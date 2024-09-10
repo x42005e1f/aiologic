@@ -1,0 +1,7 @@
+* text=auto
+
+*.py text diff=python
+
+.gitattributes text export-ignore
+.gitignore text export-ignore
+.gitkeep text export-ignore

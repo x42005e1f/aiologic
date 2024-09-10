@@ -1,0 +1,17 @@
+graft src
+
+prune **/__pycache__
+
+global-exclude .*
+prune **/.*
+global-exclude *~
+prune **/*~
+
+include setup.py
+include setup.cfg
+include pyproject.toml
+
+include MANIFEST.in
+
+include README.rst
+include LICENSE.txt
