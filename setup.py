@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 
 from setuptools import find_namespace_packages, setup
 
-
-def main():
+if __name__ == '__main__':
     setup(
         package_dir={'': 'src'},
         packages=find_namespace_packages(where='src'),
@@ -20,7 +18,3 @@ def main():
             )
         ]
     )
-
-
-if __name__ == '__main__':
-    sys.exit(main())
