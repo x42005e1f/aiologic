@@ -21,6 +21,7 @@ from aiologic.lowlevel import (
 
 class PLock:
     __slots__ = (
+        '__weakref__',
         '__waiters', '__unlocked',
     )
     

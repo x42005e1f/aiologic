@@ -35,8 +35,9 @@ USE_BYTEARRAY = PYTHON_IMPLEMENTATION == 'CPython' and _is_gil_enabled()
 
 class Semaphore:
     __slots__ = (
-        'initial_value',
+        '__weakref__',
         '__waiters', '__unlocked',
+        'initial_value',
     )
     
     @staticmethod
@@ -234,8 +235,8 @@ class Semaphore:
 
 class BoundedSemaphore(Semaphore):
     __slots__ = (
-        'max_value',
         '__locked',
+        'max_value',
     )
     
     @staticmethod

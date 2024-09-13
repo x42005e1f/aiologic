@@ -19,8 +19,9 @@ from .lock import RLock
 
 class Condition:
     __slots__ = (
-        'lock',
+        '__weakref__',
         '__waiters', '__timer',
+        'lock',
     )
     
     @staticmethod
@@ -30,10 +31,10 @@ class Condition:
         
         self = super(Condition, cls).__new__(cls)
         
-        self.lock = lock
-        
         self.__waiters = deque()
         self.__timer = count().__next__
+        
+        self.lock = lock
         
         return self
     

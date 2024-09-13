@@ -20,8 +20,9 @@ class QueueEmpty(Exception):
 
 class SimpleQueue:
     __slots__ = (
+        '__weakref__',
+        '__queue',
         '__lock',
-        '__queue'
     )
     
     @staticmethod

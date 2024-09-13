@@ -15,17 +15,18 @@ class BusyResourceError(RuntimeError):
 
 class ResourceGuard:
     __slots__ = (
-        'action',
+        '__weakref__',
         '__unlocked',
+        'action',
     )
     
     @staticmethod
     def __new__(cls, /, action='using'):
         self = super(ResourceGuard, cls).__new__(cls)
         
-        self.action = action
-        
         self.__unlocked = [True]
+        
+        self.action = action
         
         return self
     

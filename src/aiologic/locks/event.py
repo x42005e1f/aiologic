@@ -21,17 +21,16 @@ from aiologic.lowlevel import (
 
 class Event:
     __slots__ = (
-        '__is_unset',
-        '__waiters',
+        '__weakref__',
+        '__waiters', '__is_unset',
     )
     
     @staticmethod
     def __new__(cls, /, is_set=False):
         self = super(Event, cls).__new__(cls)
         
-        self.__is_unset = not is_set
-        
         self.__waiters = deque()
+        self.__is_unset = not is_set
         
         return self
     
@@ -143,20 +142,21 @@ class Event:
 
 class REvent:
     __slots__ = (
-        '__is_unset',
-        '__waiters', '__timer',
+        '__weakref__',
+        '__waiters', '__is_unset',
+        '__timer',
     )
     
     @staticmethod
     def __new__(cls, /, is_set=False):
         self = super(REvent, cls).__new__(cls)
         
+        self.__waiters = deque()
         self.__is_unset = Flag()
         
         if not is_set:
             self.__is_unset.set()
         
-        self.__waiters = deque()
         self.__timer = count().__next__
         
         return self
