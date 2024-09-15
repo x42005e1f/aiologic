@@ -389,7 +389,8 @@ else:
 @once
 def patch_threading():
     """
-    On PyPy, fix race in `Thread.join()` (AssertionError, RuntimeError).
+    Fixes race conditions in `Thread.join()` (`AssertionError`, `RuntimeError`)
+    for PyPy.
     
     Code to reproduce::
     
@@ -424,7 +425,7 @@ def patch_threading():
         for _ in range(1000):
             Thread(target=func).start()
     
-    You may ask: why not just suppress AssertionError and RuntimeError?
+    You may ask: why not just suppress `AssertionError` and `RuntimeError`?
     Well, even if the user suppresses them, the `_shutdown()` function won't.
     As a result, running threads will be killed as daemon threads::
     
@@ -452,9 +453,10 @@ def patch_threading():
             thread = Thread(target=func, args=[i])
             thread.start()
     
-    A related problem is that a thread in which an exception (for example,
-    KeyboardInterrupt) was raised when calling `join()` of a second thread
-    will kill that second thread as a daemon thread::
+    A related problem is that if a first thread calls `join()` of a second
+    thread and in the first thread an exception (for example,
+    `KeyboardInterrupt`) is raised, then the second thread will be killed as a
+    daemon thread::
     
         import time
         
@@ -486,10 +488,10 @@ def patch_threading():
     The reason for this is that on September 27, 2021, CPython applied a fix
     for a different race condition on the same `Thread.join()` that caused
     hangs, and mostly on Windows (see bpo-21822, bpo-45274, and gh-28532).
-    Really, there are no hangs now, because threads can now kill each other.
-    So the dangerous KeyboardInterrupt exception raised by the signal handler
-    has become really dangerous. This patch doesn't undo that fix. If you
-    really want safe Control-C handling, just set your own signal handler.
+    Actually, there are no hangs now, because threads can now kill each other.
+    So the `KeyboardInterrupt` exception raised by the signal handler has
+    become really dangerous. This patch doesn't undo that fix. If you really
+    want safe Control-C handling, set your own signal handler.
     
     In Python 3.13, all of these issues have been resolved at C level as part
     of the free-threaded mode implementation (see gh-114271), so this patch
@@ -673,7 +675,7 @@ def patch_threading():
 @once
 def patch_eventlet():
     """
-    Inject `destroy()` into BaseHub to fix EMFILE ("too many open files")
+    Injects `destroy()` into `BaseHub` to fix EMFILE ("too many open files")
     + ENOMEM (memory leak).
     
     Code to reproduce::

@@ -2,9 +2,9 @@
 aiologic
 ========
 
-**aiologic** is an async-aware library for synchronization and communication
-between tasks in different threads and different event loops. Just look at this
-example:
+**aiologic** is an async-aware library for tasks synchronization and their
+communication in different threads and different event loops. Let's take a look
+at the example:
 
 .. code:: python
 
@@ -61,9 +61,9 @@ It prints something like this:
     3: thread=140011620005632 task=140011624408560 stop
     4: thread=140011611612928 task=140011602574512 stop
 
-As you can see, when using aiologic.Lock, tasks from different event loops have
-an equal opportunity to acquire a lock. Using anyio.Lock would raise a
-RuntimeError. And using threading.Lock would cause a deadlock.
+As you can see, when using `aiologic.Lock`, tasks from different event loops
+are all able to acquire a lock. In the same case if you use `anyio.Lock`, it
+will raise a `RuntimeError`. And `threading.Lock` will cause a deadlock.
 
 Features
 ========
@@ -94,8 +94,8 @@ Supported concurrency libraries:
   and `gevent <https://www.gevent.org/>`_ (greenlet-based)
 
 All synchronization primitives are implemented entirely on effectively atomic
-operations, which gives incredible speedup on PyPy compared to alternatives
-from the threading module. All this works thanks to GIL, but per-object locks
+operations, which gives an incredible speedup on PyPy compared to alternatives
+from the threading module. All this works because of GIL, but per-object locks
 also ensure that `the same operations are still atomic
 <https://peps.python.org/pep-0703/#container-thread-safety>`_, so aiologic also
 works when running in a `free-threaded mode
