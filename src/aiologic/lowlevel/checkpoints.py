@@ -158,7 +158,7 @@ async def asyncio_checkpoint():
         else:
             asyncio_checkpoint = partial(asyncio_sleep, 0)
     
-    asyncio_checkpoint()
+    await asyncio_checkpoint()
 
 
 async def curio_checkpoint():
@@ -172,7 +172,7 @@ async def curio_checkpoint():
     else:
         curio_checkpoint = partial(curio_sleep, 0)
     
-    curio_checkpoint()
+    await curio_checkpoint()
 
 
 async def trio_checkpoint():
@@ -187,7 +187,7 @@ async def trio_checkpoint():
             async def trio_checkpoint():
                 pass
     
-    trio_checkpoint()
+    await trio_checkpoint()
 
 
 async def asyncio_checkpoint_if_cancelled():
@@ -201,7 +201,7 @@ async def asyncio_checkpoint_if_cancelled():
         async def asyncio_checkpoint_if_cancelled():
             pass
     
-    asyncio_checkpoint_if_cancelled()
+    await asyncio_checkpoint_if_cancelled()
 
 
 async def curio_checkpoint_if_cancelled():
@@ -213,7 +213,7 @@ async def curio_checkpoint_if_cancelled():
         async def curio_checkpoint_if_cancelled():
             pass
     
-    curio_checkpoint_if_cancelled()
+    await curio_checkpoint_if_cancelled()
 
 
 async def trio_checkpoint_if_cancelled():
@@ -232,7 +232,7 @@ async def trio_checkpoint_if_cancelled():
             async def trio_checkpoint_if_cancelled():
                 pass
     
-    trio_checkpoint_if_cancelled()
+    await trio_checkpoint_if_cancelled()
 
 
 async def asyncio_cancel_shielded_checkpoint():
@@ -255,7 +255,7 @@ async def asyncio_cancel_shielded_checkpoint():
             async def asyncio_cancel_shielded_checkpoint():
                 await asyncio_shield(asyncio_sleep(0))
     
-    asyncio_cancel_shielded_checkpoint()
+    await asyncio_cancel_shielded_checkpoint()
 
 
 async def curio_cancel_shielded_checkpoint():
@@ -274,7 +274,7 @@ async def curio_cancel_shielded_checkpoint():
             async with curio_disable_cancellation():
                 await curio_sleep(0)
     
-    curio_cancel_shielded_checkpoint()
+    await curio_cancel_shielded_checkpoint()
 
 
 async def trio_cancel_shielded_checkpoint():
@@ -294,7 +294,7 @@ async def trio_cancel_shielded_checkpoint():
             async def trio_cancel_shielded_checkpoint():
                 pass
     
-    trio_cancel_shielded_checkpoint()
+    await trio_cancel_shielded_checkpoint()
 
 
 async def shield(coro):
