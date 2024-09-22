@@ -176,15 +176,16 @@ class REvent:
         return not self.__is_unset
     
     def __await__(self, /):
-        time = self.__timer()
+        token = None
         rescheduled = False
         
         if (marker := self.__is_unset.get(None)) is not None:
-            self.__waiters.append(token := (
+            self.__waiters.append(token := [
                 event := AsyncEvent(),
                 marker,
-                time,
-            ))
+                self.__timer(),
+                None,
+            ])
             
             if marker is self.__is_unset.get(None):
                 success = False
@@ -205,7 +206,10 @@ class REvent:
             success = True
         
         if success:
-            self.__wakeup(time)
+            if token is not None:
+                self.__wakeup(token[3])
+            else:
+                self.__wakeup()
         
         if not rescheduled:
             yield from checkpoint().__await__()
@@ -213,15 +217,16 @@ class REvent:
         return success
     
     def wait(self, /, timeout=None):
-        time = self.__timer()
+        token = None
         rescheduled = False
         
         if (marker := self.__is_unset.get(None)) is not None:
-            self.__waiters.append(token := (
+            self.__waiters.append(token := [
                 event := GreenEvent(),
                 marker,
-                time,
-            ))
+                self.__timer(),
+                None,
+            ])
             
             if marker is self.__is_unset.get(None):
                 success = False
@@ -242,7 +247,10 @@ class REvent:
             success = True
         
         if success:
-            self.__wakeup(time)
+            if token is not None:
+                self.__wakeup(token[3])
+            else:
+                self.__wakeup()
         
         if not rescheduled:
             green_checkpoint()
@@ -254,14 +262,17 @@ class REvent:
     
     def set(self, /):
         self.__is_unset.clear()
-        self.__wakeup(self.__timer())
+        self.__wakeup()
     
     def is_set(self, /):
         return not self.__is_unset
     
-    def __wakeup(self, /, deadline):
-        is_unset = self.__is_unset
+    def __wakeup(self, /, deadline=None):
         waiters = self.__waiters
+        is_unset = self.__is_unset
+        
+        if deadline is None:
+            deadline = self.__timer()
         
         while waiters:
             try:
@@ -269,9 +280,11 @@ class REvent:
             except IndexError:
                 break
             else:
-                event, marker, time = token
+                event, marker, time, _ = token
                 
                 if time <= deadline and marker is not is_unset.get(None):
+                    token[3] = deadline
+                    
                     event.set()
                     
                     try:
