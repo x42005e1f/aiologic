@@ -7,11 +7,9 @@ prune **/.*
 global-exclude *~
 prune **/*~
 
-include setup.py
-include setup.cfg
 include pyproject.toml
 
 include MANIFEST.in
 
 include README.rst
-include LICENSE.txt
+include LICENSE
