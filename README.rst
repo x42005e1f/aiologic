@@ -94,9 +94,10 @@ Supported concurrency libraries:
   and `gevent <https://www.gevent.org/>`_ (greenlet-based)
 
 All synchronization primitives are implemented entirely on effectively atomic
-operations, which gives an incredible speedup on PyPy compared to alternatives
-from the threading module. All this works because of GIL, but per-object locks
-also ensure that `the same operations are still atomic
+operations, which gives `an incredible speedup on PyPy 
+<https://gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`_ compared
+to alternatives from the threading module. All this works because of GIL, but
+per-object locks also ensure that `the same operations are still atomic
 <https://peps.python.org/pep-0703/#container-thread-safety>`_, so aiologic also
 works when running in a `free-threaded mode
 <https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`_.
