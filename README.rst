@@ -72,8 +72,16 @@ Features
 * `CPython <https://www.python.org/>`_ and `PyPy <https://pypy.org/>`_ support
 * Cancellation and timeouts support
 * Optional `Trio-style checkpoints
-  <https://trio.readthedocs.io/en/stable/reference-core.html#checkpoints>`_
-* Only one checkpoint per asynchronous call
+  <https://trio.readthedocs.io/en/stable/reference-core.html#checkpoints>`_:
+
+  * enabled by default for Trio itself
+  * disabled by default for all others
+
+* Only one checkpoint per asynchronous call:
+
+  * exactly one context switch if checkpoints are enabled
+  * zero or one context switch if checkpoints are disabled
+
 * Fairness wherever possible (with some caveats)
 * Thread safety wherever possible
 
