@@ -1,5 +1,44 @@
 [build-system]
-requires = [
-    'wheel>=0.31.0',
-    'setuptools>=40.8.0',
+requires = ["setuptools >= 64"]
+
+[project]
+name = "aiologic"
+version = "0.3.0"
+authors = [
+  { name="Ilya Egorov", email="0x42005e1f@gmail.com" },
 ]
+description = "GIL-powered* locking library for Python"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Intended Audience :: Developers",
+    "Framework :: AsyncIO",
+    "Framework :: Trio",
+    "Framework :: AnyIO",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
+]
+keywords = []
+dependencies = []
+
+[project.optional-dependencies]
+trio = ["trio>=0.23.0"]
+anyio = ["anyio>=3.0.0"]
+gevent = ["gevent>=21.1.0"]
+sniffio = ["sniffio>=1.3.0"]
+eventlet = ["eventlet>=0.15.1"]
+
+[project.urls]
+"Source" = "https://github.com/x42005e1f/aiologic"
