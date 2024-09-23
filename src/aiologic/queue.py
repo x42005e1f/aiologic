@@ -151,8 +151,22 @@ class Queue:
         self._data.popleft()
 
     @property
-    def waiting(self, /):
-        return self.__lock.waiting
+    def put_waiting(self, /):
+        if (put_lock := self.__put_lock) is not None:
+            value = put_lock.waiting
+        else:
+            value = 0
+
+        return value
+
+    @property
+    def get_waiting(self, /):
+        if (get_lock := self.__get_lock) is not None:
+            value = get_lock.waiting
+        else:
+            value = 0
+
+        return value
 
 
 class LifoQueue(Queue):
