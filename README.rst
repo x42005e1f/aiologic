@@ -92,7 +92,7 @@ Synchronization primitives:
 * Conditions
 * Events: one-time and reusable
 * Resource guards
-* Queues: simple only
+* Queues: FIFO and LIFO
 
 Supported concurrency libraries:
 
