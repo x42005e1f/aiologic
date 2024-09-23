@@ -10,10 +10,10 @@ __all__ = (
     "checkpoint_if_cancelled",
     "cancel_shielded_checkpoint",
     "threading_checkpoints_cvar",
-    "asyncio_checkpoints_cvar",
     "eventlet_checkpoints_cvar",
-    "curio_checkpoints_cvar",
     "gevent_checkpoints_cvar",
+    "asyncio_checkpoints_cvar",
+    "curio_checkpoints_cvar",
     "trio_checkpoints_cvar",
 )
 
