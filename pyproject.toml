@@ -42,3 +42,6 @@ eventlet = ["eventlet>=0.15.1"]
 
 [project.urls]
 "Source" = "https://github.com/x42005e1f/aiologic"
+
+[tool.black]
+line-length = 79

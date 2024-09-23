@@ -9,17 +9,17 @@ at the example:
 .. code:: python
 
     import time
-    
+
     from threading import Thread, get_ident
-    
+
     import anyio
-    
+
     from aiologic import Lock
-    
+
     lock = Lock()
     start = time.monotonic()
-    
-    
+
+
     async def func():
         print(
             f"{time.monotonic() - start:.0f}:",
@@ -27,24 +27,24 @@ at the example:
             f"task={anyio.get_current_task().id}",
             'start',
         )
-        
+
         async with lock:
             await anyio.sleep(1)
-        
+
         print(
             f"{time.monotonic() - start:.0f}:",
             f"thread={get_ident()}",
             f"task={anyio.get_current_task().id}",
             'stop',
         )
-    
-    
+
+
     async def main():
         async with anyio.create_task_group() as tasks:
             for _ in range(2):
                 tasks.start_soon(func)
-    
-    
+
+
     for _ in range(2):
         Thread(target=anyio.run, args=[main]).start()
 
@@ -102,7 +102,7 @@ Supported concurrency libraries:
   and `gevent <https://www.gevent.org/>`_ (greenlet-based)
 
 All synchronization primitives are implemented entirely on effectively atomic
-operations, which gives `an incredible speedup on PyPy 
+operations, which gives `an incredible speedup on PyPy
 <https://gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`_ compared
 to alternatives from the threading module. All this works because of GIL, but
 per-object locks also ensure that `the same operations are still atomic
