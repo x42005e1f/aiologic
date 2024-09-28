@@ -350,52 +350,52 @@ async def shield(coro):
     return result
 
 
-async def checkpoint():
+async def checkpoint(*, force=False):
     try:
         library = current_async_library()
     except AsyncLibraryNotFoundError:
         pass
     else:
         if library == "asyncio":
-            if asyncio_checkpoints_cvar.get():
+            if force or asyncio_checkpoints_cvar.get():
                 await asyncio_checkpoint()
         elif library == "curio":
-            if curio_checkpoints_cvar.get():
+            if force or curio_checkpoints_cvar.get():
                 await curio_checkpoint()
         elif library == "trio":
-            if trio_checkpoints_cvar.get():
+            if force or trio_checkpoints_cvar.get():
                 await trio_checkpoint()
 
 
-async def checkpoint_if_cancelled():
+async def checkpoint_if_cancelled(*, force=False):
     try:
         library = current_async_library()
     except AsyncLibraryNotFoundError:
         pass
     else:
         if library == "asyncio":
-            if asyncio_checkpoints_cvar.get():
+            if force or asyncio_checkpoints_cvar.get():
                 await asyncio_checkpoint_if_cancelled()
         elif library == "curio":
-            if curio_checkpoints_cvar.get():
+            if force or curio_checkpoints_cvar.get():
                 await curio_checkpoint_if_cancelled()
         elif library == "trio":
-            if trio_checkpoints_cvar.get():
+            if force or trio_checkpoints_cvar.get():
                 await trio_checkpoint_if_cancelled()
 
 
-async def cancel_shielded_checkpoint():
+async def cancel_shielded_checkpoint(*, force=False):
     try:
         library = current_async_library()
     except AsyncLibraryNotFoundError:
         pass
     else:
         if library == "asyncio":
-            if asyncio_checkpoints_cvar.get():
+            if force or asyncio_checkpoints_cvar.get():
                 await asyncio_cancel_shielded_checkpoint()
         elif library == "curio":
-            if curio_checkpoints_cvar.get():
+            if force or curio_checkpoints_cvar.get():
                 await curio_cancel_shielded_checkpoint()
         elif library == "trio":
-            if trio_checkpoints_cvar.get():
+            if force or trio_checkpoints_cvar.get():
                 await trio_cancel_shielded_checkpoint()
