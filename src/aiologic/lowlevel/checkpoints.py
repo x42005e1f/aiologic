@@ -85,17 +85,17 @@ def gevent_checkpoint():
     gevent_checkpoint()
 
 
-def green_checkpoint():
+def green_checkpoint(*, force=False):
     library = current_green_library(failsafe=True)
 
     if library == "threading":
-        if threading_checkpoints_cvar.get():
+        if force or threading_checkpoints_cvar.get():
             time.sleep(0)
     elif library == "eventlet":
-        if eventlet_checkpoints_cvar.get():
+        if force or eventlet_checkpoints_cvar.get():
             eventlet_checkpoint()
     elif library == "gevent":
-        if gevent_checkpoints_cvar.get():
+        if force or gevent_checkpoints_cvar.get():
             gevent_checkpoint()
 
 
