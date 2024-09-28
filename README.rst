@@ -93,6 +93,9 @@ Synchronization primitives:
 * Barriers: single-use only
 * Events: one-time and reusable
 * Resource guards
+
+Communication primitives:
+
 * Queues: FIFO and LIFO
 
 Supported concurrency libraries:
