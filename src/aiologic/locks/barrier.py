@@ -54,6 +54,7 @@ class Latch:
     def __await__(self, /):
         reached = self.__reached
         rescheduled = False
+        force_checkpoint = False
 
         try:
             if not reached:
@@ -67,15 +68,15 @@ class Latch:
                             if not rescheduled:
                                 reached.set(False)
                     else:
-                        reached.set(True)
+                        force_checkpoint = reached.set(True)
         finally:
             self.__wakeup()
 
         if not reached.get(False):
             raise BrokenBarrierError
 
-        if not rescheduled:
-            yield from checkpoint().__await__()
+        if not rescheduled or force_checkpoint:
+            yield from checkpoint(force=force_checkpoint).__await__()
 
     def wait(self, /, timeout=None):
         reached = self.__reached
