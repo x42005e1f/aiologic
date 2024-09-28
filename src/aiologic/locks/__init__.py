@@ -3,6 +3,7 @@
 from .semaphore import *
 from .lock import *
 from .condition import *
+from .barrier import *
 from .event import *
 from .guard import *
 
@@ -10,6 +11,7 @@ __all__ = (
     *semaphore.__all__,
     *lock.__all__,
     *condition.__all__,
+    *barrier.__all__,
     *event.__all__,
     *guard.__all__,
 )

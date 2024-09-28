@@ -90,6 +90,7 @@ Synchronization primitives:
 * Semaphores: counting and bounded
 * Locks: primitive and reentrant
 * Conditions
+* Barriers: single-use only
 * Events: one-time and reusable
 * Resource guards
 * Queues: FIFO and LIFO
