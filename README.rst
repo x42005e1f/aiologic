@@ -88,7 +88,7 @@ Features
 Synchronization primitives:
 
 * Semaphores: counting and bounded
-* Locks: primitive and reentrant
+* Locks: primitive, ownable and reentrant
 * Conditions
 * Barriers: single-use only
 * Events: one-time and reusable
