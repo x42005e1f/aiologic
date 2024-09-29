@@ -8,62 +8,49 @@ at the example:
 
 .. code:: python
 
-    import time
-
-    from threading import Thread, get_ident
+    from threading import Thread
 
     import anyio
 
     from aiologic import Lock
 
     lock = Lock()
-    start = time.monotonic()
 
 
-    async def func():
-        print(
-            f"{time.monotonic() - start:.0f}:",
-            f"thread={get_ident()}",
-            f"task={anyio.get_current_task().id}",
-            'start',
-        )
+    async def func(i, j):
+        print(f"started thread={i} task={j}")
 
         async with lock:
             await anyio.sleep(1)
 
-        print(
-            f"{time.monotonic() - start:.0f}:",
-            f"thread={get_ident()}",
-            f"task={anyio.get_current_task().id}",
-            'stop',
-        )
+        print(f"stopped thread={i} task={j}")
 
 
-    async def main():
+    async def main(i):
         async with anyio.create_task_group() as tasks:
-            for _ in range(2):
-                tasks.start_soon(func)
+            for j in range(2):
+                tasks.start_soon(func, i, j)
 
 
-    for _ in range(2):
-        Thread(target=anyio.run, args=[main]).start()
+    for i in range(2):
+        Thread(target=anyio.run, args=[main, i]).start()
 
 It prints something like this:
 
 .. code-block::
 
-    0: thread=140011620005632 task=140011624407888 start
-    0: thread=140011611612928 task=140011602572720 start
-    0: thread=140011620005632 task=140011624408560 start
-    0: thread=140011611612928 task=140011602574512 start
-    1: thread=140011620005632 task=140011624407888 stop
-    2: thread=140011611612928 task=140011602572720 stop
-    3: thread=140011620005632 task=140011624408560 stop
-    4: thread=140011611612928 task=140011602574512 stop
+    started thread=0 task=0
+    started thread=1 task=0
+    started thread=0 task=1
+    started thread=1 task=1
+    stopped thread=0 task=0
+    stopped thread=1 task=0
+    stopped thread=0 task=1
+    stopped thread=1 task=1
 
-As you can see, when using `aiologic.Lock`, tasks from different event loops
-are all able to acquire a lock. In the same case if you use `anyio.Lock`, it
-will raise a `RuntimeError`. And `threading.Lock` will cause a deadlock.
+As you can see, when using ``aiologic.Lock``, tasks from different event loops
+are all able to acquire a lock. In the same case if you use ``anyio.Lock``, it
+will raise a ``RuntimeError``. And ``threading.Lock`` will cause a deadlock.
 
 Features
 ========
