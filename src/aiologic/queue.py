@@ -148,7 +148,7 @@ class Queue:
         self._data.append(item)
 
     def _get(self, /):
-        self._data.popleft()
+        return self._data.popleft()
 
     @property
     def put_waiting(self, /):
@@ -184,4 +184,4 @@ class LifoQueue(Queue):
         self._data.append(item)
 
     def _get(self, /):
-        self._data.pop()
+        return self._data.pop()
