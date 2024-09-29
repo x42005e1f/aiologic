@@ -123,6 +123,7 @@ Features
 
 * Python 3.8+ support
 * `CPython <https://www.python.org/>`_ and `PyPy <https://pypy.org/>`_ support
+* Pickling and weakrefing support
 * Cancellation and timeouts support
 * Optional `Trio-style checkpoints
   <https://trio.readthedocs.io/en/stable/reference-core.html#checkpoints>`_:
@@ -137,6 +138,8 @@ Features
 
 * Fairness wherever possible (with some caveats)
 * Thread safety wherever possible
+* Zero required dependencies
+* Lock-free implementation
 
 Synchronization primitives:
 
