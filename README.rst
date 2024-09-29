@@ -52,6 +52,72 @@ As you can see, when using ``aiologic.Lock``, tasks from different event loops
 are all able to acquire a lock. In the same case if you use ``anyio.Lock``, it
 will raise a ``RuntimeError``. And ``threading.Lock`` will cause a deadlock.
 
+Why?
+====
+
+Cooperative (coroutines, greenlets) and preemptive (threads) multitasking are
+not usually used together. But there are situations when these so different
+styles need to coexist:
+
+* Interaction of two or more frameworks that cannot be run in the same event
+  loop (e.g. a GUI framework with any other framework).
+* Parallelization of code whose synchronous part cannot be easily delegated to
+  a thread pool (e.g. a CPU-bound network application that needs low
+  response times).
+* Simultaneous use of incompatible concurrency libraries in different threads
+  (e.g. due to legacy code).
+
+Known solutions (only for some special cases) use one of the following ideas:
+
+- Delegate waiting to a thread pool (executor), e.g. via ``run_in_executor()``.
+- Delegate calling to an event loop, e.g. via
+  ``call_soon_threadsafe()``.
+- Perform polling via timeouts and non-blocking calls.
+
+All these ideas have disadvantages. Polling consumes a lot of CPU resources,
+actually blocks the event loop for a short time, and has poor responsiveness.
+The ``call_soon_threadsafe()`` approach does not actually do any real work
+until the event loop scheduler handles a callback, and in the case of a queue
+only works when there is only one consumer. The ``run_in_executor()`` approach
+requires a worker thread per call and has issues with cancellation and
+timeouts:
+
+.. code:: python
+
+    import asyncio
+    import threading
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    executor = ThreadPoolExecutor(8)
+    semaphore = threading.Semaphore(0)
+
+
+    async def main():
+        loop = asyncio.get_running_loop()
+
+        for _ in range(8):
+            try:
+                await asyncio.wait_for(loop.run_in_executor(
+                    executor,
+                    semaphore.acquire,
+                ), 0)
+            except asyncio.TimeoutError:
+                pass
+
+
+    print('active threads:', threading.active_count())  # 1
+
+    asyncio.run(main())
+
+    print('active threads:', threading.active_count())  # 9 - wow, thread leak!
+
+    # program will hang until you press Control-C
+
+However, *aiologic* has none of these disadvantages. Using its approach based
+on low-level events, it gives you much more than you can get with alternatives.
+That's why it's there, and that's why you're here.
+
 Features
 ========
 
