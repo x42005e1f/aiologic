@@ -147,7 +147,7 @@ Synchronization primitives:
 * Locks: primitive, ownable and reentrant
 * Capacity limiters
 * Conditions
-* Barriers: single-use only
+* Barriers: single-use and cyclic
 * Events: one-time and reusable
 * Resource guards
 
