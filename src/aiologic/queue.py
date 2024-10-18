@@ -151,6 +151,10 @@ class Queue:
         return self._data.popleft()
 
     @property
+    def waiting(self, /):
+        return abs(self.putting - self.getting)
+
+    @property
     def putting(self, /):
         if (put_lock := self.__put_lock) is not None:
             value = put_lock.waiting
