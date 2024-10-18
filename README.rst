@@ -153,7 +153,7 @@ Synchronization primitives:
 
 Communication primitives:
 
-* Queues: FIFO and LIFO
+* Queues: FIFO, LIFO and priority
 
 Supported concurrency libraries:
 
