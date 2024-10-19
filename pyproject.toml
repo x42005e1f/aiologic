@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 
 [project]
 name = "aiologic"
-version = "0.6.0"
+version = "0.7.0"
 authors = [
     {name = "Ilya Egorov", email = "0x42005e1f@gmail.com"},
 ]
