@@ -132,9 +132,12 @@ class Queue:
             else:
                 maxsize = 0
 
+        if items is MISSING:
+            items = ()
+
         self = super(Queue, cls).__new__(cls)
 
-        self._data = self._make(items)
+        self._init(items, maxsize)
 
         self.__waiters = deque()
         self.__get_waiters = deque()
@@ -147,25 +150,25 @@ class Queue:
 
     def __getnewargs__(self, /):
         if (maxsize := self.maxsize) != 0:
-            args = (list(self._data), maxsize)
+            args = (self._items(), maxsize)
         else:
-            args = (list(self._data),)
+            args = (self._items(),)
 
         return args
 
     def __repr__(self, /):
         if (maxsize := self.maxsize) != 0:
-            args_repr = f"{repr(list(self._data))}, maxsize={maxsize!r}"
+            args_repr = f"{repr(self._items())}, maxsize={maxsize!r}"
         else:
-            args_repr = repr(list(self._data))
+            args_repr = repr(self._items())
 
         return f"{self.__class__.__name__}({args_repr})"
 
     def __bool__(self, /):
-        return bool(self._data)
+        return self._qsize() > 0
 
     def __len__(self, /):
-        return len(self._data)
+        return self._qsize()
 
     def __acquire_nowait(self, /):
         if unlocked := self.__unlocked:
@@ -181,7 +184,6 @@ class Queue:
         return success
 
     def __release(self, /):
-        data = self._data
         maxsize = self.maxsize
 
         waiters = self.__waiters
@@ -190,7 +192,7 @@ class Queue:
         unlocked = self.__unlocked
 
         while True:
-            size = len(data)
+            size = self._qsize()
 
             if not size:
                 actual_waiters = put_waiters
@@ -221,7 +223,6 @@ class Queue:
                 break
 
     async def async_put(self, /, item, *, blocking=True):
-        data = self._data
         maxsize = self.maxsize
 
         waiters = self.__waiters
@@ -229,10 +230,10 @@ class Queue:
 
         if maxsize <= 0:
             success = self.__acquire_nowait()
-        elif len(data) < maxsize:
+        elif self._qsize() < maxsize:
             success = self.__acquire_nowait()
 
-            if success and len(data) == maxsize:
+            if success and self._qsize() >= maxsize:
                 self.__release()
 
                 success = False
@@ -251,10 +252,10 @@ class Queue:
                 try:
                     if maxsize <= 0:
                         success = self.__acquire_nowait()
-                    elif len(data) < maxsize:
+                    elif self._qsize() < maxsize:
                         success = self.__acquire_nowait()
 
-                        if success and len(data) == maxsize:
+                        if success and self._qsize() >= maxsize:
                             self.__release()
 
                             success = False
@@ -290,7 +291,6 @@ class Queue:
             self.__release()
 
     def green_put(self, /, item, *, blocking=True, timeout=None):
-        data = self._data
         maxsize = self.maxsize
 
         waiters = self.__waiters
@@ -298,10 +298,10 @@ class Queue:
 
         if maxsize <= 0:
             success = self.__acquire_nowait()
-        elif len(data) < maxsize:
+        elif self._qsize() < maxsize:
             success = self.__acquire_nowait()
 
-            if success and len(data) == maxsize:
+            if success and self._qsize() >= maxsize:
                 self.__release()
 
                 success = False
@@ -320,10 +320,10 @@ class Queue:
                 try:
                     if maxsize <= 0:
                         success = self.__acquire_nowait()
-                    elif len(data) < maxsize:
+                    elif self._qsize() < maxsize:
                         success = self.__acquire_nowait()
 
-                        if success and len(data) == maxsize:
+                        if success and self._qsize() >= maxsize:
                             self.__release()
 
                             success = False
@@ -359,15 +359,13 @@ class Queue:
             self.__release()
 
     async def async_get(self, /, *, blocking=True):
-        data = self._data
-
         waiters = self.__waiters
         get_waiters = self.__get_waiters
 
-        if data:
+        if self._qsize() > 0:
             success = self.__acquire_nowait()
 
-            if success and not data:
+            if success and self._qsize() <= 0:
                 self.__release()
 
                 success = False
@@ -384,10 +382,10 @@ class Queue:
                 get_waiters.append(event)
 
                 try:
-                    if data:
+                    if self._qsize() > 0:
                         success = self.__acquire_nowait()
 
-                        if success and not data:
+                        if success and self._qsize() <= 0:
                             self.__release()
 
                             success = False
@@ -425,15 +423,13 @@ class Queue:
         return item
 
     def green_get(self, /, *, blocking=True, timeout=None):
-        data = self._data
-
         waiters = self.__waiters
         get_waiters = self.__get_waiters
 
-        if data:
+        if self._qsize() > 0:
             success = self.__acquire_nowait()
 
-            if success and not data:
+            if success and self._qsize() <= 0:
                 self.__release()
 
                 success = False
@@ -450,10 +446,10 @@ class Queue:
                 get_waiters.append(event)
 
                 try:
-                    if data:
+                    if self._qsize() > 0:
                         success = self.__acquire_nowait()
 
-                        if success and not data:
+                        if success and self._qsize() <= 0:
                             self.__release()
 
                             success = False
@@ -490,13 +486,14 @@ class Queue:
 
         return item
 
-    def _make(self, /, items=MISSING):
-        if items is not MISSING:
-            data = deque(items)
-        else:
-            data = deque()
+    def _init(self, /, items, maxsize):
+        self._data = deque(items)
 
-        return data
+    def _qsize(self, /):
+        return len(self._data)
+
+    def _items(self, /):
+        return list(self._data)
 
     def _put(self, /, item):
         self._data.append(item)
@@ -520,13 +517,8 @@ class Queue:
 class LifoQueue(Queue):
     __slots__ = ()
 
-    def _make(self, /, items=MISSING):
-        if items is not MISSING:
-            data = list(items)
-        else:
-            data = []
-
-        return data
+    def _init(self, /, items, maxsize):
+        self._data = list(items)
 
     def _put(self, /, item):
         self._data.append(item)
@@ -538,13 +530,8 @@ class LifoQueue(Queue):
 class PriorityQueue(Queue):
     __slots__ = ()
 
-    def _make(self, /, items=MISSING):
-        if items is not MISSING:
-            data = list(items)
-        else:
-            data = []
-
-        return data
+    def _init(self, /, items, maxsize):
+        self._data = list(items)
 
     def _put(self, /, item):
         heappush(self._data, item)
