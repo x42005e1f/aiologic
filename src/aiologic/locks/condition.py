@@ -175,7 +175,7 @@ class Condition:
                         notified += 1
 
                     try:
-                        waiters.remove(event)
+                        waiters.remove(token)
                     except ValueError:
                         pass
                 else:
@@ -204,7 +204,7 @@ class Condition:
                         notified += 1
 
                     try:
-                        waiters.remove(event)
+                        waiters.remove(token)
                     except ValueError:
                         pass
                 else:
