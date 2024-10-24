@@ -259,7 +259,10 @@ class BoundedSemaphore(Semaphore):
         else:
             self.max_value = self.initial_value
 
-        self.__locked = [None] * (self.max_value - self.initial_value)
+        if USE_BYTEARRAY:
+            self.__locked = bytearray(self.max_value - self.initial_value)
+        else:
+            self.__locked = [None] * (self.max_value - self.initial_value)
 
         return self
 
@@ -291,7 +294,10 @@ class BoundedSemaphore(Semaphore):
         success = await super().async_acquire(blocking=blocking)
 
         if success:
-            self.__locked.append(None)
+            if USE_BYTEARRAY:
+                self.__locked.append(0)
+            else:
+                self.__locked.append(None)
 
         return success
 
@@ -299,7 +305,10 @@ class BoundedSemaphore(Semaphore):
         success = super().green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
-            self.__locked.append(None)
+            if USE_BYTEARRAY:
+                self.__locked.append(0)
+            else:
+                self.__locked.append(None)
 
         return success
 
