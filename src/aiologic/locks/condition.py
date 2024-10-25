@@ -13,6 +13,7 @@ from collections import deque
 from aiologic.lowlevel import AsyncEvent, GreenEvent, shield
 
 from .lock import RLock
+from .limiter import RCapacityLimiter
 
 
 class Condition:
@@ -71,7 +72,7 @@ class Condition:
         success = False
 
         try:
-            if isinstance(lock, RLock):
+            if isinstance(lock, (RLock, RCapacityLimiter)):
                 state = lock._async_release_save()
             else:
                 yield from lock.__aexit__(None, None, None).__await__()
@@ -79,7 +80,7 @@ class Condition:
             try:
                 success = yield from event.__await__()
             finally:
-                if isinstance(lock, RLock):
+                if isinstance(lock, (RLock, RCapacityLimiter)):
                     yield from shield(
                         lock._async_acquire_restore(state),
                     ).__await__()
@@ -111,7 +112,7 @@ class Condition:
         success = False
 
         try:
-            if isinstance(lock, RLock):
+            if isinstance(lock, (RLock, RCapacityLimiter)):
                 state = lock._green_release_save()
             else:
                 lock.__exit__(None, None, None)
@@ -119,7 +120,7 @@ class Condition:
             try:
                 success = event.wait(timeout)
             finally:
-                if isinstance(lock, RLock):
+                if isinstance(lock, (RLock, RCapacityLimiter)):
                     lock._green_acquire_restore(state)
                 else:
                     lock.__enter__()
