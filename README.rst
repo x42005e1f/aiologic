@@ -18,12 +18,12 @@ at the example:
 
 
     async def func(i, j):
-        print(f"started thread={i} task={j}")
+        print(f"thread={i} task={j} started")
 
         async with lock:
             await anyio.sleep(1)
 
-        print(f"stopped thread={i} task={j}")
+        print(f"thread={i} task={j} stopped")
 
 
     async def main(i):
@@ -39,14 +39,14 @@ It prints something like this:
 
 .. code-block::
 
-    started thread=0 task=0
-    started thread=1 task=0
-    started thread=0 task=1
-    started thread=1 task=1
-    stopped thread=0 task=0
-    stopped thread=1 task=0
-    stopped thread=0 task=1
-    stopped thread=1 task=1
+    thread=0 task=0 started
+    thread=1 task=0 started
+    thread=0 task=1 started
+    thread=1 task=1 started
+    thread=0 task=0 stopped
+    thread=1 task=0 stopped
+    thread=0 task=1 stopped
+    thread=1 task=1 stopped
 
 As you can see, when using ``aiologic.Lock``, tasks from different event loops
 are all able to acquire a lock. In the same case if you use ``anyio.Lock``, it
