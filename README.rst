@@ -148,7 +148,7 @@ Synchronization primitives:
 * Capacity limiters: simple and reentrant
 * Condition variables
 * Barriers: single-use and cyclic
-* Events: one-time and reusable
+* Events: one-time, reusable and countdown
 * Resource guards
 
 Communication primitives:
