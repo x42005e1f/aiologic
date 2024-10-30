@@ -511,6 +511,7 @@ def get_asyncio_event_class():
     global AsyncioEvent
 
     from asyncio import get_running_loop as get_running_asyncio_loop
+    from asyncio.exceptions import InvalidStateError
 
     class AsyncioEvent(AsyncEvent):
         __slots__ = (
@@ -565,7 +566,10 @@ def get_asyncio_event_class():
 
         def __set(self, /):
             if (future := self.__future) is not None:
-                future.set_result(True)
+                try:
+                    future.set_result(True)
+                except InvalidStateError:  # future is cancelled
+                    pass
 
         def set(self, /):
             success = True
