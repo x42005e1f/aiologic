@@ -435,8 +435,11 @@ class CountdownEvent:
 
         return success
 
-    def up(self, /):
-        self.__markers.append(object())
+    def up(self, /, count=1):
+        if count == 1:
+            self.__markers.append(object())
+        else:
+            self.__markers.extend([object()] * count)
 
     def down(self, /):
         try:
