@@ -454,6 +454,10 @@ class CountdownEvent:
 
         self.__wakeup()
 
+    def clear(self, /):
+        self.__markers.clear()
+        self.__wakeup()
+
     def __get(self, /):
         if markers := self.__markers:
             try:
