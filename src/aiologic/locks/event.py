@@ -313,38 +313,34 @@ class CountdownEvent:
         "__waiters",
         "__markers",
         "__timer",
-        "initial_value",
     )
 
     @staticmethod
-    def __new__(cls, /, initial_value=None):
+    def __new__(cls, /, value=None):
         self = super(CountdownEvent, cls).__new__(cls)
 
-        if initial_value is not None:
-            if initial_value < 0:
-                raise ValueError("initial_value must be >= 0")
-
-            self.initial_value = initial_value
-        else:
-            self.initial_value = 0
+        if value is None:
+            value = 0
+        elif value < 0:
+            raise ValueError("value must be >= 0")
 
         self.__waiters = deque()
-        self.__markers = [object()] * self.initial_value
+        self.__markers = [object()] * value
 
         self.__timer = count().__next__
 
         return self
 
     def __getnewargs__(self, /):
-        if initial_value := self.initial_value:
-            args = (initial_value,)
+        if value := len(self.__markers):
+            args = (value,)
         else:
             args = ()
 
         return args
 
     def __repr__(self, /):
-        return f"CountdownEvent({self.initial_value!r})"
+        return f"CountdownEvent({len(self.__markers)!r})"
 
     def __bool__(self, /):
         return not self.__markers
