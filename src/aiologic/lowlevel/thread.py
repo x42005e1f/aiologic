@@ -101,6 +101,20 @@ try:
         get_ident = import_original("threading:get_ident")
 except ImportError:
     pass
+else:
+    try:
+        get_main_thread_ident = import_original(
+            "_thread:_get_main_thread_ident",
+        )
+    except ImportError:
+        try:
+            main_thread_ident = import_original("threading:_main_thread").ident
+
+            def get_main_thread_ident():
+                return main_thread_ident
+
+        except ImportError:
+            pass
 
 
 def __getattr__(name, /):

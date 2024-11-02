@@ -63,9 +63,29 @@ def eventlet_running_impl():
     global eventlet_running_impl
 
     if patcher.eventlet_patched("threading"):
+        try:
+            from .thread import get_ident, get_main_thread_ident
+        except ImportError:
 
-        def eventlet_running_impl():
-            return True
+            def eventlet_running_impl():
+                return False
+
+        else:
+
+            def eventlet_running_impl():
+                global eventlet_running_impl
+
+                running = False
+
+                if get_ident() == get_main_thread_ident():
+                    current_green_library_tlocal.name = "eventlet"
+
+                    def eventlet_running_impl():
+                        return False
+
+                    running = True
+
+                return running
 
     else:
 
@@ -79,9 +99,29 @@ def gevent_running_impl():
     global gevent_running_impl
 
     if patcher.gevent_patched("threading"):
+        try:
+            from .thread import get_ident, get_main_thread_ident
+        except ImportError:
 
-        def gevent_running_impl():
-            return True
+            def gevent_running_impl():
+                return False
+
+        else:
+
+            def gevent_running_impl():
+                global gevent_running_impl
+
+                running = False
+
+                if get_ident() == get_main_thread_ident():
+                    current_green_library_tlocal.name = "gevent"
+
+                    def gevent_running_impl():
+                        return False
+
+                    running = True
+
+                return running
 
     else:
 
