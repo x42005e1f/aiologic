@@ -30,15 +30,17 @@ class Condition:
 
     @staticmethod
     def __new__(cls, /, lock=MISSING):
-        if lock is MISSING:
-            lock = RLock()
-
         self = super(Condition, cls).__new__(cls)
 
         self.__waiters = deque()
         self.__timer = count().__next__
 
-        self.lock = lock
+        if lock is MISSING:
+            self.lock = RLock()
+        elif isinstance(lock, Condition):
+            self.lock = lock.lock
+        else:
+            self.lock = lock
 
         return self
 
