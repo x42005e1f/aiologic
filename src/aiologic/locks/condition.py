@@ -10,7 +10,7 @@ import time
 from itertools import count
 from collections import deque
 
-from aiologic.lowlevel import AsyncEvent, GreenEvent, shield
+from aiologic.lowlevel import AsyncEvent, GreenEvent, repeat_if_cancelled
 
 from .lock import RLock
 from .limiter import RCapacityLimiter
@@ -81,12 +81,13 @@ class Condition:
                 success = yield from event.__await__()
             finally:
                 if isinstance(lock, (RLock, RCapacityLimiter)):
-                    yield from shield(
-                        lock._async_acquire_restore(state),
+                    yield from repeat_if_cancelled(
+                        lock._async_acquire_restore,
+                        state,
                     ).__await__()
                 else:
-                    yield from shield(
-                        lock.__aenter__(),
+                    yield from repeat_if_cancelled(
+                        lock.__aenter__,
                     ).__await__()
         finally:
             if success or event.set():

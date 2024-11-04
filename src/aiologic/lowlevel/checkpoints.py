@@ -4,10 +4,10 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "shield",
     "checkpoint",
     "green_checkpoint",
     "checkpoint_if_cancelled",
+    "repeat_if_cancelled",
     "cancel_shielded_checkpoint",
     "threading_checkpoints_cvar",
     "eventlet_checkpoints_cvar",
@@ -97,75 +97,6 @@ def green_checkpoint(*, force=False):
     elif library == "gevent":
         if force or gevent_checkpoints_cvar.get():
             gevent_checkpoint()
-
-
-async def asyncio_shield(coro):
-    global asyncio_shield
-
-    try:
-        from anyio import CancelScope
-    except ImportError:
-        try:
-            from asyncio import shield as asyncio_shield
-        except ImportError:
-
-            async def asyncio_shield(coro):
-                raise NotImplementedError
-
-    else:
-
-        async def asyncio_shield(coro):
-            with CancelScope(shield=True):
-                return await coro
-
-    return await asyncio_shield(coro)
-
-
-async def curio_shield(coro):
-    global curio_shield
-
-    try:
-        from curio import disable_cancellation as curio_disable_cancellation
-    except ImportError:
-
-        async def curio_shield(coro):
-            raise NotImplementedError
-
-    else:
-
-        async def curio_shield(coro):
-            async with curio_disable_cancellation():
-                return await coro
-
-    return await curio_shield(coro)
-
-
-async def trio_shield(coro):
-    global trio_shield
-
-    try:
-        from anyio import CancelScope
-    except ImportError:
-        try:
-            from trio import CancelScope
-        except ImportError:
-
-            async def trio_shield(coro):
-                raise NotImplementedError
-
-        else:
-
-            async def trio_shield(coro):
-                with CancelScope(shield=True):
-                    return await coro
-
-    else:
-
-        async def trio_shield(coro):
-            with CancelScope(shield=True):
-                return await coro
-
-    return await trio_shield(coro)
 
 
 async def asyncio_checkpoint():
@@ -267,6 +198,78 @@ async def trio_checkpoint_if_cancelled():
     await trio_checkpoint_if_cancelled()
 
 
+async def asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+    global asyncio_repeat_if_cancelled
+
+    try:
+        from asyncio.exceptions import CancelledError
+    except ImportError:
+
+        async def asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+            raise NotImplementedError
+
+    else:
+
+        async def asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+            exc = None
+
+            while True:
+                try:
+                    result = await func(*args, **kwargs)
+                except CancelledError as e:
+                    exc = e
+                else:
+                    break
+
+            if exc is not None:
+                try:
+                    raise exc
+                finally:
+                    exc = None
+
+            return result
+
+    return await asyncio_repeat_if_cancelled(func, *args, **kwargs)
+
+
+async def curio_repeat_if_cancelled(func, /, *args, **kwargs):
+    global curio_repeat_if_cancelled
+
+    try:
+        from curio import disable_cancellation as curio_disable_cancellation
+    except ImportError:
+
+        async def curio_repeat_if_cancelled(func, /, *args, **kwargs):
+            raise NotImplementedError
+
+    else:
+
+        async def curio_repeat_if_cancelled(func, /, *args, **kwargs):
+            async with curio_disable_cancellation():
+                return await func(*args, **kwargs)
+
+    return await curio_repeat_if_cancelled(func, *args, **kwargs)
+
+
+async def trio_repeat_if_cancelled(func, /, *args, **kwargs):
+    global trio_repeat_if_cancelled
+
+    try:
+        from trio import CancelScope
+    except ImportError:
+
+        async def trio_repeat_if_cancelled(func, /, *args, **kwargs):
+            raise NotImplementedError
+
+    else:
+
+        async def trio_repeat_if_cancelled(func, /, *args, **kwargs):
+            with CancelScope(shield=True):
+                return await func(*args, **kwargs)
+
+    return await trio_repeat_if_cancelled(func, *args, **kwargs)
+
+
 async def asyncio_cancel_shielded_checkpoint():
     global asyncio_cancel_shielded_checkpoint
 
@@ -335,21 +338,6 @@ async def trio_cancel_shielded_checkpoint():
     await trio_cancel_shielded_checkpoint()
 
 
-async def shield(coro):
-    library = current_async_library()
-
-    if library == "asyncio":
-        result = await asyncio_shield(coro)
-    elif library == "curio":
-        result = await curio_shield(coro)
-    elif library == "trio":
-        result = await trio_shield(coro)
-    else:
-        raise RuntimeError(f"unsupported async library {library!r}")
-
-    return result
-
-
 async def checkpoint(*, force=False):
     try:
         library = current_async_library()
@@ -382,6 +370,21 @@ async def checkpoint_if_cancelled(*, force=False):
         elif library == "trio":
             if force or trio_checkpoints_cvar.get():
                 await trio_checkpoint_if_cancelled()
+
+
+async def repeat_if_cancelled(func, /, *args, **kwargs):
+    library = current_async_library()
+
+    if library == "asyncio":
+        result = await asyncio_repeat_if_cancelled(func, *args, **kwargs)
+    elif library == "curio":
+        result = await curio_repeat_if_cancelled(func, *args, **kwargs)
+    elif library == "trio":
+        result = await trio_repeat_if_cancelled(func, *args, **kwargs)
+    else:
+        raise RuntimeError(f"unsupported async library {library!r}")
+
+    return result
 
 
 async def cancel_shielded_checkpoint(*, force=False):
