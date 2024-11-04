@@ -90,13 +90,14 @@ class Condition:
                         lock.__aenter__,
                     ).__await__()
         finally:
-            if success or event.set():
-                try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
-            else:
-                self.notify()
+            if not success:
+                if event.set():
+                    try:
+                        waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
 
         return success
 
@@ -126,13 +127,14 @@ class Condition:
                 else:
                     lock.__enter__()
         finally:
-            if success or event.set():
-                try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
-            else:
-                self.notify()
+            if not success:
+                if event.set():
+                    try:
+                        waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
 
         return success
 
