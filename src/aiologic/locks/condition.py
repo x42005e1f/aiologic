@@ -10,7 +10,12 @@ import time
 from itertools import count
 from collections import deque
 
-from aiologic.lowlevel import AsyncEvent, GreenEvent, repeat_if_cancelled
+from aiologic.lowlevel import (
+    MISSING,
+    AsyncEvent,
+    GreenEvent,
+    repeat_if_cancelled,
+)
 
 from .lock import RLock
 
@@ -24,8 +29,8 @@ class Condition:
     )
 
     @staticmethod
-    def __new__(cls, /, lock=None):
-        if lock is None:
+    def __new__(cls, /, lock=MISSING):
+        if lock is MISSING:
             lock = RLock()
 
         self = super(Condition, cls).__new__(cls)
@@ -44,21 +49,47 @@ class Condition:
         return f"Condition({self.lock!r})"
 
     def __bool__(self, /):
-        return bool(self.lock)
+        if (lock := self.lock) is not None:
+            value = bool(lock)
+        else:
+            value = True
+
+        return value
 
     async def __aenter__(self, /):
-        return await self.lock.__aenter__()
+        if (lock := self.lock) is not None:
+            value = await lock.__aenter__()
+        else:
+            value = self
+
+        return value
 
     async def __aexit__(self, /, exc_type, exc_value, traceback):
-        return await self.lock.__aexit__(exc_type, exc_value, traceback)
+        if (lock := self.lock) is not None:
+            value = await lock.__aexit__(exc_type, exc_value, traceback)
+        else:
+            value = None
+
+        return value
 
     def __enter__(self, /):
-        return self.lock.__enter__()
+        if (lock := self.lock) is not None:
+            value = lock.__enter__()
+        else:
+            value = self
+
+        return value
 
     def __exit__(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
+        if (lock := self.lock) is not None:
+            value = lock.__exit__(exc_type, exc_value, traceback)
+        else:
+            value = None
+
+        return value
 
     def __await__(self, /):
+        lock = self.lock
         waiters = self.__waiters
         waiters.append(
             token := (
@@ -70,18 +101,22 @@ class Condition:
         success = False
 
         try:
-            if hasattr(self.lock, "__aexit__"):
-                state = yield from self._async_release_save().__await__()
-            else:
-                state = self._green_release_save()
+            if lock is not None:
+                if hasattr(lock, "__aexit__"):
+                    state = yield from self._async_release_save().__await__()
+                else:
+                    state = self._green_release_save()
 
             try:
                 success = yield from event.__await__()
             finally:
-                if hasattr(self.lock, "__aenter__"):
-                    yield from self._async_acquire_restore(state).__await__()
-                else:
-                    self._green_acquire_restore(state)
+                if lock is not None:
+                    if hasattr(lock, "__aenter__"):
+                        yield from self._async_acquire_restore(
+                            state,
+                        ).__await__()
+                    else:
+                        self._green_acquire_restore(state)
         finally:
             if not success:
                 if event.set():
@@ -95,6 +130,7 @@ class Condition:
         return success
 
     def wait(self, /, timeout=None):
+        lock = self.lock
         waiters = self.__waiters
         waiters.append(
             token := (
@@ -106,12 +142,14 @@ class Condition:
         success = False
 
         try:
-            state = self._green_release_save()
+            if lock is not None:
+                state = self._green_release_save()
 
             try:
                 success = event.wait(timeout)
             finally:
-                self._green_acquire_restore(state)
+                if lock is not None:
+                    self._green_acquire_restore(state)
         finally:
             if not success:
                 if event.set():
