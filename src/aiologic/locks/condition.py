@@ -13,7 +13,6 @@ from collections import deque
 from aiologic.lowlevel import AsyncEvent, GreenEvent, repeat_if_cancelled
 
 from .lock import RLock
-from .limiter import RCapacityLimiter
 
 
 class Condition:
@@ -60,7 +59,6 @@ class Condition:
         return self.lock.__exit__(exc_type, exc_value, traceback)
 
     def __await__(self, /):
-        lock = self.lock
         waiters = self.__waiters
         waiters.append(
             token := (
@@ -72,23 +70,18 @@ class Condition:
         success = False
 
         try:
-            if isinstance(lock, (RLock, RCapacityLimiter)):
-                state = lock._async_release_save()
+            if hasattr(self.lock, "__aexit__"):
+                state = yield from self._async_release_save().__await__()
             else:
-                yield from lock.__aexit__(None, None, None).__await__()
+                state = self._green_release_save()
 
             try:
                 success = yield from event.__await__()
             finally:
-                if isinstance(lock, (RLock, RCapacityLimiter)):
-                    yield from repeat_if_cancelled(
-                        lock._async_acquire_restore,
-                        state,
-                    ).__await__()
+                if hasattr(self.lock, "__aenter__"):
+                    yield from self._async_acquire_restore(state).__await__()
                 else:
-                    yield from repeat_if_cancelled(
-                        lock.__aenter__,
-                    ).__await__()
+                    self._green_acquire_restore(state)
         finally:
             if not success:
                 if event.set():
@@ -102,7 +95,6 @@ class Condition:
         return success
 
     def wait(self, /, timeout=None):
-        lock = self.lock
         waiters = self.__waiters
         waiters.append(
             token := (
@@ -114,18 +106,12 @@ class Condition:
         success = False
 
         try:
-            if isinstance(lock, (RLock, RCapacityLimiter)):
-                state = lock._green_release_save()
-            else:
-                lock.__exit__(None, None, None)
+            state = self._green_release_save()
 
             try:
                 success = event.wait(timeout)
             finally:
-                if isinstance(lock, (RLock, RCapacityLimiter)):
-                    lock._green_acquire_restore(state)
-                else:
-                    lock.__enter__()
+                self._green_acquire_restore(state)
         finally:
             if not success:
                 if event.set():
@@ -215,6 +201,46 @@ class Condition:
                     break
 
         return notified
+
+    async def _async_release_save(self, /):
+        lock = self.lock
+
+        if (func := getattr(lock, "_async_release_save", None)) is not None:
+            state = func()
+        else:
+            state = await lock.__aexit__(None, None, None)
+
+        return state
+
+    def _green_release_save(self, /):
+        lock = self.lock
+
+        if (func := getattr(lock, "_green_release_save", None)) is not None:
+            state = func()
+        elif (func := getattr(lock, "_release_save", None)) is not None:
+            state = func()
+        else:
+            state = lock.__exit__(None, None, None)
+
+        return state
+
+    async def _async_acquire_restore(self, /, state):
+        lock = self.lock
+
+        if (func := getattr(lock, "_async_acquire_restore", None)) is not None:
+            func(state)
+        else:
+            await repeat_if_cancelled(lock.__aenter__)
+
+    def _green_acquire_restore(self, /, state):
+        lock = self.lock
+
+        if (func := getattr(lock, "_green_acquire_restore", None)) is not None:
+            func(state)
+        elif (func := getattr(lock, "_acquire_restore", None)) is not None:
+            func(state)
+        else:
+            lock.__enter__()
 
     @property
     def waiting(self, /):
