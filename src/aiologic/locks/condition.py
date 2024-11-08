@@ -187,9 +187,6 @@ class Condition:
     def notify(self, /, count=1, *, deadline=None):
         waiters = self.__waiters
 
-        if deadline is None:
-            deadline = self.__timer()
-
         notified = 0
 
         while waiters and notified != count:
@@ -199,6 +196,9 @@ class Condition:
                 break
             else:
                 event, time = token
+
+                if deadline is None:
+                    deadline = self.__timer()
 
                 if time <= deadline:
                     if event.set():
@@ -216,9 +216,6 @@ class Condition:
     def notify_all(self, /, *, deadline=None):
         waiters = self.__waiters
 
-        if deadline is None:
-            deadline = self.__timer()
-
         notified = 0
 
         while waiters:
@@ -228,6 +225,9 @@ class Condition:
                 break
             else:
                 event, time = token
+
+                if deadline is None:
+                    deadline = self.__timer()
 
                 if time <= deadline:
                     if event.set():

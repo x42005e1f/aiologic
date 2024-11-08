@@ -279,9 +279,6 @@ class REvent:
         waiters = self.__waiters
         is_unset = self.__is_unset
 
-        if deadline is None:
-            deadline = self.__timer()
-
         while waiters:
             try:
                 token = waiters[0]
@@ -289,6 +286,9 @@ class REvent:
                 break
             else:
                 event, marker, time, _ = token
+
+                if deadline is None:
+                    deadline = self.__timer()
 
                 if time <= deadline and marker is not is_unset.get(None):
                     token[3] = deadline
@@ -468,9 +468,6 @@ class CountdownEvent:
     def __wakeup(self, /, deadline=None):
         waiters = self.__waiters
 
-        if deadline is None:
-            deadline = self.__timer()
-
         while waiters:
             try:
                 token = waiters[0]
@@ -478,6 +475,9 @@ class CountdownEvent:
                 break
             else:
                 event, marker, time, _ = token
+
+                if deadline is None:
+                    deadline = self.__timer()
 
                 if time <= deadline and marker is not self.__get():
                     token[3] = deadline
