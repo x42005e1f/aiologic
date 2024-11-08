@@ -4,8 +4,9 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "checkpoint",
+    "async_checkpoint",
     "green_checkpoint",
+    "checkpoint",
     "checkpoint_if_cancelled",
     "repeat_if_cancelled",
     "cancel_shielded_checkpoint",
@@ -353,6 +354,9 @@ async def checkpoint(*, force=False):
         elif library == "trio":
             if force or trio_checkpoints_cvar.get():
                 await trio_checkpoint()
+
+
+async_checkpoint = checkpoint
 
 
 async def checkpoint_if_cancelled(*, force=False):
