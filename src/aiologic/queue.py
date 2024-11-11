@@ -12,7 +12,7 @@ __all__ = (
     "PriorityQueue",
 )
 
-from heapq import heappop, heappush
+from heapq import heapify, heappop, heappush
 from collections import deque
 
 from aiologic.lowlevel import (
@@ -531,7 +531,11 @@ class PriorityQueue(Queue):
     __slots__ = ()
 
     def _init(self, /, items, maxsize):
-        self._data = list(items)
+        data = list(items)
+
+        heapify(data)
+
+        self._data = data
 
     def _put(self, /, item):
         heappush(self._data, item)
