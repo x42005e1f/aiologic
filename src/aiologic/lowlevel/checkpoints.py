@@ -25,11 +25,7 @@ import platform
 from functools import partial
 from contextvars import ContextVar
 
-from .libraries import (
-    AsyncLibraryNotFoundError,
-    current_async_library,
-    current_green_library,
-)
+from .libraries import current_async_library, current_green_library
 
 PYTHON_IMPLEMENTATION = platform.python_implementation()
 
@@ -340,40 +336,34 @@ async def trio_cancel_shielded_checkpoint():
 
 
 async def checkpoint(*, force=False):
-    try:
-        library = current_async_library()
-    except AsyncLibraryNotFoundError:
-        pass
-    else:
-        if library == "asyncio":
-            if force or asyncio_checkpoints_cvar.get():
-                await asyncio_checkpoint()
-        elif library == "curio":
-            if force or curio_checkpoints_cvar.get():
-                await curio_checkpoint()
-        elif library == "trio":
-            if force or trio_checkpoints_cvar.get():
-                await trio_checkpoint()
+    library = current_async_library(failsafe=True)
+
+    if library == "asyncio":
+        if force or asyncio_checkpoints_cvar.get():
+            await asyncio_checkpoint()
+    elif library == "curio":
+        if force or curio_checkpoints_cvar.get():
+            await curio_checkpoint()
+    elif library == "trio":
+        if force or trio_checkpoints_cvar.get():
+            await trio_checkpoint()
 
 
 async_checkpoint = checkpoint
 
 
 async def checkpoint_if_cancelled(*, force=False):
-    try:
-        library = current_async_library()
-    except AsyncLibraryNotFoundError:
-        pass
-    else:
-        if library == "asyncio":
-            if force or asyncio_checkpoints_cvar.get():
-                await asyncio_checkpoint_if_cancelled()
-        elif library == "curio":
-            if force or curio_checkpoints_cvar.get():
-                await curio_checkpoint_if_cancelled()
-        elif library == "trio":
-            if force or trio_checkpoints_cvar.get():
-                await trio_checkpoint_if_cancelled()
+    library = current_async_library(failsafe=True)
+
+    if library == "asyncio":
+        if force or asyncio_checkpoints_cvar.get():
+            await asyncio_checkpoint_if_cancelled()
+    elif library == "curio":
+        if force or curio_checkpoints_cvar.get():
+            await curio_checkpoint_if_cancelled()
+    elif library == "trio":
+        if force or trio_checkpoints_cvar.get():
+            await trio_checkpoint_if_cancelled()
 
 
 async def repeat_if_cancelled(func, /, *args, **kwargs):
@@ -392,17 +382,14 @@ async def repeat_if_cancelled(func, /, *args, **kwargs):
 
 
 async def cancel_shielded_checkpoint(*, force=False):
-    try:
-        library = current_async_library()
-    except AsyncLibraryNotFoundError:
-        pass
-    else:
-        if library == "asyncio":
-            if force or asyncio_checkpoints_cvar.get():
-                await asyncio_cancel_shielded_checkpoint()
-        elif library == "curio":
-            if force or curio_checkpoints_cvar.get():
-                await curio_cancel_shielded_checkpoint()
-        elif library == "trio":
-            if force or trio_checkpoints_cvar.get():
-                await trio_cancel_shielded_checkpoint()
+    library = current_async_library(failsafe=True)
+
+    if library == "asyncio":
+        if force or asyncio_checkpoints_cvar.get():
+            await asyncio_cancel_shielded_checkpoint()
+    elif library == "curio":
+        if force or curio_checkpoints_cvar.get():
+            await curio_cancel_shielded_checkpoint()
+    elif library == "trio":
+        if force or trio_checkpoints_cvar.get():
+            await trio_cancel_shielded_checkpoint()
