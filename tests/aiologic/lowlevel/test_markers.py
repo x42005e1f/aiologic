@@ -1,32 +1,47 @@
 #!/usr/bin/env python3
 
 import pickle
+import weakref
+import platform  # noqa: F401
 
 import pytest
 import aiologic.lowlevel
 
 
-def test_none():
-    assert type(None)() is None
-    assert pickle.loads(pickle.dumps(None)) is None
-    assert repr(None) == "None"
-    assert not None
+class _TestMarker:
+    def test_base(self, /):
+        assert type(self.value)() is self.value  # singleton
+        assert repr(self.value) == self.name
+        assert not self.value
 
-    with pytest.raises(TypeError):
+    def test_attrs(self, /):
+        with pytest.raises(AttributeError):
+            self.value.nonexistent_attribute
+        with pytest.raises(AttributeError):
+            self.value.nonexistent_attribute = 42
+        with pytest.raises(AttributeError):
+            del self.value.nonexistent_attribute
 
-        class NoneType(type(None)):
-            pass
+    def test_pickling(self, /):
+        assert pickle.loads(pickle.dumps(self.value)) is self.value
+
+    @pytest.mark.skipif("platform.python_implementation() == 'PyPy'")
+    def test_weakrefing(self, /):
+        with pytest.raises(TypeError):
+            weakref.ref(self.value)
+
+    def test_inheritance(self, /):
+        with pytest.raises(TypeError):
+
+            class MarkerType(type(self.value)):
+                pass
 
 
-def test_missing():  # like None
-    MISSING = aiologic.lowlevel.MISSING
+class TestNone(_TestMarker):
+    name = "None"
+    value = None
 
-    assert type(MISSING)() is MISSING
-    assert pickle.loads(pickle.dumps(MISSING)) is MISSING
-    assert repr(MISSING) == "MISSING"
-    assert not MISSING
 
-    with pytest.raises(TypeError):
-
-        class MissingType(type(MISSING)):
-            pass
+class TestMissing(_TestMarker):  # like None
+    name = "MISSING"
+    value = aiologic.lowlevel.MISSING
