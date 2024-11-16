@@ -11,12 +11,7 @@ class MissingType:
 
     @staticmethod
     def __new__(cls, /):
-        if cls is MissingType:
-            self = MISSING
-        else:
-            self = super(MissingType, cls).__new__(cls)
-
-        return self
+        return MISSING
 
     @classmethod
     def __init_subclass__(cls, /, **kwargs):
