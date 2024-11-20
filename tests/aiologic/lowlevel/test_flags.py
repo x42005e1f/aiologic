@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
+import time
 import pickle
+
+from concurrent.futures import ThreadPoolExecutor, wait
 
 import pytest
 import aiologic.lowlevel
@@ -105,3 +108,103 @@ class TestFlag:
         assert flag
         assert copy1
         assert not copy2
+
+    def test_base_thread_safety(self, /):
+        with ThreadPoolExecutor() as executor:
+            flag = self.factory()
+            stop = False
+
+            def f():
+                while not stop:
+                    marker = repr(flag)
+
+                    if not flag.set(marker):
+                        flag.clear()
+                    else:
+                        while not flag and not stop:
+                            time.sleep(0)
+
+            futures = [executor.submit(f), executor.submit(f)]
+
+            try:
+                time.sleep(6)
+            finally:
+                stop = True
+
+            wait(futures)
+
+    def test_set_and_get_thread_safety(self, /):
+        with ThreadPoolExecutor() as executor:
+            flag = self.factory()
+            stop = False
+
+            def a():
+                while not stop:
+                    flag.clear()
+                    time.sleep(0)
+
+            def b():
+                marker = object()
+
+                while not stop:
+                    if flag.set(marker):
+                        assert flag.get(marker) is marker
+                    else:
+                        assert flag.get(None) is not marker
+
+            futures = [executor.submit(a), executor.submit(b)]
+
+            try:
+                time.sleep(6)
+            finally:
+                stop = True
+
+            wait(futures)
+
+    def test_set_and_clear_thread_safety(self, /):
+        with ThreadPoolExecutor() as executor:
+            flag = self.factory()
+            stop = False
+
+            def a():
+                while not stop:
+                    flag.clear()
+                    time.sleep(0)
+
+            def b():
+                while not stop:
+                    flag.set()
+                    flag.clear()
+
+            futures = [executor.submit(a), executor.submit(b)]
+
+            try:
+                time.sleep(6)
+            finally:
+                stop = True
+
+            wait(futures)
+
+    def test_pickling_thread_safety(self, /):
+        with ThreadPoolExecutor() as executor:
+            flag = self.factory()
+            stop = False
+
+            def a():
+                while not stop:
+                    flag.clear()
+                    time.sleep(0)
+
+            def b():
+                while not stop:
+                    flag.set(None)
+                    pickle.dumps(flag)
+
+            futures = [executor.submit(a), executor.submit(b)]
+
+            try:
+                time.sleep(6)
+            finally:
+                stop = True
+
+            wait(futures)
