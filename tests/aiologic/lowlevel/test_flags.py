@@ -87,27 +87,45 @@ class TestFlag:
 
     def test_pickling(self, /):
         flag = self.factory()
+        copy = pickle.loads(pickle.dumps(flag))
 
         assert not flag
+        assert not copy
 
-        copy1 = pickle.loads(pickle.dumps(flag))
-        copy2 = pickle.loads(pickle.dumps(flag))
-
-        assert not flag
-        assert not copy1
-        assert not copy2
-
-        copy1.set()
+        copy.set()
 
         assert not flag
-        assert copy1
-        assert not copy2
+        assert copy
+
+        copy = pickle.loads(pickle.dumps(flag))
+
+        assert not flag
+        assert not copy
 
         flag.set()
 
         assert flag
-        assert copy1
-        assert not copy2
+        assert not copy
+
+        copy = pickle.loads(pickle.dumps(flag))
+
+        assert flag
+        assert copy
+
+        copy.clear()
+
+        assert flag
+        assert not copy
+
+        copy = pickle.loads(pickle.dumps(flag))
+
+        assert flag
+        assert copy
+
+        flag.clear()
+
+        assert not flag
+        assert copy
 
     def test_base_thread_safety(self, /):
         with ThreadPoolExecutor() as executor:
