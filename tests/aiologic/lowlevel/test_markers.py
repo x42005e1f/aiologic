@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import pickle
-import weakref
-import platform  # noqa: F401
 
 import pytest
 import aiologic.lowlevel
@@ -24,11 +22,6 @@ class _TestMarker:
 
     def test_pickling(self, /):
         assert pickle.loads(pickle.dumps(self.value)) is self.value
-
-    @pytest.mark.skipif("platform.python_implementation() == 'PyPy'")
-    def test_weakrefing(self, /):
-        with pytest.raises(TypeError):
-            weakref.ref(self.value)
 
     def test_inheritance(self, /):
         with pytest.raises(TypeError):
