@@ -3,8 +3,10 @@ aiologic
 ========
 
 **aiologic** is an async-aware library for tasks synchronization and their
-communication in different threads and different event loops. Let's take a look
-at the example:
+communication in different threads and different event loops. For example, if
+there is interaction between classic synchronous (threaded) code and
+asynchronous one, between two asynchronous codes in different threads, or any
+other combination that you want. Let's take a look at the example:
 
 .. code:: python
 
@@ -56,8 +58,10 @@ Why?
 ====
 
 Cooperative (coroutines, greenlets) and preemptive (threads) multitasking are
-not usually used together. But there are situations when these so different
-styles need to coexist:
+not usually used together. Typically, you have an application that uses only
+threads (classic application) or only coroutines/greenlets (asynchronous
+application). But there are situations when these so different styles need to
+coexist:
 
 * Interaction of two or more frameworks that cannot be run in the same event
   loop (e.g. a GUI framework with any other framework).
@@ -66,6 +70,8 @@ styles need to coexist:
   response times).
 * Simultaneous use of incompatible concurrency libraries in different threads
   (e.g. due to legacy code).
+* `Accelerating asynchronous applications in a nogil world
+  <https://discuss.python.org/t/asyncio-in-a-nogil-world/30694>`_.
 
 Known solutions (only for some special cases) use one of the following ideas:
 
@@ -170,3 +176,47 @@ per-object locks also ensure that `the same operations are still atomic
 <https://peps.python.org/pep-0703/#container-thread-safety>`_, so aiologic also
 works when running in a `free-threaded mode
 <https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`_.
+
+Installation
+============
+
+Install from `PyPI <https://pypi.org/project/aiologic/>`_ (recommended):
+
+.. code:: console
+
+    pip install aiologic
+
+Or from `GitHub <https://github.com/x42005e1f/aiologic>`_:
+
+.. code:: console
+
+    pip install git+https://github.com/x42005e1f/aiologic.git
+
+You can also use other package managers, such as
+`uv <https://github.com/astral-sh/uv>`_.
+
+Communication channels
+======================
+
+GitHub Discussions: https://github.com/x42005e1f/aiologic/discussions
+
+Feel free to post your questions and ideas here.
+
+Derivatives
+===========
+
+* `x42005e1f/culsans <https://github.com/x42005e1f/culsans>`_ - Janus-like
+  sync-async queue. Unlike ``aiologic`` queues, provides API compatible
+  interfaces.
+
+Stars
+=====
+
+.. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
+  :target: https://starchart.cc/x42005e1f/aiologic
+
+License
+=======
+
+The ``aiologic`` library is offered under the
+`ISC License <https://spdx.org/licenses/ISC.html>`_.
