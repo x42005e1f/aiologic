@@ -237,22 +237,19 @@ class Queue:
     def __release(self, /):
         maxsize = self.maxsize
 
-        waiters = self.__waiters
-        put_waiters = self.__put_waiters
-        get_waiters = self.__get_waiters
         unlocked = self.__unlocked
 
         while True:
             size = self._qsize()
 
             if not size:
-                actual_waiters = put_waiters
+                actual_waiters = self.__put_waiters
             elif size >= maxsize > 0:
-                actual_waiters = get_waiters
+                actual_waiters = self.__get_waiters
             else:
-                actual_waiters = waiters
+                actual_waiters = self.__waiters
 
-            if actual_waiters:
+            while actual_waiters:
                 try:
                     event = actual_waiters.popleft()
                 except IndexError:
@@ -260,18 +257,14 @@ class Queue:
                 else:
                     if event.set():
                         break
-                    else:
+            else:
+                unlocked.append(True)
+
+                if actual_waiters:
+                    if self.__acquire_nowait():
                         continue
 
-            unlocked.append(True)
-
-            if actual_waiters:
-                if self.__acquire_nowait():
-                    continue
-                else:
-                    break
-            else:
-                break
+            break
 
     async def async_put(self, /, item, *, blocking=True):
         waiters = self.__waiters
