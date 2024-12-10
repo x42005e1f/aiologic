@@ -183,6 +183,57 @@ class Queue:
 
         return success
 
+    def __acquire_nowait_put(self, /):
+        maxsize = self.maxsize
+
+        if unlocked := self.__unlocked:
+            if maxsize <= 0:
+                try:
+                    unlocked.pop()
+                except IndexError:
+                    success = False
+                else:
+                    success = True
+            elif self._qsize() < maxsize:
+                try:
+                    unlocked.pop()
+                except IndexError:
+                    success = False
+                else:
+                    if self._qsize() < maxsize:
+                        success = True
+                    else:
+                        self.__release()
+
+                        success = False
+            else:
+                success = False
+        else:
+            success = False
+
+        return success
+
+    def __acquire_nowait_get(self, /):
+        if unlocked := self.__unlocked:
+            if self._qsize() > 0:
+                try:
+                    unlocked.pop()
+                except IndexError:
+                    success = False
+                else:
+                    if self._qsize() > 0:
+                        success = True
+                    else:
+                        self.__release()
+
+                        success = False
+            else:
+                success = False
+        else:
+            success = False
+
+        return success
+
     def __release(self, /):
         maxsize = self.maxsize
 
@@ -223,22 +274,10 @@ class Queue:
                 break
 
     async def async_put(self, /, item, *, blocking=True):
-        maxsize = self.maxsize
-
         waiters = self.__waiters
         put_waiters = self.__put_waiters
 
-        if maxsize <= 0:
-            success = self.__acquire_nowait()
-        elif self._qsize() < maxsize:
-            success = self.__acquire_nowait()
-
-            if success and self._qsize() >= maxsize:
-                self.__release()
-
-                success = False
-        else:
-            success = False
+        success = self.__acquire_nowait_put()
 
         if blocking:
             rescheduled = False
@@ -250,17 +289,7 @@ class Queue:
                 put_waiters.append(event)
 
                 try:
-                    if maxsize <= 0:
-                        success = self.__acquire_nowait()
-                    elif self._qsize() < maxsize:
-                        success = self.__acquire_nowait()
-
-                        if success and self._qsize() >= maxsize:
-                            self.__release()
-
-                            success = False
-                    else:
-                        success = False
+                    success = self.__acquire_nowait_put()
 
                     if not success:
                         success = await event
@@ -291,22 +320,10 @@ class Queue:
             self.__release()
 
     def green_put(self, /, item, *, blocking=True, timeout=None):
-        maxsize = self.maxsize
-
         waiters = self.__waiters
         put_waiters = self.__put_waiters
 
-        if maxsize <= 0:
-            success = self.__acquire_nowait()
-        elif self._qsize() < maxsize:
-            success = self.__acquire_nowait()
-
-            if success and self._qsize() >= maxsize:
-                self.__release()
-
-                success = False
-        else:
-            success = False
+        success = self.__acquire_nowait_put()
 
         if blocking:
             rescheduled = False
@@ -318,17 +335,7 @@ class Queue:
                 put_waiters.append(event)
 
                 try:
-                    if maxsize <= 0:
-                        success = self.__acquire_nowait()
-                    elif self._qsize() < maxsize:
-                        success = self.__acquire_nowait()
-
-                        if success and self._qsize() >= maxsize:
-                            self.__release()
-
-                            success = False
-                    else:
-                        success = False
+                    success = self.__acquire_nowait_put()
 
                     if not success:
                         success = event.wait(timeout)
@@ -362,15 +369,7 @@ class Queue:
         waiters = self.__waiters
         get_waiters = self.__get_waiters
 
-        if self._qsize() > 0:
-            success = self.__acquire_nowait()
-
-            if success and self._qsize() <= 0:
-                self.__release()
-
-                success = False
-        else:
-            success = False
+        success = self.__acquire_nowait_get()
 
         if blocking:
             rescheduled = False
@@ -382,15 +381,7 @@ class Queue:
                 get_waiters.append(event)
 
                 try:
-                    if self._qsize() > 0:
-                        success = self.__acquire_nowait()
-
-                        if success and self._qsize() <= 0:
-                            self.__release()
-
-                            success = False
-                    else:
-                        success = False
+                    success = self.__acquire_nowait_get()
 
                     if not success:
                         success = await event
@@ -426,15 +417,7 @@ class Queue:
         waiters = self.__waiters
         get_waiters = self.__get_waiters
 
-        if self._qsize() > 0:
-            success = self.__acquire_nowait()
-
-            if success and self._qsize() <= 0:
-                self.__release()
-
-                success = False
-        else:
-            success = False
+        success = self.__acquire_nowait_get()
 
         if blocking:
             rescheduled = False
@@ -446,15 +429,7 @@ class Queue:
                 get_waiters.append(event)
 
                 try:
-                    if self._qsize() > 0:
-                        success = self.__acquire_nowait()
-
-                        if success and self._qsize() <= 0:
-                            self.__release()
-
-                            success = False
-                    else:
-                        success = False
+                    success = self.__acquire_nowait_get()
 
                     if not success:
                         success = event.wait(timeout)
