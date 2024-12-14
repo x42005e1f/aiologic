@@ -15,15 +15,14 @@ __all__ = (
 from heapq import heapify, heappop, heappush
 from collections import deque
 
-from aiologic.lowlevel import (
+from .locks import Semaphore
+from .lowlevel import (
+    MISSING,
     AsyncEvent,
     GreenEvent,
     checkpoint,
     green_checkpoint,
 )
-
-from .locks import Semaphore
-from .lowlevel import MISSING
 
 
 class QueueEmpty(Exception):
