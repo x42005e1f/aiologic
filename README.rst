@@ -265,8 +265,11 @@ Derivatives
   sync-async queue. Unlike ``aiologic`` queues, provides API compatible
   interfaces.
 
-Stars
-=====
+Support
+=======
+
+If you like ``aiologic`` and want to support its development, star `its
+repository on GitHub <https://github.com/x42005e1f/aiologic>`_.
 
 .. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
   :target: https://starchart.cc/x42005e1f/aiologic
