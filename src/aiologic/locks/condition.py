@@ -268,7 +268,7 @@ class Condition:
         lock = self.lock
 
         if (func := getattr(lock, "_async_acquire_restore", None)) is not None:
-            func(state)
+            await func(state)
         else:
             await repeat_if_cancelled(lock.__aenter__)
 
