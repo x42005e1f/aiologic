@@ -121,7 +121,7 @@ class Condition:
                         self._green_acquire_restore(state)
         finally:
             if not success:
-                if event.set():
+                if event.cancel():
                     try:
                         waiters.remove(token)
                     except ValueError:
@@ -154,7 +154,7 @@ class Condition:
                     self._green_acquire_restore(state)
         finally:
             if not success:
-                if event.set():
+                if event.cancel():
                     try:
                         waiters.remove(token)
                     except ValueError:

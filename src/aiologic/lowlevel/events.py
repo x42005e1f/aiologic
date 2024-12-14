@@ -5,6 +5,8 @@
 
 __all__ = (
     "DUMMY_EVENT",
+    "Event",
+    "DummyEvent",
     "GreenEvent",
     "AsyncEvent",
 )
@@ -16,7 +18,31 @@ from .libraries import current_async_library, current_green_library
 from .checkpoints import checkpoint, green_checkpoint
 
 
-class DummyEvent:
+class Event(ABC):
+    __slots__ = ()
+
+    @abstractmethod
+    def __bool__(self, /):
+        return self.is_set()
+
+    @abstractmethod
+    def set(self, /):
+        raise NotImplementedError
+
+    @abstractmethod
+    def cancel(self, /):
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_set(self, /):
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_cancelled(self, /):
+        raise NotImplementedError
+
+
+class DummyEvent(Event):
     __slots__ = ()
 
     @staticmethod
@@ -54,14 +80,58 @@ class DummyEvent:
     def set(self, /):
         return False
 
+    def cancel(self, /):
+        return False
+
     def is_set(self, /):
         return True
+
+    def is_cancelled(self, /):
+        return False
 
 
 DUMMY_EVENT = object.__new__(DummyEvent)
 
 
-class GreenEvent(ABC):
+class BaseEvent(Event):
+    __slots__ = (
+        "_is_unset",
+        "_is_cancelled",
+    )
+
+    @staticmethod
+    def __new__(cls, /):
+        self = super(BaseEvent, cls).__new__(cls)
+
+        self._is_unset = [True]
+        self._is_cancelled = False
+
+        return self
+
+    def __bool__(self, /):
+        return not self._is_unset
+
+    def cancel(self, /):
+        cancelled = self._is_cancelled
+
+        if not cancelled and (is_unset := self._is_unset):
+            try:
+                is_unset.pop()
+            except IndexError:
+                pass
+            else:
+                self._is_cancelled = cancelled = True
+
+        return cancelled
+
+    def is_set(self, /):
+        return not self._is_unset
+
+    def is_cancelled(self, /):
+        return self._is_cancelled
+
+
+class GreenEvent(BaseEvent):
     __slots__ = ()
 
     @staticmethod
@@ -83,20 +153,8 @@ class GreenEvent(ABC):
         return self
 
     @abstractmethod
-    def __bool__(self, /):
-        return self.is_set()
-
-    @abstractmethod
     def wait(self, /, timeout=None):
         raise NotImplementedError
-
-    @abstractmethod
-    def set(self, /):
-        raise NotImplementedError
-
-    @abstractmethod
-    def is_set(self, /):
-        return bool(self)
 
 
 def get_threading_event_class():
@@ -105,16 +163,11 @@ def get_threading_event_class():
     from .thread import allocate_lock
 
     class ThreadingEvent(GreenEvent):
-        __slots__ = (
-            "__is_unset",
-            "__lock",
-        )
+        __slots__ = ("__lock",)
 
         @staticmethod
         def __new__(cls, /):
             self = super(ThreadingEvent, cls).__new__(cls)
-
-            self.__is_unset = [True]
 
             self.__lock = allocate_lock()
             self.__lock.acquire()
@@ -130,13 +183,10 @@ def get_threading_event_class():
         def __reduce__(self, /):
             raise TypeError(f"cannot reduce {self!r}")
 
-        def __bool__(self, /):
-            return not self.__is_unset
-
         def wait(self, /, timeout=None):
             success = True
 
-            if self.__is_unset:
+            if self._is_unset:
                 if timeout is None:
                     success = self.__lock.acquire()
                 elif timeout > 0:
@@ -151,7 +201,7 @@ def get_threading_event_class():
         def set(self, /):
             success = True
 
-            if is_unset := self.__is_unset:
+            if is_unset := self._is_unset:
                 try:
                     is_unset.pop()
                 except IndexError:
@@ -162,9 +212,6 @@ def get_threading_event_class():
                 success = False
 
             return success
-
-        def is_set(self, /):
-            return not self.__is_unset
 
     return ThreadingEvent
 
@@ -193,7 +240,6 @@ def get_eventlet_event_class():
 
     class EventletEvent(GreenEvent):
         __slots__ = (
-            "__is_unset",
             "__hub",
             "__greenlet",
         )
@@ -201,8 +247,6 @@ def get_eventlet_event_class():
         @staticmethod
         def __new__(cls, /):
             self = super(EventletEvent, cls).__new__(cls)
-
-            self.__is_unset = [True]
 
             self.__hub = get_eventlet_hub()
             self.__greenlet = None
@@ -218,13 +262,10 @@ def get_eventlet_event_class():
         def __reduce__(self, /):
             raise TypeError(f"cannot reduce {self!r}")
 
-        def __bool__(self, /):
-            return not self.__is_unset
-
         def wait(self, /, timeout=None):
             success = True
 
-            if self.__is_unset:
+            if self._is_unset:
                 self.__greenlet = current_greenlet()
 
                 try:
@@ -251,12 +292,7 @@ def get_eventlet_event_class():
                         if timer is not None:
                             timer.cancel()
                 except BaseException:
-                    if is_unset := self.__is_unset:
-                        try:
-                            is_unset.pop()
-                        except IndexError:
-                            pass
-
+                    self.cancel()
                     raise
                 finally:
                     self.__greenlet = None
@@ -272,7 +308,7 @@ def get_eventlet_event_class():
         def set(self, /):
             success = True
 
-            if is_unset := self.__is_unset:
+            if is_unset := self._is_unset:
                 try:
                     is_unset.pop()
                 except IndexError:
@@ -297,9 +333,6 @@ def get_eventlet_event_class():
 
             return success
 
-        def is_set(self, /):
-            return not self.__is_unset
-
     return EventletEvent
 
 
@@ -316,7 +349,6 @@ def get_gevent_event_class():
 
     class GeventEvent(GreenEvent):
         __slots__ = (
-            "__is_unset",
             "__hub",
             "__event",
         )
@@ -324,8 +356,6 @@ def get_gevent_event_class():
         @staticmethod
         def __new__(cls, /):
             self = super(GeventEvent, cls).__new__(cls)
-
-            self.__is_unset = [True]
 
             self.__hub = get_gevent_hub()
             self.__event = None
@@ -341,13 +371,10 @@ def get_gevent_event_class():
         def __reduce__(self, /):
             raise TypeError(f"cannot reduce {self!r}")
 
-        def __bool__(self, /):
-            return not self.__is_unset
-
         def wait(self, /, timeout=None):
             success = True
 
-            if self.__is_unset:
+            if self._is_unset:
                 self.__event = GeventPEvent()
 
                 try:
@@ -378,12 +405,7 @@ def get_gevent_event_class():
                             del hub._aiologic_watcher
                             del hub._aiologic_watcher_count
                 except BaseException:
-                    if is_unset := self.__is_unset:
-                        try:
-                            is_unset.pop()
-                        except IndexError:
-                            pass
-
+                    self.cancel()
                     raise
                 finally:
                     self.__event = None
@@ -399,7 +421,7 @@ def get_gevent_event_class():
         def set(self, /):
             success = True
 
-            if is_unset := self.__is_unset:
+            if is_unset := self._is_unset:
                 try:
                     is_unset.pop()
                 except IndexError:
@@ -419,9 +441,6 @@ def get_gevent_event_class():
                 success = False
 
             return success
-
-        def is_set(self, /):
-            return not self.__is_unset
 
     return GeventEvent
 
@@ -471,7 +490,7 @@ class GeventEvent(GreenEvent):
         return self
 
 
-class AsyncEvent(ABC):
+class AsyncEvent(BaseEvent):
     __slots__ = ()
 
     @staticmethod
@@ -491,20 +510,8 @@ class AsyncEvent(ABC):
         return self
 
     @abstractmethod
-    def __bool__(self, /):
-        return self.is_set()
-
-    @abstractmethod
     def __await__(self, /):
         raise NotImplementedError
-
-    @abstractmethod
-    def set(self, /):
-        raise NotImplementedError
-
-    @abstractmethod
-    def is_set(self, /):
-        return bool(self)
 
 
 def get_asyncio_event_class():
@@ -515,7 +522,6 @@ def get_asyncio_event_class():
 
     class AsyncioEvent(AsyncEvent):
         __slots__ = (
-            "__is_unset",
             "__loop",
             "__future",
         )
@@ -523,8 +529,6 @@ def get_asyncio_event_class():
         @staticmethod
         def __new__(cls, /):
             self = super(AsyncioEvent, cls).__new__(cls)
-
-            self.__is_unset = [True]
 
             self.__loop = get_running_asyncio_loop()
             self.__future = None
@@ -540,22 +544,14 @@ def get_asyncio_event_class():
         def __reduce__(self, /):
             raise TypeError(f"cannot reduce {self!r}")
 
-        def __bool__(self, /):
-            return not self.__is_unset
-
         def __await__(self, /):
-            if self.__is_unset:
+            if self._is_unset:
                 self.__future = self.__loop.create_future()
 
                 try:
                     yield from self.__future.__await__()
                 except BaseException:
-                    if is_unset := self.__is_unset:
-                        try:
-                            is_unset.pop()
-                        except IndexError:
-                            pass
-
+                    self.cancel()
                     raise
                 finally:
                     self.__future = None
@@ -574,7 +570,7 @@ def get_asyncio_event_class():
         def set(self, /):
             success = True
 
-            if is_unset := self.__is_unset:
+            if is_unset := self._is_unset:
                 try:
                     is_unset.pop()
                 except IndexError:
@@ -597,9 +593,6 @@ def get_asyncio_event_class():
 
             return success
 
-        def is_set(self, /):
-            return not self.__is_unset
-
     return AsyncioEvent
 
 
@@ -617,7 +610,6 @@ def get_trio_event_class():
 
     class TrioEvent(AsyncEvent):
         __slots__ = (
-            "__is_unset",
             "__token",
             "__task",
         )
@@ -625,8 +617,6 @@ def get_trio_event_class():
         @staticmethod
         def __new__(cls, /):
             self = super(TrioEvent, cls).__new__(cls)
-
-            self.__is_unset = [True]
 
             self.__token = current_trio_token()
             self.__task = None
@@ -640,11 +630,8 @@ def get_trio_event_class():
         def __reduce__(self, /):
             raise TypeError(f"cannot reduce {self!r}")
 
-        def __bool__(self, /):
-            return not self.__is_unset
-
         def __await__(self, /):
-            if self.__is_unset:
+            if self._is_unset:
                 self.__task = current_trio_task()
 
                 yield from wait_trio_task_rescheduled(self.__abort).__await__()
@@ -658,11 +645,7 @@ def get_trio_event_class():
         def __abort(self, /, raise_cancel):
             self.__task = None
 
-            if is_unset := self.__is_unset:
-                try:
-                    is_unset.pop()
-                except IndexError:
-                    pass
+            self.cancel()
 
             return Abort.SUCCEEDED
 
@@ -673,7 +656,7 @@ def get_trio_event_class():
         def set(self, /):
             success = True
 
-            if is_unset := self.__is_unset:
+            if is_unset := self._is_unset:
                 try:
                     is_unset.pop()
                 except IndexError:
@@ -695,9 +678,6 @@ def get_trio_event_class():
                 success = False
 
             return success
-
-        def is_set(self, /):
-            return not self.__is_unset
 
     return TrioEvent
 

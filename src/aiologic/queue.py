@@ -271,45 +271,46 @@ class Queue:
 
         success = self.__acquire_nowait_put()
 
-        if blocking:
-            rescheduled = False
+        try:
+            if blocking:
+                rescheduled = False
+
+                if not success:
+                    event = AsyncEvent()
+
+                    waiters.append(event)
+                    put_waiters.append(event)
+
+                    try:
+                        success = self.__acquire_nowait_put()
+
+                        if not success:
+                            success = await event
+                            rescheduled = True
+                    finally:
+                        if success or event.cancel():
+                            try:
+                                put_waiters.remove(event)
+                            except ValueError:
+                                pass
+
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            success = True
+
+                if not rescheduled:
+                    await checkpoint()
 
             if not success:
-                event = AsyncEvent()
+                raise QueueFull
 
-                waiters.append(event)
-                put_waiters.append(event)
-
-                try:
-                    success = self.__acquire_nowait_put()
-
-                    if not success:
-                        success = await event
-                        rescheduled = True
-                finally:
-                    if success or event.set():
-                        try:
-                            put_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
-
-            if not rescheduled:
-                await checkpoint()
-
-        if not success:
-            raise QueueFull
-
-        try:
             self._put(item)
         finally:
-            self.__release()
+            if success:
+                self.__release()
 
     def green_put(self, /, item, *, blocking=True, timeout=None):
         waiters = self.__waiters
@@ -317,45 +318,46 @@ class Queue:
 
         success = self.__acquire_nowait_put()
 
-        if blocking:
-            rescheduled = False
+        try:
+            if blocking:
+                rescheduled = False
+
+                if not success:
+                    event = GreenEvent()
+
+                    waiters.append(event)
+                    put_waiters.append(event)
+
+                    try:
+                        success = self.__acquire_nowait_put()
+
+                        if not success:
+                            success = event.wait(timeout)
+                            rescheduled = True
+                    finally:
+                        if success or event.cancel():
+                            try:
+                                put_waiters.remove(event)
+                            except ValueError:
+                                pass
+
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            success = True
+
+                if not rescheduled:
+                    green_checkpoint()
 
             if not success:
-                event = GreenEvent()
+                raise QueueFull
 
-                waiters.append(event)
-                put_waiters.append(event)
-
-                try:
-                    success = self.__acquire_nowait_put()
-
-                    if not success:
-                        success = event.wait(timeout)
-                        rescheduled = True
-                finally:
-                    if success or event.set():
-                        try:
-                            put_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
-
-            if not rescheduled:
-                green_checkpoint()
-
-        if not success:
-            raise QueueFull
-
-        try:
             self._put(item)
         finally:
-            self.__release()
+            if success:
+                self.__release()
 
     async def async_get(self, /, *, blocking=True):
         waiters = self.__waiters
@@ -363,45 +365,46 @@ class Queue:
 
         success = self.__acquire_nowait_get()
 
-        if blocking:
-            rescheduled = False
+        try:
+            if blocking:
+                rescheduled = False
+
+                if not success:
+                    event = AsyncEvent()
+
+                    waiters.append(event)
+                    get_waiters.append(event)
+
+                    try:
+                        success = self.__acquire_nowait_get()
+
+                        if not success:
+                            success = await event
+                            rescheduled = True
+                    finally:
+                        if success or event.cancel():
+                            try:
+                                get_waiters.remove(event)
+                            except ValueError:
+                                pass
+
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            success = True
+
+                if not rescheduled:
+                    await checkpoint()
 
             if not success:
-                event = AsyncEvent()
+                raise QueueEmpty
 
-                waiters.append(event)
-                get_waiters.append(event)
-
-                try:
-                    success = self.__acquire_nowait_get()
-
-                    if not success:
-                        success = await event
-                        rescheduled = True
-                finally:
-                    if success or event.set():
-                        try:
-                            get_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
-
-            if not rescheduled:
-                await checkpoint()
-
-        if not success:
-            raise QueueEmpty
-
-        try:
             item = self._get()
         finally:
-            self.__release()
+            if success:
+                self.__release()
 
         return item
 
@@ -411,45 +414,46 @@ class Queue:
 
         success = self.__acquire_nowait_get()
 
-        if blocking:
-            rescheduled = False
+        try:
+            if blocking:
+                rescheduled = False
+
+                if not success:
+                    event = GreenEvent()
+
+                    waiters.append(event)
+                    get_waiters.append(event)
+
+                    try:
+                        success = self.__acquire_nowait_get()
+
+                        if not success:
+                            success = event.wait(timeout)
+                            rescheduled = True
+                    finally:
+                        if success or event.cancel():
+                            try:
+                                get_waiters.remove(event)
+                            except ValueError:
+                                pass
+
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            success = True
+
+                if not rescheduled:
+                    green_checkpoint()
 
             if not success:
-                event = GreenEvent()
+                raise QueueEmpty
 
-                waiters.append(event)
-                get_waiters.append(event)
-
-                try:
-                    success = self.__acquire_nowait_get()
-
-                    if not success:
-                        success = event.wait(timeout)
-                        rescheduled = True
-                finally:
-                    if success or event.set():
-                        try:
-                            get_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
-
-            if not rescheduled:
-                green_checkpoint()
-
-        if not success:
-            raise QueueEmpty
-
-        try:
             item = self._get()
         finally:
-            self.__release()
+            if success:
+                self.__release()
 
         return item
 

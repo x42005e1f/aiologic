@@ -134,7 +134,7 @@ class Semaphore:
                         success = await event
                         rescheduled = True
                 finally:
-                    if success or event.set():
+                    if success or event.cancel():
                         try:
                             waiters.remove(event)
                         except ValueError:
@@ -164,7 +164,7 @@ class Semaphore:
                         success = event.wait(timeout)
                         rescheduled = True
                 finally:
-                    if success or event.set():
+                    if success or event.cancel():
                         try:
                             waiters.remove(event)
                         except ValueError:
