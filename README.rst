@@ -251,19 +251,19 @@ Or from `GitHub <https://github.com/x42005e1f/aiologic>`_:
 You can also use other package managers, such as
 `uv <https://github.com/astral-sh/uv>`_.
 
-Communication channels
-======================
-
-GitHub Discussions: https://github.com/x42005e1f/aiologic/discussions
-
-Feel free to post your questions and ideas here.
-
 Derivatives
 ===========
 
 * `x42005e1f/culsans <https://github.com/x42005e1f/culsans>`_ - Janus-like
   sync-async queue. Unlike ``aiologic`` queues, provides API compatible
   interfaces.
+
+Communication channels
+======================
+
+GitHub Discussions: https://github.com/x42005e1f/aiologic/discussions
+
+Feel free to post your questions and ideas here.
 
 Support
 =======
