@@ -157,6 +157,7 @@ class GreenEvent(BaseEvent):
         raise NotImplementedError
 
 
+@patcher.once
 def get_threading_event_class():
     global ThreadingEvent
 
@@ -216,6 +217,7 @@ def get_threading_event_class():
     return ThreadingEvent
 
 
+@patcher.once
 def get_eventlet_event_class():
     global EventletEvent
 
@@ -336,6 +338,7 @@ def get_eventlet_event_class():
     return EventletEvent
 
 
+@patcher.once
 def get_gevent_event_class():
     global GeventEvent
 
@@ -514,6 +517,7 @@ class AsyncEvent(BaseEvent):
         raise NotImplementedError
 
 
+@patcher.once
 def get_asyncio_event_class():
     global AsyncioEvent
 
@@ -596,6 +600,7 @@ def get_asyncio_event_class():
     return AsyncioEvent
 
 
+@patcher.once
 def get_trio_event_class():
     global TrioEvent
 
