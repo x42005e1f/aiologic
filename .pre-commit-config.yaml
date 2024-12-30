@@ -12,10 +12,11 @@ repos:
       - id: check-case-conflict
       - id: sort-simple-yaml
         files: .pre-commit-config.yaml
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
     hooks:
-      - id: black
+      - id: ruff
+      - id: ruff-format
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:

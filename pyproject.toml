@@ -41,5 +41,172 @@ eventlet = ["eventlet>=0.15.1"]
 [project.urls]
 Source = "https://github.com/x42005e1f/aiologic"
 
-[tool.black]
+[tool.ruff]
+fix = true
 line-length = 79
+preview = true
+show-fixes = true
+
+[tool.ruff.lint]
+select = [
+    # pyflakes
+    "F",
+    # pycodestyle
+    "E",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # flake8-2020
+    "YTT",
+    # flake8-async
+    "ASYNC",
+    # flake8-bandit
+    "S",
+    # flake8-blind-except
+    "BLE",
+    # flake8-bugbear
+    "B",
+    # flake8-commas
+    "COM",
+    # flake8-comprehensions
+    "C4",
+    # flake8-debugger
+    "T10",
+    # flake8-errmsg
+    "EM",
+    # flake8-executable
+    "EXE",
+    # flake8-future-annotations
+    "FA",
+    # flake8-implicit-str-concat
+    "ISC",
+    # flake8-import-conventions
+    "ICN",
+    # flake8-logging
+    "LOG",
+    # flake8-logging-format
+    "G",
+    # flake8-pie
+    "PIE",
+    # flake8-print
+    "T20",
+    # flake8-pytest-style
+    "PT",
+    # flake8-raise
+    "RSE",
+    # flake8-return
+    "RET",
+    # flake8-slots
+    "SLOT",
+    # flake8-simplify
+    "SIM",
+    # flake8-tidy-imports
+    "TID",
+    # flake8-todos
+    "TD",
+    # flake8-fixme
+    "FIX",
+    # pygrep-hooks
+    "PGH",
+    # tryceratops
+    "TRY",
+    # flynt
+    "FLY",
+    # perflint
+    "PERF",
+    # refurb
+    "FURB",
+    # ruff-specific rules
+    "RUF",
+]
+ignore = [
+    # flake8-async
+    "ASYNC105",  # trio-sync-call
+    "ASYNC110",  # async-busy-wait
+    # flake8-bandit
+    "S101",  # assert
+    # flake8-bugbear
+    "B905",  # zip-without-explicit-strict
+    "B911",  # batched-without-explicit-strict
+    # flake8-commas
+    "COM812",  # missing-trailing-comma
+    "COM819",  # prohibited-trailing-comma
+    # flake8-executable
+    "EXE001",  # shebang-not-executable
+    # flake8-implicit-str-concat
+    "ISC001",  # single-line-implicit-string-concatenation
+    "ISC002",  # multi-line-implicit-string-concatenation
+    # flake8-return
+    "RET504",  # unnecessary-assign
+    # flake8-simplify
+    "SIM102",  # collapsible-if
+    "SIM105",  # suppressible-exception
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM109",  # compare-with-tuple
+    "SIM114",  # if-with-same-arms
+    "SIM116",  # if-else-block-instead-of-dict-lookup
+    "SIM210",  # if-expr-with-true-false
+    "SIM211",  # if-expr-with-false-true
+    "SIM300",  # yoda-conditions
+    # pylint refactor
+    "PLR0904",  # too-many-public-methods
+    "PLR0911",  # too-many-return-statements
+    "PLR0912",  # too-many-branches
+    "PLR0913",  # too-many-arguments
+    "PLR0914",  # too-many-locals
+    "PLR0915",  # too-many-statements
+    "PLR0916",  # too-many-boolean-expressions
+    "PLR0917",  # too-many-positional-arguments
+    "PLR1702",  # too-many-nested-blocks
+    "PLR1704",  # redefined-argument-from-local
+    "PLR1714",  # repeated-equality-comparison
+    "PLR1730",  # if-stmt-min-max
+    "PLR2004",  # magic-value-comparison
+    "PLR5501",  # collapsible-else-if
+    "PLR6301",  # no-self-use
+    # tryceratops
+    "TRY003",  # raise-vanilla-args
+    "TRY301",  # raise-within-try
+    # refurb
+    "FURB101",  # read-whole-file
+    "FURB103",  # write-whole-file
+    # ruff-specific rules
+    "RUF052",
+]
+fixable = [
+    "ALL",
+]
+unfixable = [
+    # pyflakes
+    "F401",  # unused-import
+    "F504",  # percent-format-extra-named-arguments
+    "F522",  # string-dot-format-extra-named-arguments
+    "F523",  # string-dot-format-extra-positional-arguments
+    "F601",  # multi-value-repeated-key-literal
+    "F602",  # multi-value-repeated-key-variable
+    "F811",  # redefined-while-unused
+    "F841",  # unused-variable
+    # flake8-bugbear
+    "B006",  # mutable-argument-default
+    "B007",  # unused-loop-control-variable
+    # flake8-errmsg
+    "EM",
+    # flake8-pie
+    "PIE794",  # duplicate-class-field-definition
+    # flake8-print
+    "T20",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    # pyflakes
+    "F403",  # undefined-local-with-import-star
+    "F405",  # undefined-local-with-import-star-usage
+]
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+combine-as-imports = true
+lines-between-types = 1
