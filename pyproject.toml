@@ -110,6 +110,11 @@ select = [
     "FIX",
     # pygrep-hooks
     "PGH",
+    # pylint
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
     # tryceratops
     "TRY",
     # flynt
@@ -150,7 +155,11 @@ ignore = [
     "SIM210",  # if-expr-with-true-false
     "SIM211",  # if-expr-with-false-true
     "SIM300",  # yoda-conditions
-    # pylint refactor
+    # pylint
+    "PLC0415",  # import-outside-top-level
+    "PLC2701",  # import-private-name
+    "PLC2801",  # unnecessary-dunder-call
+    "PLE0604",  # invalid-all-object
     "PLR0904",  # too-many-public-methods
     "PLR0911",  # too-many-return-statements
     "PLR0912",  # too-many-branches
@@ -166,6 +175,7 @@ ignore = [
     "PLR2004",  # magic-value-comparison
     "PLR5501",  # collapsible-else-if
     "PLR6301",  # no-self-use
+    "PLW0603",  # global-statement
     # tryceratops
     "TRY003",  # raise-vanilla-args
     "TRY301",  # raise-within-try
@@ -197,6 +207,9 @@ unfixable = [
     "PIE794",  # duplicate-class-field-definition
     # flake8-print
     "T20",
+    # pylint
+    "PLE4703",  # modified-iterating-set
+    "PLW0128",  # redeclared-assigned-name
 ]
 
 [tool.ruff.lint.per-file-ignores]
