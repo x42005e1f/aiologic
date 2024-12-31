@@ -220,6 +220,11 @@ unfixable = [
     "F403",  # undefined-local-with-import-star
     "F405",  # undefined-local-with-import-star-usage
 ]
+"tests/**.py" = [
+    # flake8-bandit
+    "S301",  # suspicious-pickle-usage
+    "S403",  # suspicious-pickle-import
+]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
