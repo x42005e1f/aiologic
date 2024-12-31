@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: 0BSD
+
 import time
 import pickle
 

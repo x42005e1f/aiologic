@@ -1,5 +1,9 @@
+# SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+
 graft src
 graft tests
+graft LICENSES
 
 prune **/__pycache__
 
@@ -13,4 +17,3 @@ include pyproject.toml
 include MANIFEST.in
 
 include README.rst
-include LICENSE

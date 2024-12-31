@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+
 [build-system]
 requires = ["setuptools>=64"]
 
@@ -9,7 +12,6 @@ authors = [
 ]
 description = "GIL-powered* locking library for Python"
 readme = {file = "README.rst", content-type = "text/x-rst"}
-license = {file = "LICENSE"}
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 3 - Alpha",
