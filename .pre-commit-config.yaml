@@ -1,17 +1,16 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+      - id: fix-byte-order-marker
       - id: end-of-file-fixer
-      - id: check-ast
-      - id: check-yaml
-      - id: check-toml
-      - id: check-merge-conflict
       - id: mixed-line-ending
       - id: check-case-conflict
-      - id: sort-simple-yaml
-        files: .pre-commit-config.yaml
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-ast
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
     hooks:
