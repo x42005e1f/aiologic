@@ -147,6 +147,10 @@ ignore = [
     "ISC002",  # multi-line-implicit-string-concatenation
     # flake8-return
     "RET504",  # unnecessary-assign
+    "RET505",  # superfluous-else-return
+    "RET506",  # superfluous-else-raise
+    "RET507",  # superfluous-else-continue
+    "RET508",  # superfluous-else-break
     # flake8-simplify
     "SIM102",  # collapsible-if
     "SIM105",  # suppressible-exception
@@ -181,6 +185,8 @@ ignore = [
     # tryceratops
     "TRY003",  # raise-vanilla-args
     "TRY301",  # raise-within-try
+    # perflint
+    "PERF203",  # try-except-in-loop
     # refurb
     "FURB101",  # read-whole-file
     "FURB103",  # write-whole-file
@@ -203,8 +209,6 @@ unfixable = [
     # flake8-bugbear
     "B006",  # mutable-argument-default
     "B007",  # unused-loop-control-variable
-    # flake8-errmsg
-    "EM",
     # flake8-pie
     "PIE794",  # duplicate-class-field-definition
     # flake8-print
