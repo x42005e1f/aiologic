@@ -4,18 +4,18 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "GreenLibraryNotFoundError",
     "AsyncLibraryNotFoundError",
-    "current_green_library_tlocal",
-    "current_async_library_tlocal",
-    "current_async_library_cvar",
-    "current_green_library",
-    "current_async_library",
-    "threading_running",
-    "eventlet_running",
-    "gevent_running",
+    "GreenLibraryNotFoundError",
     "asyncio_running",
     "curio_running",
+    "current_async_library",
+    "current_async_library_cvar",
+    "current_async_library_tlocal",
+    "current_green_library",
+    "current_green_library_tlocal",
+    "eventlet_running",
+    "gevent_running",
+    "threading_running",
     "trio_running",
 )
 
@@ -41,7 +41,7 @@ class NamedLocal(ThreadLocal):
 current_green_library_tlocal = NamedLocal()
 
 
-def threading_running_impl():
+def threading_running_impl():  # noqa: F811
     global threading_running_impl
 
     try:
@@ -59,7 +59,7 @@ def threading_running_impl():
     return threading_running_impl()
 
 
-def eventlet_running_impl():
+def eventlet_running_impl():  # noqa: F811
     global eventlet_running_impl
 
     if patcher.eventlet_patched("threading"):
@@ -95,7 +95,7 @@ def eventlet_running_impl():
     return eventlet_running_impl()
 
 
-def gevent_running_impl():
+def gevent_running_impl():  # noqa: F811
     global gevent_running_impl
 
     if patcher.gevent_patched("threading"):
@@ -178,9 +178,8 @@ def current_green_library(*, failsafe=False):
     elif failsafe:
         library = None
     else:
-        raise GreenLibraryNotFoundError(
-            "unknown green library, or not in green context",
-        )
+        msg = "unknown green library, or not in green context"
+        raise GreenLibraryNotFoundError(msg)
 
     return library
 
@@ -188,8 +187,8 @@ def current_green_library(*, failsafe=False):
 try:
     from sniffio import (
         AsyncLibraryNotFoundError,
-        thread_local as current_async_library_tlocal,
         current_async_library_cvar,
+        thread_local as current_async_library_tlocal,
     )
 except ImportError:
     from contextvars import ContextVar
@@ -204,7 +203,7 @@ except ImportError:
     )
 
 
-def asyncio_running_impl():
+def asyncio_running_impl():  # noqa: F811
     global asyncio_running_impl
 
     if "asyncio" in modules:
@@ -232,7 +231,7 @@ def asyncio_running_impl():
     return running
 
 
-def curio_running_impl():
+def curio_running_impl():  # noqa: F811
     global curio_running_impl
 
     if "curio" in modules:
@@ -303,8 +302,7 @@ def current_async_library(*, failsafe=False):
     elif failsafe:
         library = None
     else:
-        raise AsyncLibraryNotFoundError(
-            "unknown async library, or not in async context",
-        )
+        msg = "unknown async library, or not in async context"
+        raise AsyncLibraryNotFoundError(msg)
 
     return library

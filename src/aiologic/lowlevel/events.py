@@ -5,17 +5,17 @@
 
 __all__ = (
     "DUMMY_EVENT",
-    "Event",
-    "DummyEvent",
-    "GreenEvent",
     "AsyncEvent",
+    "DummyEvent",
+    "Event",
+    "GreenEvent",
 )
 
 from abc import ABC, abstractmethod
 
 from . import patcher
-from .libraries import current_async_library, current_green_library
 from .checkpoints import checkpoint, green_checkpoint
+from .libraries import current_async_library, current_green_library
 
 
 class Event(ABC):
@@ -56,7 +56,8 @@ class DummyEvent(Event):
 
     @classmethod
     def __init_subclass__(cls, /, **kwargs):
-        raise TypeError("type 'DummyEvent' is not an acceptable base type")
+        msg = "type 'DummyEvent' is not an acceptable base type"
+        raise TypeError(msg)
 
     def __reduce__(self, /):
         return "DUMMY_EVENT"
@@ -95,8 +96,8 @@ DUMMY_EVENT = object.__new__(DummyEvent)
 
 class BaseEvent(Event):
     __slots__ = (
-        "_is_unset",
         "_is_cancelled",
+        "_is_unset",
     )
 
     @staticmethod
@@ -146,7 +147,8 @@ class GreenEvent(BaseEvent):
             elif library == "gevent":
                 self = GeventEvent.__new__(GeventEvent)
             else:
-                raise RuntimeError(f"unsupported green library {library!r}")
+                msg = f"unsupported green library {library!r}"
+                raise RuntimeError(msg)
         else:
             self = super(GreenEvent, cls).__new__(cls)
 
@@ -177,12 +179,12 @@ def get_threading_event_class():
 
         @classmethod
         def __init_subclass__(cls, /, **kwargs):
-            raise TypeError(
-                "type 'ThreadingEvent' is not an acceptable base type",
-            )
+            msg = "type 'ThreadingEvent' is not an acceptable base type"
+            raise TypeError(msg)
 
         def __reduce__(self, /):
-            raise TypeError(f"cannot reduce {self!r}")
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def wait(self, /, timeout=None):
             success = True
@@ -242,8 +244,8 @@ def get_eventlet_event_class():
 
     class EventletEvent(GreenEvent):
         __slots__ = (
-            "__hub",
             "__greenlet",
+            "__hub",
         )
 
         @staticmethod
@@ -257,12 +259,12 @@ def get_eventlet_event_class():
 
         @classmethod
         def __init_subclass__(cls, /, **kwargs):
-            raise TypeError(
-                "type 'EventletEvent' is not an acceptable base type",
-            )
+            msg = "type 'EventletEvent' is not an acceptable base type"
+            raise TypeError(msg)
 
         def __reduce__(self, /):
-            raise TypeError(f"cannot reduce {self!r}")
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def wait(self, /, timeout=None):
             success = True
@@ -352,8 +354,8 @@ def get_gevent_event_class():
 
     class GeventEvent(GreenEvent):
         __slots__ = (
-            "__hub",
             "__event",
+            "__hub",
         )
 
         @staticmethod
@@ -367,12 +369,12 @@ def get_gevent_event_class():
 
         @classmethod
         def __init_subclass__(cls, /, **kwargs):
-            raise TypeError(
-                "type 'GeventEvent' is not an acceptable base type",
-            )
+            msg = "type 'GeventEvent' is not an acceptable base type"
+            raise TypeError(msg)
 
         def __reduce__(self, /):
-            raise TypeError(f"cannot reduce {self!r}")
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def wait(self, /, timeout=None):
             success = True
@@ -448,7 +450,7 @@ def get_gevent_event_class():
     return GeventEvent
 
 
-class ThreadingEvent(GreenEvent):
+class ThreadingEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
     @staticmethod
@@ -456,14 +458,14 @@ class ThreadingEvent(GreenEvent):
         try:
             cls = get_threading_event_class()
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError from None
         else:
             self = cls.__new__(cls)
 
         return self
 
 
-class EventletEvent(GreenEvent):
+class EventletEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
     @staticmethod
@@ -471,14 +473,14 @@ class EventletEvent(GreenEvent):
         try:
             cls = get_eventlet_event_class()
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError from None
         else:
             self = cls.__new__(cls)
 
         return self
 
 
-class GeventEvent(GreenEvent):
+class GeventEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
     @staticmethod
@@ -486,7 +488,7 @@ class GeventEvent(GreenEvent):
         try:
             cls = get_gevent_event_class()
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError from None
         else:
             self = cls.__new__(cls)
 
@@ -506,7 +508,8 @@ class AsyncEvent(BaseEvent):
             elif library == "trio":
                 self = TrioEvent.__new__(TrioEvent)
             else:
-                raise RuntimeError(f"unsupported async library {library!r}")
+                msg = f"unsupported async library {library!r}"
+                raise RuntimeError(msg)
         else:
             self = super(AsyncEvent, cls).__new__(cls)
 
@@ -526,8 +529,8 @@ def get_asyncio_event_class():
 
     class AsyncioEvent(AsyncEvent):
         __slots__ = (
-            "__loop",
             "__future",
+            "__loop",
         )
 
         @staticmethod
@@ -541,12 +544,12 @@ def get_asyncio_event_class():
 
         @classmethod
         def __init_subclass__(cls, /, **kwargs):
-            raise TypeError(
-                "type 'AsyncioEvent' is not an acceptable base type",
-            )
+            msg = "type 'AsyncioEvent' is not an acceptable base type"
+            raise TypeError(msg)
 
         def __reduce__(self, /):
-            raise TypeError(f"cannot reduce {self!r}")
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def __await__(self, /):
             if self._is_unset:
@@ -607,16 +610,16 @@ def get_trio_event_class():
     from trio import RunFinishedError
     from trio.lowlevel import (
         Abort,
-        reschedule as reschedule_trio_task,
         current_task as current_trio_task,
         current_trio_token,
+        reschedule as reschedule_trio_task,
         wait_task_rescheduled as wait_trio_task_rescheduled,
     )
 
     class TrioEvent(AsyncEvent):
         __slots__ = (
-            "__token",
             "__task",
+            "__token",
         )
 
         @staticmethod
@@ -630,10 +633,12 @@ def get_trio_event_class():
 
         @classmethod
         def __init_subclass__(cls, /, **kwargs):
-            raise TypeError("type 'TrioEvent' is not an acceptable base type")
+            msg = "type 'TrioEvent' is not an acceptable base type"
+            raise TypeError(msg)
 
         def __reduce__(self, /):
-            raise TypeError(f"cannot reduce {self!r}")
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def __await__(self, /):
             if self._is_unset:
@@ -687,7 +692,7 @@ def get_trio_event_class():
     return TrioEvent
 
 
-class AsyncioEvent(AsyncEvent):
+class AsyncioEvent(AsyncEvent):  # noqa: F811
     __slots__ = ()
 
     @staticmethod
@@ -695,14 +700,14 @@ class AsyncioEvent(AsyncEvent):
         try:
             cls = get_asyncio_event_class()
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError from None
         else:
             self = cls.__new__(cls)
 
         return self
 
 
-class TrioEvent(AsyncEvent):
+class TrioEvent(AsyncEvent):  # noqa: F811
     __slots__ = ()
 
     @staticmethod
@@ -710,7 +715,7 @@ class TrioEvent(AsyncEvent):
         try:
             cls = get_trio_event_class()
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError from None
         else:
             self = cls.__new__(cls)
 

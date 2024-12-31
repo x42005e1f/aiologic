@@ -3,13 +3,13 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from .semaphore import *
-from .lock import *
-from .limiter import *
-from .condition import *
 from .barrier import *
+from .condition import *
 from .event import *
 from .guard import *
+from .limiter import *
+from .lock import *
+from .semaphore import *
 
 __all__ = (
     *semaphore.__all__,

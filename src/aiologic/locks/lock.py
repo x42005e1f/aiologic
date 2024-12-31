@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "PLock",
     "Lock",
+    "PLock",
     "RLock",
 )
 
@@ -15,17 +15,17 @@ from aiologic.lowlevel import (
     AsyncEvent,
     GreenEvent,
     checkpoint,
-    green_checkpoint,
     current_async_task_ident,
     current_green_task_ident,
+    green_checkpoint,
 )
 
 
 class PLock:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__unlocked",
+        "__waiters",
+        "__weakref__",
     )
 
     @staticmethod
@@ -187,9 +187,8 @@ class Lock(PLock):
         task = current_async_task_ident()
 
         if self.owner == task:
-            raise RuntimeError(
-                "the current task is already holding this lock",
-            )
+            msg = "the current task is already holding this lock"
+            raise RuntimeError(msg)
 
         success = await super().async_acquire(blocking=blocking)
 
@@ -202,9 +201,8 @@ class Lock(PLock):
         task = current_green_task_ident()
 
         if self.owner == task:
-            raise RuntimeError(
-                "the current task is already holding this lock",
-            )
+            msg = "the current task is already holding this lock"
+            raise RuntimeError(msg)
 
         success = super().green_acquire(blocking=blocking, timeout=timeout)
 
@@ -215,12 +213,14 @@ class Lock(PLock):
 
     def async_release(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_async_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         self.owner = None
 
@@ -228,12 +228,14 @@ class Lock(PLock):
 
     def green_release(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_green_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         self.owner = None
 
@@ -242,8 +244,8 @@ class Lock(PLock):
 
 class RLock(PLock):
     __slots__ = (
-        "owner",
         "level",
+        "owner",
     )
 
     @staticmethod
@@ -292,12 +294,14 @@ class RLock(PLock):
 
     def async_release(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_async_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         self.level -= 1
 
@@ -308,12 +312,14 @@ class RLock(PLock):
 
     def green_release(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_green_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         self.level -= 1
 
@@ -324,12 +330,14 @@ class RLock(PLock):
 
     def _async_release_save(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_async_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         state = self.owner, self.level
 
@@ -342,12 +350,14 @@ class RLock(PLock):
 
     def _green_release_save(self, /):
         if self.owner is None:
-            raise RuntimeError("release unlocked lock")
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
         task = current_green_task_ident()
 
         if self.owner != task:
-            raise RuntimeError("the current task is not holding this lock")
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
 
         state = self.owner, self.level
 

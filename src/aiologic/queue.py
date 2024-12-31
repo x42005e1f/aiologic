@@ -4,16 +4,16 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
+    "LifoQueue",
+    "PriorityQueue",
+    "Queue",
     "QueueEmpty",
     "QueueFull",
     "SimpleQueue",
-    "Queue",
-    "LifoQueue",
-    "PriorityQueue",
 )
 
-from heapq import heapify, heappop, heappush
 from collections import deque
+from heapq import heapify, heappop, heappush
 
 from .locks import Semaphore
 from .lowlevel import (
@@ -35,8 +35,8 @@ class QueueFull(Exception):
 
 class SimpleQueue:
     __slots__ = (
-        "__weakref__",
         "__sem",
+        "__weakref__",
         "_data",
     )
 
@@ -114,11 +114,11 @@ class SimpleQueue:
 
 class Queue:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__get_waiters",
         "__put_waiters",
         "__unlocked",
+        "__waiters",
+        "__weakref__",
         "_data",
         "maxsize",
     )
@@ -157,7 +157,7 @@ class Queue:
 
     def __repr__(self, /):
         if (maxsize := self.maxsize) != 0:
-            args_repr = f"{repr(self._items())}, maxsize={maxsize!r}"
+            args_repr = f"{self._items()!r}, maxsize={maxsize!r}"
         else:
             args_repr = repr(self._items())
 

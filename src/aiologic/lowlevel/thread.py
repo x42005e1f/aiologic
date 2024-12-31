@@ -14,7 +14,8 @@ error = RuntimeError
 # module, so we need to use the _thread module in the first place
 
 
-def start_new_thread(callable, args, kwargs=MISSING):  # PyPy signature
+# PyPy signature
+def start_new_thread(callable, args, kwargs=MISSING):  # noqa: F811
     global start_new_thread
 
     try:
@@ -32,13 +33,16 @@ def start_new_thread(callable, args, kwargs=MISSING):  # PyPy signature
 
             def start_new_thread(callable, args, kwargs=MISSING):
                 if not builtins_callable(callable):
-                    raise TypeError("first arg must be callable")
+                    msg = "first arg must be callable"
+                    raise TypeError(msg)
 
                 if not isinstance(args, tuple):
-                    raise TypeError("2nd arg must be a tuple")
+                    msg = "2nd arg must be a tuple"
+                    raise TypeError(msg)
 
                 if kwargs is not MISSING and not isinstance(kwargs, dict):
-                    raise TypeError("optional 3rd arg must be a dictionary")
+                    msg = "optional 3rd arg must be a dictionary"
+                    raise TypeError(msg)
 
                 try:
                     callable_name = callable.__name__
@@ -130,4 +134,5 @@ def __getattr__(name, /):
                 ):
                     return globals().setdefault(name, value)
 
-    raise AttributeError(f"module '_thread' has no attribute {name!r}")
+    msg = f"module '_thread' has no attribute {name!r}"
+    raise AttributeError(msg)

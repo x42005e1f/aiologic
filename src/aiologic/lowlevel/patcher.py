@@ -4,22 +4,22 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "patch_threading",
     "patch_eventlet",
+    "patch_threading",
 )
 
-import sys
 import platform
+import sys
 
-from sys import modules
 from functools import partial, wraps
 from importlib import import_module
+from sys import modules
 
 PYTHON_VERSION = sys.version_info
 PYTHON_IMPLEMENTATION = platform.python_implementation()
 
 
-def eventlet_patched(name, /):
+def eventlet_patched(name, /):  # noqa: F811
     global eventlet_patched
 
     if "eventlet" in modules:
@@ -45,7 +45,7 @@ def eventlet_patched(name, /):
                     ):
                         module_key = name[7:].partition("_")[0]
 
-                        for module_name, module in value():
+                        for module_name, _ in value():
                             mapping[module_name] = module_key
 
                 return mapping
@@ -92,7 +92,7 @@ def eventlet_patched(name, /):
     return answer
 
 
-def gevent_patched(name, /):
+def gevent_patched(name, /):  # noqa: F811
     global gevent_patched
 
     if "gevent" in modules:
@@ -145,7 +145,7 @@ def gevent_patched(name, /):
     return answer
 
 
-def import_eventlet_original(module_name, /):
+def import_eventlet_original(module_name, /):  # noqa: F811
     global import_eventlet_original
 
     if "eventlet" in modules:
@@ -163,7 +163,7 @@ def import_eventlet_original(module_name, /):
     return module
 
 
-def import_gevent_original(module_name, /):
+def import_gevent_original(module_name, /):  # noqa: F811
     global import_gevent_original
 
     if "gevent" in modules:
@@ -188,17 +188,16 @@ def import_gevent_original(module_name, /):
                     pass
                 else:
                     if value_module.partition(".")[0] == "gevent":
-                        raise AttributeError(
-                            f"No original attribute named {name!r}",
-                        )
+                        msg = f"No original attribute named {name!r}"
+                        raise AttributeError(msg)
 
                 return value
 
             class ModuleProxy:
                 __slots__ = (
+                    "_content_",
                     "_module_",
                     "_name_",
-                    "_content_",
                 )
 
                 @staticmethod
@@ -277,9 +276,8 @@ def import_gevent_original(module_name, /):
                             setattr(module, name, value)
 
                 def __delattr__(self, /, name):
-                    raise TypeError(
-                        f"cannot delete {name!r} attribute of module proxy",
-                    )
+                    msg = f"cannot delete {name!r} attribute of module proxy"
+                    raise TypeError(msg)
 
             def import_gevent_original(module_name, /):
                 if module_name in saved and not eventlet_patched(module_name):
@@ -307,7 +305,8 @@ def import_original(name):
         module = import_module(module_name)
 
     if module is None:
-        exc = ModuleNotFoundError(f"No original module named {module_name!r}")
+        msg = f"No original module named {module_name!r}"
+        exc = ModuleNotFoundError(msg)
         exc.name = module_name
 
         try:
@@ -527,9 +526,9 @@ def patch_threading():
 
             def _maintain_shutdown_locks():
                 _shutdown_locks = threading._shutdown_locks
-                _shutdown_locks.difference_update(
-                    [lock for lock in _shutdown_locks if not lock.locked()]
-                )
+                _shutdown_locks.difference_update([
+                    lock for lock in _shutdown_locks if not lock.locked()
+                ])
 
             threading._maintain_shutdown_locks = _maintain_shutdown_locks
 
@@ -609,14 +608,16 @@ def patch_threading():
                 _threading_atexits = threading._threading_atexits
 
                 if threading._SHUTTING_DOWN:
-                    raise RuntimeError("can't register atexit after shutdown")
+                    msg = "can't register atexit after shutdown"
+                    raise RuntimeError(msg)
 
                 _threading_atexits.append(ate := partial(func, *arg, **kwargs))
 
                 if threading._SHUTTING_DOWN:
                     _threading_atexits.remove(ate)
 
-                    raise RuntimeError("can't register atexit after shutdown")
+                    msg = "can't register atexit after shutdown"
+                    raise RuntimeError(msg)
 
             threading._register_atexit = _register_atexit
 

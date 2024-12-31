@@ -6,6 +6,7 @@
 import pickle
 
 import pytest
+
 import aiologic.lowlevel
 
 
@@ -17,7 +18,7 @@ class _TestMarker:
 
     def test_attrs(self, /):
         with pytest.raises(AttributeError):
-            self.value.nonexistent_attribute
+            self.value.nonexistent_attribute  # noqa: B018
         with pytest.raises(AttributeError):
             self.value.nonexistent_attribute = 42
         with pytest.raises(AttributeError):

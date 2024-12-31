@@ -15,8 +15,8 @@ class BusyResourceError(RuntimeError):
 
 class ResourceGuard:
     __slots__ = (
-        "__weakref__",
         "__unlocked",
+        "__weakref__",
         "action",
     )
 
@@ -53,9 +53,8 @@ class ResourceGuard:
             success = True
 
         if not success:
-            raise BusyResourceError(
-                f"another task is already {self.action} this resource",
-            )
+            msg = f"another task is already {self.action} this resource"
+            raise BusyResourceError(msg)
 
         return self
 

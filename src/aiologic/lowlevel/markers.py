@@ -15,7 +15,8 @@ class MissingType:
 
     @classmethod
     def __init_subclass__(cls, /, **kwargs):
-        raise TypeError("type 'MissingType' is not an acceptable base type")
+        msg = "type 'MissingType' is not an acceptable base type"
+        raise TypeError(msg)
 
     def __reduce__(self, /):
         return "MISSING"

@@ -48,16 +48,19 @@ try:
             elif family == AF_INET6:
                 host = "::1"
             else:
-                raise ValueError(
+                msg = (
                     "Only AF_INET and AF_INET6 socket address families"
                     " are supported"
                 )
+                raise ValueError(msg)
 
             if type != SOCK_STREAM:
-                raise ValueError("Only SOCK_STREAM socket type is supported")
+                msg = "Only SOCK_STREAM socket type is supported"
+                raise ValueError(msg)
 
             if proto != 0:
-                raise ValueError("Only protocol zero is supported")
+                msg = "Only protocol zero is supported"
+                raise ValueError(msg)
 
             lsock = socket(family, type, proto, None)
 
@@ -94,7 +97,8 @@ try:
                     ssock.getsockname() != csock.getpeername()
                     or csock.getsockname() != ssock.getpeername()
                 ):
-                    raise ConnectionError("Unexpected peer connection")
+                    msg = "Unexpected peer connection"
+                    raise ConnectionError(msg)
             except:
                 ssock.close()
                 csock.close()
@@ -120,4 +124,5 @@ def __getattr__(name, /):
                 ):
                     return globals().setdefault(name, value)
 
-    raise AttributeError(f"module '_socket' has no attribute {name!r}")
+    msg = f"module '_socket' has no attribute {name!r}"
+    raise AttributeError(msg)

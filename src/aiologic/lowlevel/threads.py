@@ -5,19 +5,19 @@
 
 __all__ = (
     "ThreadLocal",
-    "start_new_thread",
     "add_thread_finalizer",
     "remove_thread_finalizer",
+    "start_new_thread",
 )
 
-from sys import modules
 from importlib import import_module
+from sys import modules
 
 from . import patcher
 from .markers import MISSING
 
 
-def get_python_thread(ident, /):
+def get_python_thread(ident, /):  # noqa: F811
     global get_python_thread
 
     try:
@@ -57,7 +57,7 @@ def get_python_thread(ident, /):
     return get_python_thread(ident)
 
 
-def get_eventlet_thread(ident, /):
+def get_eventlet_thread(ident, /):  # noqa: F811
     global get_eventlet_thread
 
     if "eventlet" in modules:
@@ -109,7 +109,7 @@ def get_thread(ident, /):
     return thread
 
 
-def current_python_thread():
+def current_python_thread():  # noqa: F811
     global current_python_thread
 
     try:
@@ -182,7 +182,7 @@ def current_python_thread():
     return current_python_thread()
 
 
-def current_eventlet_thread():
+def current_eventlet_thread():  # noqa: F811
     global current_eventlet_thread
 
     if "eventlet" in modules:
@@ -285,8 +285,8 @@ else:
     import atexit
     import weakref
 
-    from logging import getLogger
     from collections import deque
+    from logging import getLogger
 
     from . import thread as _thread
 
@@ -361,15 +361,16 @@ else:
             elif not init:
                 namespace = None
             else:
-                raise RuntimeError("no current thread")
+                msg = "no current thread"
+                raise RuntimeError(msg)
 
             return namespace
 
         class ThreadLocal:
             __slots__ = (
                 "__weakref__",
-                "_namespaces_",
                 "_kwargs_",
+                "_namespaces_",
             )
 
             @staticmethod
@@ -429,16 +430,20 @@ else:
 
             def __setattr__(self, /, name, value):
                 if name == "__dict__":
-                    raise AttributeError("readonly attribute")
-                elif name.startswith("_") and name.endswith("_"):
+                    msg = "readonly attribute"
+                    raise AttributeError(msg)
+
+                if name.startswith("_") and name.endswith("_"):
                     object___setattr__(self, name, value)
                 else:
                     get_thread_namespace(self, init=True)[name] = value
 
             def __delattr__(self, /, name):
                 if name == "__dict__":
-                    raise AttributeError("readonly attribute")
-                elif name.startswith("_") and name.endswith("_"):
+                    msg = "readonly attribute"
+                    raise AttributeError(msg)
+
+                if name.startswith("_") and name.endswith("_"):
                     object___delattr__(self, name)
                 else:
                     try:
@@ -449,10 +454,11 @@ else:
 
                         del namespace[name]
                     except KeyError:
-                        raise AttributeError(
+                        msg = (
                             f"{self.__class__.__name__!r} object"
                             f" has no attribute {name!r}"
-                        ) from None
+                        )
+                        raise AttributeError(msg) from None
 
     def run_thread_finalizer(ident, thread, /):
         if thread is not None:
@@ -485,7 +491,8 @@ else:
                         thread_repr = f"<thread {ident!r}>"
 
                     LOGGER.exception(
-                        f"exception calling callback for {thread_repr}",
+                        "exception calling callback for %s",
+                        thread_repr,
                     )
 
     def run_new_thread(target, start_lock, shutdown_lock, /, *args, **kwargs):
@@ -517,7 +524,8 @@ else:
 
     def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
         if not callable(target):
-            raise TypeError("'target' argument must be callable")
+            msg = "'target' argument must be callable"
+            raise TypeError(msg)
 
         start_lock = allocate_lock()
         start_lock.acquire()
@@ -531,11 +539,13 @@ else:
         try:
             args = (target, start_lock, shutdown_lock, *args)
         except TypeError:
-            raise TypeError("'args' argument must be an iterable") from None
+            msg = "'args' argument must be an iterable"
+            raise TypeError(msg) from None
 
         if kwargs is not MISSING:
             if not isinstance(kwargs, dict):
-                raise TypeError("'kwargs' argument must be a dictionary")
+                msg = "'kwargs' argument must be a dictionary"
+                raise TypeError(msg)
 
             ident = _thread.start_new_thread(run_new_thread, args, kwargs)
         else:
@@ -557,14 +567,14 @@ else:
                     thread = get_thread(ident)
 
                     if thread is None:
-                        raise RuntimeError(
-                            f"no running thread {ident!r}",
-                        ) from None
+                        msg = f"no running thread {ident!r}"
+                        raise RuntimeError(msg) from None
                 else:
                     thread = current_thread()
 
                     if thread is None:
-                        raise RuntimeError("no current thread") from None
+                        msg = "no current thread"
+                        raise RuntimeError(msg) from None
 
                 start_new_thread(
                     run_thread_finalizer,

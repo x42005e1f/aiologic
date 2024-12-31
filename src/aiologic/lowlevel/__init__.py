@@ -3,17 +3,17 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from .markers import *
-from .flags import *
-from .thread import *
-from .socket import *
-from .threads import *
-from .sockets import *
-from .patcher import *
-from .libraries import *
-from .ident import *
 from .checkpoints import *
 from .events import *
+from .flags import *
+from .ident import *
+from .libraries import *
+from .markers import *
+from .patcher import *
+from .socket import *
+from .sockets import *
+from .thread import *
+from .threads import *
 
 __all__ = (
     *markers.__all__,

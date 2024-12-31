@@ -4,20 +4,20 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "current_thread",
-    "current_thread_ident",
-    "current_green_token",
-    "current_green_token_ident",
+    "current_async_task",
+    "current_async_task_ident",
     "current_async_token",
     "current_async_token_ident",
     "current_green_task",
     "current_green_task_ident",
-    "current_async_task",
-    "current_async_task_ident",
+    "current_green_token",
+    "current_green_token_ident",
+    "current_thread",
+    "current_thread_ident",
 )
 
-from .threads import current_thread
 from .libraries import current_async_library, current_green_library
+from .threads import current_thread
 
 try:
     from .thread import get_ident as current_thread_ident
@@ -27,7 +27,7 @@ except ImportError:
         raise NotImplementedError
 
 
-def current_eventlet_token():
+def current_eventlet_token():  # noqa: F811
     global current_eventlet_token
 
     try:
@@ -40,7 +40,7 @@ def current_eventlet_token():
     return current_eventlet_token()
 
 
-def current_gevent_token():
+def current_gevent_token():  # noqa: F811
     global current_gevent_token
 
     try:
@@ -63,7 +63,8 @@ def current_green_token():
     elif library == "gevent":
         token = current_gevent_token()
     else:
-        raise RuntimeError(f"unsupported green library {library!r}")
+        msg = f"unsupported green library {library!r}"
+        raise RuntimeError(msg)
 
     return token
 
@@ -78,12 +79,13 @@ def current_green_token_ident():
     elif library == "gevent":
         ident = (library, id(current_gevent_token()))
     else:
-        raise RuntimeError(f"unsupported green library {library!r}")
+        msg = f"unsupported green library {library!r}"
+        raise RuntimeError(msg)
 
     return ident
 
 
-def current_asyncio_token():
+def current_asyncio_token():  # noqa: F811
     global current_asyncio_token
 
     try:
@@ -96,7 +98,7 @@ def current_asyncio_token():
     return current_asyncio_token()
 
 
-def current_trio_token():
+def current_trio_token():  # noqa: F811
     global current_trio_token
 
     try:
@@ -117,7 +119,8 @@ def current_async_token():
     elif library == "trio":
         token = current_trio_token()
     else:
-        raise RuntimeError(f"unsupported async library {library!r}")
+        msg = f"unsupported async library {library!r}"
+        raise RuntimeError(msg)
 
     return token
 
@@ -130,12 +133,13 @@ def current_async_token_ident():
     elif library == "trio":
         ident = (library, id(current_trio_token()))
     else:
-        raise RuntimeError(f"unsupported async library {library!r}")
+        msg = f"unsupported async library {library!r}"
+        raise RuntimeError(msg)
 
     return ident
 
 
-def current_greenlet():
+def current_greenlet():  # noqa: F811
     global current_greenlet
 
     try:
@@ -158,7 +162,8 @@ def current_green_task():
     elif library == "gevent":
         task = current_greenlet()
     else:
-        raise RuntimeError(f"unsupported green library {library!r}")
+        msg = f"unsupported green library {library!r}"
+        raise RuntimeError(msg)
 
     return task
 
@@ -173,12 +178,13 @@ def current_green_task_ident():
     elif library == "gevent":
         ident = (library, id(current_greenlet()))
     else:
-        raise RuntimeError(f"unsupported green library {library!r}")
+        msg = f"unsupported green library {library!r}"
+        raise RuntimeError(msg)
 
     return ident
 
 
-def current_asyncio_task():
+def current_asyncio_task():  # noqa: F811
     global current_asyncio_task
 
     try:
@@ -191,7 +197,7 @@ def current_asyncio_task():
     return current_asyncio_task()
 
 
-def current_trio_task():
+def current_trio_task():  # noqa: F811
     global current_trio_task
 
     try:
@@ -212,7 +218,8 @@ def current_async_task():
     elif library == "trio":
         task = current_trio_task()
     else:
-        raise RuntimeError(f"unsupported async library {library!r}")
+        msg = f"unsupported async library {library!r}"
+        raise RuntimeError(msg)
 
     return task
 
@@ -225,6 +232,7 @@ def current_async_task_ident():
     elif library == "trio":
         ident = (library, id(current_trio_task()))
     else:
-        raise RuntimeError(f"unsupported async library {library!r}")
+        msg = f"unsupported async library {library!r}"
+        raise RuntimeError(msg)
 
     return ident

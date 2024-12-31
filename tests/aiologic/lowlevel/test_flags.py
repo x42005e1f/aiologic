@@ -3,12 +3,13 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: 0BSD
 
-import time
 import pickle
+import time
 
 from concurrent.futures import ThreadPoolExecutor, wait
 
 import pytest
+
 import aiologic.lowlevel
 
 
@@ -37,7 +38,7 @@ class TestFlag:
         flag = self.factory()
 
         with pytest.raises(AttributeError):
-            flag.nonexistent_attribute
+            flag.nonexistent_attribute  # noqa: B018
         with pytest.raises(AttributeError):
             flag.nonexistent_attribute = 42
         with pytest.raises(AttributeError):

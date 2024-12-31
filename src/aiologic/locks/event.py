@@ -4,17 +4,17 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
+    "CountdownEvent",
     "Event",
     "REvent",
-    "CountdownEvent",
 )
 
-from itertools import count
 from collections import deque
+from itertools import count
 
 from aiologic.lowlevel import (
-    Flag,
     AsyncEvent,
+    Flag,
     GreenEvent,
     checkpoint,
     green_checkpoint,
@@ -23,9 +23,9 @@ from aiologic.lowlevel import (
 
 class Event:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__is_unset",
+        "__waiters",
+        "__weakref__",
     )
 
     @staticmethod
@@ -145,10 +145,10 @@ class Event:
 
 class REvent:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__is_unset",
         "__timer",
+        "__waiters",
+        "__weakref__",
     )
 
     @staticmethod
@@ -309,10 +309,10 @@ class REvent:
 
 class CountdownEvent:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__markers",
         "__timer",
+        "__waiters",
+        "__weakref__",
     )
 
     @staticmethod
@@ -322,7 +322,8 @@ class CountdownEvent:
         if value is None:
             value = 0
         elif value < 0:
-            raise ValueError("value must be >= 0")
+            msg = "value must be >= 0"
+            raise ValueError(msg)
 
         self.__waiters = deque()
         self.__markers = [object()] * value
@@ -446,7 +447,8 @@ class CountdownEvent:
             success = True
 
         if not success:
-            raise RuntimeError("down() called too many times")
+            msg = "down() called too many times"
+            raise RuntimeError(msg)
 
         self.__wakeup()
 

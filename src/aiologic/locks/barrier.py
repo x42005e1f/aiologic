@@ -4,16 +4,16 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
+    "Barrier",
     "BrokenBarrierError",
     "Latch",
-    "Barrier",
 )
 
 from collections import deque
 
 from aiologic.lowlevel import (
-    Flag,
     AsyncEvent,
+    Flag,
     GreenEvent,
     checkpoint,
     green_checkpoint,
@@ -26,9 +26,9 @@ class BrokenBarrierError(RuntimeError):
 
 class Latch:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__reached",
+        "__waiters",
+        "__weakref__",
         "parties",
     )
 
@@ -37,7 +37,8 @@ class Latch:
         self = super(Latch, cls).__new__(cls)
 
         if parties < 1:
-            raise ValueError("parties must be >= 1")
+            msg = "parties must be >= 1"
+            raise ValueError(msg)
 
         self.__waiters = deque()
         self.__reached = Flag()
@@ -137,10 +138,10 @@ class Latch:
 
 class Barrier:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
-        "__unlocked",
         "__is_broken",
+        "__unlocked",
+        "__waiters",
+        "__weakref__",
         "parties",
     )
 
@@ -149,7 +150,8 @@ class Barrier:
         self = super(Barrier, cls).__new__(cls)
 
         if parties < 1:
-            raise ValueError("parties must be >= 1")
+            msg = "parties must be >= 1"
+            raise ValueError(msg)
 
         self.__waiters = deque()
         self.__unlocked = [True]

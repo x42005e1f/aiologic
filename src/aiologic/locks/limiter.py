@@ -18,9 +18,9 @@ from .semaphore import Semaphore
 
 class CapacityLimiter:
     __slots__ = (
-        "__weakref__",
         "__semaphore",
         "__waiters",
+        "__weakref__",
         "borrowers",
     )
 
@@ -29,7 +29,8 @@ class CapacityLimiter:
         self = super(CapacityLimiter, cls).__new__(cls)
 
         if total_tokens < 1:
-            raise ValueError("total_tokens must be >= 1")
+            msg = "total_tokens must be >= 1"
+            raise ValueError(msg)
 
         self.__semaphore = Semaphore(total_tokens)
 
@@ -65,15 +66,17 @@ class CapacityLimiter:
 
         if self.__waiters.setdefault(borrower, marker) is not marker:
             if borrower not in self.borrowers:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already waiting for"
                     " any of this CapacityLimiter's tokens",
                 )
             else:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already holding"
                     " one of this CapacityLimiter's tokens",
                 )
+
+            raise RuntimeError(msg)
 
         success = False
 
@@ -105,15 +108,17 @@ class CapacityLimiter:
 
         if self.__waiters.setdefault(borrower, marker) is not marker:
             if borrower not in self.borrowers:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already waiting for"
                     " any of this CapacityLimiter's tokens",
                 )
             else:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already holding"
                     " one of this CapacityLimiter's tokens",
                 )
+
+            raise RuntimeError(msg)
 
         success = False
 
@@ -141,10 +146,11 @@ class CapacityLimiter:
         try:
             self.borrowers.remove(borrower)
         except KeyError:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this CapacityLimiter's tokens",
-            ) from None
+            )
+            raise RuntimeError(msg) from None
         else:
             del self.__waiters[borrower]
 
@@ -157,10 +163,11 @@ class CapacityLimiter:
         try:
             self.borrowers.remove(borrower)
         except KeyError:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this CapacityLimiter's tokens",
-            ) from None
+            )
+            raise RuntimeError(msg) from None
         else:
             del self.__waiters[borrower]
 
@@ -188,9 +195,9 @@ class CapacityLimiter:
 
 class RCapacityLimiter:
     __slots__ = (
-        "__weakref__",
         "__semaphore",
         "__waiters",
+        "__weakref__",
         "borrowers",
     )
 
@@ -199,7 +206,8 @@ class RCapacityLimiter:
         self = super(RCapacityLimiter, cls).__new__(cls)
 
         if total_tokens < 1:
-            raise ValueError("total_tokens must be >= 1")
+            msg = "total_tokens must be >= 1"
+            raise ValueError(msg)
 
         self.__semaphore = Semaphore(total_tokens)
 
@@ -235,15 +243,17 @@ class RCapacityLimiter:
 
         if self.__waiters.setdefault(borrower, task) != task:
             if borrower not in self.borrowers:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already waiting for"
                     " any of this RCapacityLimiter's tokens",
                 )
             else:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already holding"
                     " one of this RCapacityLimiter's tokens",
                 )
+
+            raise RuntimeError(msg)
 
         if borrower not in self.borrowers:
             success = False
@@ -283,15 +293,17 @@ class RCapacityLimiter:
 
         if self.__waiters.setdefault(borrower, task) != task:
             if borrower not in self.borrowers:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already waiting for"
                     " any of this RCapacityLimiter's tokens"
                 )
             else:
-                raise RuntimeError(
+                msg = (
                     "this borrower is already holding"
                     " one of this RCapacityLimiter's tokens"
                 )
+
+            raise RuntimeError(msg)
 
         if borrower not in self.borrowers:
             success = False
@@ -323,19 +335,21 @@ class RCapacityLimiter:
 
     def async_release_on_behalf_of(self, /, borrower):
         if borrower not in self.__waiters:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this RCapacityLimiter's tokens"
             )
+            raise RuntimeError(msg)
 
         task = current_async_task_ident()
 
         if self.__waiters.get(borrower) != task:
-            raise RuntimeError(
+            msg = (
                 "the current task is not holding"
                 " any of this RCapacityLimiter's tokens"
                 " on behalf of this borrower"
             )
+            raise RuntimeError(msg)
 
         self.borrowers[borrower] -= 1
 
@@ -350,19 +364,21 @@ class RCapacityLimiter:
 
     def green_release_on_behalf_of(self, /, borrower):
         if borrower not in self.__waiters:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this RCapacityLimiter's tokens"
             )
+            raise RuntimeError(msg)
 
         task = current_green_task_ident()
 
         if self.__waiters.get(borrower) != task:
-            raise RuntimeError(
+            msg = (
                 "the current task is not holding"
                 " any of this RCapacityLimiter's tokens"
                 " on behalf of this borrower"
             )
+            raise RuntimeError(msg)
 
         self.borrowers[borrower] -= 1
 
@@ -379,17 +395,19 @@ class RCapacityLimiter:
         task = current_async_task_ident()
 
         if task not in self.__waiters:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this RCapacityLimiter's tokens"
             )
+            raise RuntimeError(msg)
 
         if self.__waiters.get(task) != task:
-            raise RuntimeError(
+            msg = (
                 "the current task is not holding"
                 " any of this RCapacityLimiter's tokens"
                 " on behalf of this borrower"
             )
+            raise RuntimeError(msg)
 
         state = task, self.borrowers[task]
 
@@ -403,17 +421,19 @@ class RCapacityLimiter:
         task = current_green_task_ident()
 
         if task not in self.__waiters:
-            raise RuntimeError(
+            msg = (
                 "this borrower is not holding"
                 " any of this RCapacityLimiter's tokens"
             )
+            raise RuntimeError(msg)
 
         if self.__waiters.get(task) != task:
-            raise RuntimeError(
+            msg = (
                 "the current task is not holding"
                 " any of this RCapacityLimiter's tokens"
                 " on behalf of this borrower"
             )
+            raise RuntimeError(msg)
 
         state = task, self.borrowers[task]
 

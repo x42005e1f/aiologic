@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: ISC
 
 __all__ = (
-    "Semaphore",
     "BoundedSemaphore",
+    "Semaphore",
 )
 
 import platform
@@ -38,9 +38,9 @@ USE_BYTEARRAY = PYTHON_IMPLEMENTATION == "CPython" and _is_gil_enabled()
 
 class Semaphore:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__unlocked",
+        "__waiters",
+        "__weakref__",
         "initial_value",
     )
 
@@ -57,12 +57,14 @@ class Semaphore:
 
             if initial_value is not None:
                 if initial_value < 0:
-                    raise ValueError("initial_value must be >= 0")
+                    msg = "initial_value must be >= 0"
+                    raise ValueError(msg)
 
                 self.initial_value = initial_value
             elif max_value is not None:
                 if max_value < 0:
-                    raise ValueError("max_value must be >= 0")
+                    msg = "max_value must be >= 0"
+                    raise ValueError(msg)
 
                 self.initial_value = max_value
             else:
@@ -253,7 +255,8 @@ class BoundedSemaphore(Semaphore):
 
         if max_value is not None:
             if max_value < self.initial_value:
-                raise ValueError("max_value must be >= initial_value")
+                msg = "max_value must be >= initial_value"
+                raise ValueError(msg)
 
             self.max_value = max_value
         else:
@@ -322,9 +325,11 @@ class BoundedSemaphore(Semaphore):
                 success = True
 
             if not success:
-                raise RuntimeError("semaphore released too many times")
+                msg = "semaphore released too many times"
+                raise RuntimeError(msg)
         elif count:
-            raise ValueError("count must be 0 or 1")
+            msg = "count must be 0 or 1"
+            raise ValueError(msg)
 
         super().release(count)
 

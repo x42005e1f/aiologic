@@ -7,8 +7,8 @@ __all__ = ("Condition",)
 
 import time
 
-from itertools import count
 from collections import deque
+from itertools import count
 
 from aiologic.lowlevel import (
     MISSING,
@@ -22,9 +22,9 @@ from .lock import RLock
 
 class Condition:
     __slots__ = (
-        "__weakref__",
-        "__waiters",
         "__timer",
+        "__waiters",
+        "__weakref__",
         "lock",
     )
 
