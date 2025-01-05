@@ -62,6 +62,8 @@ select = [
     "UP",
     # flake8-2020
     "YTT",
+    # flake8-annotations
+    "ANN",
     # flake8-async
     "ASYNC",
     # flake8-bandit
@@ -94,6 +96,8 @@ select = [
     "PIE",
     # flake8-print
     "T20",
+    # flake8-pyi
+    "PYI",
     # flake8-pytest-style
     "PT",
     # flake8-raise
@@ -106,6 +110,8 @@ select = [
     "SIM",
     # flake8-tidy-imports
     "TID",
+    # flake8-type-checking
+    "TC",
     # flake8-todos
     "TD",
     # flake8-fixme
@@ -129,6 +135,8 @@ select = [
     "RUF",
 ]
 ignore = [
+    # flake8-annotations
+    "ANN401",  # any-type
     # flake8-async
     "ASYNC105",  # trio-sync-call
     "ASYNC110",  # async-busy-wait
@@ -145,6 +153,9 @@ ignore = [
     # flake8-implicit-str-concat
     "ISC001",  # single-line-implicit-string-concatenation
     "ISC002",  # multi-line-implicit-string-concatenation
+    # flake8-pyi
+    "PYI053",  # string-or-bytes-too-long
+    "PYI054",  # numeric-literal-too-long
     # flake8-return
     "RET504",  # unnecessary-assign
     "RET505",  # superfluous-else-return
@@ -213,6 +224,15 @@ unfixable = [
     "PIE794",  # duplicate-class-field-definition
     # flake8-print
     "T20",
+    # flake8-pyi
+    "PYI010",  # non-empty-stub-body
+    "PYI011",  # typed-argument-default-in-stub
+    "PYI014",  # argument-default-in-stub
+    "PYI015",  # assignment-default-in-stub
+    "PYI021",  # docstring-in-stub
+    "PYI029",  # str-or-repr-defined-in-stub
+    "PYI048",  # stub-body-multiple-statements
+    "PYI051",  # redundant-literal-union
     # pylint
     "PLE4703",  # modified-iterating-set
     "PLW0128",  # redeclared-assigned-name
