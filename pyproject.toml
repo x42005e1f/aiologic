@@ -62,8 +62,6 @@ select = [
     "UP",
     # flake8-2020
     "YTT",
-    # flake8-annotations
-    "ANN",
     # flake8-async
     "ASYNC",
     # flake8-bandit
@@ -135,8 +133,6 @@ select = [
     "RUF",
 ]
 ignore = [
-    # flake8-annotations
-    "ANN401",  # any-type
     # flake8-async
     "ASYNC105",  # trio-sync-call
     "ASYNC110",  # async-busy-wait
