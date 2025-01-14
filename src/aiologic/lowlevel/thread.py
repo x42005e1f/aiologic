@@ -129,10 +129,7 @@ def __getattr__(name, /):
             except ImportError:
                 pass
             else:
-                if name.isupper() or getattr(value, "__module__", "") == (
-                    "_thread"
-                ):
-                    return globals().setdefault(name, value)
+                return globals().setdefault(name, value)
 
     msg = f"module '_thread' has no attribute {name!r}"
     raise AttributeError(msg)

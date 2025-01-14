@@ -119,10 +119,7 @@ def __getattr__(name, /):
             except ImportError:
                 pass
             else:
-                if name.isupper() or getattr(value, "__module__", "") == (
-                    "_socket"
-                ):
-                    return globals().setdefault(name, value)
+                return globals().setdefault(name, value)
 
     msg = f"module '_socket' has no attribute {name!r}"
     raise AttributeError(msg)
