@@ -3,20 +3,13 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-__all__ = ("Condition",)
-
 import time
 
 from collections import deque
 from itertools import count
 
 from .lock import RLock
-from .lowlevel import (
-    MISSING,
-    AsyncEvent,
-    GreenEvent,
-    repeat_if_cancelled,
-)
+from .lowlevel import MISSING, AsyncEvent, GreenEvent, repeat_if_cancelled
 
 
 class Condition:

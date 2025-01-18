@@ -3,21 +3,11 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-__all__ = (
-    "BoundedSemaphore",
-    "Semaphore",
-)
-
 import platform
 
 from collections import deque
 
-from .lowlevel import (
-    AsyncEvent,
-    GreenEvent,
-    checkpoint,
-    green_checkpoint,
-)
+from .lowlevel import AsyncEvent, GreenEvent, checkpoint, green_checkpoint
 
 try:
     from sys import _is_gil_enabled

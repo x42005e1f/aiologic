@@ -3,11 +3,6 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-__all__ = (
-    "BusyResourceError",
-    "ResourceGuard",
-)
-
 
 class BusyResourceError(RuntimeError):
     pass

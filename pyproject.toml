@@ -239,6 +239,8 @@ unfixable = [
     # pyflakes
     "F403",  # undefined-local-with-import-star
     "F405",  # undefined-local-with-import-star-usage
+    # pylint
+    "PLC0414",  # useless-import-alias
 ]
 "tests/**.py" = [
     # flake8-bandit

@@ -3,12 +3,6 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-__all__ = (
-    "Lock",
-    "PLock",
-    "RLock",
-)
-
 from collections import deque
 
 from .lowlevel import (

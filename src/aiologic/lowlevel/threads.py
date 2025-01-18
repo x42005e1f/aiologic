@@ -3,13 +3,6 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-__all__ = (
-    "ThreadLocal",
-    "add_thread_finalizer",
-    "remove_thread_finalizer",
-    "start_new_thread",
-)
-
 from importlib import import_module
 from sys import modules
 
