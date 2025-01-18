@@ -35,11 +35,12 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-trio = ["trio>=0.23.0"]
 anyio = ["anyio>=3.0.0"]
+eventlet = ["eventlet>=0.15.1"]
 gevent = ["gevent>=21.1.0"]
 sniffio = ["sniffio>=1.3.0"]
-eventlet = ["eventlet>=0.15.1"]
+trio = ["trio>=0.23.0"]
+typing_extensions = ["typing_extensions>=4.1.0"]
 
 [project.urls]
 Source = "https://github.com/x42005e1f/aiologic"
