@@ -8,11 +8,10 @@ __all__ = (
     "RCapacityLimiter",
 )
 
-from aiologic.lowlevel import (
+from .lowlevel import (
     current_async_task_ident,
     current_green_task_ident,
 )
-
 from .semaphore import Semaphore
 
 

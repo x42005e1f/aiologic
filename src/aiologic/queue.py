@@ -15,7 +15,6 @@ __all__ = (
 from collections import deque
 from heapq import heapify, heappop, heappush
 
-from .locks import Semaphore
 from .lowlevel import (
     MISSING,
     AsyncEvent,
@@ -23,6 +22,7 @@ from .lowlevel import (
     checkpoint,
     green_checkpoint,
 )
+from .semaphore import Semaphore
 
 
 class QueueEmpty(Exception):

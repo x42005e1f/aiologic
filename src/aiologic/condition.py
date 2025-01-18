@@ -10,14 +10,13 @@ import time
 from collections import deque
 from itertools import count
 
-from aiologic.lowlevel import (
+from .lock import RLock
+from .lowlevel import (
     MISSING,
     AsyncEvent,
     GreenEvent,
     repeat_if_cancelled,
 )
-
-from .lock import RLock
 
 
 class Condition:

@@ -12,7 +12,7 @@ import platform
 
 from collections import deque
 
-from aiologic.lowlevel import (
+from .lowlevel import (
     AsyncEvent,
     GreenEvent,
     checkpoint,

@@ -11,7 +11,7 @@ __all__ = (
 
 from collections import deque
 
-from aiologic.lowlevel import (
+from .lowlevel import (
     AsyncEvent,
     Flag,
     GreenEvent,

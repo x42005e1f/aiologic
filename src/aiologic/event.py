@@ -12,7 +12,7 @@ __all__ = (
 from collections import deque
 from itertools import count
 
-from aiologic.lowlevel import (
+from .lowlevel import (
     AsyncEvent,
     Flag,
     GreenEvent,
