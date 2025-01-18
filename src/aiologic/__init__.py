@@ -3,6 +3,9 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from . import (  # noqa: F401
+    lowlevel,
+)
 from ._barrier import (
     Barrier as Barrier,
     BrokenBarrierError as BrokenBarrierError,
