@@ -70,3 +70,13 @@ from .threads import (
     remove_thread_finalizer as remove_thread_finalizer,
     start_new_thread as start_new_thread,
 )
+
+# modify __module__ for shorter repr() and better pickle support
+for __value in list(globals().values()):
+    if getattr(__value, "__module__", "").startswith(f"{__name__}."):
+        try:
+            __value.__module__ = __name__
+        except AttributeError:
+            pass
+
+del __value
