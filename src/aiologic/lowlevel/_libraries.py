@@ -7,8 +7,8 @@ import os
 
 from sys import modules
 
-from . import patcher
-from .threads import ThreadLocal
+from . import _patcher as patcher
+from ._threads import ThreadLocal
 
 GREEN_LIBRARY_DEFAULT = os.getenv("AIOLOGIC_GREEN_LIBRARY") or None
 ASYNC_LIBRARY_DEFAULT = os.getenv("AIOLOGIC_ASYNC_LIBRARY") or None
@@ -29,7 +29,7 @@ def threading_running_impl():  # noqa: F811
     global threading_running_impl
 
     try:
-        from .thread import get_ident  # noqa: F401
+        from ._thread import get_ident  # noqa: F401
     except ImportError:
 
         def threading_running_impl():
@@ -48,7 +48,7 @@ def eventlet_running_impl():  # noqa: F811
 
     if patcher.eventlet_patched("threading"):
         try:
-            from .thread import get_ident, get_main_thread_ident
+            from ._thread import get_ident, get_main_thread_ident
         except ImportError:
 
             def eventlet_running_impl():
@@ -84,7 +84,7 @@ def gevent_running_impl():  # noqa: F811
 
     if patcher.gevent_patched("threading"):
         try:
-            from .thread import get_ident, get_main_thread_ident
+            from ._thread import get_ident, get_main_thread_ident
         except ImportError:
 
             def gevent_running_impl():

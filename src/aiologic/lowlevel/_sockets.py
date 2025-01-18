@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: ISC
 
 try:
-    from .socket import socketpair as socketpair_impl
+    from ._socket import socketpair as socketpair_impl
 except ImportError:
 
     def socketpair(*args, blocking=True, buffering=-1, **kwargs):
@@ -12,12 +12,12 @@ except ImportError:
 
 else:
     try:
-        from .socket import SOL_SOCKET, SO_RCVBUF, SO_SNDBUF
+        from ._socket import SOL_SOCKET, SO_RCVBUF, SO_SNDBUF
     except ImportError:
         pass
 
     try:
-        from .socket import IPPROTO_TCP, TCP_NODELAY
+        from ._socket import IPPROTO_TCP, TCP_NODELAY
     except ImportError:
         pass
 

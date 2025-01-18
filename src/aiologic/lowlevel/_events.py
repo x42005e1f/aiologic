@@ -5,9 +5,9 @@
 
 from abc import ABC, abstractmethod
 
-from . import patcher
-from .checkpoints import checkpoint, green_checkpoint
-from .libraries import current_async_library, current_green_library
+from . import _patcher as patcher
+from ._checkpoints import checkpoint, green_checkpoint
+from ._libraries import current_async_library, current_green_library
 
 
 class Event(ABC):
@@ -155,7 +155,7 @@ class GreenEvent(BaseEvent):
 def get_threading_event_class():
     global ThreadingEvent
 
-    from .thread import allocate_lock
+    from ._thread import allocate_lock
 
     class ThreadingEvent(GreenEvent):
         __slots__ = ("__lock",)

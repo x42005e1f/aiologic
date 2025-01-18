@@ -10,7 +10,7 @@ import time
 from contextvars import ContextVar
 from functools import partial
 
-from .libraries import current_async_library, current_green_library
+from ._libraries import current_async_library, current_green_library
 
 PYTHON_IMPLEMENTATION = platform.python_implementation()
 

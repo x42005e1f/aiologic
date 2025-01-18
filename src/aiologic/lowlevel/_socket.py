@@ -5,7 +5,7 @@
 
 import sys
 
-from .patcher import import_original
+from ._patcher import import_original
 
 error = OSError
 

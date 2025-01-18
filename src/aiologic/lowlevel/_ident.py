@@ -3,11 +3,11 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from .libraries import current_async_library, current_green_library
-from .threads import current_thread
+from ._libraries import current_async_library, current_green_library
+from ._threads import current_thread
 
 try:
-    from .thread import get_ident as current_thread_ident
+    from ._thread import get_ident as current_thread_ident
 except ImportError:
 
     def current_thread_ident():

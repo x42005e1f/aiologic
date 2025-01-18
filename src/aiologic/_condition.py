@@ -10,7 +10,7 @@ import types
 from collections import deque
 from itertools import count
 
-from .lock import RLock
+from ._lock import RLock
 from .lowlevel import MISSING, AsyncEvent, GreenEvent, repeat_if_cancelled
 
 

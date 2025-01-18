@@ -6,8 +6,8 @@
 from importlib import import_module
 from sys import modules
 
-from . import patcher
-from .markers import MISSING
+from . import _patcher as patcher
+from ._markers import MISSING
 
 
 def get_python_thread(ident, /):  # noqa: F811
@@ -261,7 +261,7 @@ def current_thread():
 
 
 try:
-    from .thread import allocate_lock, get_ident
+    from ._thread import allocate_lock, get_ident
 except ImportError:
     from types import SimpleNamespace as ThreadLocal
 
@@ -281,7 +281,7 @@ else:
     from collections import deque
     from logging import getLogger
 
-    from . import thread as _thread
+    from . import _thread
 
     LOGGER = getLogger(__name__)
 

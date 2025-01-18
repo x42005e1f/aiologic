@@ -6,7 +6,7 @@
 import sys
 import types
 
-from .markers import MISSING
+from ._markers import MISSING
 
 
 class Flag:

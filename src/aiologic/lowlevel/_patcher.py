@@ -335,7 +335,7 @@ def import_original(name):
 
 
 try:
-    from .thread import allocate_lock
+    from ._thread import allocate_lock
 except ImportError:
     import time
 
@@ -834,7 +834,7 @@ def patch_eventlet():
                 AsyncioHub_schedule_call_threadsafe
             )
 
-        from .sockets import socketpair
+        from ._sockets import socketpair
 
         def BaseHub__aiologic_init_socketpair(self, /):
             if not hasattr(self, "_aiologic_rsock"):
