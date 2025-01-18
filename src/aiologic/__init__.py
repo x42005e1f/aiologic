@@ -63,4 +63,4 @@ for __value in list(globals().values()):
         except AttributeError:
             pass
 
-del __value
+    del __value
