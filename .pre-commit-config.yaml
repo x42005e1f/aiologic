@@ -23,3 +23,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v5.0.2
+    hooks:
+      - id: reuse-lint-file
