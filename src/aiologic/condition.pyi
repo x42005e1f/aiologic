@@ -3,6 +3,7 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import _thread
 import sys
 import threading
 
@@ -18,7 +19,15 @@ else:
 
 _T_co = TypeVar(
     "_T_co",
-    bound=(RLock | Lock | PLock | threading.RLock | threading.Lock | None),
+    bound=(
+        RLock
+        | Lock
+        | PLock
+        | threading.RLock
+        | threading.Lock
+        | _thread.LockType
+        | None
+    ),
     covariant=True,
 )
 
