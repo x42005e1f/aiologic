@@ -56,6 +56,7 @@ from .libraries import (
 )
 from .markers import (
     MISSING as MISSING,
+    MissingType as MissingType,
 )
 from .patcher import (
     patch_eventlet as patch_eventlet,
