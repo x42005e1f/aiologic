@@ -3,6 +3,9 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import sys
+import types
+
 from collections import deque
 from heapq import heapify, heappop, heappush
 
@@ -101,6 +104,9 @@ class SimpleQueue:
     @property
     def getting(self, /):
         return self.__sem.waiting
+
+    if sys.version_info >= (3, 9):
+        __class_getitem__ = classmethod(types.GenericAlias)
 
 
 class Queue:
@@ -474,6 +480,9 @@ class Queue:
     @property
     def getting(self, /):
         return len(self.__get_waiters)
+
+    if sys.version_info >= (3, 9):
+        __class_getitem__ = classmethod(types.GenericAlias)
 
 
 class LifoQueue(Queue):

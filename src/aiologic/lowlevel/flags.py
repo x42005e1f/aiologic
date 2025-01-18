@@ -3,6 +3,9 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import sys
+import types
+
 from .markers import MISSING
 
 
@@ -90,3 +93,6 @@ class Flag:
 
     def clear(self, /):
         self.__markers.clear()
+
+    if sys.version_info >= (3, 9):
+        __class_getitem__ = classmethod(types.GenericAlias)
