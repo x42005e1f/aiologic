@@ -206,6 +206,7 @@ Features
 * Thread safety wherever possible
 * Zero required dependencies
 * Lock-free implementation
+* Bundled stub files
 
 Synchronization primitives:
 
