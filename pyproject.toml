@@ -43,7 +43,7 @@ trio = ["trio>=0.23.0"]
 typing_extensions = ["typing_extensions>=4.1.0"]
 
 [project.urls]
-Source = "https://github.com/x42005e1f/aiologic"
+GitHub = "https://github.com/x42005e1f/aiologic"
 
 [tool.ruff]
 fix = true
