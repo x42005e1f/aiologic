@@ -17,3 +17,4 @@ include pyproject.toml
 include MANIFEST.in
 
 include README.rst
+include CHANGELOG.md
