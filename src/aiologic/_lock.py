@@ -83,13 +83,14 @@ class PLock:
                         success = await event
                         rescheduled = True
                 finally:
-                    if success or event.cancel():
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
+                    if not success:
+                        if event.cancel():
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            self.__release()
 
             if not rescheduled:
                 await checkpoint()
@@ -113,13 +114,14 @@ class PLock:
                         success = event.wait(timeout)
                         rescheduled = True
                 finally:
-                    if success or event.cancel():
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
-                    else:
-                        self.__release()
+                    if not success:
+                        if event.cancel():
+                            try:
+                                waiters.remove(event)
+                            except ValueError:
+                                pass
+                        else:
+                            self.__release()
 
             if not rescheduled:
                 green_checkpoint()
