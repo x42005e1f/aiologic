@@ -16,6 +16,18 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
+[Unreleased]
+------------
+
+### Fixed
+
+- Optimized the event removal in locks and semaphores. Previously, removing an
+  event from the waiting queue was performed even when it was successfully set,
+  which caused serious slowdown due to expensive O(n) operations.
+  Now the removal is only performed in case of failure - on cancellation,
+  in particular timeouts, and exceptions.
+  ([#5](https://github.com/x42005e1f/aiologic/issues/5)).
+
 [0.13.0] - 2025-01-19
 ---------------------
 
@@ -205,6 +217,7 @@ Commit messages are consistent with
 - The build system has been changed to `pyproject.toml`-only instead of
   `pyproject.toml` + `setup.cfg` + `setup.py`. It should be more trusted by new
   users, since it does not contain executable code.
+  ([#1](https://github.com/x42005e1f/aiologic/pull/1)).
 
 [0.3.0] - 2024-09-23
 --------------------
@@ -320,6 +333,7 @@ Commit messages are consistent with
 
 Check back later!
 
+[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.13.0...HEAD
 [0.13.0]: https://github.com/x42005e1f/aiologic/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/x42005e1f/aiologic/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/x42005e1f/aiologic/compare/0.10.0...0.11.0
