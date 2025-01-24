@@ -34,7 +34,6 @@ class Semaphore:
         "initial_value",
     )
 
-    @staticmethod
     def __new__(cls, /, initial_value=None, max_value=None):
         if cls is Semaphore and max_value is not None:
             self = BoundedSemaphore.__new__(
@@ -237,7 +236,6 @@ class BoundedSemaphore(Semaphore):
         "max_value",
     )
 
-    @staticmethod
     def __new__(cls, /, initial_value=None, max_value=None):
         self = super(BoundedSemaphore, cls).__new__(
             cls,

@@ -15,7 +15,6 @@ class CapacityLimiter:
         "borrowers",
     )
 
-    @staticmethod
     def __new__(cls, /, total_tokens):
         self = super(CapacityLimiter, cls).__new__(cls)
 
@@ -192,7 +191,6 @@ class RCapacityLimiter:
         "borrowers",
     )
 
-    @staticmethod
     def __new__(cls, /, total_tokens):
         self = super(RCapacityLimiter, cls).__new__(cls)
 

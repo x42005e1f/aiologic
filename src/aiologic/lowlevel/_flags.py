@@ -12,7 +12,6 @@ from ._markers import MISSING
 class Flag:
     __slots__ = ("__markers",)
 
-    @staticmethod
     def __new__(cls, /, marker=MISSING):
         self = super(Flag, cls).__new__(cls)
 

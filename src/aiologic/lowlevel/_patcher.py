@@ -195,7 +195,6 @@ def import_gevent_original(module_name, /):  # noqa: F811
                     "_name_",
                 )
 
-                @staticmethod
                 def __new__(cls, /, name):
                     self = object___new__(cls)
 

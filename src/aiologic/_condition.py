@@ -22,7 +22,6 @@ class Condition:
         "lock",
     )
 
-    @staticmethod
     def __new__(cls, /, lock=MISSING):
         self = super(Condition, cls).__new__(cls)
 

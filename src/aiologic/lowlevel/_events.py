@@ -37,7 +37,6 @@ class Event(ABC):
 class DummyEvent(Event):
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         if cls is DummyEvent:
             self = DUMMY_EVENT
@@ -46,7 +45,6 @@ class DummyEvent(Event):
 
         return self
 
-    @classmethod
     def __init_subclass__(cls, /, **kwargs):
         msg = "type 'DummyEvent' is not an acceptable base type"
         raise TypeError(msg)
@@ -92,7 +90,6 @@ class BaseEvent(Event):
         "_is_unset",
     )
 
-    @staticmethod
     def __new__(cls, /):
         self = super(BaseEvent, cls).__new__(cls)
 
@@ -127,7 +124,6 @@ class BaseEvent(Event):
 class GreenEvent(BaseEvent):
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         if cls is GreenEvent:
             library = current_green_library()
@@ -160,7 +156,6 @@ def get_threading_event_class():
     class ThreadingEvent(GreenEvent):
         __slots__ = ("__lock",)
 
-        @staticmethod
         def __new__(cls, /):
             self = super(ThreadingEvent, cls).__new__(cls)
 
@@ -169,7 +164,6 @@ def get_threading_event_class():
 
             return self
 
-        @classmethod
         def __init_subclass__(cls, /, **kwargs):
             msg = "type 'ThreadingEvent' is not an acceptable base type"
             raise TypeError(msg)
@@ -240,7 +234,6 @@ def get_eventlet_event_class():
             "__hub",
         )
 
-        @staticmethod
         def __new__(cls, /):
             self = super(EventletEvent, cls).__new__(cls)
 
@@ -249,7 +242,6 @@ def get_eventlet_event_class():
 
             return self
 
-        @classmethod
         def __init_subclass__(cls, /, **kwargs):
             msg = "type 'EventletEvent' is not an acceptable base type"
             raise TypeError(msg)
@@ -350,7 +342,6 @@ def get_gevent_event_class():
             "__hub",
         )
 
-        @staticmethod
         def __new__(cls, /):
             self = super(GeventEvent, cls).__new__(cls)
 
@@ -359,7 +350,6 @@ def get_gevent_event_class():
 
             return self
 
-        @classmethod
         def __init_subclass__(cls, /, **kwargs):
             msg = "type 'GeventEvent' is not an acceptable base type"
             raise TypeError(msg)
@@ -445,10 +435,9 @@ def get_gevent_event_class():
 class ThreadingEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         try:
-            cls = get_threading_event_class()
+            cls = get_threading_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
@@ -460,10 +449,9 @@ class ThreadingEvent(GreenEvent):  # noqa: F811
 class EventletEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         try:
-            cls = get_eventlet_event_class()
+            cls = get_eventlet_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
@@ -475,10 +463,9 @@ class EventletEvent(GreenEvent):  # noqa: F811
 class GeventEvent(GreenEvent):  # noqa: F811
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         try:
-            cls = get_gevent_event_class()
+            cls = get_gevent_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
@@ -490,7 +477,6 @@ class GeventEvent(GreenEvent):  # noqa: F811
 class AsyncEvent(BaseEvent):
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         if cls is AsyncEvent:
             library = current_async_library()
@@ -525,7 +511,6 @@ def get_asyncio_event_class():
             "__loop",
         )
 
-        @staticmethod
         def __new__(cls, /):
             self = super(AsyncioEvent, cls).__new__(cls)
 
@@ -534,7 +519,6 @@ def get_asyncio_event_class():
 
             return self
 
-        @classmethod
         def __init_subclass__(cls, /, **kwargs):
             msg = "type 'AsyncioEvent' is not an acceptable base type"
             raise TypeError(msg)
@@ -614,7 +598,6 @@ def get_trio_event_class():
             "__token",
         )
 
-        @staticmethod
         def __new__(cls, /):
             self = super(TrioEvent, cls).__new__(cls)
 
@@ -623,7 +606,6 @@ def get_trio_event_class():
 
             return self
 
-        @classmethod
         def __init_subclass__(cls, /, **kwargs):
             msg = "type 'TrioEvent' is not an acceptable base type"
             raise TypeError(msg)
@@ -687,10 +669,9 @@ def get_trio_event_class():
 class AsyncioEvent(AsyncEvent):  # noqa: F811
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         try:
-            cls = get_asyncio_event_class()
+            cls = get_asyncio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
@@ -702,10 +683,9 @@ class AsyncioEvent(AsyncEvent):  # noqa: F811
 class TrioEvent(AsyncEvent):  # noqa: F811
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         try:
-            cls = get_trio_event_class()
+            cls = get_trio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:

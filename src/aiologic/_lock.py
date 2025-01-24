@@ -22,7 +22,6 @@ class PLock:
         "__weakref__",
     )
 
-    @staticmethod
     def __new__(cls, /):
         self = super(PLock, cls).__new__(cls)
 
@@ -168,7 +167,6 @@ class PLock:
 class Lock(PLock):
     __slots__ = ("owner",)
 
-    @staticmethod
     def __new__(cls, /):
         self = super(Lock, cls).__new__(cls)
 
@@ -244,7 +242,6 @@ class RLock(PLock):
         "owner",
     )
 
-    @staticmethod
     def __new__(cls, /):
         self = super(RLock, cls).__new__(cls)
 

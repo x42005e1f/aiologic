@@ -366,7 +366,6 @@ else:
                 "_namespaces_",
             )
 
-            @staticmethod
             def __new__(cls, /, **kwargs):
                 self = object___new__(cls)
 

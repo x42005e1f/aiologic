@@ -7,11 +7,9 @@
 class MissingType:
     __slots__ = ()
 
-    @staticmethod
     def __new__(cls, /):
         return MISSING
 
-    @classmethod
     def __init_subclass__(cls, /, **kwargs):
         msg = "type 'MissingType' is not an acceptable base type"
         raise TypeError(msg)

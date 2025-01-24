@@ -26,7 +26,6 @@ class Latch:
         "parties",
     )
 
-    @staticmethod
     def __new__(cls, /, parties):
         self = super(Latch, cls).__new__(cls)
 
@@ -139,7 +138,6 @@ class Barrier:
         "parties",
     )
 
-    @staticmethod
     def __new__(cls, /, parties):
         self = super(Barrier, cls).__new__(cls)
 

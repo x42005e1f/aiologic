@@ -34,7 +34,6 @@ class SimpleQueue:
         "_data",
     )
 
-    @staticmethod
     def __new__(cls, items=MISSING, /):
         self = super(SimpleQueue, cls).__new__(cls)
 
@@ -120,7 +119,6 @@ class Queue:
         "maxsize",
     )
 
-    @staticmethod
     def __new__(cls, items=MISSING, /, maxsize=None):
         if maxsize is None:
             if isinstance(items, int):

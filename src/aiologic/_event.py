@@ -22,7 +22,6 @@ class Event:
         "__weakref__",
     )
 
-    @staticmethod
     def __new__(cls, /, is_set=False):
         self = super(Event, cls).__new__(cls)
 
@@ -145,7 +144,6 @@ class REvent:
         "__weakref__",
     )
 
-    @staticmethod
     def __new__(cls, /, is_set=False):
         self = super(REvent, cls).__new__(cls)
 
@@ -309,7 +307,6 @@ class CountdownEvent:
         "__weakref__",
     )
 
-    @staticmethod
     def __new__(cls, /, value=None):
         self = super(CountdownEvent, cls).__new__(cls)
 

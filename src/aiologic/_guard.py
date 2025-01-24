@@ -15,7 +15,6 @@ class ResourceGuard:
         "action",
     )
 
-    @staticmethod
     def __new__(cls, /, action="using"):
         self = super(ResourceGuard, cls).__new__(cls)
 
