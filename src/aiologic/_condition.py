@@ -23,7 +23,7 @@ class Condition:
     )
 
     def __new__(cls, /, lock=MISSING):
-        self = super(Condition, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.__waiters = deque()
         self.__timer = count().__next__

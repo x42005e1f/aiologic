@@ -23,7 +23,7 @@ class PLock:
     )
 
     def __new__(cls, /):
-        self = super(PLock, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.__waiters = deque()
         self.__unlocked = [True]
@@ -168,7 +168,7 @@ class Lock(PLock):
     __slots__ = ("owner",)
 
     def __new__(cls, /):
-        self = super(Lock, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.owner = None
 
@@ -243,7 +243,7 @@ class RLock(PLock):
     )
 
     def __new__(cls, /):
-        self = super(RLock, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.owner = None
         self.level = 0

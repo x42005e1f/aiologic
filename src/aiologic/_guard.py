@@ -16,7 +16,7 @@ class ResourceGuard:
     )
 
     def __new__(cls, /, action="using"):
-        self = super(ResourceGuard, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.__unlocked = [True]
 

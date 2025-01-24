@@ -27,7 +27,7 @@ class Latch:
     )
 
     def __new__(cls, /, parties):
-        self = super(Latch, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if parties < 1:
             msg = "parties must be >= 1"
@@ -139,7 +139,7 @@ class Barrier:
     )
 
     def __new__(cls, /, parties):
-        self = super(Barrier, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if parties < 1:
             msg = "parties must be >= 1"

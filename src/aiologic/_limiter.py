@@ -16,7 +16,7 @@ class CapacityLimiter:
     )
 
     def __new__(cls, /, total_tokens):
-        self = super(CapacityLimiter, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if total_tokens < 1:
             msg = "total_tokens must be >= 1"
@@ -192,7 +192,7 @@ class RCapacityLimiter:
     )
 
     def __new__(cls, /, total_tokens):
-        self = super(RCapacityLimiter, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if total_tokens < 1:
             msg = "total_tokens must be >= 1"

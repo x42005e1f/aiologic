@@ -13,7 +13,7 @@ class Flag:
     __slots__ = ("__markers",)
 
     def __new__(cls, /, marker=MISSING):
-        self = super(Flag, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if marker is not MISSING:
             self.__markers = [marker]

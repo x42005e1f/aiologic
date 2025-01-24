@@ -23,7 +23,7 @@ class Event:
     )
 
     def __new__(cls, /, is_set=False):
-        self = super(Event, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.__waiters = deque()
         self.__is_unset = not is_set
@@ -145,7 +145,7 @@ class REvent:
     )
 
     def __new__(cls, /, is_set=False):
-        self = super(REvent, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self.__waiters = deque()
         self.__is_unset = Flag()
@@ -308,7 +308,7 @@ class CountdownEvent:
     )
 
     def __new__(cls, /, value=None):
-        self = super(CountdownEvent, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if value is None:
             value = 0

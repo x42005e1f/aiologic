@@ -35,7 +35,7 @@ class SimpleQueue:
     )
 
     def __new__(cls, items=MISSING, /):
-        self = super(SimpleQueue, cls).__new__(cls)
+        self = super().__new__(cls)
 
         if items is not MISSING:
             self._data = data = deque(items)
@@ -129,7 +129,7 @@ class Queue:
         if items is MISSING:
             items = ()
 
-        self = super(Queue, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._init(items, maxsize)
 

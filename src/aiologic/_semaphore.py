@@ -42,7 +42,7 @@ class Semaphore:
                 max_value,
             )
         else:
-            self = super(Semaphore, cls).__new__(cls)
+            self = super().__new__(cls)
 
             if initial_value is not None:
                 if initial_value < 0:
@@ -237,11 +237,7 @@ class BoundedSemaphore(Semaphore):
     )
 
     def __new__(cls, /, initial_value=None, max_value=None):
-        self = super(BoundedSemaphore, cls).__new__(
-            cls,
-            initial_value,
-            max_value,
-        )
+        self = super().__new__(cls, initial_value, max_value)
 
         if max_value is not None:
             if max_value < self.initial_value:

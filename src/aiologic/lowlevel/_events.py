@@ -41,7 +41,7 @@ class DummyEvent(Event):
         if cls is DummyEvent:
             self = DUMMY_EVENT
         else:
-            self = super(DummyEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
         return self
 
@@ -91,7 +91,7 @@ class BaseEvent(Event):
     )
 
     def __new__(cls, /):
-        self = super(BaseEvent, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._is_unset = [True]
         self._is_cancelled = False
@@ -138,7 +138,7 @@ class GreenEvent(BaseEvent):
                 msg = f"unsupported green library {library!r}"
                 raise RuntimeError(msg)
         else:
-            self = super(GreenEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
         return self
 
@@ -157,7 +157,7 @@ def get_threading_event_class():
         __slots__ = ("__lock",)
 
         def __new__(cls, /):
-            self = super(ThreadingEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
             self.__lock = allocate_lock()
             self.__lock.acquire()
@@ -235,7 +235,7 @@ def get_eventlet_event_class():
         )
 
         def __new__(cls, /):
-            self = super(EventletEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
             self.__hub = get_eventlet_hub()
             self.__greenlet = None
@@ -343,7 +343,7 @@ def get_gevent_event_class():
         )
 
         def __new__(cls, /):
-            self = super(GeventEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
             self.__hub = get_gevent_hub()
             self.__event = None
@@ -489,7 +489,7 @@ class AsyncEvent(BaseEvent):
                 msg = f"unsupported async library {library!r}"
                 raise RuntimeError(msg)
         else:
-            self = super(AsyncEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
         return self
 
@@ -512,7 +512,7 @@ def get_asyncio_event_class():
         )
 
         def __new__(cls, /):
-            self = super(AsyncioEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
             self.__loop = get_running_asyncio_loop()
             self.__future = None
@@ -599,7 +599,7 @@ def get_trio_event_class():
         )
 
         def __new__(cls, /):
-            self = super(TrioEvent, cls).__new__(cls)
+            self = super().__new__(cls)
 
             self.__token = current_trio_token()
             self.__task = None
