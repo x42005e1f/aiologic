@@ -6,6 +6,8 @@
 aiologic
 ========
 
+.. badges-start-marker
+
 .. image:: https://img.shields.io/pypi/dw/aiologic.svg
   :target: https://pypistats.org/packages/aiologic
 .. image:: https://img.shields.io/pypi/implementation/aiologic.svg
@@ -14,6 +16,8 @@ aiologic
   :target: #features
 .. image:: https://img.shields.io/pypi/types/aiologic.svg
   :target: #features
+
+.. badges-end-marker
 
 **aiologic** is a locking library for tasks synchronization
 and their communication. It provides primitives that are both
@@ -75,6 +79,8 @@ it will raise a ``RuntimeError``. And ``threading.Lock`` will cause a deadlock.
 Features
 ========
 
+.. features-start-marker
+
 * Python 3.8+ support
 * `CPython <https://www.python.org/>`_ and `PyPy <https://pypy.org/>`_ support
 * `Pickling <https://docs.python.org/3/library/pickle.html>`_
@@ -129,8 +135,12 @@ All this works because of GIL, but per-object locks also ensure that
 so ``aiologic`` also works when running in a `free-threaded mode
 <https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`_.
 
+.. features-end-marker
+
 Installation
 ============
+
+.. installation-start-marker
 
 Install from `PyPI <https://pypi.org/project/aiologic/>`_ (recommended):
 
@@ -146,6 +156,8 @@ Or from `GitHub <https://github.com/x42005e1f/aiologic>`_:
 
 You can also use other package managers,
 such as `uv <https://github.com/astral-sh/uv>`_.
+
+.. installation-end-marker
 
 Documentation
 =============
@@ -171,6 +183,8 @@ star `its repository on GitHub <https://github.com/x42005e1f/aiologic>`_.
 License
 =======
 
+.. license-start-marker
+
 The ``aiologic`` library is `REUSE-compliant
 <https://api.reuse.software/info/github.com/x42005e1f/aiologic>`_
 and is offered under multiple licenses:
@@ -185,3 +199,5 @@ and is offered under multiple licenses:
   <https://choosealicense.com/licenses/cc0-1.0/>`_.
 
 For more accurate information, check the individual files.
+
+.. license-end-marker
