@@ -21,6 +21,4 @@ extensions = [
 ]
 
 html_theme = "sphinx_rtd_theme"
-html_theme_options = {
-    "version_selector": False,
-}
+html_theme_options = {}
