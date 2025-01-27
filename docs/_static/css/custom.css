@@ -1,6 +1,10 @@
 /* SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com> */
 /* SPDX-License-Identifier: CC0-1.0 */
 
+.wy-side-nav-search .switch-menus {
+  display: none;
+}
+
 .wy-menu.wy-menu-vertical a.reference.external::after {
   content: "\00a0\f08e";
   display: inline-block;
