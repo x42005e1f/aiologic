@@ -25,3 +25,10 @@ html_theme = "sphinx_rtd_theme"
 html_theme_options = {}
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_context = {
+    "display_github": True,
+    "github_user": "x42005e1f",
+    "github_repo": "aiologic",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
