@@ -41,6 +41,7 @@ docs = [
     "myst-parser",
     "packaging",
     "Sphinx",
+    "sphinx-copybutton",
     "sphinx-inline-tabs",
     "sphinx-rtd-theme",
 ]
