@@ -41,6 +41,7 @@ docs = [
     "myst-parser",
     "packaging",
     "Sphinx",
+    "sphinx-inline-tabs",
     "sphinx-rtd-theme",
 ]
 eventlet = ["eventlet>=0.15.1"]

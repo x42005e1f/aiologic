@@ -10,7 +10,9 @@ are not usually used together. Typically, you have an application that uses
 only threads (classic application) or only coroutines/greenlets
 (asynchronous application). But sometimes so different styles need to coexist.
 
-.. code:: python
+.. tab:: cooperative multitasking (coroutines)
+
+  .. code:: python
 
     # cooperative multitasking (deterministic execution order)
 
@@ -28,7 +30,9 @@ only threads (classic application) or only coroutines/greenlets
         tg.create_task(foo())
         tg.create_task(bar())
 
-.. code:: python
+.. tab:: preemptive multitasking (threads)
+
+  .. code:: python
 
     # preemptive multitasking (non-deterministic execution order)
 

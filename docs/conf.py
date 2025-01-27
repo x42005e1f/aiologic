@@ -16,6 +16,7 @@ version = v.base_version
 release = v.public
 
 extensions = [
+    "sphinx_inline_tabs",
     "sphinx_rtd_theme",
     "myst_parser",
 ]
