@@ -25,6 +25,8 @@ aiologic
 
 .. badges-end-marker
 
+.. description-start-marker
+
 **aiologic** is a locking library for tasks synchronization
 and their communication. It provides primitives that are both
 *async-aware* and *thread-aware*, and can be used for interaction between:
@@ -81,6 +83,8 @@ It prints something like this:
 As you can see, tasks from different event loops are all able to acquire
 ``aiologic.Lock``. In the same case if you use ``asyncio.Lock``,
 it will raise a ``RuntimeError``. And ``threading.Lock`` will cause a deadlock.
+
+.. description-end-marker
 
 Features
 ========
