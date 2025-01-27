@@ -162,7 +162,7 @@ such as `uv <https://github.com/astral-sh/uv>`_.
 Documentation
 =============
 
-Check back later!
+Read the Docs: https://aiologic.readthedocs.io
 
 Communication channels
 ======================
