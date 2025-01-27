@@ -50,7 +50,9 @@ trio = ["trio>=0.23.0"]
 typing_extensions = ["typing_extensions>=4.1.0"]
 
 [project.urls]
-GitHub = "https://github.com/x42005e1f/aiologic"
+Homepage = "https://github.com/x42005e1f/aiologic"
+Documentation = "https://aiologic.readthedocs.io"
+Changelog = "https://aiologic.readthedocs.io/latest/changelog.html"
 
 [tool.ruff]
 fix = true
