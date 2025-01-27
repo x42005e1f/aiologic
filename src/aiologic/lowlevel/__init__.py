@@ -72,22 +72,6 @@ from ._threads import (
     start_new_thread as start_new_thread,
 )
 
-# add old aiologic.lowlevel submodules for backward compatibility with 0.12.0
-__modules = __import__("sys").modules
-__modules[f"{__name__}.checkpoints"] = __modules[f"{__name__}._checkpoints"]
-__modules[f"{__name__}.events"] = __modules[f"{__name__}._events"]
-__modules[f"{__name__}.flags"] = __modules[f"{__name__}._flags"]
-__modules[f"{__name__}.ident"] = __modules[f"{__name__}._ident"]
-__modules[f"{__name__}.libraries"] = __modules[f"{__name__}._libraries"]
-__modules[f"{__name__}.markers"] = __modules[f"{__name__}._markers"]
-__modules[f"{__name__}.patcher"] = __modules[f"{__name__}._patcher"]
-__modules[f"{__name__}.socket"] = __modules[f"{__name__}._socket"]
-__modules[f"{__name__}.sockets"] = __modules[f"{__name__}._sockets"]
-__modules[f"{__name__}.thread"] = __modules[f"{__name__}._thread"]
-__modules[f"{__name__}.threads"] = __modules[f"{__name__}._threads"]
-
-del __modules
-
 # modify __module__ for shorter repr() and better pickle support
 for __value in list(globals().values()):
     if getattr(__value, "__module__", "").startswith(f"{__name__}."):

@@ -45,19 +45,6 @@ from ._semaphore import (
     Semaphore as Semaphore,
 )
 
-# add aiologic.locks subpackage for backward compatibility with 0.12.0
-__modules = __import__("sys").modules
-__modules[f"{__name__}.locks"] = __modules[f"{__name__}"]
-__modules[f"{__name__}.locks.barrier"] = __modules[f"{__name__}._barrier"]
-__modules[f"{__name__}.locks.condition"] = __modules[f"{__name__}._condition"]
-__modules[f"{__name__}.locks.event"] = __modules[f"{__name__}._event"]
-__modules[f"{__name__}.locks.guard"] = __modules[f"{__name__}._guard"]
-__modules[f"{__name__}.locks.limiter"] = __modules[f"{__name__}._limiter"]
-__modules[f"{__name__}.locks.lock"] = __modules[f"{__name__}._lock"]
-__modules[f"{__name__}.locks.semaphore"] = __modules[f"{__name__}._semaphore"]
-
-del __modules
-
 # modify __module__ for shorter repr() and better pickle support
 for __value in list(globals().values()):
     if getattr(__value, "__module__", "").startswith(f"{__name__}."):
