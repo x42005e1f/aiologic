@@ -8,14 +8,20 @@ aiologic
 
 .. badges-start-marker
 
-.. image:: https://img.shields.io/pypi/dw/aiologic.svg
+|pypi-dw| |pypi-impl| |pypi-pyv| |pypi-types|
+
+.. |pypi-dw| image:: https://img.shields.io/pypi/dw/aiologic
   :target: https://pypistats.org/packages/aiologic
-.. image:: https://img.shields.io/pypi/implementation/aiologic.svg
+  :alt:
+.. |pypi-impl| image:: https://img.shields.io/pypi/implementation/aiologic
   :target: #features
-.. image:: https://img.shields.io/pypi/pyversions/aiologic.svg
+  :alt:
+.. |pypi-pyv| image:: https://img.shields.io/pypi/pyversions/aiologic
   :target: #features
-.. image:: https://img.shields.io/pypi/types/aiologic.svg
+  :alt:
+.. |pypi-types| image:: https://img.shields.io/pypi/types/aiologic
   :target: #features
+  :alt:
 
 .. badges-end-marker
 
