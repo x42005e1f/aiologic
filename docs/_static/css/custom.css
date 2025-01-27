@@ -2,11 +2,11 @@
 /* SPDX-License-Identifier: CC0-1.0 */
 
 .wy-side-nav-search .switch-menus {
-  display: none;
+    display: none;
 }
 
 .wy-menu.wy-menu-vertical a.reference.external::after {
-  content: "\00a0\f08e";
-  display: inline-block;
-  font-family: FontAwesome;
+    content: "\00a0\f08e";
+    display: inline-block;
+    font-family: FontAwesome;
 }
