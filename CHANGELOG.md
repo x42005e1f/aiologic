@@ -19,6 +19,14 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
+### Changed
+
+- Corrected type annotations: now `aiologic.BoundedSemaphore` extends
+  `aiologic.Semaphore`, and `aiologic.Semaphore` returns an instance of
+  `aiologic.BoundedSemaphore` when passing `max_value`. Previously, the classes
+  were independent in stubs, which was inconsistent with the behavior added in
+  `0.2.0`.
+
 ### Removed
 
 - Aliases to old modules (affects objects pickled before `0.13.0`).
