@@ -79,25 +79,25 @@ things get much more complicated. Here are some of those situations
 
 These situations have one thing in common: you may need a way
 to interact between threads, at least one of which may run an event loop.
-However, you cannot use primitives from the ``threading`` module
+However, you cannot use primitives from the :mod:`threading` module
 because they block the event loop. You also cannot use primitives from
-the ``asyncio`` module because they `are not thread-safe/thread-aware
+the :mod:`asyncio` module because they `are not thread-safe/thread-aware
 <https://stackoverflow.com/a/79198672>`_.
 
 Known solutions (only for some special cases) use one of the following ideas:
 
 - Delegate waiting to a thread pool (executor),
-  e.g. via ``run_in_executor()``.
+  e.g. via :meth:`~asyncio.loop.run_in_executor`.
 - Delegate calling to an event loop,
-  e.g. via ``call_soon_threadsafe()``.
+  e.g. via :meth:`~asyncio.loop.call_soon_threadsafe`.
 - Perform polling via timeouts and non-blocking calls.
 
 All these ideas have disadvantages. Polling consumes a lot of CPU resources,
 actually blocks the event loop for a short time, and has poor responsiveness.
-The ``call_soon_threadsafe()`` approach does not actually do any real work
-until the event loop scheduler handles a callback.
-The ``run_in_executor()`` approach requires a worker thread per call
-and has issues with cancellation and timeouts:
+The :meth:`~asyncio.loop.call_soon_threadsafe` approach does not actually do
+any real work until the event loop scheduler handles a callback.
+The :meth:`~asyncio.loop.run_in_executor` approach requires
+a worker thread per call and has issues with cancellation and timeouts:
 
 .. code:: python
 

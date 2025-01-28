@@ -16,11 +16,16 @@ version = v.base_version
 release = v.public
 
 extensions = [
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx_rtd_theme",
     "myst_parser",
 ]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+}
 
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {}

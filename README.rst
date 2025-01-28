@@ -2,6 +2,17 @@
   SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
   SPDX-License-Identifier: CC-BY-4.0
 
+.. role:: mod(literal)
+.. role:: func(literal)
+.. role:: data(literal)
+.. role:: const(literal)
+.. role:: class(literal)
+.. role:: meth(literal)
+.. role:: attr(literal)
+.. role:: type(literal)
+.. role:: exc(literal)
+.. role:: obj(literal)
+
 ========
 aiologic
 ========
@@ -81,8 +92,9 @@ It prints something like this:
     thread=1 task=1 end
 
 As you can see, tasks from different event loops are all able to acquire
-``aiologic.Lock``. In the same case if you use ``asyncio.Lock``,
-it will raise a ``RuntimeError``. And ``threading.Lock`` will cause a deadlock.
+:class:`aiologic.Lock`. In the same case if you use :class:`asyncio.Lock`,
+it will raise a :exc:`RuntimeError`. And :class:`threading.Lock`
+will cause a deadlock.
 
 .. description-end-marker
 
@@ -138,11 +150,11 @@ Supported concurrency libraries:
 All synchronization and communication primitives are implemented entirely
 on effectively atomic operations, which gives `an incredible speedup on PyPy
 <https://gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`_
-compared to alternatives from the ``threading`` module.
+compared to alternatives from the :mod:`threading` module.
 All this works because of GIL, but per-object locks also ensure that
 `the same operations are still atomic
 <https://peps.python.org/pep-0703/#container-thread-safety>`_,
-so ``aiologic`` also works when running in a `free-threaded mode
+so aiologic also works when running in a `free-threaded mode
 <https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`_.
 
 .. features-end-marker
@@ -184,7 +196,7 @@ Feel free to post your questions and ideas here.
 Support
 =======
 
-If you like ``aiologic`` and want to support its development,
+If you like aiologic and want to support its development,
 star `its repository on GitHub <https://github.com/x42005e1f/aiologic>`_.
 
 .. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
@@ -195,7 +207,7 @@ License
 
 .. license-start-marker
 
-The ``aiologic`` library is `REUSE-compliant
+The aiologic library is `REUSE-compliant
 <https://api.reuse.software/info/github.com/x42005e1f/aiologic>`_
 and is offered under multiple licenses:
 
