@@ -58,19 +58,6 @@ from ._markers import (
     MISSING as MISSING,
     MissingType as MissingType,
 )
-from ._patcher import (
-    patch_eventlet as patch_eventlet,
-    patch_threading as patch_threading,
-)
-from ._sockets import (
-    socketpair as socketpair,
-)
-from ._threads import (
-    ThreadLocal as ThreadLocal,
-    add_thread_finalizer as add_thread_finalizer,
-    remove_thread_finalizer as remove_thread_finalizer,
-    start_new_thread as start_new_thread,
-)
 
 # modify __module__ for shorter repr() and better pickle support
 for __value in list(globals().values()):

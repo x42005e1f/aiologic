@@ -22,6 +22,7 @@ Commit messages are consistent with
 ### Removed
 
 - Aliases to old modules (affects objects pickled before `0.13.0`).
+- Patcher-related exports (such as `aiologic.lowlevel.start_new_thread()`).
 
 [0.13.1] - 2025-01-24
 ---------------------
