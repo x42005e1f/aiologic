@@ -39,6 +39,11 @@ Commit messages are consistent with
 
 ### Fixed
 
+- `asyncio` was not considered running when the current task was `None`. This
+  resulted in the inability to use any async functions in
+  [asyncio REPR](https://docs.python.org/3/library/asyncio.html#asyncio-cli)
+  without explicitly setting the current async library. Related:
+  [python-trio/sniffio#35](https://github.com/python-trio/sniffio/issues/35).
 - There was a missing branch for the optimistic case of non-waiting lock
   acquiring during race condition, which caused hangs in a free-threaded mode
   (`0.13.1` regression).
