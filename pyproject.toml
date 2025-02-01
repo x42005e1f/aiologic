@@ -49,6 +49,7 @@ eventlet = ["eventlet>=0.17.0"]
 gevent = ["gevent>=21.1.0"]
 sniffio = ["sniffio>=1.3.0"]
 trio = ["trio>=0.23.0"]
+trio-asyncio = ["trio-asyncio>=0.13.0"]
 typing_extensions = ["typing_extensions>=4.1.0"]
 
 [project.urls]

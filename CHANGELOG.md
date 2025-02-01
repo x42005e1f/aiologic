@@ -36,6 +36,9 @@ Commit messages are consistent with
 
 - Aliases to old modules (affects objects pickled before `0.13.0`).
 - Patcher-related exports (such as `aiologic.lowlevel.start_new_thread()`).
+- `aiologic.lowlevel.current_async_library_cvar`: the `sniffio` equivalent is
+  deprecated and not used by modern libraries, and the performance impact of
+  using it is only negative.
 
 ### Fixed
 

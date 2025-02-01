@@ -45,7 +45,6 @@ from ._libraries import (
     asyncio_running as asyncio_running,
     curio_running as curio_running,
     current_async_library as current_async_library,
-    current_async_library_cvar as current_async_library_cvar,
     current_async_library_tlocal as current_async_library_tlocal,
     current_green_library as current_green_library,
     current_green_library_tlocal as current_green_library_tlocal,

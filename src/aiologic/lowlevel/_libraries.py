@@ -116,20 +116,14 @@ def current_green_library(*, failsafe=False):
 try:
     from sniffio import (
         AsyncLibraryNotFoundError,
-        current_async_library_cvar,
         thread_local as current_async_library_tlocal,
     )
 except ImportError:
-    from contextvars import ContextVar
 
     class AsyncLibraryNotFoundError(RuntimeError):
         pass
 
     current_async_library_tlocal = NamedLocal()
-    current_async_library_cvar = ContextVar(
-        "current_async_library_cvar",
-        default=None,
-    )
 
 
 def _asyncio_running_impl():
@@ -174,8 +168,6 @@ def _curio_running_impl():
 def asyncio_running():
     if (name := current_async_library_tlocal.name) is not None:
         running = name == "asyncio"
-    elif (name := current_async_library_cvar.get()) is not None:
-        running = name == "asyncio"
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "asyncio"
     else:
@@ -186,8 +178,6 @@ def asyncio_running():
 
 def curio_running():
     if (name := current_async_library_tlocal.name) is not None:
-        running = name == "curio"
-    elif (name := current_async_library_cvar.get()) is not None:
         running = name == "curio"
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "curio"
@@ -200,8 +190,6 @@ def curio_running():
 def trio_running():
     if (name := current_async_library_tlocal.name) is not None:
         running = name == "trio"
-    elif (name := current_async_library_cvar.get()) is not None:
-        running = name == "trio"
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "trio"
     else:
@@ -212,8 +200,6 @@ def trio_running():
 
 def current_async_library(*, failsafe=False):
     if (name := current_async_library_tlocal.name) is not None:
-        library = name
-    elif (name := current_async_library_cvar.get()) is not None:
         library = name
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         library = name
