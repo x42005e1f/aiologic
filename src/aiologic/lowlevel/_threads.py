@@ -3,49 +3,43 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from importlib import import_module
+import atexit
+import weakref
+
+from collections import deque
+from logging import getLogger
 from sys import modules
 
-from . import _patcher as patcher
+from . import _patcher, _thread
 from ._markers import MISSING
+from ._thread import allocate_lock, get_ident
+
+LOGGER = getLogger(__name__)
 
 
 def get_python_thread(ident, /):  # noqa: F811
     global get_python_thread
 
-    try:
-        threading = import_module("threading")
+    threading = _patcher.import_module("threading")
 
-        if patcher.eventlet_patched("threading") or patcher.gevent_patched(
-            "threading"
-        ):
-            raise ImportError
-
-        _active = threading._active
-    except (ImportError, AttributeError):
+    if _patcher.monkey_patched("threading"):
 
         def get_python_thread(ident, /):
             return None
 
     else:
-        patcher.patch_threading()
+        DummyThread = threading._DummyThread
+        _active = threading._active
 
-        try:
-            DummyThread = threading._DummyThread
-        except AttributeError:
+        _patcher.patch_threading()
 
-            def get_python_thread(ident, /):
-                return _active.get(ident)
+        def get_python_thread(ident, /):
+            thread = _active.get(ident)
 
-        else:
+            if isinstance(thread, DummyThread):
+                thread = None
 
-            def get_python_thread(ident, /):
-                thread = _active.get(ident)
-
-                if isinstance(thread, DummyThread):
-                    thread = None
-
-                return thread
+            return thread
 
     return get_python_thread(ident)
 
@@ -53,38 +47,21 @@ def get_python_thread(ident, /):  # noqa: F811
 def get_eventlet_thread(ident, /):  # noqa: F811
     global get_eventlet_thread
 
-    if "eventlet" in modules:
-        try:
-            threading = patcher.import_eventlet_original("threading")
+    if "eventlet.patcher" in modules:
+        threading = _patcher.import_eventlet_original("threading")
 
-            if threading is None:
-                raise ImportError
+        DummyThread = threading._DummyThread
+        _active = threading._active
 
-            _active = threading._active
-        except (ImportError, AttributeError):
+        _patcher.patch_threading()
 
-            def get_eventlet_thread(ident, /):
-                return None
+        def get_eventlet_thread(ident, /):
+            thread = _active.get(ident)
 
-        else:
-            patcher.patch_threading()
+            if isinstance(thread, DummyThread):
+                thread = None
 
-            try:
-                DummyThread = threading._DummyThread
-            except AttributeError:
-
-                def get_eventlet_thread(ident, /):
-                    return _active.get(ident)
-
-            else:
-
-                def get_eventlet_thread(ident, /):
-                    thread = _active.get(ident)
-
-                    if isinstance(thread, DummyThread):
-                        thread = None
-
-                    return thread
+            return thread
 
         thread = get_eventlet_thread(ident)
     else:
@@ -105,72 +82,26 @@ def get_thread(ident, /):
 def current_python_thread():  # noqa: F811
     global current_python_thread
 
-    try:
-        threading = import_module("threading")
+    threading = _patcher.import_module("threading")
 
-        if patcher.eventlet_patched("threading") or patcher.gevent_patched(
-            "threading"
-        ):
-            raise ImportError
-
-        _active = threading._active
-    except ImportError:
+    if _patcher.monkey_patched("threading"):
 
         def current_python_thread():
             return None
 
-    except AttributeError:
-        try:
-            current_thread = threading.current_thread
-        except AttributeError:
-
-            def current_python_thread():
-                return None
-
-        else:
-            patcher.patch_threading()
-
-            try:
-                DummyThread = threading._DummyThread
-            except AttributeError:
-                current_python_thread = current_thread
-            else:
-
-                def current_python_thread():
-                    thread = current_thread()
-
-                    if isinstance(thread, DummyThread):
-                        thread = None
-
-                    return thread
-
     else:
-        try:
-            get_ident = threading.get_ident
-        except AttributeError:
+        DummyThread = threading._DummyThread
+        current_thread = threading.current_thread
 
-            def current_python_thread():
-                return None
+        _patcher.patch_threading()
 
-        else:
-            patcher.patch_threading()
+        def current_python_thread():
+            thread = current_thread()
 
-            try:
-                DummyThread = threading._DummyThread
-            except AttributeError:
+            if isinstance(thread, DummyThread):
+                thread = None
 
-                def current_python_thread():
-                    return _active.get(get_ident())
-
-            else:
-
-                def current_python_thread():
-                    thread = _active.get(get_ident())
-
-                    if isinstance(thread, DummyThread):
-                        thread = None
-
-                    return thread
+            return thread
 
     return current_python_thread()
 
@@ -178,71 +109,21 @@ def current_python_thread():  # noqa: F811
 def current_eventlet_thread():  # noqa: F811
     global current_eventlet_thread
 
-    if "eventlet" in modules:
-        try:
-            threading = patcher.import_eventlet_original("threading")
+    if "eventlet.patcher" in modules:
+        threading = _patcher.import_eventlet_original("threading")
 
-            if threading is None:
-                raise ImportError
+        DummyThread = threading._DummyThread
+        current_thread = threading.current_thread
 
-            _active = threading._active
-        except ImportError:
+        _patcher.patch_threading()
 
-            def current_eventlet_thread():
-                return None
+        def current_eventlet_thread():
+            thread = current_thread()
 
-        except AttributeError:
-            try:
-                current_thread = threading.current_thread
-            except AttributeError:
+            if isinstance(thread, DummyThread):
+                thread = None
 
-                def current_eventlet_thread():
-                    return None
-
-            else:
-                patcher.patch_threading()
-
-                try:
-                    DummyThread = threading._DummyThread
-                except AttributeError:
-                    current_eventlet_thread = current_thread
-                else:
-
-                    def current_eventlet_thread():
-                        thread = current_thread()
-
-                        if isinstance(thread, DummyThread):
-                            thread = None
-
-                        return thread
-
-        else:
-            try:
-                get_ident = threading.get_ident
-            except AttributeError:
-
-                def current_eventlet_thread():
-                    return None
-
-            else:
-                patcher.patch_threading()
-
-                try:
-                    DummyThread = threading._DummyThread
-                except AttributeError:
-
-                    def current_eventlet_thread():
-                        return _active.get(get_ident())
-
-                else:
-
-                    def current_eventlet_thread():
-                        thread = _active.get(get_ident())
-
-                        if isinstance(thread, DummyThread):
-                            thread = None
-
-                        return thread
+            return thread
 
         thread = current_eventlet_thread()
     else:
@@ -260,363 +141,344 @@ def current_thread():
     return thread
 
 
+threads = set()
+
+finalizers = {}
+finalizers_lock = allocate_lock()
+
+shutdown_locks = deque()
+
 try:
-    from ._thread import allocate_lock, get_ident
-except ImportError:
-    from types import SimpleNamespace as ThreadLocal
+    ThreadLocal = _thread._local
+except AttributeError:
+    object___new__ = object.__new__
+    object___dir__ = object.__dir__
+    object___getattribute__ = object.__getattribute__
+    object___setattr__ = object.__setattr__
+    object___delattr__ = object.__delattr__
 
-    def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
-        raise NotImplementedError
+    def get_thread_namespace(self, /, *, init=False):
+        namespaces = object___getattribute__(self, "_namespaces_")
 
-    def add_thread_finalizer(ident, func, /, *, ref=None):
-        raise NotImplementedError
+        if (ident := get_ident()) in threads:
+            if ident in namespaces:
+                namespace = namespaces[ident]
+            elif init:
 
-    def remove_thread_finalizer(ident, key, /):
-        raise NotImplementedError
+                def thread_deleted():
+                    del namespaces[ident]
 
-else:
-    import atexit
-    import weakref
+                add_thread_finalizer(ident, thread_deleted, ref=self)
 
-    from collections import deque
-    from logging import getLogger
-
-    from . import _thread
-
-    LOGGER = getLogger(__name__)
-
-    threads = set()
-
-    finalizers = {}
-    finalizers_lock = allocate_lock()
-
-    shutdown_locks = deque()
-
-    try:
-        ThreadLocal = _thread._local
-    except AttributeError:
-        object___new__ = object.__new__
-        object___dir__ = object.__dir__
-        object___getattribute__ = object.__getattribute__
-        object___setattr__ = object.__setattr__
-        object___delattr__ = object.__delattr__
-
-        def get_thread_namespace(self, /, *, init=False):
-            namespaces = object___getattribute__(self, "_namespaces_")
-
-            if (ident := get_ident()) in threads:
-                if ident in namespaces:
-                    namespace = namespaces[ident]
-                elif init:
-
-                    def thread_deleted():
-                        del namespaces[ident]
-
-                    add_thread_finalizer(ident, thread_deleted, ref=self)
-
-                    namespace = namespaces[ident] = object___getattribute__(
-                        self, "_kwargs_"
-                    ).copy()
-                else:
-                    namespace = None
-            elif (thread := current_thread()) is not None:
-                thread_ref = weakref.ref(thread)
-
-                if thread_ref in namespaces:
-                    namespace = namespaces[thread_ref]
-                elif init:
-                    try:
-                        references = thread._localimpl_references
-                    except AttributeError:
-                        thread._localimpl_references = references = set()
-
-                    def self_deleted(ref, /):
-                        if (thread := thread_ref()) is not None:
-                            thread._localimpl_references.remove(ref)
-
-                    def thread_deleted(ref, /):
-                        if (self := self_ref()) is not None:
-                            del object___getattribute__(
-                                self,
-                                "_namespaces_",
-                            )[ref]
-
-                    self_ref = weakref.ref(self, self_deleted)
-                    thread_ref = weakref.ref(thread, thread_deleted)
-
-                    references.add(self_ref)
-
-                    namespace = namespaces[thread_ref] = (
-                        object___getattribute__(self, "_kwargs_").copy()
-                    )
-                else:
-                    namespace = None
-            elif not init:
-                namespace = None
+                namespace = namespaces[ident] = object___getattribute__(
+                    self, "_kwargs_"
+                ).copy()
             else:
-                msg = "no current thread"
-                raise RuntimeError(msg)
+                namespace = None
+        elif (thread := current_thread()) is not None:
+            thread_ref = weakref.ref(thread)
 
-            return namespace
+            if thread_ref in namespaces:
+                namespace = namespaces[thread_ref]
+            elif init:
+                try:
+                    references = thread._localimpl_references
+                except AttributeError:
+                    thread._localimpl_references = references = set()
 
-        class ThreadLocal:
-            __slots__ = (
-                "__weakref__",
-                "_kwargs_",
-                "_namespaces_",
-            )
+                def self_deleted(ref, /):
+                    if (thread := thread_ref()) is not None:
+                        thread._localimpl_references.remove(ref)
 
-            def __new__(cls, /, **kwargs):
-                self = object___new__(cls)
+                def thread_deleted(ref, /):
+                    if (self := self_ref()) is not None:
+                        del object___getattribute__(
+                            self,
+                            "_namespaces_",
+                        )[ref]
 
-                object___setattr__(self, "_namespaces_", {})
-                object___setattr__(self, "_kwargs_", kwargs)
+                self_ref = weakref.ref(self, self_deleted)
+                thread_ref = weakref.ref(thread, thread_deleted)
 
-                return self
+                references.add(self_ref)
 
-            def __getnewargs_ex__(self, /):
-                return ((), object___getattribute__(self, "_kwargs_"))
+                namespace = namespaces[thread_ref] = object___getattribute__(
+                    self, "_kwargs_"
+                ).copy()
+            else:
+                namespace = None
+        elif not init:
+            namespace = None
+        else:
+            msg = "no current thread"
+            raise RuntimeError(msg)
 
-            def __repr__(self, /):
+        return namespace
+
+    class ThreadLocal:
+        __slots__ = (
+            "__weakref__",
+            "_kwargs_",
+            "_namespaces_",
+        )
+
+        def __new__(cls, /, **kwargs):
+            self = object___new__(cls)
+
+            object___setattr__(self, "_namespaces_", {})
+            object___setattr__(self, "_kwargs_", kwargs)
+
+            return self
+
+        def __getnewargs_ex__(self, /):
+            return ((), object___getattribute__(self, "_kwargs_"))
+
+        def __repr__(self, /):
+            namespace = get_thread_namespace(self, init=False)
+
+            if namespace is not None:
+                kwargs = namespace
+            else:
+                kwargs = object___getattribute__(self, "_kwargs_")
+
+            items = (f"{key}={value!r}" for key, value in kwargs.items())
+
+            return f"{self.__class__.__name__}({', '.join(items)})"
+
+        def __dir__(self, /):
+            names = object___dir__(self)
+
+            if "__dict__" not in names:
+                names.append("__dict__")
+
+            return names
+
+        def __getattribute__(self, /, name):
+            if name == "__dict__":
+                value = get_thread_namespace(self, init=True)
+            elif name.startswith("_") and name.endswith("_"):
+                value = object___getattribute__(self, name)
+            else:
                 namespace = get_thread_namespace(self, init=False)
 
-                if namespace is not None:
-                    kwargs = namespace
-                else:
-                    kwargs = object___getattribute__(self, "_kwargs_")
-
-                items = (f"{key}={value!r}" for key, value in kwargs.items())
-
-                return f"{self.__class__.__name__}({', '.join(items)})"
-
-            def __dir__(self, /):
-                names = object___dir__(self)
-
-                if "__dict__" not in names:
-                    names.append("__dict__")
-
-                return names
-
-            def __getattribute__(self, /, name):
-                if name == "__dict__":
-                    value = get_thread_namespace(self, init=True)
-                elif name.startswith("_") and name.endswith("_"):
-                    value = object___getattribute__(self, name)
-                else:
-                    namespace = get_thread_namespace(self, init=False)
-
-                    if namespace is None:
-                        namespace = object___getattribute__(self, "_kwargs_")
-
-                    try:
-                        value = namespace[name]
-                    except KeyError:
-                        success = False
-                    else:
-                        success = True
-
-                    if not success:
-                        value = object___getattribute__(self, name)
-
-                return value
-
-            def __setattr__(self, /, name, value):
-                if name == "__dict__":
-                    msg = "readonly attribute"
-                    raise AttributeError(msg)
-
-                if name.startswith("_") and name.endswith("_"):
-                    object___setattr__(self, name, value)
-                else:
-                    get_thread_namespace(self, init=True)[name] = value
-
-            def __delattr__(self, /, name):
-                if name == "__dict__":
-                    msg = "readonly attribute"
-                    raise AttributeError(msg)
-
-                if name.startswith("_") and name.endswith("_"):
-                    object___delattr__(self, name)
-                else:
-                    try:
-                        namespace = get_thread_namespace(self, init=False)
-
-                        if namespace is None:
-                            raise KeyError
-
-                        del namespace[name]
-                    except KeyError:
-                        msg = (
-                            f"{self.__class__.__name__!r} object"
-                            f" has no attribute {name!r}"
-                        )
-                        raise AttributeError(msg) from None
-
-    def run_thread_finalizer(ident, thread, /):
-        if thread is not None:
-            thread.join()
-
-        while True:
-            with finalizers_lock:
-                if thread is not None:
-                    callbacks = list(finalizers[thread].values())
-                    finalizers[thread].clear()
-                else:
-                    callbacks = list(finalizers[ident].values())
-                    finalizers[ident].clear()
-
-                if not callbacks:
-                    if thread is not None:
-                        del finalizers[thread]
-                    else:
-                        del finalizers[ident]
-
-                    break
-
-            for _, func in callbacks:
-                try:
-                    func()
-                except Exception:
-                    if thread is not None:
-                        thread_repr = repr(thread)
-                    else:
-                        thread_repr = f"<thread {ident!r}>"
-
-                    LOGGER.exception(
-                        "exception calling callback for %s",
-                        thread_repr,
-                    )
-
-    def run_new_thread(target, start_lock, shutdown_lock, /, *args, **kwargs):
-        if shutdown_lock is not None:
-            shutdown_locks.append(shutdown_lock)
-
-        try:
-            ident = get_ident()
-            threads.add(ident)
-
-            try:
-                finalizers[ident] = {}
+                if namespace is None:
+                    namespace = object___getattribute__(self, "_kwargs_")
 
                 try:
-                    start_lock.release()
-                    target(*args, **kwargs)
-                finally:
-                    run_thread_finalizer(ident, None)
-            finally:
-                threads.remove(ident)
-        finally:
-            if shutdown_lock is not None:
-                try:
-                    shutdown_locks.remove(shutdown_lock)
-                except ValueError:
-                    pass
-
-                shutdown_lock.release()
-
-    def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
-        if not callable(target):
-            msg = "'target' argument must be callable"
-            raise TypeError(msg)
-
-        start_lock = allocate_lock()
-        start_lock.acquire()
-
-        if not daemon:
-            shutdown_lock = allocate_lock()
-            shutdown_lock.acquire()
-        else:
-            shutdown_lock = None
-
-        try:
-            args = (target, start_lock, shutdown_lock, *args)
-        except TypeError:
-            msg = "'args' argument must be an iterable"
-            raise TypeError(msg) from None
-
-        if kwargs is not MISSING:
-            if not isinstance(kwargs, dict):
-                msg = "'kwargs' argument must be a dictionary"
-                raise TypeError(msg)
-
-            ident = _thread.start_new_thread(run_new_thread, args, kwargs)
-        else:
-            ident = _thread.start_new_thread(run_new_thread, args)
-
-        start_lock.acquire()
-
-        return ident
-
-    def add_thread_finalizer(ident, func, /, *, ref=None):
-        with finalizers_lock:
-            try:
-                if ident is not None:
-                    callbacks = finalizers[ident]
-                else:
-                    callbacks = finalizers[get_ident()]
-            except KeyError:
-                if ident is not None:
-                    thread = get_thread(ident)
-
-                    if thread is None:
-                        msg = f"no running thread {ident!r}"
-                        raise RuntimeError(msg) from None
-                else:
-                    thread = current_thread()
-
-                    if thread is None:
-                        msg = "no current thread"
-                        raise RuntimeError(msg) from None
-
-                start_new_thread(
-                    run_thread_finalizer,
-                    [ident, thread],
-                    daemon=False,
-                )
-
-                finalizers[thread] = callbacks = {}
-
-            key = object()
-
-            if ref is not None:
-
-                def deleted(_, /):
-                    try:
-                        del callbacks[key]
-                    except KeyError:
-                        pass
-
-                callbacks[key] = (weakref.ref(ref, deleted), func)
-            else:
-                callbacks[key] = (None, func)
-
-            return key
-
-    def remove_thread_finalizer(ident, key, /):
-        with finalizers_lock:
-            try:
-                if ident is not None:
-                    callbacks = finalizers[ident]
-                else:
-                    callbacks = finalizers[get_ident()]
-            except KeyError:
-                success = False
-            else:
-                try:
-                    del callbacks[key]
+                    value = namespace[name]
                 except KeyError:
                     success = False
                 else:
                     success = True
 
-        return success
+                if not success:
+                    value = object___getattribute__(self, name)
 
-    @atexit.register
-    def shutdown():
-        while shutdown_locks:
-            try:
-                shutdown_lock = shutdown_locks.popleft()
-            except IndexError:
-                pass
+            return value
+
+        def __setattr__(self, /, name, value):
+            if name == "__dict__":
+                msg = "readonly attribute"
+                raise AttributeError(msg)
+
+            if name.startswith("_") and name.endswith("_"):
+                object___setattr__(self, name, value)
             else:
-                shutdown_lock.acquire()
+                get_thread_namespace(self, init=True)[name] = value
+
+        def __delattr__(self, /, name):
+            if name == "__dict__":
+                msg = "readonly attribute"
+                raise AttributeError(msg)
+
+            if name.startswith("_") and name.endswith("_"):
+                object___delattr__(self, name)
+            else:
+                try:
+                    namespace = get_thread_namespace(self, init=False)
+
+                    if namespace is None:
+                        raise KeyError
+
+                    del namespace[name]
+                except KeyError:
+                    msg = (
+                        f"{self.__class__.__name__!r} object"
+                        f" has no attribute {name!r}"
+                    )
+                    raise AttributeError(msg) from None
+
+
+def run_thread_finalizer(ident, thread, /):
+    if thread is not None:
+        thread.join()
+
+    while True:
+        with finalizers_lock:
+            if thread is not None:
+                callbacks = list(finalizers[thread].values())
+                finalizers[thread].clear()
+            else:
+                callbacks = list(finalizers[ident].values())
+                finalizers[ident].clear()
+
+            if not callbacks:
+                if thread is not None:
+                    del finalizers[thread]
+                else:
+                    del finalizers[ident]
+
+                break
+
+        for _, func in callbacks:
+            try:
+                func()
+            except Exception:
+                if thread is not None:
+                    thread_repr = repr(thread)
+                else:
+                    thread_repr = f"<thread {ident!r}>"
+
+                LOGGER.exception(
+                    "exception calling callback for %s",
+                    thread_repr,
+                )
+
+
+def run_new_thread(target, start_lock, shutdown_lock, /, *args, **kwargs):
+    if shutdown_lock is not None:
+        shutdown_locks.append(shutdown_lock)
+
+    try:
+        ident = get_ident()
+        threads.add(ident)
+
+        try:
+            finalizers[ident] = {}
+
+            try:
+                start_lock.release()
+                target(*args, **kwargs)
+            finally:
+                run_thread_finalizer(ident, None)
+        finally:
+            threads.remove(ident)
+    finally:
+        if shutdown_lock is not None:
+            try:
+                shutdown_locks.remove(shutdown_lock)
+            except ValueError:
+                pass
+
+            shutdown_lock.release()
+
+
+def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
+    if not callable(target):
+        msg = "'target' argument must be callable"
+        raise TypeError(msg)
+
+    start_lock = allocate_lock()
+    start_lock.acquire()
+
+    if not daemon:
+        shutdown_lock = allocate_lock()
+        shutdown_lock.acquire()
+    else:
+        shutdown_lock = None
+
+    try:
+        args = (target, start_lock, shutdown_lock, *args)
+    except TypeError:
+        msg = "'args' argument must be an iterable"
+        raise TypeError(msg) from None
+
+    if kwargs is not MISSING:
+        if not isinstance(kwargs, dict):
+            msg = "'kwargs' argument must be a dictionary"
+            raise TypeError(msg)
+
+        ident = _thread.start_new_thread(run_new_thread, args, kwargs)
+    else:
+        ident = _thread.start_new_thread(run_new_thread, args)
+
+    start_lock.acquire()
+
+    return ident
+
+
+def add_thread_finalizer(ident, func, /, *, ref=None):
+    with finalizers_lock:
+        try:
+            if ident is not None:
+                callbacks = finalizers[ident]
+            else:
+                callbacks = finalizers[get_ident()]
+        except KeyError:
+            if ident is not None:
+                thread = get_thread(ident)
+
+                if thread is None:
+                    msg = f"no running thread {ident!r}"
+                    raise RuntimeError(msg) from None
+            else:
+                thread = current_thread()
+
+                if thread is None:
+                    msg = "no current thread"
+                    raise RuntimeError(msg) from None
+
+            start_new_thread(
+                run_thread_finalizer,
+                [ident, thread],
+                daemon=False,
+            )
+
+            finalizers[thread] = callbacks = {}
+
+        key = object()
+
+        if ref is not None:
+
+            def deleted(_, /):
+                try:
+                    del callbacks[key]
+                except KeyError:
+                    pass
+
+            callbacks[key] = (weakref.ref(ref, deleted), func)
+        else:
+            callbacks[key] = (None, func)
+
+        return key
+
+
+def remove_thread_finalizer(ident, key, /):
+    with finalizers_lock:
+        try:
+            if ident is not None:
+                callbacks = finalizers[ident]
+            else:
+                callbacks = finalizers[get_ident()]
+        except KeyError:
+            success = False
+        else:
+            try:
+                del callbacks[key]
+            except KeyError:
+                success = False
+            else:
+                success = True
+
+    return success
+
+
+@atexit.register
+def shutdown():
+    while shutdown_locks:
+        try:
+            shutdown_lock = shutdown_locks.popleft()
+        except IndexError:
+            pass
+        else:
+            shutdown_lock.acquire()

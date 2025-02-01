@@ -7,11 +7,10 @@ import os
 
 from sys import modules
 
-from . import _patcher as patcher
 from ._threads import ThreadLocal
 
-GREEN_LIBRARY_DEFAULT = os.getenv("AIOLOGIC_GREEN_LIBRARY") or None
-ASYNC_LIBRARY_DEFAULT = os.getenv("AIOLOGIC_ASYNC_LIBRARY") or None
+DEFAULT_GREEN_LIBRARY = os.getenv("AIOLOGIC_GREEN_LIBRARY") or None
+DEFAULT_ASYNC_LIBRARY = os.getenv("AIOLOGIC_ASYNC_LIBRARY") or None
 
 
 class GreenLibraryNotFoundError(RuntimeError):
@@ -25,103 +24,49 @@ class NamedLocal(ThreadLocal):
 current_green_library_tlocal = NamedLocal()
 
 
-def threading_running_impl():  # noqa: F811
-    global threading_running_impl
+def _threading_running_impl():
+    return True
 
-    try:
-        from ._thread import get_ident  # noqa: F401
-    except ImportError:
 
-        def threading_running_impl():
-            return False
+def _eventlet_running_impl():
+    global _eventlet_running_impl
 
+    if "eventlet" in modules:
+        from eventlet.hubs import _threadlocal
+
+        def _eventlet_running_impl():
+            return getattr(_threadlocal, "hub", None) is not None
+
+        answer = _eventlet_running_impl()
     else:
+        answer = False
 
-        def threading_running_impl():
-            return True
-
-    return threading_running_impl()
+    return answer
 
 
-def eventlet_running_impl():  # noqa: F811
-    global eventlet_running_impl
+def _gevent_running_impl():
+    global _gevent_running_impl
 
-    if patcher.eventlet_patched("threading"):
-        try:
-            from ._thread import get_ident, get_main_thread_ident
-        except ImportError:
+    if "gevent" in modules:
+        from gevent._hub_local import get_hub_if_exists
 
-            def eventlet_running_impl():
-                return False
+        def _gevent_running_impl():
+            return get_hub_if_exists() is not None
 
-        else:
-
-            def eventlet_running_impl():
-                global eventlet_running_impl
-
-                running = False
-
-                if get_ident() == get_main_thread_ident():
-                    current_green_library_tlocal.name = "eventlet"
-
-                    def eventlet_running_impl():
-                        return False
-
-                    running = True
-
-                return running
-
+        answer = _gevent_running_impl()
     else:
+        answer = False
 
-        def eventlet_running_impl():
-            return False
-
-    return eventlet_running_impl()
-
-
-def gevent_running_impl():  # noqa: F811
-    global gevent_running_impl
-
-    if patcher.gevent_patched("threading"):
-        try:
-            from ._thread import get_ident, get_main_thread_ident
-        except ImportError:
-
-            def gevent_running_impl():
-                return False
-
-        else:
-
-            def gevent_running_impl():
-                global gevent_running_impl
-
-                running = False
-
-                if get_ident() == get_main_thread_ident():
-                    current_green_library_tlocal.name = "gevent"
-
-                    def gevent_running_impl():
-                        return False
-
-                    running = True
-
-                return running
-
-    else:
-
-        def gevent_running_impl():
-            return False
-
-    return gevent_running_impl()
+    return answer
 
 
 def threading_running():
     if (name := current_green_library_tlocal.name) is not None:
         running = name == "threading"
-    elif (name := GREEN_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         running = name == "threading"
     else:
-        running = threading_running_impl()
+        running = _threading_running_impl()
 
     return running
 
@@ -129,10 +74,10 @@ def threading_running():
 def eventlet_running():
     if (name := current_green_library_tlocal.name) is not None:
         running = name == "eventlet"
-    elif (name := GREEN_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         running = name == "eventlet"
     else:
-        running = eventlet_running_impl()
+        running = _eventlet_running_impl()
 
     return running
 
@@ -140,10 +85,10 @@ def eventlet_running():
 def gevent_running():
     if (name := current_green_library_tlocal.name) is not None:
         running = name == "gevent"
-    elif (name := GREEN_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         running = name == "gevent"
     else:
-        running = gevent_running_impl()
+        running = _gevent_running_impl()
 
     return running
 
@@ -151,13 +96,13 @@ def gevent_running():
 def current_green_library(*, failsafe=False):
     if (name := current_green_library_tlocal.name) is not None:
         library = name
-    elif (name := GREEN_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         library = name
-    elif eventlet_running_impl():
-        library = "eventlet"
-    elif gevent_running_impl():
+    elif _gevent_running_impl():
         library = "gevent"
-    elif threading_running_impl():
+    elif _eventlet_running_impl():
+        library = "eventlet"
+    elif _threading_running_impl():
         library = "threading"
     elif failsafe:
         library = None
@@ -187,46 +132,39 @@ except ImportError:
     )
 
 
-def asyncio_running_impl():  # noqa: F811
-    global asyncio_running_impl
+def _asyncio_running_impl():
+    global _asyncio_running_impl
 
     if "asyncio" in modules:
         try:
-            from asyncio import current_task as current_asyncio_task
+            from asyncio import _get_running_loop as get_running_loop
         except ImportError:
+            from asyncio import get_running_loop
 
-            def asyncio_running_impl():
-                return False
+        def _asyncio_running_impl():
+            try:
+                running = get_running_loop() is not None
+            except RuntimeError:
+                running = False
 
-        else:
+            return running
 
-            def asyncio_running_impl():
-                try:
-                    running = current_asyncio_task() is not None
-                except RuntimeError:
-                    running = False
-
-                return running
-
-        running = asyncio_running_impl()
+        running = _asyncio_running_impl()
     else:
         running = False
 
     return running
 
 
-def curio_running_impl():  # noqa: F811
-    global curio_running_impl
+def _curio_running_impl():
+    global _curio_running_impl
 
     if "curio" in modules:
-        try:
-            from curio.meta import curio_running as curio_running_impl
-        except ImportError:
+        from curio.meta import curio_running
 
-            def curio_running_impl():
-                return False
+        _curio_running_impl = curio_running
 
-        running = curio_running_impl()
+        running = _curio_running_impl()
     else:
         running = False
 
@@ -238,10 +176,10 @@ def asyncio_running():
         running = name == "asyncio"
     elif (name := current_async_library_cvar.get()) is not None:
         running = name == "asyncio"
-    elif (name := ASYNC_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "asyncio"
     else:
-        running = asyncio_running_impl()
+        running = _asyncio_running_impl()
 
     return running
 
@@ -251,10 +189,10 @@ def curio_running():
         running = name == "curio"
     elif (name := current_async_library_cvar.get()) is not None:
         running = name == "curio"
-    elif (name := ASYNC_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "curio"
     else:
-        running = curio_running_impl()
+        running = _curio_running_impl()
 
     return running
 
@@ -264,7 +202,7 @@ def trio_running():
         running = name == "trio"
     elif (name := current_async_library_cvar.get()) is not None:
         running = name == "trio"
-    elif (name := ASYNC_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "trio"
     else:
         running = False
@@ -277,11 +215,11 @@ def current_async_library(*, failsafe=False):
         library = name
     elif (name := current_async_library_cvar.get()) is not None:
         library = name
-    elif (name := ASYNC_LIBRARY_DEFAULT) is not None:
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         library = name
-    elif asyncio_running_impl():
+    elif _asyncio_running_impl():
         library = "asyncio"
-    elif curio_running_impl():
+    elif _curio_running_impl():
         library = "curio"
     elif failsafe:
         library = None

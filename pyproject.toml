@@ -45,7 +45,7 @@ docs = [
     "sphinx-inline-tabs",
     "sphinx-rtd-theme",
 ]
-eventlet = ["eventlet>=0.15.1"]
+eventlet = ["eventlet>=0.17.0"]
 gevent = ["gevent>=21.1.0"]
 sniffio = ["sniffio>=1.3.0"]
 trio = ["trio>=0.23.0"]

@@ -3,293 +3,99 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import platform
 import sys
 
 from functools import partial, wraps
 from importlib import import_module
 from sys import modules
+from types import SimpleNamespace
 
-PYTHON_VERSION = sys.version_info
-PYTHON_IMPLEMENTATION = platform.python_implementation()
+from ._markers import MISSING
 
 
-def eventlet_patched(name, /):  # noqa: F811
+def eventlet_patched(module_name):  # noqa: F811
     global eventlet_patched
 
-    if "eventlet" in modules:
-        try:
-            from eventlet import patcher
-            from eventlet.patcher import already_patched, original
-        except ImportError:
+    if "eventlet.patcher" in modules:
+        from eventlet.patcher import already_patched
 
-            def eventlet_patched(name, /):
-                return None
+        mapping = {
+            "_thread": "thread",
+            "psycopg2": "psycopg",
+            "queue": "thread",
+            "selectors": "select",
+            "ssl": "socket",
+            "threading": "thread",
+        }
 
-        else:
-            # eventlet stores information about patched modules not by their
-            # names, but by keyword name, so is_monkey_patched() will not work
-            # for module names
+        def eventlet_patched(module_name):
+            if module_name in mapping:
+                return mapping[module_name] in already_patched
+            else:
+                return module_name in already_patched
 
-            def generate_mapping():
-                mapping = {}
-
-                for name, value in vars(patcher).items():
-                    if name.startswith("_green_") and (
-                        name.endswith("_modules") or name.count("_") == 2
-                    ):
-                        module_key = name[7:].partition("_")[0]
-
-                        for module_name, _ in value():
-                            mapping[module_name] = module_key
-
-                return mapping
-
-            mapping = generate_mapping()
-
-            def eventlet_patched(name, /):
-                module_name, _, attribute_name = name.partition(":")
-
-                if (
-                    module_name in mapping
-                    and mapping[module_name] in already_patched
-                ):
-                    if attribute_name:
-                        patched_module = import_module(module_name)
-
-                        try:
-                            value = getattr(patched_module, attribute_name)
-                        except AttributeError:
-                            answer = hasattr(
-                                original(module_name),
-                                attribute_name,
-                            )
-                        else:
-                            try:
-                                value_module = value.__module__
-                            except AttributeError:
-                                answer = None
-                            else:
-                                answer = value_module.partition(".")[0] == (
-                                    "eventlet"
-                                )
-                    else:
-                        answer = True
-                else:
-                    answer = False
-
-                return answer
-
-        answer = eventlet_patched(name)
+        answer = eventlet_patched(module_name)
     else:
         answer = False
 
     return answer
 
 
-def gevent_patched(name, /):  # noqa: F811
+def gevent_patched(module_name):  # noqa: F811
     global gevent_patched
 
-    if "gevent" in modules:
-        try:
-            from gevent.monkey import saved
-        except ImportError:
+    if "gevent.monkey" in modules:
+        from gevent.monkey import is_module_patched
 
-            def gevent_patched(name, /):
-                return None
+        gevent_patched = is_module_patched
 
-        else:
-            # some objects, such as threading._active_limbo_lock, are
-            # replaced by gevent, but without saving the originals, so
-            # is_object_patched() is not enough
-
-            def gevent_patched(name, /):
-                module_name, _, attribute_name = name.partition(":")
-
-                if module_name in saved:
-                    if (
-                        attribute_name
-                        and attribute_name not in saved[module_name]
-                    ):
-                        patched_module = import_module(module_name)
-
-                        try:
-                            value = getattr(patched_module, attribute_name)
-                        except AttributeError:
-                            answer = False
-                        else:
-                            try:
-                                value_module = value.__module__
-                            except AttributeError:
-                                answer = None
-                            else:
-                                answer = value_module.partition(".")[0] == (
-                                    "gevent"
-                                )
-                    else:
-                        answer = True
-                else:
-                    answer = False
-
-                return answer
-
-        answer = gevent_patched(name)
+        answer = gevent_patched(module_name)
     else:
         answer = False
 
     return answer
 
 
-def import_eventlet_original(module_name, /):  # noqa: F811
+def monkey_patched(module_name):
+    return eventlet_patched(module_name) or gevent_patched(module_name)
+
+
+def import_eventlet_original(module_name):  # noqa: F811
     global import_eventlet_original
 
-    if "eventlet" in modules:
-        try:
-            from eventlet.patcher import original as import_eventlet_original
-        except ImportError:
+    if "eventlet.patcher" in modules:
+        from eventlet.patcher import original
 
-            def import_eventlet_original(module_name, /):
-                return None
+        import_eventlet_original = original
 
         module = import_eventlet_original(module_name)
     else:
-        module = None
+        module = import_module(module_name)
 
     return module
 
 
-def import_gevent_original(module_name, /):  # noqa: F811
+def import_gevent_original(module_name):  # noqa: F811
     global import_gevent_original
 
-    if "gevent" in modules:
-        try:
-            from gevent.monkey import saved
-        except ImportError:
+    if "gevent.monkey" in modules:
+        from gevent.monkey import saved
 
-            def import_gevent_original(module_name, /):
-                return None
-
-        else:
-            object___new__ = object.__new__
-            object___getattribute__ = object.__getattribute__
-            object___setattr__ = object.__setattr__
-
-            def check_value(self, /, module, name):
-                value = getattr(module, name)
-
-                try:
-                    value_module = value.__module__
-                except AttributeError:
-                    pass
-                else:
-                    if value_module.partition(".")[0] == "gevent":
-                        msg = f"No original attribute named {name!r}"
-                        raise AttributeError(msg)
-
-                return value
-
-            class ModuleProxy:
-                __slots__ = (
-                    "_content_",
-                    "_module_",
-                    "_name_",
-                )
-
-                def __new__(cls, /, name):
-                    self = object___new__(cls)
-
-                    object___setattr__(self, "_name_", name)
-                    object___setattr__(self, "_content_", saved[name])
-
-                    return self
-
-                def __getnewargs__(self, /):
-                    return (object___getattribute__(self, "_name_"),)
-
-                def __repr__(self, /):
-                    name = object___getattribute__(self, "_name_")
-
-                    return f"<module {name!r} proxy>"
-
-                def __getattribute__(self, /, name):
-                    if name.startswith("_") and name.endswith("_"):
-                        value = object___getattribute__(self, name)
-                    else:
-                        content = object___getattribute__(self, "_content_")
-
-                        if name in content:
-                            value = content[name]
-                        else:
-                            try:
-                                module = object___getattribute__(
-                                    self,
-                                    "_module_",
-                                )
-                            except AttributeError:
-                                module = import_module(
-                                    object___getattribute__(
-                                        self,
-                                        "_name_",
-                                    )
-                                )
-
-                                object___setattr__(self, "_module_", module)
-
-                            if hasattr(module, name):
-                                value = check_value(self, module, name)
-                            else:
-                                value = object___getattribute__(self, name)
-
-                    return value
-
-                def __setattr__(self, /, name, value):
-                    if name.startswith("_") and name.endswith("_"):
-                        object___setattr__(self, name, value)
-                    else:
-                        content = object___getattribute__(self, "_content_")
-
-                        if name in content:
-                            content[name] = value
-                        else:
-                            try:
-                                module = object___getattribute__(
-                                    self,
-                                    "_module_",
-                                )
-                            except AttributeError:
-                                module = import_module(
-                                    object___getattribute__(
-                                        self,
-                                        "_name_",
-                                    )
-                                )
-
-                                object___setattr__(self, "_module_", module)
-
-                            check_value(self, module, name)
-                            setattr(module, name, value)
-
-                def __delattr__(self, /, name):
-                    msg = f"cannot delete {name!r} attribute of module proxy"
-                    raise TypeError(msg)
-
-            def import_gevent_original(module_name, /):
-                if module_name in saved and not eventlet_patched(module_name):
-                    module = ModuleProxy(module_name)
-                else:
-                    module = None
-
-                return module
+        def import_gevent_original(module_name, /):
+            return SimpleNamespace(**{
+                **vars(import_module(module_name)),
+                **saved.get(module_name, {}),
+            })
 
         module = import_gevent_original(module_name)
     else:
-        module = None
+        module = import_module(module_name)
 
     return module
 
 
 def import_original(name):
-    module_name, _, attribute_name = name.partition(":")
+    module_name, _, item_name = name.partition(":")
 
     if eventlet_patched(module_name):
         module = import_eventlet_original(module_name)
@@ -298,29 +104,19 @@ def import_original(name):
     else:
         module = import_module(module_name)
 
-    if module is None:
-        msg = f"No original module named {module_name!r}"
-        exc = ModuleNotFoundError(msg)
-        exc.name = module_name
-
+    if item_name:
         try:
-            raise exc
-        finally:
-            del exc
-
-    if attribute_name:
-        try:
-            value = getattr(module, attribute_name)
+            value = getattr(module, item_name)
         except AttributeError:
             module_path = getattr(module, "__file__", None)
             exc = ImportError(
-                f"cannot import name {attribute_name!r}"
+                f"cannot import name {item_name!r}"
                 f" from {module_name!r}"
                 f" ({module_path or 'unknown location'})"
             )
 
             exc.name = module_name
-            exc.name_from = attribute_name
+            exc.name_from = item_name
             exc.path = module_path
 
             try:
@@ -333,63 +129,29 @@ def import_original(name):
     return value
 
 
-try:
+def once(func):  # noqa: F811
+    global once
+
     from ._thread import allocate_lock
-except ImportError:
-    import time
 
     def once(func):
-        locks = {}
-        results = {}
+        lock = allocate_lock()
+        result = MISSING
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
-            key = (args, tuple(kwargs.items()))
+        def wrapper():
+            nonlocal result
 
-            try:
-                unlocked = locks[key]
-            except KeyError:
-                unlocked = locks.setdefault(key, [True])
-
-            while key not in results:
-                try:
-                    unlocked.pop()
-                except IndexError:
-                    time.sleep(0)
-                else:
-                    try:
-                        if key not in results:
-                            results[key] = func(*args, **kwargs)
-                    finally:
-                        unlocked.append(True)
-
-            return results[key]
-
-        return wrapper
-
-else:
-
-    def once(func):
-        locks = {}
-        results = {}
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            key = (args, tuple(kwargs.items()))
-
-            try:
-                lock = locks[key]
-            except KeyError:
-                lock = locks.setdefault(key, allocate_lock())
-
-            if key not in results:
+            if result is MISSING:
                 with lock:
-                    if key not in results:
-                        results[key] = func(*args, **kwargs)
+                    if result is MISSING:
+                        result = func()
 
-            return results[key]
+            return result
 
         return wrapper
+
+    return once(func)
 
 
 @once
@@ -500,20 +262,20 @@ def patch_threading():
     want safe Control-C handling, set your own signal handler.
 
     In Python 3.13, all of these issues have been resolved at C level as part
-    of the free-threaded mode implementation (see gh-114271), so this patch
-    only applies on versions below 3.13.
+    of the free-threaded mode implementation (see gh-114271).
+
+    Does not affect PyPy 7.3.18 and newer (see pypy/pypy#5080).
     """
 
-    if PYTHON_VERSION >= (3, 13):
+    try:
+        pypy_version_info = sys.pypy_version_info
+    except AttributeError:
         return
 
-    if PYTHON_IMPLEMENTATION != "PyPy":
+    if pypy_version_info >= (7, 3, 18):
         return
 
     def patch_thread(threading):
-        if hasattr(threading, "_ThreadHandle"):
-            return  # was a backport applied?
-
         Thread = threading.Thread
 
         if not hasattr(threading, "_maintain_shutdown_locks"):
@@ -570,16 +332,6 @@ def patch_threading():
                     self._stop()
             except:
                 if lock.locked():
-                    """
-                    # possible mitigation (only works, and only partially,
-                    # on non-Windows systems; on Windows it actually undoes
-                    # gh-28532):
-
-                    with _active_limbo_lock:
-                        if self in _limbo or self._ident in _active:
-                            raise  # false positive in case of abrupt stop
-                    """
-
                     try:
                         lock.release()
                     except RuntimeError:
@@ -592,9 +344,6 @@ def patch_threading():
         Thread._wait_for_tstate_lock = Thread__wait_for_tstate_lock
 
     def patch_shutdown(threading):
-        if hasattr(threading, "_ThreadHandle"):
-            return  # was a backport applied?
-
         if hasattr(threading, "_register_atexit"):
 
             @wraps(threading._register_atexit)
@@ -833,12 +582,26 @@ def patch_eventlet():
                 AsyncioHub_schedule_call_threadsafe
             )
 
-        from ._sockets import socketpair
+        socket = import_eventlet_original("socket")
 
         def BaseHub__aiologic_init_socketpair(self, /):
             if not hasattr(self, "_aiologic_rsock"):
-                rsock, wsock = socketpair(blocking=False, buffering=1)
+                rsock, wsock = socket.socketpair()
                 rsock_fd = rsock.fileno()
+
+                rsock.setblocking(False)
+                wsock.setblocking(False)
+
+                try:
+                    rsock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1)
+                    wsock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1)
+                except (AttributeError, OSError):
+                    pass
+
+                try:
+                    wsock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                except (AttributeError, OSError):
+                    pass
 
                 def rsock_recv(_, /):
                     while True:

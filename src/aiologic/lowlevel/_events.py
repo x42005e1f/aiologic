@@ -5,9 +5,10 @@
 
 from abc import ABC, abstractmethod
 
-from . import _patcher as patcher
+from . import _patcher
 from ._checkpoints import checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
+from ._thread import allocate_lock
 
 
 class Event(ABC):
@@ -147,65 +148,7 @@ class GreenEvent(BaseEvent):
         raise NotImplementedError
 
 
-@patcher.once
-def get_threading_event_class():
-    global ThreadingEvent
-
-    from ._thread import allocate_lock
-
-    class ThreadingEvent(GreenEvent):
-        __slots__ = ("__lock",)
-
-        def __new__(cls, /):
-            self = super().__new__(cls)
-
-            self.__lock = allocate_lock()
-            self.__lock.acquire()
-
-            return self
-
-        def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'ThreadingEvent' is not an acceptable base type"
-            raise TypeError(msg)
-
-        def __reduce__(self, /):
-            msg = f"cannot reduce {self!r}"
-            raise TypeError(msg)
-
-        def wait(self, /, timeout=None):
-            success = True
-
-            if self._is_unset:
-                if timeout is None:
-                    success = self.__lock.acquire()
-                elif timeout > 0:
-                    success = self.__lock.acquire(timeout=timeout)
-                else:
-                    success = self.__lock.acquire(blocking=False)
-            else:
-                green_checkpoint()
-
-            return success
-
-        def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
-                try:
-                    is_unset.pop()
-                except IndexError:
-                    success = False
-                else:
-                    self.__lock.release()
-            else:
-                success = False
-
-            return success
-
-    return ThreadingEvent
-
-
-@patcher.once
+@_patcher.once
 def get_eventlet_event_class():
     global EventletEvent
 
@@ -226,7 +169,7 @@ def get_eventlet_event_class():
 
             return hub
 
-    patcher.patch_eventlet()
+    _patcher.patch_eventlet()
 
     class EventletEvent(GreenEvent):
         __slots__ = (
@@ -324,7 +267,7 @@ def get_eventlet_event_class():
     return EventletEvent
 
 
-@patcher.once
+@_patcher.once
 def get_gevent_event_class():
     global GeventEvent
 
@@ -432,18 +375,54 @@ def get_gevent_event_class():
     return GeventEvent
 
 
-class ThreadingEvent(GreenEvent):  # noqa: F811
-    __slots__ = ()
+class ThreadingEvent(GreenEvent):
+    __slots__ = ("__lock",)
 
     def __new__(cls, /):
-        try:
-            cls = get_threading_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls)
+        self = super().__new__(cls)
+
+        self.__lock = allocate_lock()
+        self.__lock.acquire()
 
         return self
+
+    def __init_subclass__(cls, /, **kwargs):
+        msg = "type 'ThreadingEvent' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /):
+        msg = f"cannot reduce {self!r}"
+        raise TypeError(msg)
+
+    def wait(self, /, timeout=None):
+        success = True
+
+        if self._is_unset:
+            if timeout is None:
+                success = self.__lock.acquire()
+            elif timeout > 0:
+                success = self.__lock.acquire(timeout=timeout)
+            else:
+                success = self.__lock.acquire(blocking=False)
+        else:
+            green_checkpoint()
+
+        return success
+
+    def set(self, /):
+        success = True
+
+        if is_unset := self._is_unset:
+            try:
+                is_unset.pop()
+            except IndexError:
+                success = False
+            else:
+                self.__lock.release()
+        else:
+            success = False
+
+        return success
 
 
 class EventletEvent(GreenEvent):  # noqa: F811
@@ -498,7 +477,7 @@ class AsyncEvent(BaseEvent):
         raise NotImplementedError
 
 
-@patcher.once
+@_patcher.once
 def get_asyncio_event_class():
     global AsyncioEvent
 
@@ -579,7 +558,7 @@ def get_asyncio_event_class():
     return AsyncioEvent
 
 
-@patcher.once
+@_patcher.once
 def get_trio_event_class():
     global TrioEvent
 

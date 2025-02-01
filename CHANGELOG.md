@@ -21,6 +21,11 @@ Commit messages are consistent with
 
 ### Changed
 
+- Support for greenlet-based libraries has been simplified. Detecting the
+  current green library is now done by hub: if any `eventlet` or `gevent`
+  function was called in the current thread, the current thread starts using
+  the corresponding library. This eliminates the need to specify a green
+  library both before and after monkey patching.
 - Corrected type annotations: now `aiologic.BoundedSemaphore` extends
   `aiologic.Semaphore`, and `aiologic.Semaphore` returns an instance of
   `aiologic.BoundedSemaphore` when passing `max_value`. Previously, the classes
