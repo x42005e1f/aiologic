@@ -75,21 +75,26 @@ class PLock:
             if not success:
                 waiters.append(event := AsyncEvent())
 
-                try:
-                    success = self.__acquire_nowait()
+                success = self.__acquire_nowait()
 
-                    if not success:
+                if not success:
+                    try:
                         success = await event
                         rescheduled = True
-                finally:
-                    if not success:
-                        if event.cancel():
-                            try:
-                                waiters.remove(event)
-                            except ValueError:
-                                pass
-                        else:
-                            self.__release()
+                    finally:
+                        if not success:
+                            if event.cancel():
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                self.release()
+                else:
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
 
             if not rescheduled:
                 await checkpoint()
@@ -106,21 +111,26 @@ class PLock:
             if not success:
                 waiters.append(event := GreenEvent())
 
-                try:
-                    success = self.__acquire_nowait()
+                success = self.__acquire_nowait()
 
-                    if not success:
+                if not success:
+                    try:
                         success = event.wait(timeout)
                         rescheduled = True
-                finally:
-                    if not success:
-                        if event.cancel():
-                            try:
-                                waiters.remove(event)
-                            except ValueError:
-                                pass
-                        else:
-                            self.__release()
+                    finally:
+                        if not success:
+                            if event.cancel():
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                self.release()
+                else:
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
 
             if not rescheduled:
                 green_checkpoint()

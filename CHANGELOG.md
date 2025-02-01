@@ -37,6 +37,12 @@ Commit messages are consistent with
 - Aliases to old modules (affects objects pickled before `0.13.0`).
 - Patcher-related exports (such as `aiologic.lowlevel.start_new_thread()`).
 
+### Fixed
+
+- There was a missing branch for the optimistic case of non-waiting lock
+  acquiring during race condition, which caused hangs in a free-threaded mode
+  (`0.13.1` regression).
+
 [0.13.1] - 2025-01-24
 ---------------------
 
