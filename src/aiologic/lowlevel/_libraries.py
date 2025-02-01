@@ -129,25 +129,30 @@ except ImportError:
 def _asyncio_running_impl():
     global _asyncio_running_impl
 
-    if "asyncio" in modules:
+    from asyncio import _get_running_loop
+    from sys import version_info
+
+    if version_info >= (3, 12) and _get_running_loop.__module__ == "_asyncio":
+        fast_path = True
+    else:
         try:
-            from asyncio import _get_running_loop as get_running_loop
+            from sniffio import current_async_library_cvar
         except ImportError:
-            from asyncio import get_running_loop
+            fast_path = True
+        else:
+            fast_path = False
+
+    if fast_path:
+        _asyncio_running_impl = _get_running_loop
+    else:
 
         def _asyncio_running_impl():
-            try:
-                running = get_running_loop() is not None
-            except RuntimeError:
-                running = False
+            if (name := current_async_library_cvar.get()) is not None:
+                return (name == "asyncio") or None
+            else:
+                return _get_running_loop()
 
-            return running
-
-        running = _asyncio_running_impl()
-    else:
-        running = False
-
-    return running
+    return _asyncio_running_impl()
 
 
 def _curio_running_impl():
@@ -171,7 +176,7 @@ def asyncio_running():
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         running = name == "asyncio"
     else:
-        running = _asyncio_running_impl()
+        running = _asyncio_running_impl() is not None
 
     return running
 
@@ -203,7 +208,7 @@ def current_async_library(*, failsafe=False):
         library = name
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         library = name
-    elif _asyncio_running_impl():
+    elif _asyncio_running_impl() is not None:
         library = "asyncio"
     elif _curio_running_impl():
         library = "curio"
