@@ -14,6 +14,24 @@ requires-python = ">=3.8"
 dependencies = [
     "wrapt>=1.16.0",
 ]
+keywords = [
+    "anyio",
+    "async",
+    "async-await",
+    "asyncio",
+    "concurrency",
+    "eventlet",
+    "gevent",
+    "greenlet",
+    "library",
+    "locking",
+    "mypy",
+    "python",
+    "synchronization",
+    "threading",
+    "thread-safety",
+    "trio",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Topic :: Software Development :: Libraries :: Python Modules",
