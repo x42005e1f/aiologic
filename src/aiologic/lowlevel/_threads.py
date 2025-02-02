@@ -8,7 +8,8 @@ import weakref
 
 from collections import deque
 from logging import getLogger
-from sys import modules
+
+from wrapt import when_imported
 
 from . import _patcher, _thread
 from ._markers import MISSING
@@ -17,14 +18,14 @@ from ._thread import allocate_lock, get_ident
 LOGGER = getLogger(__name__)
 
 
-def get_python_thread(ident, /):  # noqa: F811
-    global get_python_thread
+def _get_python_thread(ident, /):
+    global _get_python_thread
 
     threading = _patcher.import_module("threading")
 
     if _patcher.monkey_patched("threading"):
 
-        def get_python_thread(ident, /):
+        def _get_python_thread(ident, /):
             return None
 
     else:
@@ -33,7 +34,7 @@ def get_python_thread(ident, /):  # noqa: F811
 
         _patcher.patch_threading()
 
-        def get_python_thread(ident, /):
+        def _get_python_thread(ident, /):
             thread = _active.get(ident)
 
             if isinstance(thread, DummyThread):
@@ -41,21 +42,28 @@ def get_python_thread(ident, /):  # noqa: F811
 
             return thread
 
-    return get_python_thread(ident)
+    return _get_python_thread(ident)
 
 
-def get_eventlet_thread(ident, /):  # noqa: F811
-    global get_eventlet_thread
+def _get_eventlet_thread(ident, /):
+    return None
 
-    if "eventlet.patcher" in modules:
-        threading = _patcher.import_eventlet_original("threading")
+
+@when_imported("eventlet.patcher")
+def _get_eventlet_thread(_):
+    global _get_eventlet_thread
+
+    def _get_eventlet_thread(ident, /):
+        global _get_eventlet_thread
+
+        threading = _patcher._import_eventlet_original("threading")
 
         DummyThread = threading._DummyThread
         _active = threading._active
 
         _patcher.patch_threading()
 
-        def get_eventlet_thread(ident, /):
+        def _get_eventlet_thread(ident, /):
             thread = _active.get(ident)
 
             if isinstance(thread, DummyThread):
@@ -63,30 +71,26 @@ def get_eventlet_thread(ident, /):  # noqa: F811
 
             return thread
 
-        thread = get_eventlet_thread(ident)
-    else:
-        thread = None
-
-    return thread
+        return _get_eventlet_thread(ident)
 
 
 def get_thread(ident, /):
-    thread = get_python_thread(ident)
+    thread = _get_python_thread(ident)
 
     if thread is None:
-        thread = get_eventlet_thread(ident)
+        thread = _get_eventlet_thread(ident)
 
     return thread
 
 
-def current_python_thread():  # noqa: F811
-    global current_python_thread
+def _current_python_thread():
+    global _current_python_thread
 
     threading = _patcher.import_module("threading")
 
     if _patcher.monkey_patched("threading"):
 
-        def current_python_thread():
+        def _current_python_thread():
             return None
 
     else:
@@ -95,7 +99,7 @@ def current_python_thread():  # noqa: F811
 
         _patcher.patch_threading()
 
-        def current_python_thread():
+        def _current_python_thread():
             thread = current_thread()
 
             if isinstance(thread, DummyThread):
@@ -103,21 +107,28 @@ def current_python_thread():  # noqa: F811
 
             return thread
 
-    return current_python_thread()
+    return _current_python_thread()
 
 
-def current_eventlet_thread():  # noqa: F811
-    global current_eventlet_thread
+def _current_eventlet_thread():
+    return None
 
-    if "eventlet.patcher" in modules:
-        threading = _patcher.import_eventlet_original("threading")
+
+@when_imported("eventlet.patcher")
+def _current_eventlet_thread(_):
+    global _current_eventlet_thread
+
+    def _current_eventlet_thread():
+        global _current_eventlet_thread
+
+        threading = _patcher._import_eventlet_original("threading")
 
         DummyThread = threading._DummyThread
         current_thread = threading.current_thread
 
         _patcher.patch_threading()
 
-        def current_eventlet_thread():
+        def _current_eventlet_thread():
             thread = current_thread()
 
             if isinstance(thread, DummyThread):
@@ -125,18 +136,14 @@ def current_eventlet_thread():  # noqa: F811
 
             return thread
 
-        thread = current_eventlet_thread()
-    else:
-        thread = None
-
-    return thread
+        return _current_eventlet_thread()
 
 
 def current_thread():
-    thread = current_python_thread()
+    thread = _current_python_thread()
 
     if thread is None:
-        thread = current_eventlet_thread()
+        thread = _current_eventlet_thread()
 
     return thread
 

@@ -5,7 +5,7 @@
 
 import os
 
-from sys import modules
+from wrapt import when_imported
 
 from ._threads import ThreadLocal
 
@@ -24,62 +24,22 @@ class NamedLocal(ThreadLocal):
 current_green_library_tlocal = NamedLocal()
 
 
-def _threading_running_impl():
-    return True
+def _get_gevent_hub_if_exists():
+    return None
 
 
-def _eventlet_running_impl():
-    global _eventlet_running_impl
+@when_imported("gevent")
+def _get_gevent_hub_if_exists_hook(_):
+    global _get_gevent_hub_if_exists
 
-    if "eventlet" in modules:
-        from eventlet.hubs import _threadlocal
+    def _get_gevent_hub_if_exists():
+        global _get_gevent_hub_if_exists
 
-        def _eventlet_running_impl():
-            return getattr(_threadlocal, "hub", None) is not None
-
-        answer = _eventlet_running_impl()
-    else:
-        answer = False
-
-    return answer
-
-
-def _gevent_running_impl():
-    global _gevent_running_impl
-
-    if "gevent" in modules:
         from gevent._hub_local import get_hub_if_exists
 
-        def _gevent_running_impl():
-            return get_hub_if_exists() is not None
+        _get_gevent_hub_if_exists = get_hub_if_exists
 
-        answer = _gevent_running_impl()
-    else:
-        answer = False
-
-    return answer
-
-
-def threading_running():
-    if (name := current_green_library_tlocal.name) is not None:
-        running = name == "threading"
-    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
-        running = name == "threading"
-    else:
-        running = _threading_running_impl()
-
-    return running
-
-
-def eventlet_running():
-    if (name := current_green_library_tlocal.name) is not None:
-        running = name == "eventlet"
-    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
-        running = name == "eventlet"
-    else:
-        running = _eventlet_running_impl()
-
-    return running
+        return _get_gevent_hub_if_exists()
 
 
 def gevent_running():
@@ -88,7 +48,54 @@ def gevent_running():
     elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         running = name == "gevent"
     else:
-        running = _gevent_running_impl()
+        running = _get_gevent_hub_if_exists() is not None
+
+    return running
+
+
+def _get_eventlet_hub_if_exists():
+    return None
+
+
+@when_imported("eventlet")
+def _get_eventlet_hub_if_exists_hook(_):
+    global _get_eventlet_hub_if_exists
+
+    def _get_eventlet_hub_if_exists():
+        global _get_eventlet_hub_if_exists
+
+        from eventlet.hubs import _threadlocal
+
+        def _get_eventlet_hub_if_exists():
+            return getattr(_threadlocal, "hub", None)
+
+        return _get_eventlet_hub_if_exists()
+
+
+def eventlet_running():
+    if (name := current_green_library_tlocal.name) is not None:
+        running = name == "eventlet"
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
+        running = name == "eventlet"
+    elif _get_gevent_hub_if_exists() is not None:
+        running = False
+    else:
+        running = _get_eventlet_hub_if_exists() is not None
+
+    return running
+
+
+def threading_running():
+    if (name := current_green_library_tlocal.name) is not None:
+        running = name == "threading"
+    elif (name := DEFAULT_GREEN_LIBRARY) is not None:
+        running = name == "threading"
+    elif _get_gevent_hub_if_exists() is not None:
+        running = False
+    elif _get_eventlet_hub_if_exists() is not None:
+        running = False
+    else:
+        running = True
 
     return running
 
@@ -98,17 +105,12 @@ def current_green_library(*, failsafe=False):
         library = name
     elif (name := DEFAULT_GREEN_LIBRARY) is not None:
         library = name
-    elif _gevent_running_impl():
+    elif _get_gevent_hub_if_exists() is not None:
         library = "gevent"
-    elif _eventlet_running_impl():
+    elif _get_eventlet_hub_if_exists() is not None:
         library = "eventlet"
-    elif _threading_running_impl():
-        library = "threading"
-    elif failsafe:
-        library = None
     else:
-        msg = "unknown green library, or not in green context"
-        raise GreenLibraryNotFoundError(msg)
+        library = "threading"
 
     return library
 
@@ -126,72 +128,6 @@ except ImportError:
     current_async_library_tlocal = NamedLocal()
 
 
-def _asyncio_running_impl():
-    global _asyncio_running_impl
-
-    from asyncio import _get_running_loop
-    from sys import version_info
-
-    if version_info >= (3, 12) and _get_running_loop.__module__ == "_asyncio":
-        fast_path = True
-    else:
-        try:
-            from sniffio import current_async_library_cvar
-        except ImportError:
-            fast_path = True
-        else:
-            fast_path = False
-
-    if fast_path:
-        _asyncio_running_impl = _get_running_loop
-    else:
-
-        def _asyncio_running_impl():
-            if (name := current_async_library_cvar.get()) is not None:
-                return (name == "asyncio") or None
-            else:
-                return _get_running_loop()
-
-    return _asyncio_running_impl()
-
-
-def _curio_running_impl():
-    global _curio_running_impl
-
-    if "curio" in modules:
-        from curio.meta import curio_running
-
-        _curio_running_impl = curio_running
-
-        running = _curio_running_impl()
-    else:
-        running = False
-
-    return running
-
-
-def asyncio_running():
-    if (name := current_async_library_tlocal.name) is not None:
-        running = name == "asyncio"
-    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
-        running = name == "asyncio"
-    else:
-        running = _asyncio_running_impl() is not None
-
-    return running
-
-
-def curio_running():
-    if (name := current_async_library_tlocal.name) is not None:
-        running = name == "curio"
-    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
-        running = name == "curio"
-    else:
-        running = _curio_running_impl()
-
-    return running
-
-
 def trio_running():
     if (name := current_async_library_tlocal.name) is not None:
         running = name == "trio"
@@ -203,15 +139,95 @@ def trio_running():
     return running
 
 
+def _curio_running():
+    return False
+
+
+@when_imported("curio")
+def _curio_running_hook(_):
+    global _curio_running
+
+    def _curio_running():
+        global _curio_running
+
+        from curio.meta import curio_running as _curio_running
+
+        return _curio_running()
+
+
+def curio_running():
+    if (name := current_async_library_tlocal.name) is not None:
+        running = name == "curio"
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
+        running = name == "curio"
+    else:
+        running = _curio_running()
+
+    return running
+
+
+def _get_asyncio_marker_if_exists():
+    return None
+
+
+@when_imported("asyncio")
+def _get_asyncio_marker_if_exists_hook(_):
+    global _get_asyncio_marker_if_exists
+
+    def _get_asyncio_marker_if_exists():
+        global _get_asyncio_marker_if_exists
+
+        from asyncio import _get_running_loop
+        from sys import version_info
+
+        is_builtin = _get_running_loop.__module__ == "_asyncio"
+
+        _get_asyncio_marker_if_exists = _get_running_loop
+
+        if version_info < (3, 12) or not is_builtin:
+
+            @when_imported("sniffio")
+            def _get_asyncio_marker_if_exists_hook(_):
+                global _get_asyncio_marker_if_exists
+
+                def _get_asyncio_marker_if_exists():
+                    global _get_asyncio_marker_if_exists
+
+                    from sniffio import current_async_library_cvar as cvar
+
+                    def _get_asyncio_marker_if_exists():
+                        if (name := cvar.get()) is not None:
+                            return (name == "asyncio") or None
+                        else:
+                            return _get_running_loop()
+
+                    return _get_asyncio_marker_if_exists()
+
+        return _get_asyncio_marker_if_exists()
+
+
+def asyncio_running():
+    if (name := current_async_library_tlocal.name) is not None:
+        running = name == "asyncio"
+    elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
+        running = name == "asyncio"
+    elif _curio_running():
+        running = False
+    else:
+        running = _get_asyncio_marker_if_exists() is not None
+
+    return running
+
+
 def current_async_library(*, failsafe=False):
     if (name := current_async_library_tlocal.name) is not None:
         library = name
     elif (name := DEFAULT_ASYNC_LIBRARY) is not None:
         library = name
-    elif _asyncio_running_impl() is not None:
-        library = "asyncio"
-    elif _curio_running_impl():
+    elif _curio_running():
         library = "curio"
+    elif _get_asyncio_marker_if_exists() is not None:
+        library = "asyncio"
     elif failsafe:
         library = None
     else:

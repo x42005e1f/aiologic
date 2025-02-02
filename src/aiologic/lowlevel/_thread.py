@@ -10,7 +10,7 @@ from . import _patcher
 
 __module = _patcher.import_original("_thread")
 
-if _patcher.eventlet_patched("_thread"):
+if _patcher._eventlet_patched("_thread"):
     from sys import modules
 
     modules[__name__] = __module

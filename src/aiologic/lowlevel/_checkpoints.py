@@ -8,7 +8,8 @@ import platform
 import time
 
 from contextvars import ContextVar
-from functools import partial
+
+from wrapt import when_imported
 
 from ._libraries import current_async_library, current_green_library
 
@@ -74,14 +75,10 @@ def green_checkpoint(*, force=False):
 async def _asyncio_checkpoint():
     global _asyncio_checkpoint
 
-    try:
-        from anyio.lowlevel import checkpoint
-    except ImportError:
-        from asyncio import sleep
+    from asyncio import sleep
 
-        _asyncio_checkpoint = partial(sleep, 0)
-    else:
-        _asyncio_checkpoint = checkpoint
+    async def _asyncio_checkpoint():
+        await sleep(0)
 
     await _asyncio_checkpoint()
 
@@ -91,7 +88,8 @@ async def _curio_checkpoint():
 
     from curio import sleep
 
-    _curio_checkpoint = partial(sleep, 0)
+    async def _curio_checkpoint():
+        await sleep(0)
 
     await _curio_checkpoint()
 
@@ -99,12 +97,7 @@ async def _curio_checkpoint():
 async def _trio_checkpoint():
     global _trio_checkpoint
 
-    try:
-        from anyio.lowlevel import checkpoint
-    except ImportError:
-        from trio.lowlevel import checkpoint
-
-    _trio_checkpoint = checkpoint
+    from trio.lowlevel import checkpoint as _trio_checkpoint
 
     await _trio_checkpoint()
 
@@ -127,19 +120,21 @@ async_checkpoint = checkpoint
 
 
 async def _asyncio_checkpoint_if_cancelled():
+    pass
+
+
+@when_imported("anyio")
+def _asyncio_checkpoint_if_cancelled_hook(_):
     global _asyncio_checkpoint_if_cancelled
 
-    try:
+    async def _asyncio_checkpoint_if_cancelled():
+        global _asyncio_checkpoint_if_cancelled
+
         from anyio.lowlevel import checkpoint_if_cancelled
-    except ImportError:
 
-        async def _asyncio_checkpoint_if_cancelled():
-            pass
-
-    else:
         _asyncio_checkpoint_if_cancelled = checkpoint_if_cancelled
 
-    await _asyncio_checkpoint_if_cancelled()
+        await _asyncio_checkpoint_if_cancelled()
 
 
 async def _curio_checkpoint_if_cancelled():
@@ -153,10 +148,7 @@ async def _curio_checkpoint_if_cancelled():
 async def _trio_checkpoint_if_cancelled():
     global _trio_checkpoint_if_cancelled
 
-    try:
-        from anyio.lowlevel import checkpoint_if_cancelled
-    except ImportError:
-        from trio.lowlevel import checkpoint_if_cancelled
+    from trio.lowlevel import checkpoint_if_cancelled
 
     _trio_checkpoint_if_cancelled = checkpoint_if_cancelled
 
@@ -247,18 +239,26 @@ async def repeat_if_cancelled(func, /, *args, **kwargs):
 async def _asyncio_cancel_shielded_checkpoint():
     global _asyncio_cancel_shielded_checkpoint
 
-    try:
-        from anyio.lowlevel import cancel_shielded_checkpoint
-    except ImportError:
-        from asyncio import shield, sleep
+    from asyncio import shield, sleep
 
-        async def _asyncio_cancel_shielded_checkpoint():
-            await shield(sleep(0))
-
-    else:
-        _asyncio_cancel_shielded_checkpoint = cancel_shielded_checkpoint
+    async def _asyncio_cancel_shielded_checkpoint():
+        await shield(sleep(0))
 
     await _asyncio_cancel_shielded_checkpoint()
+
+
+@when_imported("anyio")
+def _asyncio_cancel_shielded_checkpoint_hook(_):
+    global _asyncio_cancel_shielded_checkpoint
+
+    async def _asyncio_cancel_shielded_checkpoint():
+        global _asyncio_cancel_shielded_checkpoint
+
+        from anyio.lowlevel import cancel_shielded_checkpoint
+
+        _asyncio_cancel_shielded_checkpoint = cancel_shielded_checkpoint
+
+        await _asyncio_cancel_shielded_checkpoint()
 
 
 async def _curio_cancel_shielded_checkpoint():
@@ -276,10 +276,7 @@ async def _curio_cancel_shielded_checkpoint():
 async def _trio_cancel_shielded_checkpoint():
     global _trio_cancel_shielded_checkpoint
 
-    try:
-        from anyio.lowlevel import cancel_shielded_checkpoint
-    except ImportError:
-        from trio.lowlevel import cancel_shielded_checkpoint
+    from trio.lowlevel import cancel_shielded_checkpoint
 
     _trio_cancel_shielded_checkpoint = cancel_shielded_checkpoint
 

@@ -7,16 +7,24 @@ import sys
 
 from functools import partial, wraps
 from importlib import import_module
-from sys import modules
 from types import SimpleNamespace
+
+from wrapt import when_imported
 
 from ._markers import MISSING
 
 
-def eventlet_patched(module_name):  # noqa: F811
-    global eventlet_patched
+def _eventlet_patched(module_name):
+    return False
 
-    if "eventlet.patcher" in modules:
+
+@when_imported("eventlet.patcher")
+def _eventlet_patched_hook(_):
+    global _eventlet_patched
+
+    def _eventlet_patched(module_name):
+        global _eventlet_patched
+
         from eventlet.patcher import already_patched
 
         mapping = {
@@ -28,79 +36,84 @@ def eventlet_patched(module_name):  # noqa: F811
             "threading": "thread",
         }
 
-        def eventlet_patched(module_name):
+        def _eventlet_patched(module_name):
             if module_name in mapping:
                 return mapping[module_name] in already_patched
             else:
                 return module_name in already_patched
 
-        answer = eventlet_patched(module_name)
-    else:
-        answer = False
-
-    return answer
+        return _eventlet_patched(module_name)
 
 
-def gevent_patched(module_name):  # noqa: F811
-    global gevent_patched
+def _gevent_patched(module_name):
+    return False
 
-    if "gevent.monkey" in modules:
+
+@when_imported("gevent.monkey")
+def _gevent_patched_hook(_):
+    global _gevent_patched
+
+    def _gevent_patched(module_name):
+        global _gevent_patched
+
         from gevent.monkey import is_module_patched
 
-        gevent_patched = is_module_patched
+        _gevent_patched = is_module_patched
 
-        answer = gevent_patched(module_name)
-    else:
-        answer = False
-
-    return answer
+        return _gevent_patched(module_name)
 
 
 def monkey_patched(module_name):
-    return eventlet_patched(module_name) or gevent_patched(module_name)
+    return _gevent_patched(module_name) or _eventlet_patched(module_name)
 
 
-def import_eventlet_original(module_name):  # noqa: F811
-    global import_eventlet_original
+def _import_eventlet_original(module_name):
+    return import_module(module_name)
 
-    if "eventlet.patcher" in modules:
+
+@when_imported("eventlet.patcher")
+def _import_eventlet_original_hook(_):
+    global _import_eventlet_original
+
+    def _import_eventlet_original(module_name):
+        global _import_eventlet_original
+
         from eventlet.patcher import original
 
-        import_eventlet_original = original
+        _import_eventlet_original = original
 
-        module = import_eventlet_original(module_name)
-    else:
-        module = import_module(module_name)
-
-    return module
+        return _import_eventlet_original(module_name)
 
 
-def import_gevent_original(module_name):  # noqa: F811
-    global import_gevent_original
+def _import_gevent_original(module_name):
+    return import_module(module_name)
 
-    if "gevent.monkey" in modules:
+
+@when_imported("gevent.monkey")
+def _import_gevent_original_hook(_):
+    global _import_gevent_original
+
+    def _import_gevent_original(module_name):
+        global _import_gevent_original
+
         from gevent.monkey import saved
 
-        def import_gevent_original(module_name, /):
+        def _import_gevent_original(module_name):
             return SimpleNamespace(**{
                 **vars(import_module(module_name)),
                 **saved.get(module_name, {}),
             })
 
-        module = import_gevent_original(module_name)
-    else:
-        module = import_module(module_name)
-
-    return module
+        return _import_gevent_original(module_name)
 
 
 def import_original(name):
     module_name, _, item_name = name.partition(":")
 
-    if eventlet_patched(module_name):
-        module = import_eventlet_original(module_name)
-    elif gevent_patched(module_name):
-        module = import_gevent_original(module_name)
+    if _eventlet_patched(module_name):
+        module = _import_eventlet_original(module_name)
+    elif _gevent_patched(module_name):
+        module = _import_gevent_original(module_name)
     else:
         module = import_module(module_name)
 
@@ -415,13 +428,13 @@ def patch_threading():
 
         threading._shutdown = _shutdown
 
-    if not eventlet_patched("threading") and not gevent_patched("threading"):
+    if not _eventlet_patched("threading") and not _gevent_patched("threading"):
         threading = import_module("threading")
 
         patch_thread(threading)
         patch_shutdown(threading)
 
-    if (threading := import_eventlet_original("threading")) is not None:
+    if (threading := _import_eventlet_original("threading")) is not None:
         patch_thread(threading)
         patch_shutdown(threading)
 
@@ -582,7 +595,7 @@ def patch_eventlet():
                 AsyncioHub_schedule_call_threadsafe
             )
 
-        socket = import_eventlet_original("socket")
+        socket = _import_eventlet_original("socket")
 
         def BaseHub__aiologic_init_socketpair(self, /):
             if not hasattr(self, "_aiologic_rsock"):
