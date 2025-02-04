@@ -23,24 +23,18 @@ def _get_python_thread(ident, /):
 
     threading = _patcher.import_module("threading")
 
-    if _patcher.monkey_patched("threading"):
+    DummyThread = threading._DummyThread
+    _active = threading._active
 
-        def _get_python_thread(ident, /):
-            return None
+    _patcher.patch_threading()
 
-    else:
-        DummyThread = threading._DummyThread
-        _active = threading._active
+    def _get_python_thread(ident, /):
+        thread = _active.get(ident)
 
-        _patcher.patch_threading()
+        if isinstance(thread, (DummyThread, threading._DummyThread)):
+            thread = None
 
-        def _get_python_thread(ident, /):
-            thread = _active.get(ident)
-
-            if isinstance(thread, DummyThread):
-                thread = None
-
-            return thread
+        return thread
 
     return _get_python_thread(ident)
 
@@ -50,7 +44,7 @@ def _get_eventlet_thread(ident, /):
 
 
 @when_imported("eventlet.patcher")
-def _get_eventlet_thread(_):
+def _get_eventlet_thread_hook(_):
     global _get_eventlet_thread
 
     def _get_eventlet_thread(ident, /):
@@ -75,75 +69,19 @@ def _get_eventlet_thread(_):
 
 
 def get_thread(ident, /):
-    thread = _get_python_thread(ident)
+    thread = _get_eventlet_thread(ident)
 
     if thread is None:
-        thread = _get_eventlet_thread(ident)
+        thread = _get_python_thread(ident)
 
     return thread
 
 
-def _current_python_thread():
-    global _current_python_thread
-
-    threading = _patcher.import_module("threading")
-
-    if _patcher.monkey_patched("threading"):
-
-        def _current_python_thread():
-            return None
-
-    else:
-        DummyThread = threading._DummyThread
-        current_thread = threading.current_thread
-
-        _patcher.patch_threading()
-
-        def _current_python_thread():
-            thread = current_thread()
-
-            if isinstance(thread, DummyThread):
-                thread = None
-
-            return thread
-
-    return _current_python_thread()
-
-
-def _current_eventlet_thread():
-    return None
-
-
-@when_imported("eventlet.patcher")
-def _current_eventlet_thread(_):
-    global _current_eventlet_thread
-
-    def _current_eventlet_thread():
-        global _current_eventlet_thread
-
-        threading = _patcher._import_eventlet_original("threading")
-
-        DummyThread = threading._DummyThread
-        current_thread = threading.current_thread
-
-        _patcher.patch_threading()
-
-        def _current_eventlet_thread():
-            thread = current_thread()
-
-            if isinstance(thread, DummyThread):
-                thread = None
-
-            return thread
-
-        return _current_eventlet_thread()
-
-
 def current_thread():
-    thread = _current_python_thread()
+    thread = _get_eventlet_thread(get_ident())
 
     if thread is None:
-        thread = _current_eventlet_thread()
+        thread = _get_python_thread(get_ident())
 
     return thread
 
