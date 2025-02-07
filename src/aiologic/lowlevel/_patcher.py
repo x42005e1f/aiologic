@@ -167,7 +167,189 @@ def once(func):  # noqa: F811
     return once(func)
 
 
+def _patch_threading_thread(threading):
+    Thread = threading.Thread
+
+    if not hasattr(threading, "_maintain_shutdown_locks"):
+
+        def _maintain_shutdown_locks():
+            _shutdown_locks = threading._shutdown_locks
+            _shutdown_locks.difference_update([
+                lock for lock in _shutdown_locks if not lock.locked()
+            ])
+
+        threading._maintain_shutdown_locks = _maintain_shutdown_locks
+
+        @wraps(Thread._set_tstate_lock)
+        def Thread__set_tstate_lock(self):
+            self._tstate_lock = threading._set_sentinel()
+            self._tstate_lock.acquire()
+
+            if not self.daemon:
+                with threading._shutdown_locks_lock:
+                    threading._maintain_shutdown_locks()
+                    threading._shutdown_locks.add(self._tstate_lock)
+
+        Thread._set_tstate_lock = Thread__set_tstate_lock
+
+    @wraps(Thread._stop)
+    def Thread__stop(self):
+        self._is_stopped = True
+
+        if not self.daemon:
+            if self._tstate_lock is not None:
+                with threading._shutdown_locks_lock:
+                    if self._tstate_lock is not None:
+                        threading._maintain_shutdown_locks()
+                        self._tstate_lock = None
+        else:
+            self._tstate_lock = None
+
+    Thread._stop = Thread__stop
+
+    @wraps(Thread._wait_for_tstate_lock)
+    def Thread__wait_for_tstate_lock(self, block=True, timeout=-1):
+        lock = self._tstate_lock
+
+        if lock is None:
+            return
+
+        try:
+            if lock.acquire(block, timeout):
+                try:
+                    lock.release()
+                except RuntimeError:
+                    pass
+
+                self._stop()
+        except:
+            if lock.locked():
+                try:
+                    lock.release()
+                except RuntimeError:
+                    pass
+
+                self._stop()
+
+            raise
+
+    Thread._wait_for_tstate_lock = Thread__wait_for_tstate_lock
+
+
+def _patch_threading_shutdown(threading):
+    if hasattr(threading, "_register_atexit"):
+
+        @wraps(threading._register_atexit)
+        def _register_atexit(func, *arg, **kwargs):
+            _threading_atexits = threading._threading_atexits
+
+            if threading._SHUTTING_DOWN:
+                msg = "can't register atexit after shutdown"
+                raise RuntimeError(msg)
+
+            _threading_atexits.append(ate := partial(func, *arg, **kwargs))
+
+            if threading._SHUTTING_DOWN:
+                _threading_atexits.remove(ate)
+
+                msg = "can't register atexit after shutdown"
+                raise RuntimeError(msg)
+
+        threading._register_atexit = _register_atexit
+
+    @wraps(threading._shutdown)
+    def _shutdown():
+        _main_thread = threading._main_thread
+        _threading_atexits = threading._threading_atexits
+
+        _shutdown_locks = threading._shutdown_locks
+        _shutdown_locks_lock = threading._shutdown_locks_lock
+
+        try:
+            _is_main_interpreter = threading._is_main_interpreter
+        except AttributeError:
+            if _main_thread._is_stopped:
+                return
+        else:
+            if _main_thread._is_stopped and _is_main_interpreter():
+                return
+
+        threading._SHUTTING_DOWN = True
+
+        for atexit_call in reversed(_threading_atexits):
+            atexit_call()
+
+        _threading_atexits.clear()
+
+        if _main_thread.ident == threading.get_ident():
+            tlock = _main_thread._tstate_lock
+
+            assert tlock is not None
+            assert tlock.locked()
+
+            tlock.release()
+            _main_thread._stop()
+
+        while True:
+            with _shutdown_locks_lock:
+                locks = list(_shutdown_locks)
+                _shutdown_locks.clear()
+
+            if not locks:
+                break
+
+            for lock in locks:
+                lock.acquire()
+
+                try:
+                    lock.release()
+                except RuntimeError:
+                    pass
+
+    threading._shutdown = _shutdown
+
+
 @once
+def _patch_python_threading():
+    try:
+        pypy_version_info = sys.pypy_version_info
+    except AttributeError:
+        return
+
+    if pypy_version_info >= (7, 3, 18):
+        return
+
+    if not monkey_patched("threading"):
+        threading = import_module("threading")
+
+        _patch_threading_thread(threading)
+        _patch_threading_shutdown(threading)
+
+
+def _patch_eventlet_threading():
+    pass
+
+
+@when_imported("eventlet.patcher")
+def _patch_eventlet_threading_hook(_):
+    global _patch_eventlet_threading
+
+    @once
+    def _patch_eventlet_threading():
+        try:
+            pypy_version_info = sys.pypy_version_info
+        except AttributeError:
+            return
+
+        if pypy_version_info >= (7, 3, 18):
+            return
+
+        threading = _import_eventlet_original("threading")
+
+        _patch_threading_thread(threading)
+        _patch_threading_shutdown(threading)
+
+
 def patch_threading():
     """
     Fixes race conditions in `Thread.join()` (`AssertionError`, `RuntimeError`)
@@ -280,166 +462,16 @@ def patch_threading():
     Does not affect PyPy 7.3.18 and newer (see pypy/pypy#5080).
     """
 
-    try:
-        pypy_version_info = sys.pypy_version_info
-    except AttributeError:
-        return
-
-    if pypy_version_info >= (7, 3, 18):
-        return
-
-    def patch_thread(threading):
-        Thread = threading.Thread
-
-        if not hasattr(threading, "_maintain_shutdown_locks"):
-
-            def _maintain_shutdown_locks():
-                _shutdown_locks = threading._shutdown_locks
-                _shutdown_locks.difference_update([
-                    lock for lock in _shutdown_locks if not lock.locked()
-                ])
-
-            threading._maintain_shutdown_locks = _maintain_shutdown_locks
-
-            @wraps(Thread._set_tstate_lock)
-            def Thread__set_tstate_lock(self):
-                self._tstate_lock = threading._set_sentinel()
-                self._tstate_lock.acquire()
-
-                if not self.daemon:
-                    with threading._shutdown_locks_lock:
-                        threading._maintain_shutdown_locks()
-                        threading._shutdown_locks.add(self._tstate_lock)
-
-            Thread._set_tstate_lock = Thread__set_tstate_lock
-
-        @wraps(Thread._stop)
-        def Thread__stop(self):
-            self._is_stopped = True
-
-            if not self.daemon:
-                if self._tstate_lock is not None:
-                    with threading._shutdown_locks_lock:
-                        if self._tstate_lock is not None:
-                            threading._maintain_shutdown_locks()
-                            self._tstate_lock = None
-            else:
-                self._tstate_lock = None
-
-        Thread._stop = Thread__stop
-
-        @wraps(Thread._wait_for_tstate_lock)
-        def Thread__wait_for_tstate_lock(self, block=True, timeout=-1):
-            lock = self._tstate_lock
-
-            if lock is None:
-                return
-
-            try:
-                if lock.acquire(block, timeout):
-                    try:
-                        lock.release()
-                    except RuntimeError:
-                        pass
-
-                    self._stop()
-            except:
-                if lock.locked():
-                    try:
-                        lock.release()
-                    except RuntimeError:
-                        pass
-
-                    self._stop()
-
-                raise
-
-        Thread._wait_for_tstate_lock = Thread__wait_for_tstate_lock
-
-    def patch_shutdown(threading):
-        if hasattr(threading, "_register_atexit"):
-
-            @wraps(threading._register_atexit)
-            def _register_atexit(func, *arg, **kwargs):
-                _threading_atexits = threading._threading_atexits
-
-                if threading._SHUTTING_DOWN:
-                    msg = "can't register atexit after shutdown"
-                    raise RuntimeError(msg)
-
-                _threading_atexits.append(ate := partial(func, *arg, **kwargs))
-
-                if threading._SHUTTING_DOWN:
-                    _threading_atexits.remove(ate)
-
-                    msg = "can't register atexit after shutdown"
-                    raise RuntimeError(msg)
-
-            threading._register_atexit = _register_atexit
-
-        @wraps(threading._shutdown)
-        def _shutdown():
-            _main_thread = threading._main_thread
-            _threading_atexits = threading._threading_atexits
-
-            _shutdown_locks = threading._shutdown_locks
-            _shutdown_locks_lock = threading._shutdown_locks_lock
-
-            try:
-                _is_main_interpreter = threading._is_main_interpreter
-            except AttributeError:
-                if _main_thread._is_stopped:
-                    return
-            else:
-                if _main_thread._is_stopped and _is_main_interpreter():
-                    return
-
-            threading._SHUTTING_DOWN = True
-
-            for atexit_call in reversed(_threading_atexits):
-                atexit_call()
-
-            _threading_atexits.clear()
-
-            if _main_thread.ident == threading.get_ident():
-                tlock = _main_thread._tstate_lock
-
-                assert tlock is not None
-                assert tlock.locked()
-
-                tlock.release()
-                _main_thread._stop()
-
-            while True:
-                with _shutdown_locks_lock:
-                    locks = list(_shutdown_locks)
-                    _shutdown_locks.clear()
-
-                if not locks:
-                    break
-
-                for lock in locks:
-                    lock.acquire()
-
-                    try:
-                        lock.release()
-                    except RuntimeError:
-                        pass
-
-        threading._shutdown = _shutdown
-
-    if not _eventlet_patched("threading") and not _gevent_patched("threading"):
-        threading = import_module("threading")
-
-        patch_thread(threading)
-        patch_shutdown(threading)
-
-    if (threading := _import_eventlet_original("threading")) is not None:
-        patch_thread(threading)
-        patch_shutdown(threading)
+    _patch_python_threading()
+    _patch_eventlet_threading()
 
     # gevent breaks original objects with changes in the module namespace,
     # so processing its originals makes no sense
+
+
+@when_imported("threading")
+def _patch_threading_hook(_):
+    patch_threading()
 
 
 @once
@@ -700,3 +732,8 @@ def patch_eventlet():
 
     inject_destroy(BaseHub)
     inject_schedule_call_threadsafe(BaseHub)
+
+
+@when_imported("eventlet")
+def _patch_eventlet_hook(_):
+    patch_eventlet()
