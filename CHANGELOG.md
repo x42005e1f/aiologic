@@ -21,6 +21,11 @@ Commit messages are consistent with
 
 ### Changed
 
+- Support for libraries has been redefined with `wrapt` via post import hooks.
+  Previously, available libraries were determined after the first use, which
+  could lead to unexpected behavior in interactive scenarios. Now support for a
+  library is activated when the corresponding library is imported. This applies
+  to both functions and patches.
 - Support for greenlet-based libraries has been simplified. Detecting the
   current green library is now done by hub: if any `eventlet` or `gevent`
   function was called in the current thread, the current thread starts using
