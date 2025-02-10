@@ -30,11 +30,14 @@ Commit messages are consistent with
   function was called in the current thread, the current thread starts using
   the corresponding library. This eliminates the need to specify a green
   library both before and after monkey patching.
-- Corrected type annotations: now `aiologic.BoundedSemaphore` extends
-  `aiologic.Semaphore`, and `aiologic.Semaphore` returns an instance of
-  `aiologic.BoundedSemaphore` when passing `max_value`. Previously, the classes
-  were independent in stubs, which was inconsistent with the behavior added in
-  `0.2.0`.
+- Corrected type annotations:
+  + `aiologic.BoundedSemaphore` extends `aiologic.Semaphore`, and
+    `aiologic.Semaphore` returns an instance of `aiologic.BoundedSemaphore`
+    when passing `max_value`. Previously, the classes were independent in
+    stubs, which was inconsistent with the behavior added in `0.2.0`.
+  + `aiologic.lowlevel.current_thread()` returns `Optional[threading.Thread]`.
+    Previously, `threading.Thread` was returned, which was inconsistent with
+    the special handling of `threading._DummyThread`.
 
 ### Removed
 
