@@ -19,6 +19,10 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
+### Added
+
+- Experimental `curio` support.
+
 ### Changed
 
 - Support for libraries has been redefined with `wrapt` via post import hooks.

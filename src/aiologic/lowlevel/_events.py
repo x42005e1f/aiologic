@@ -464,6 +464,8 @@ class AsyncEvent(_BaseEvent):
 
             if library == "asyncio":
                 self = _AsyncioEvent.__new__(_AsyncioEvent)
+            elif library == "curio":
+                self = _CurioEvent.__new__(_CurioEvent)
             elif library == "trio":
                 self = _TrioEvent.__new__(_TrioEvent)
             else:
@@ -561,6 +563,70 @@ def get_asyncio_event_class():
 
 
 @once
+def get_curio_event_class():
+    global _CurioEvent
+
+    from concurrent.futures import Future, InvalidStateError
+
+    from curio.traps import _future_wait
+
+    class _CurioEvent(AsyncEvent):
+        __slots__ = ("__future",)
+
+        def __new__(cls, /):
+            self = super().__new__(cls)
+
+            self.__future = None
+
+            return self
+
+        def __init_subclass__(cls, /, **kwargs):
+            msg = "type 'CurioEvent' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /):
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __await__(self, /):
+            if self._is_unset:
+                self.__future = Future()
+
+                try:
+                    yield from _future_wait(self.__future).__await__()
+                except BaseException:
+                    self.cancel()
+                    raise
+                finally:
+                    self.__future = None
+            else:
+                yield from checkpoint().__await__()
+
+            return True
+
+        def set(self, /):
+            success = True
+
+            if is_unset := self._is_unset:
+                try:
+                    is_unset.pop()
+                except IndexError:
+                    success = False
+                else:
+                    if (future := self.__future) is not None:
+                        try:
+                            future.set_result(True)
+                        except InvalidStateError:  # future is cancelled
+                            pass
+            else:
+                success = False
+
+            return success
+
+    return _CurioEvent
+
+
+@once
 def get_trio_event_class():
     global _TrioEvent
 
@@ -653,6 +719,20 @@ class _AsyncioEvent(AsyncEvent):
     def __new__(cls, /):
         try:
             cls = get_asyncio_event_class()  # noqa: PLW0642
+        except ImportError:
+            raise NotImplementedError from None
+        else:
+            self = cls.__new__(cls)
+
+        return self
+
+
+class _CurioEvent(AsyncEvent):
+    __slots__ = ()
+
+    def __new__(cls, /):
+        try:
+            cls = get_curio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:

@@ -63,6 +63,23 @@ def _current_asyncio_token():
     return _current_asyncio_token()
 
 
+def _current_curio_token():
+    global _current_curio_token
+
+    from curio.meta import _locals
+
+    def _current_curio_token():
+        kernel = getattr(_locals, "kernel", None)
+
+        if kernel is None:
+            msg = "no running kernel"
+            raise RuntimeError(msg)
+
+        return kernel
+
+    return _current_curio_token()
+
+
 def _current_trio_token():
     global _current_trio_token
 
@@ -76,6 +93,8 @@ def current_async_token():
 
     if library == "asyncio":
         token = _current_asyncio_token()
+    elif library == "curio":
+        token = _current_curio_token()
     elif library == "trio":
         token = _current_trio_token()
     else:
@@ -90,6 +109,8 @@ def current_async_token_ident():
 
     if library == "asyncio":
         ident = (library, id(_current_asyncio_token()))
+    elif library == "curio":
+        ident = (library, id(_current_curio_token()))
     elif library == "trio":
         ident = (library, id(_current_trio_token()))
     else:
@@ -147,6 +168,38 @@ def _current_asyncio_task():
     return _current_asyncio_task()
 
 
+def _current_curio_task():
+    global _current_curio_task
+
+    from functools import partial
+
+    from curio.meta import _locals
+
+    def _current_curio_task():
+        try:
+            _aiologic_task_cell = _locals._aiologic_task_cell
+        except AttributeError:
+            kernel = getattr(_locals, "kernel", None)
+
+            if kernel is None:
+                msg = "no running kernel"
+                raise RuntimeError(msg) from None
+
+            _trap = kernel._traps["trap_get_current"]
+
+            _cell_index = _trap.__code__.co_freevars.index("current")
+            _aiologic_task_cell = _trap.__closure__[_cell_index]
+
+            _locals._aiologic_task_cell = _aiologic_task_cell
+            _finalizer = partial(delattr, _locals, "_aiologic_task_cell")
+
+            kernel._call_at_shutdown(_finalizer)
+
+        return _aiologic_task_cell.cell_contents
+
+    return _current_curio_task()
+
+
 def _current_trio_task():
     global _current_trio_task
 
@@ -160,6 +213,8 @@ def current_async_task():
 
     if library == "asyncio":
         task = _current_asyncio_task()
+    elif library == "curio":
+        task = _current_curio_task()
     elif library == "trio":
         task = _current_trio_task()
     else:
@@ -174,6 +229,8 @@ def current_async_task_ident():
 
     if library == "asyncio":
         ident = (library, id(_current_asyncio_task()))
+    elif library == "curio":
+        ident = (library, id(_current_curio_task()))
     elif library == "trio":
         ident = (library, id(_current_trio_task()))
     else:

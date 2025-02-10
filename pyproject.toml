@@ -55,6 +55,7 @@ classifiers = [
 
 [project.optional-dependencies]
 anyio = ["anyio>=3.0.0"]
+curio = ["curio>=1.4"]
 docs = [
     "docutils>=0.17",
     "myst-parser",
