@@ -4,8 +4,7 @@
 # SPDX-License-Identifier: ISC
 
 from ._libraries import current_async_library, current_green_library
-from ._thread import get_ident as current_thread_ident
-from ._threads import current_thread
+from ._threads import current_thread, current_thread_ident
 
 
 def _current_eventlet_token():

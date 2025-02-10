@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: ISC
 
 import os
-import platform
 import time
 
 from contextvars import ContextVar
@@ -13,32 +12,30 @@ from wrapt import when_imported
 
 from ._libraries import current_async_library, current_green_library
 
-PYTHON_IMPLEMENTATION = platform.python_implementation()
-
 threading_checkpoints_cvar = ContextVar(
     "threading_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_THREADING_CHECKPOINTS", ""))),
+    default=bool(os.getenv("AIOLOGIC_THREADING_CHECKPOINTS", "")),
 )
 eventlet_checkpoints_cvar = ContextVar(
     "eventlet_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_EVENTLET_CHECKPOINTS", ""))),
+    default=bool(os.getenv("AIOLOGIC_EVENTLET_CHECKPOINTS", "")),
 )
 gevent_checkpoints_cvar = ContextVar(
     "gevent_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_GEVENT_CHECKPOINTS", ""))),
+    default=bool(os.getenv("AIOLOGIC_GEVENT_CHECKPOINTS", "")),
 )
 
 asyncio_checkpoints_cvar = ContextVar(
     "asyncio_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_ASYNCIO_CHECKPOINTS", ""))),
+    default=bool(os.getenv("AIOLOGIC_ASYNCIO_CHECKPOINTS", "")),
 )
 curio_checkpoints_cvar = ContextVar(
     "curio_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_CURIO_CHECKPOINTS", ""))),
+    default=bool(os.getenv("AIOLOGIC_CURIO_CHECKPOINTS", "")),
 )
 trio_checkpoints_cvar = ContextVar(
     "trio_checkpoints_cvar",
-    default=(bool(os.getenv("AIOLOGIC_TRIO_CHECKPOINTS", "1"))),
+    default=bool(os.getenv("AIOLOGIC_TRIO_CHECKPOINTS", "1")),
 )
 
 

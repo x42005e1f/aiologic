@@ -36,8 +36,6 @@ from ._ident import (
     current_green_task_ident as current_green_task_ident,
     current_green_token as current_green_token,
     current_green_token_ident as current_green_token_ident,
-    current_thread as current_thread,
-    current_thread_ident as current_thread_ident,
 )
 from ._libraries import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
@@ -56,6 +54,10 @@ from ._libraries import (
 from ._markers import (
     MISSING as MISSING,
     MissingType as MissingType,
+)
+from ._threads import (
+    current_thread as current_thread,
+    current_thread_ident as current_thread_ident,
 )
 
 # modify __module__ for shorter repr() and better pickle support

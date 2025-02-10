@@ -5,14 +5,15 @@
 
 from contextvars import ContextVar
 from threading import local
-from typing import Final
+from typing import Final, type_check_only
 
 class GreenLibraryNotFoundError(RuntimeError): ...
 
-class NamedLocal(local):
+@type_check_only
+class _NamedLocal(local):
     name: str | None = None
 
-current_green_library_tlocal: Final[NamedLocal]
+current_green_library_tlocal: Final[_NamedLocal]
 
 def threading_running() -> bool: ...
 def eventlet_running() -> bool: ...
@@ -21,7 +22,7 @@ def current_green_library(*, failsafe: bool = False) -> str: ...
 
 class AsyncLibraryNotFoundError(RuntimeError): ...
 
-current_async_library_tlocal: Final[NamedLocal]
+current_async_library_tlocal: Final[_NamedLocal]
 current_async_library_cvar: Final[ContextVar[str | None]]
 
 def asyncio_running() -> bool: ...

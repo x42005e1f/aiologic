@@ -3,25 +3,27 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import atexit
 import weakref
 
 from collections import deque
-from logging import getLogger
+from functools import wraps
 
 from wrapt import when_imported
 
-from . import _patcher, _thread
 from ._markers import MISSING
-from ._thread import allocate_lock, get_ident
-
-LOGGER = getLogger(__name__)
+from ._thread import (
+    allocate_lock,
+    get_ident as current_thread_ident,
+    start_new_thread as _start_new_thread,
+)
 
 
 def _get_python_thread(ident, /):
     global _get_python_thread
 
-    threading = _patcher.import_module("threading")
+    from . import _monkey, _patcher
+
+    threading = _monkey._import_python_original("threading")
 
     DummyThread = threading._DummyThread
     _active = threading._active
@@ -50,7 +52,9 @@ def _get_eventlet_thread_hook(_):
     def _get_eventlet_thread(ident, /):
         global _get_eventlet_thread
 
-        threading = _patcher._import_eventlet_original("threading")
+        from . import _monkey, _patcher
+
+        threading = _monkey._import_eventlet_original("threading")
 
         DummyThread = threading._DummyThread
         _active = threading._active
@@ -78,24 +82,42 @@ def get_thread(ident, /):
 
 
 def current_thread():
-    thread = _get_eventlet_thread(get_ident())
+    thread = _get_eventlet_thread(current_thread_ident())
 
     if thread is None:
-        thread = _get_python_thread(get_ident())
+        thread = _get_python_thread(current_thread_ident())
 
     return thread
 
 
-threads = set()
+def once(func, /):
+    lock = allocate_lock()
+    result = MISSING
 
-finalizers = {}
-finalizers_lock = allocate_lock()
+    @wraps(func)
+    def wrapper():
+        nonlocal result
 
-shutdown_locks = deque()
+        if result is MISSING:
+            with lock:
+                if result is MISSING:
+                    result = func()
+
+        return result
+
+    return wrapper
+
+
+_threads = set()
+
+_finalizers = {}
+_finalizers_lock = allocate_lock()
+
+_shutdown_locks = deque()
 
 try:
-    ThreadLocal = _thread._local
-except AttributeError:
+    from _thread import _local as ThreadLocal
+except ImportError:
     object___new__ = object.__new__
     object___dir__ = object.__dir__
     object___getattribute__ = object.__getattribute__
@@ -105,7 +127,7 @@ except AttributeError:
     def get_thread_namespace(self, /, *, init=False):
         namespaces = object___getattribute__(self, "_namespaces_")
 
-        if (ident := get_ident()) in threads:
+        if (ident := current_thread_ident()) in _threads:
             if ident in namespaces:
                 namespace = namespaces[ident]
             elif init:
@@ -254,64 +276,89 @@ except AttributeError:
                     raise AttributeError(msg) from None
 
 
-def run_thread_finalizer(ident, thread, /):
+@once
+def _get_logger():
+    from logging import getLogger
+
+    return getLogger(__name__)
+
+
+@once
+def _register_shutdown():
+    import atexit
+
+    @atexit.register
+    def _():
+        while _shutdown_locks:
+            try:
+                shutdown_lock = _shutdown_locks.popleft()
+            except IndexError:
+                pass
+            else:
+                shutdown_lock.acquire()
+
+
+def _run_thread_finalizer(ident, thread, /):
     if thread is not None:
         thread.join()
 
     while True:
-        with finalizers_lock:
+        with _finalizers_lock:
             if thread is not None:
-                callbacks = list(finalizers[thread].values())
-                finalizers[thread].clear()
+                callbacks = list(_finalizers[thread].values())
+                _finalizers[thread].clear()
             else:
-                callbacks = list(finalizers[ident].values())
-                finalizers[ident].clear()
+                callbacks = list(_finalizers[ident].values())
+                _finalizers[ident].clear()
 
             if not callbacks:
                 if thread is not None:
-                    del finalizers[thread]
+                    del _finalizers[thread]
                 else:
-                    del finalizers[ident]
+                    del _finalizers[ident]
 
                 break
 
         for _, func in callbacks:
             try:
                 func()
-            except Exception:
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:  # noqa: BLE001
                 if thread is not None:
                     thread_repr = repr(thread)
                 else:
                     thread_repr = f"<thread {ident!r}>"
 
-                LOGGER.exception(
+                _get_logger().exception(
                     "exception calling callback for %s",
                     thread_repr,
                 )
 
 
-def run_new_thread(target, start_lock, shutdown_lock, /, *args, **kwargs):
+def _run_new_thread(target, start_lock, shutdown_lock, /, *args, **kwargs):
     if shutdown_lock is not None:
-        shutdown_locks.append(shutdown_lock)
+        _shutdown_locks.append(shutdown_lock)
+        _register_shutdown()
 
     try:
-        ident = get_ident()
-        threads.add(ident)
+        ident = current_thread_ident()
+        _threads.add(ident)
 
         try:
-            finalizers[ident] = {}
+            _finalizers[ident] = {}
 
             try:
                 start_lock.release()
                 target(*args, **kwargs)
             finally:
-                run_thread_finalizer(ident, None)
+                _run_thread_finalizer(ident, None)
         finally:
-            threads.remove(ident)
+            _threads.remove(ident)
     finally:
         if shutdown_lock is not None:
             try:
-                shutdown_locks.remove(shutdown_lock)
+                _shutdown_locks.remove(shutdown_lock)
             except ValueError:
                 pass
 
@@ -343,9 +390,9 @@ def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
             msg = "'kwargs' argument must be a dictionary"
             raise TypeError(msg)
 
-        ident = _thread.start_new_thread(run_new_thread, args, kwargs)
+        ident = _start_new_thread(_run_new_thread, args, kwargs)
     else:
-        ident = _thread.start_new_thread(run_new_thread, args)
+        ident = _start_new_thread(_run_new_thread, args)
 
     start_lock.acquire()
 
@@ -353,12 +400,12 @@ def start_new_thread(target, args=(), kwargs=MISSING, *, daemon=True):
 
 
 def add_thread_finalizer(ident, func, /, *, ref=None):
-    with finalizers_lock:
+    with _finalizers_lock:
         try:
             if ident is not None:
-                callbacks = finalizers[ident]
+                callbacks = _finalizers[ident]
             else:
-                callbacks = finalizers[get_ident()]
+                callbacks = _finalizers[current_thread_ident()]
         except KeyError:
             if ident is not None:
                 thread = get_thread(ident)
@@ -374,12 +421,12 @@ def add_thread_finalizer(ident, func, /, *, ref=None):
                     raise RuntimeError(msg) from None
 
             start_new_thread(
-                run_thread_finalizer,
+                _run_thread_finalizer,
                 [ident, thread],
                 daemon=False,
             )
 
-            finalizers[thread] = callbacks = {}
+            _finalizers[thread] = callbacks = {}
 
         key = object()
 
@@ -399,12 +446,12 @@ def add_thread_finalizer(ident, func, /, *, ref=None):
 
 
 def remove_thread_finalizer(ident, key, /):
-    with finalizers_lock:
+    with _finalizers_lock:
         try:
             if ident is not None:
-                callbacks = finalizers[ident]
+                callbacks = _finalizers[ident]
             else:
-                callbacks = finalizers[get_ident()]
+                callbacks = _finalizers[current_thread_ident()]
         except KeyError:
             success = False
         else:
@@ -416,14 +463,3 @@ def remove_thread_finalizer(ident, key, /):
                 success = True
 
     return success
-
-
-@atexit.register
-def shutdown():
-    while shutdown_locks:
-        try:
-            shutdown_lock = shutdown_locks.popleft()
-        except IndexError:
-            pass
-        else:
-            shutdown_lock.acquire()

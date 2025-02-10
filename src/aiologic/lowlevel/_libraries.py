@@ -17,11 +17,11 @@ class GreenLibraryNotFoundError(RuntimeError):
     pass
 
 
-class NamedLocal(ThreadLocal):
+class _NamedLocal(ThreadLocal):
     name = None
 
 
-current_green_library_tlocal = NamedLocal()
+current_green_library_tlocal = _NamedLocal()
 
 
 def _get_gevent_hub_if_exists():
@@ -125,7 +125,7 @@ except ImportError:
     class AsyncLibraryNotFoundError(RuntimeError):
         pass
 
-    current_async_library_tlocal = NamedLocal()
+    current_async_library_tlocal = _NamedLocal()
 
 
 def trio_running():

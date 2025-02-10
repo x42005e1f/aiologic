@@ -5,10 +5,10 @@
 
 from abc import ABC, abstractmethod
 
-from . import _patcher
 from ._checkpoints import checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
 from ._thread import allocate_lock
+from ._threads import once
 
 
 class Event(ABC):
@@ -85,7 +85,7 @@ class DummyEvent(Event):
 DUMMY_EVENT = object.__new__(DummyEvent)
 
 
-class BaseEvent(Event):
+class _BaseEvent(Event):
     __slots__ = (
         "_is_cancelled",
         "_is_unset",
@@ -122,7 +122,7 @@ class BaseEvent(Event):
         return self._is_cancelled
 
 
-class GreenEvent(BaseEvent):
+class GreenEvent(_BaseEvent):
     __slots__ = ()
 
     def __new__(cls, /):
@@ -130,11 +130,11 @@ class GreenEvent(BaseEvent):
             library = current_green_library()
 
             if library == "threading":
-                self = ThreadingEvent.__new__(ThreadingEvent)
+                self = _ThreadingEvent.__new__(_ThreadingEvent)
             elif library == "eventlet":
-                self = EventletEvent.__new__(EventletEvent)
+                self = _EventletEvent.__new__(_EventletEvent)
             elif library == "gevent":
-                self = GeventEvent.__new__(GeventEvent)
+                self = _GeventEvent.__new__(_GeventEvent)
             else:
                 msg = f"unsupported green library {library!r}"
                 raise RuntimeError(msg)
@@ -148,12 +148,14 @@ class GreenEvent(BaseEvent):
         raise NotImplementedError
 
 
-@_patcher.once
+@once
 def get_eventlet_event_class():
-    global EventletEvent
+    global _EventletEvent
 
     from eventlet.hubs import get_hub as get_eventlet_hub
     from greenlet import getcurrent as current_greenlet
+
+    from . import _patcher
 
     try:
         from eventlet.hubs import _threadlocal as eventlet_hubs
@@ -171,7 +173,7 @@ def get_eventlet_event_class():
 
     _patcher.patch_eventlet()
 
-    class EventletEvent(GreenEvent):
+    class _EventletEvent(GreenEvent):
         __slots__ = (
             "__greenlet",
             "__hub",
@@ -264,12 +266,12 @@ def get_eventlet_event_class():
 
             return success
 
-    return EventletEvent
+    return _EventletEvent
 
 
-@_patcher.once
+@once
 def get_gevent_event_class():
-    global GeventEvent
+    global _GeventEvent
 
     from gevent import get_hub as get_gevent_hub
     from gevent.event import Event as GeventPEvent
@@ -279,7 +281,7 @@ def get_gevent_event_class():
     except ImportError:
         current_gevent_hub = get_gevent_hub
 
-    class GeventEvent(GreenEvent):
+    class _GeventEvent(GreenEvent):
         __slots__ = (
             "__event",
             "__hub",
@@ -372,10 +374,10 @@ def get_gevent_event_class():
 
             return success
 
-    return GeventEvent
+    return _GeventEvent
 
 
-class ThreadingEvent(GreenEvent):
+class _ThreadingEvent(GreenEvent):
     __slots__ = ("__lock",)
 
     def __new__(cls, /):
@@ -425,7 +427,7 @@ class ThreadingEvent(GreenEvent):
         return success
 
 
-class EventletEvent(GreenEvent):  # noqa: F811
+class _EventletEvent(GreenEvent):
     __slots__ = ()
 
     def __new__(cls, /):
@@ -439,7 +441,7 @@ class EventletEvent(GreenEvent):  # noqa: F811
         return self
 
 
-class GeventEvent(GreenEvent):  # noqa: F811
+class _GeventEvent(GreenEvent):
     __slots__ = ()
 
     def __new__(cls, /):
@@ -453,7 +455,7 @@ class GeventEvent(GreenEvent):  # noqa: F811
         return self
 
 
-class AsyncEvent(BaseEvent):
+class AsyncEvent(_BaseEvent):
     __slots__ = ()
 
     def __new__(cls, /):
@@ -461,9 +463,9 @@ class AsyncEvent(BaseEvent):
             library = current_async_library()
 
             if library == "asyncio":
-                self = AsyncioEvent.__new__(AsyncioEvent)
+                self = _AsyncioEvent.__new__(_AsyncioEvent)
             elif library == "trio":
-                self = TrioEvent.__new__(TrioEvent)
+                self = _TrioEvent.__new__(_TrioEvent)
             else:
                 msg = f"unsupported async library {library!r}"
                 raise RuntimeError(msg)
@@ -477,14 +479,14 @@ class AsyncEvent(BaseEvent):
         raise NotImplementedError
 
 
-@_patcher.once
+@once
 def get_asyncio_event_class():
-    global AsyncioEvent
+    global _AsyncioEvent
 
     from asyncio import get_running_loop as get_running_asyncio_loop
     from asyncio.exceptions import InvalidStateError
 
-    class AsyncioEvent(AsyncEvent):
+    class _AsyncioEvent(AsyncEvent):
         __slots__ = (
             "__future",
             "__loop",
@@ -555,12 +557,12 @@ def get_asyncio_event_class():
 
             return success
 
-    return AsyncioEvent
+    return _AsyncioEvent
 
 
-@_patcher.once
+@once
 def get_trio_event_class():
-    global TrioEvent
+    global _TrioEvent
 
     from trio import RunFinishedError
     from trio.lowlevel import (
@@ -571,7 +573,7 @@ def get_trio_event_class():
         wait_task_rescheduled as wait_trio_task_rescheduled,
     )
 
-    class TrioEvent(AsyncEvent):
+    class _TrioEvent(AsyncEvent):
         __slots__ = (
             "__task",
             "__token",
@@ -642,10 +644,10 @@ def get_trio_event_class():
 
             return success
 
-    return TrioEvent
+    return _TrioEvent
 
 
-class AsyncioEvent(AsyncEvent):  # noqa: F811
+class _AsyncioEvent(AsyncEvent):
     __slots__ = ()
 
     def __new__(cls, /):
@@ -659,7 +661,7 @@ class AsyncioEvent(AsyncEvent):  # noqa: F811
         return self
 
 
-class TrioEvent(AsyncEvent):  # noqa: F811
+class _TrioEvent(AsyncEvent):
     __slots__ = ()
 
     def __new__(cls, /):

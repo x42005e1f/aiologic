@@ -6,165 +6,10 @@
 import sys
 
 from functools import partial, wraps
-from importlib import import_module
-from types import SimpleNamespace
 
 from wrapt import when_imported
 
-from ._markers import MISSING
-
-
-def _eventlet_patched(module_name):
-    return False
-
-
-@when_imported("eventlet.patcher")
-def _eventlet_patched_hook(_):
-    global _eventlet_patched
-
-    def _eventlet_patched(module_name):
-        global _eventlet_patched
-
-        from eventlet.patcher import already_patched
-
-        mapping = {
-            "_thread": "thread",
-            "psycopg2": "psycopg",
-            "queue": "thread",
-            "selectors": "select",
-            "ssl": "socket",
-            "threading": "thread",
-        }
-
-        def _eventlet_patched(module_name):
-            if module_name in mapping:
-                return mapping[module_name] in already_patched
-            else:
-                return module_name in already_patched
-
-        return _eventlet_patched(module_name)
-
-
-def _gevent_patched(module_name):
-    return False
-
-
-@when_imported("gevent.monkey")
-def _gevent_patched_hook(_):
-    global _gevent_patched
-
-    def _gevent_patched(module_name):
-        global _gevent_patched
-
-        from gevent.monkey import is_module_patched
-
-        _gevent_patched = is_module_patched
-
-        return _gevent_patched(module_name)
-
-
-def monkey_patched(module_name):
-    return _gevent_patched(module_name) or _eventlet_patched(module_name)
-
-
-def _import_eventlet_original(module_name):
-    return import_module(module_name)
-
-
-@when_imported("eventlet.patcher")
-def _import_eventlet_original_hook(_):
-    global _import_eventlet_original
-
-    def _import_eventlet_original(module_name):
-        global _import_eventlet_original
-
-        from eventlet.patcher import original
-
-        _import_eventlet_original = original
-
-        return _import_eventlet_original(module_name)
-
-
-def _import_gevent_original(module_name):
-    return import_module(module_name)
-
-
-@when_imported("gevent.monkey")
-def _import_gevent_original_hook(_):
-    global _import_gevent_original
-
-    def _import_gevent_original(module_name):
-        global _import_gevent_original
-
-        from gevent.monkey import saved
-
-        def _import_gevent_original(module_name):
-            return SimpleNamespace(**{
-                **vars(import_module(module_name)),
-                **saved.get(module_name, {}),
-            })
-
-        return _import_gevent_original(module_name)
-
-
-def import_original(name):
-    module_name, _, item_name = name.partition(":")
-
-    if _eventlet_patched(module_name):
-        module = _import_eventlet_original(module_name)
-    elif _gevent_patched(module_name):
-        module = _import_gevent_original(module_name)
-    else:
-        module = import_module(module_name)
-
-    if item_name:
-        try:
-            value = getattr(module, item_name)
-        except AttributeError:
-            module_path = getattr(module, "__file__", None)
-            exc = ImportError(
-                f"cannot import name {item_name!r}"
-                f" from {module_name!r}"
-                f" ({module_path or 'unknown location'})"
-            )
-
-            exc.name = module_name
-            exc.name_from = item_name
-            exc.path = module_path
-
-            try:
-                raise exc from None
-            finally:
-                del exc
-    else:
-        value = module
-
-    return value
-
-
-def once(func):  # noqa: F811
-    global once
-
-    from ._thread import allocate_lock
-
-    def once(func):
-        lock = allocate_lock()
-        result = MISSING
-
-        @wraps(func)
-        def wrapper():
-            nonlocal result
-
-            if result is MISSING:
-                with lock:
-                    if result is MISSING:
-                        result = func()
-
-            return result
-
-        return wrapper
-
-    return once(func)
+from ._threads import once
 
 
 def _patch_threading_thread(threading):
@@ -311,16 +156,16 @@ def _patch_threading_shutdown(threading):
 
 @once
 def _patch_python_threading():
-    try:
-        pypy_version_info = sys.pypy_version_info
-    except AttributeError:
+    if not hasattr(sys, "pypy_version_info"):
         return
 
-    if pypy_version_info >= (7, 3, 18):
+    if sys.pypy_version_info >= (7, 3, 18):
         return
 
-    if not monkey_patched("threading"):
-        threading = import_module("threading")
+    from . import _monkey
+
+    if not _monkey._patched("threading"):
+        threading = _monkey._import_python_original("threading")
 
         _patch_threading_thread(threading)
         _patch_threading_shutdown(threading)
@@ -336,15 +181,15 @@ def _patch_eventlet_threading_hook(_):
 
     @once
     def _patch_eventlet_threading():
-        try:
-            pypy_version_info = sys.pypy_version_info
-        except AttributeError:
+        if not hasattr(sys, "pypy_version_info"):
             return
 
-        if pypy_version_info >= (7, 3, 18):
+        if sys.pypy_version_info >= (7, 3, 18):
             return
 
-        threading = _import_eventlet_original("threading")
+        from . import _monkey
+
+        threading = _monkey._import_eventlet_original("threading")
 
         _patch_threading_thread(threading)
         _patch_threading_shutdown(threading)
@@ -469,11 +314,6 @@ def patch_threading():
     # so processing its originals makes no sense
 
 
-@when_imported("threading")
-def _patch_threading_hook(_):
-    patch_threading()
-
-
 @once
 def patch_eventlet():
     """
@@ -568,6 +408,10 @@ def patch_eventlet():
 
         from eventlet.hubs.timer import Timer
 
+        from . import _monkey
+
+        socket = _monkey._import_eventlet_original("socket")
+
         def BaseHub_schedule_call_threadsafe(self, /, *args, **kwargs):
             timer = Timer(*args, **kwargs)
             scheduled_time = self.clock() + timer.seconds
@@ -626,8 +470,6 @@ def patch_eventlet():
             AsyncioHub.schedule_call_threadsafe = (
                 AsyncioHub_schedule_call_threadsafe
             )
-
-        socket = _import_eventlet_original("socket")
 
         def BaseHub__aiologic_init_socketpair(self, /):
             if not hasattr(self, "_aiologic_rsock"):
@@ -732,8 +574,3 @@ def patch_eventlet():
 
     inject_destroy(BaseHub)
     inject_schedule_call_threadsafe(BaseHub)
-
-
-@when_imported("eventlet")
-def _patch_eventlet_hook(_):
-    patch_eventlet()

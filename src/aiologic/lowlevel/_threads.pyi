@@ -5,15 +5,21 @@
 
 import sys
 
-from threading import local
-from typing import Any, Callable, overload
+from threading import Thread, local
+from typing import Any, Callable, TypeVar, overload
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
 else:
     from typing_extensions import TypeVarTuple, Unpack
 
+_T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
+
+def get_thread(ident: int, /) -> Thread: ...
+def current_thread() -> Thread: ...
+def current_thread_ident() -> int: ...
+def once(func: Callable[[], _T], /) -> Callable[[], _T]: ...
 
 ThreadLocal = local
 
