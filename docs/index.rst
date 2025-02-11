@@ -62,7 +62,7 @@ Features
   :maxdepth: 2
   :hidden:
 
-  greenlets
+  libraries
   checkpoints
   lowlevel-primitives
 
