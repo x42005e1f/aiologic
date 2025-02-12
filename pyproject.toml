@@ -6,7 +6,7 @@ requires = ["setuptools>=64"]
 
 [project]
 name = "aiologic"
-version = "0.14.0-dev"
+version = "0.14.0"
 authors = [{name = "Ilya Egorov", email = "0x42005e1f@gmail.com"}]
 description = "GIL-powered* locking library for Python"
 readme = {file = "README.rst", content-type = "text/x-rst"}

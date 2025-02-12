@@ -16,8 +16,8 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-[Unreleased]
-------------
+[0.14.0] - 2025-02-12
+---------------------
 
 ### Added
 
@@ -379,7 +379,7 @@ Commit messages are consistent with
 
 Check back later!
 
-[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.13.1...HEAD
+[0.14.0]: https://github.com/x42005e1f/aiologic/compare/0.13.1...0.14.0
 [0.13.1]: https://github.com/x42005e1f/aiologic/compare/0.13.0...0.13.1
 [0.13.0]: https://github.com/x42005e1f/aiologic/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/x42005e1f/aiologic/compare/0.11.0...0.12.0
