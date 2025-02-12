@@ -39,12 +39,7 @@ class DummyEvent(Event):
     __slots__ = ()
 
     def __new__(cls, /):
-        if cls is DummyEvent:
-            self = DUMMY_EVENT
-        else:
-            self = super().__new__(cls)
-
-        return self
+        return DUMMY_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
         msg = "type 'DummyEvent' is not an acceptable base type"
@@ -180,7 +175,7 @@ def get_eventlet_event_class():
         )
 
         def __new__(cls, /):
-            self = super().__new__(cls)
+            self = _BaseEvent.__new__(cls)
 
             self.__hub = get_eventlet_hub()
             self.__greenlet = None
@@ -288,7 +283,7 @@ def get_gevent_event_class():
         )
 
         def __new__(cls, /):
-            self = super().__new__(cls)
+            self = _BaseEvent.__new__(cls)
 
             self.__hub = get_gevent_hub()
             self.__event = None
@@ -381,7 +376,7 @@ class _ThreadingEvent(GreenEvent):
     __slots__ = ("__lock",)
 
     def __new__(cls, /):
-        self = super().__new__(cls)
+        self = _BaseEvent.__new__(cls)
 
         self.__lock = allocate_lock()
         self.__lock.acquire()
@@ -495,7 +490,7 @@ def get_asyncio_event_class():
         )
 
         def __new__(cls, /):
-            self = super().__new__(cls)
+            self = _BaseEvent.__new__(cls)
 
             self.__loop = get_running_asyncio_loop()
             self.__future = None
@@ -574,7 +569,7 @@ def get_curio_event_class():
         __slots__ = ("__future",)
 
         def __new__(cls, /):
-            self = super().__new__(cls)
+            self = _BaseEvent.__new__(cls)
 
             self.__future = None
 
@@ -646,7 +641,7 @@ def get_trio_event_class():
         )
 
         def __new__(cls, /):
-            self = super().__new__(cls)
+            self = _BaseEvent.__new__(cls)
 
             self.__token = current_trio_token()
             self.__task = None
