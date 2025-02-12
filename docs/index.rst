@@ -38,35 +38,6 @@ Features
   overview
 
 .. toctree::
-  :caption: Synchronization
-  :maxdepth: 2
-  :hidden:
-
-  semaphores
-  locks
-  capacity-limiters
-  condition-variables
-  barriers
-  events
-  resource-guards
-
-.. toctree::
-  :caption: Communication
-  :maxdepth: 2
-  :hidden:
-
-  queues
-
-.. toctree::
-  :caption: Advanced
-  :maxdepth: 2
-  :hidden:
-
-  libraries
-  checkpoints
-  lowlevel-primitives
-
-.. toctree::
   :caption: Meta
   :maxdepth: 1
   :hidden:
