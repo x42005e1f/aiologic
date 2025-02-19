@@ -1,0 +1,5 @@
+SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
+SPDX-License-Identifier: CC0-1.0
+node: $Format:%H$
+node-date: $Format:%cI$
+describe-name: $Format:%(describe:tags=true,match=*[0-9]*)$

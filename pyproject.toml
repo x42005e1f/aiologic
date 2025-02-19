@@ -2,17 +2,20 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "aiologic"
-version = "0.14.0"
 authors = [{name = "Ilya Egorov", email = "0x42005e1f@gmail.com"}]
 description = "GIL-powered* locking library for Python"
 readme = {file = "README.rst", content-type = "text/x-rst"}
 requires-python = ">=3.8"
 dependencies = [
     "wrapt>=1.16.0",
+]
+dynamic = [
+    "version",
 ]
 keywords = [
     "anyio",
@@ -283,3 +286,5 @@ unfixable = [
 case-sensitive = true
 combine-as-imports = true
 lines-between-types = 1
+
+[tool.setuptools_scm]

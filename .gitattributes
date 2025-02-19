@@ -5,6 +5,5 @@
 
 *.py text diff=python
 
-.gitattributes text export-ignore
-.gitignore text export-ignore
-.gitkeep text export-ignore
+.* text export-ignore
+.git_archival.txt text -export-ignore export-subst
