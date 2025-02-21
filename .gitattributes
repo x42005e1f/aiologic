@@ -3,3 +3,4 @@
 
 .* export-ignore
 .git_archival.txt -export-ignore export-subst
+.gitignore -export-ignore
