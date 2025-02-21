@@ -69,9 +69,9 @@ Commit messages are consistent with
 
 - Optimized the event removal in locks and semaphores. Previously, removing an
   event from the waiting queue was performed even when it was successfully set,
-  which caused serious slowdown due to expensive O(n) operations.
-  Now the removal is only performed in case of failure - on cancellation,
-  in particular timeouts, and exceptions.
+  which caused serious slowdown due to expensive O(n) operations. Now the
+  removal is only performed in case of failure - on cancellation, in particular
+  timeouts, and exceptions.
   ([#5](https://github.com/x42005e1f/aiologic/issues/5)).
 
 [0.13.0] - 2025-01-19
@@ -95,8 +95,8 @@ Commit messages are consistent with
 
 ### Changed
 
-- Support for cancellation and timeouts has been dramatically improved.
-  The `cancel()` method (and accompanying `is_cancelled()`) has been added to
+- Support for cancellation and timeouts has been dramatically improved. The
+  `cancel()` method (and accompanying `is_cancelled()`) has been added to
   low-level events, which always returns `True` after the first successful call
   before `set()` and `False` otherwise. Previously, cancellation handling used
   the same `set()` call, which resulted in false negatives, in particular
@@ -139,10 +139,10 @@ Commit messages are consistent with
 - `aiologic.lowlevel.shield()` function, which protects the call from
   cancellation, has been replaced by `aiologic.lowlevel.repeat_if_cancelled()`,
   which, depending on the library, either has the same action or repeats the
-  call until it completes (successfully or unsuccessfully).
-  Previously `anyio.CancelScope` was used, which did not really shield the call
-  from cancellation in ways outside of `anyio`, such as `task.cancel()`, so its
-  use was abandoned. However, `asyncio.shield()` starts a new task, which has a
+  call until it completes (successfully or unsuccessfully). Previously
+  `anyio.CancelScope` was used, which did not really shield the call from
+  cancellation in ways outside of `anyio`, such as `task.cancel()`, so its use
+  was abandoned. However, `asyncio.shield()` starts a new task, which has a
   negative impact on performance and does not match the expected single-switch
   behavior. This is why repeat instead of shield was chosen. This change
   directly affects `aiologic.Condition`.
@@ -156,9 +156,9 @@ Commit messages are consistent with
   initial value for the representation, it now uses the current value, so that
   its state is saved when the `pickle` module is used, just like the other
   events. Also added the ability to increase the current value by more than one
-  per call, which should help with performance in some scenarios.
-  The new `clear()` method, which atomically resets the current value, has the
-  same purpose.
+  per call, which should help with performance in some scenarios. The new
+  `clear()` method, which atomically resets the current value, has the same
+  purpose.
 - Changed the detection of the current green library after applying the monkey
   patch. Now the library that applied the patch is set only for the main
   thread, and the default library (usually `threading`) is used for all others.
@@ -173,8 +173,8 @@ Commit messages are consistent with
 
 - The future used by the `asyncio` event could be canceled due to the event
   loop shutdown, causing `InvalidStateError` to be raised due to the callback
-  execution. In particular, this was detected when using `call_soon()`
-  for notification methods.
+  execution. In particular, this was detected when using `call_soon()` for
+  notification methods.
 
 [0.8.0] - 2024-10-26
 --------------------
@@ -212,9 +212,9 @@ Commit messages are consistent with
   its derivatives now use a unique architecture that guarantees exclusive
   access to inherited methods without increasing the number of context
   switches: implicit lock and wait queue are combined. Overridable methods are
-  now part of the public API, and fairness now covers all accesses.
-  The properties returning the length of waiting queues have also been changed:
-  a common `waiting` property returning the number of all waiting ones has been
+  now part of the public API, and fairness now covers all accesses. The
+  properties returning the length of waiting queues have also been changed: a
+  common `waiting` property returning the number of all waiting ones has been
   added, and `put_waiting` and `get_waiting` have been renamed to `putting` and
   `getting`.
 
@@ -241,8 +241,8 @@ Commit messages are consistent with
 ### Added
 
 - `aiologic.CapacityLimiter` as a primitive similar to `aiologic.Semaphore`,
-  but with ownership checking on release like `aiologic.Lock`
-  (thread-aware alternative to `anyio.CapacityLimiter`).
+  but with ownership checking on release like `aiologic.Lock` (thread-aware
+  alternative to `anyio.CapacityLimiter`).
 - `aiologic.Latch` as a single-use barrier, useful for ensuring that no thread
   or task sleeps after passing the barrier (inspired by `std::latch` from
   C++20).
@@ -299,19 +299,19 @@ Commit messages are consistent with
   of `aiologic.BoundedSemaphore` without importing it.
 - `waiting` property to all primitives that returns the length of waiting queue
   (number of waiting threads and tasks).
-- Non-blocking (non-waiting) mode for asynchronous lock acquiring methods.
-  In this mode, it is guaranteed that there is no context switching even with
-  checkpoints enabled (they are ignored). Unlike synchronous methods,
-  lock acquiring is done on behalf of an asynchronous task. It is enabled by
-  passing `blocking=False`.
+- Non-blocking (non-waiting) mode for asynchronous lock acquiring methods. In
+  this mode, it is guaranteed that there is no context switching even with
+  checkpoints enabled (they are ignored). Unlike synchronous methods, lock
+  acquiring is done on behalf of an asynchronous task. It is enabled by passing
+  `blocking=False`.
 - The ability to specify the library used via environment variables, local
   thread fields, context variables.
 - Patch for the `threading` module that fixes the race in `Thread.join()` on
   PyPy. Automatically applied when creating an instance of the threading event.
 - Patch for the `eventlet` module that adds the necessary methods to support
   it. Automatically applied when creating an instance of eventlet event.
-- Optional dependencies to guarantee support for third-party libraries
-  (by specifying the minimum supported version).
+- Optional dependencies to guarantee support for third-party libraries (by
+  specifying the minimum supported version).
 
 ### Changed
 
@@ -330,8 +330,8 @@ Commit messages are consistent with
 - `aiologic.lowlevel.ThreadEvent` is renamed to `aiologic.lowlevel.GreenEvent`
   and `aiologic.lowlevel.TaskEvent` is renamed to
   `aiologic.lowlevel.AsyncEvent`.
-- `set()` method of low-level events now returns `bool`: `True` if called
-  for the first time, `False` otherwise.
+- `set()` method of low-level events now returns `bool`: `True` if called for
+  the first time, `False` otherwise.
 - Identification functions are changed due to support for new libraries.
   `aiologic.lowlevel.current_thread()` now returns a `threading.Thread`
   instance instead of its identifier, and a new function

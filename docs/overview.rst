@@ -171,12 +171,11 @@ And those that are inspired by some libraries but can be used with other ones:
 
     # program will end in 5 seconds
 
-Meanwhile, one of the unique features of aiologic
-is that primitives can be used by anyone at the same time.
-For example, you can limit access to a shared resource
-using a capacity limiter for both `gevent <https://www.gevent.org/>`_
-and `asyncio <https://docs.python.org/3/library/asyncio.html>`_
-within the same process. And it will just work, just like magic!
+Meanwhile, one of the unique features of aiologic is that primitives can be
+used by anyone at the same time. For example, you can limit access to a shared
+resource using a capacity limiter for both `gevent <https://www.gevent.org/>`_
+and `asyncio <https://docs.python.org/3/library/asyncio.html>`_ within the same
+process. And it will just work, just like magic!
 
 .. code:: python
 
@@ -218,8 +217,8 @@ within the same process. And it will just work, just like magic!
 
     # program will end in 7 seconds
 
-However, because of their two-faced nature, primitives do not offer
-API-level compatibility. Methods are prefixed:
+However, because of their two-faced nature, primitives do not offer API-level
+compatibility. Methods are prefixed:
 
 * with ``green_`` for "green" libraries (without async/await syntax)
 * with ``async_`` for "async" libraries (with async/await syntax)
@@ -231,19 +230,16 @@ And the exception is the wait methods:
 
 .. note::
 
-    Despite their name, methods prefixed with ``green_``
-    support not only greenlets but also threads.
-    They are called so because they switch to a hub
-    when it is detected in the current thread.
-    Unless you use `eventlet <https://eventlet.readthedocs.io>`_
-    or `gevent <https://www.gevent.org/>`_,
+    Despite their name, methods prefixed with ``green_`` support not only
+    greenlets but also threads. They are called so because they switch to a hub
+    when it is detected in the current thread. Unless you use `eventlet
+    <https://eventlet.readthedocs.io>`_ or `gevent <https://www.gevent.org/>`_,
     they behave like "sync" methods!
 
 The aiologic library aims to be the best locking library as far as it can be.
-Harder than just thread-safe `asyncio primitives
-<https://docs.python.org/3/library/asyncio-sync.html#asyncio-sync>`_.
-Better than `AnyIO primitives
-<https://anyio.readthedocs.io/en/stable/synchronization.html>`_.
-Faster than `Curio's universal synchronization
-<https://curio.readthedocs.io/en/latest/reference.html
-#universal-synchronizaton>`_. And stronger than separate solutions.
+Harder than just thread-safe `asyncio primitives <https://docs.python.org/3/
+library/asyncio-sync.html#asyncio-sync>`_. Better than `AnyIO primitives
+<https://anyio.readthedocs.io/en/stable/synchronization.html>`_. Faster than
+`Curio's universal synchronization <https://curio.readthedocs.io/en/latest/
+reference.html#universal-synchronizaton>`_. And stronger than separate
+solutions.

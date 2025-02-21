@@ -3,4 +3,4 @@
   SPDX-License-Identifier: CC-BY-4.0
 
 .. include:: ../CHANGELOG.md
-   :parser: myst_parser.sphinx_
+  :parser: myst_parser.sphinx_
