@@ -1,6 +1,5 @@
 * text=auto
-
 *.py text diff=python
 
-.* text export-ignore
-.git_archival.txt text -export-ignore export-subst
+.* export-ignore
+.git_archival.txt -export-ignore export-subst
