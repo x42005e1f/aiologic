@@ -1,0 +1,24 @@
+version = 1
+
+# configuration files
+[[annotations]]
+path = [
+    ".github/workflows/python-publish.yml",
+    ".gitattributes",
+    ".pre-commit-config.yaml",
+    ".readthedocs.yaml",
+    "pyproject.toml",
+]
+SPDX-FileCopyrightText = "2025 Ilya Egorov <0x42005e1f@gmail.com>"
+SPDX-License-Identifier = "CC0-1.0"
+
+# computer-generated files
+[[annotations]]
+path = [
+    ".git_archival.txt",
+    ".gitignore",
+    "uv.lock",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"
