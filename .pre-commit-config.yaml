@@ -29,3 +29,8 @@ repos:
     rev: v5.0.2
     hooks:
       - id: reuse-lint-file
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.6.2
+    hooks:
+      - id: uv-lock
+        args: ["--locked"]

@@ -2,39 +2,27 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+docs = [
+    "docutils>=0.17",
+    "myst-parser",
+    "packaging",
+    "Sphinx",
+    "sphinx-copybutton",
+    "sphinx-inline-tabs",
+    "sphinx-rtd-theme",
+]
 
 [project]
 name = "aiologic"
-authors = [{name = "Ilya Egorov", email = "0x42005e1f@gmail.com"}]
+dynamic = ["version"]
 description = "GIL-powered* locking library for Python"
 readme = {file = "README.rst", content-type = "text/x-rst"}
+authors = [{name = "Ilya Egorov", email = "0x42005e1f@gmail.com"}]
 requires-python = ">=3.8"
-dependencies = [
-    "wrapt>=1.16.0",
-]
-dynamic = [
-    "version",
-]
-keywords = [
-    "anyio",
-    "async",
-    "async-await",
-    "asyncio",
-    "concurrency",
-    "eventlet",
-    "gevent",
-    "greenlet",
-    "library",
-    "locking",
-    "mypy",
-    "python",
-    "synchronization",
-    "threading",
-    "thread-safety",
-    "trio",
-]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -55,19 +43,31 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
     "Operating System :: OS Independent",
 ]
+keywords = [
+    "anyio",
+    "async",
+    "async-await",
+    "asyncio",
+    "concurrency",
+    "eventlet",
+    "gevent",
+    "greenlet",
+    "library",
+    "locking",
+    "mypy",
+    "python",
+    "synchronization",
+    "threading",
+    "thread-safety",
+    "trio",
+]
+dependencies = [
+    "wrapt>=1.16.0",
+]
 
 [project.optional-dependencies]
 anyio = ["anyio>=3.0.0"]
 curio = ["curio>=1.4"]
-docs = [
-    "docutils>=0.17",
-    "myst-parser",
-    "packaging",
-    "Sphinx",
-    "sphinx-copybutton",
-    "sphinx-inline-tabs",
-    "sphinx-rtd-theme",
-]
 eventlet = ["eventlet>=0.17.0"]
 gevent = ["gevent>=21.1.0"]
 sniffio = ["sniffio>=1.3.0"]
@@ -79,6 +79,12 @@ typing-extensions = ["typing-extensions>=4.1.0"]
 Homepage = "https://github.com/x42005e1f/aiologic"
 Documentation = "https://aiologic.readthedocs.io"
 Changelog = "https://aiologic.readthedocs.io/latest/changelog.html"
+
+[tool.hatch.build.targets.sdist]
+exclude = [".*"]
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.ruff]
 fix = true
@@ -286,5 +292,3 @@ unfixable = [
 case-sensitive = true
 combine-as-imports = true
 lines-between-types = 1
-
-[tool.setuptools_scm]
