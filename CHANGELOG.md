@@ -377,7 +377,35 @@ Commit messages are consistent with
 [0.1.0] - 2024-08-06
 --------------------
 
-Check back later!
+### Added
+
+- A mixed build system (`setup.py` + `setup.cfg` + `pyproject.toml`): supports
+  both direct (via `setup.py`) and indirect (via `build` + `pip`) installation.
+- Low-level functions:
+  + `sniffio`-like `aiologic.lowlevel.current_async_library()` function.
+  + `anyio`-like `aiologic.lowlevel.checkpoint()` function.
+  + `anyio`-like `aiologic.lowlevel.checkpoint_if_cancelled()` function.
+  + `anyio`-like `aiologic.lowlevel.cancel_shielded_checkpoint()` function.
+  + `aiologic.lowlevel.current_thread()` to get the current thread identifier.
+  + `aiologic.lowlevel.current_token()` to get the current async token.
+  + `aiologic.lowlevel.current_task()` to get the current async task.
+- Low-level primitives:
+  + `aiologic.lowlevel.Flag` as a one-slot alternative to `dict.setdefault()`.
+  + `aiologic.lowlevel.TaskEvent` as a thread-safe async event.
+  + `aiologic.lowlevel.ThreadEvent` as a one-time thread event.
+- Synchronization primitives:
+  + `aiologic.ParkingLot` as a waiting queue for all other primitives (inspired
+    by `trio.lowlevel.ParkingLot`).
+  + `aiologic.Semaphore` as a async-aware alternative to `threading.Semaphore`.
+  + `aiologic.BoundedSemaphore` as a async-aware alternative to
+    `threading.BoundedSemaphore`.
+  + `aiologic.Lock` as a thread-aware alternative to `anyio.Lock`.
+  + `aiologic.RLock` as a async-aware alternative to `threading.RLock`.
+  + `aiologic.Condition` as a async-aware alternative to `threading.Condition`.
+  + `aiologic.Event` as a thread-aware alternative to `asyncio.Event`.
+- Communication primitives:
+  + `aiologic.SimpleQueue` as a queue that works in a semaphore style
+    (async-aware alternative to `queue.SimpleQueue`).
 
 [0.14.0]: https://github.com/x42005e1f/aiologic/compare/0.13.1...0.14.0
 [0.13.1]: https://github.com/x42005e1f/aiologic/compare/0.13.0...0.13.1
