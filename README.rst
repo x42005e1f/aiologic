@@ -129,7 +129,7 @@ Synchronization primitives:
 * Events: one-time, reusable, and countdown
 * Barriers: single-use, and cyclic
 * Semaphores: counting, and bounded
-* Capacity limiters: simple, and reentrant
+* Capacity limiters: borrowable, and reentrant
 * Locks: primitive, ownable, and reentrant
 * Condition variables
 * Resource guards
