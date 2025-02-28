@@ -126,12 +126,12 @@ Features
 
 Synchronization primitives:
 
-* Semaphores: counting, and bounded
-* Locks: primitive, ownable, and reentrant
-* Capacity limiters: simple, and reentrant
-* Condition variables
-* Barriers: single-use, and cyclic
 * Events: one-time, reusable, and countdown
+* Barriers: single-use, and cyclic
+* Semaphores: counting, and bounded
+* Capacity limiters: simple, and reentrant
+* Locks: primitive, ownable, and reentrant
+* Condition variables
 * Resource guards
 
 Communication primitives:
