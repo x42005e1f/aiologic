@@ -480,8 +480,10 @@ class AsyncEvent(_BaseEvent):
 def get_asyncio_event_class():
     global _AsyncioEvent
 
-    from asyncio import get_running_loop as get_running_asyncio_loop
-    from asyncio.exceptions import InvalidStateError
+    from asyncio import (
+        InvalidStateError,
+        get_running_loop as get_running_asyncio_loop,
+    )
 
     class _AsyncioEvent(AsyncEvent):
         __slots__ = (

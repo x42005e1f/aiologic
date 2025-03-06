@@ -169,7 +169,7 @@ async def checkpoint_if_cancelled(*, force=False):
 async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
     global _asyncio_repeat_if_cancelled
 
-    from asyncio.exceptions import CancelledError
+    from asyncio import CancelledError
 
     async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
         exc = None
