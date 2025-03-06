@@ -174,19 +174,19 @@ async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
     async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
         exc = None
 
-        while True:
-            try:
-                result = await func(*args, **kwargs)
-            except CancelledError as e:
-                exc = e
-            else:
-                break
+        try:
+            while True:
+                try:
+                    result = await func(*args, **kwargs)
+                except CancelledError as e:
+                    exc = e
+                else:
+                    break
 
-        if exc is not None:
-            try:
+            if exc is not None:
                 raise exc
-            finally:
-                del exc
+        finally:
+            del exc
 
         return result
 
