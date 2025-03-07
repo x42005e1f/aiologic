@@ -5,6 +5,7 @@
 
 from abc import ABC, abstractmethod
 
+from . import _checkpoints as _cp
 from ._checkpoints import checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
 from ._thread import allocate_lock
@@ -38,7 +39,7 @@ class Event(ABC):
 class DummyEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         return DUMMY_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
@@ -84,11 +85,13 @@ class _BaseEvent(Event):
     __slots__ = (
         "_is_cancelled",
         "_is_unset",
+        "_shield",
     )
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         self = super().__new__(cls)
 
+        self._shield = shield
         self._is_unset = [True]
         self._is_cancelled = False
 
@@ -120,21 +123,21 @@ class _BaseEvent(Event):
 class GreenEvent(_BaseEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         if cls is GreenEvent:
             library = current_green_library()
 
             if library == "threading":
-                self = _ThreadingEvent.__new__(_ThreadingEvent)
+                self = _ThreadingEvent.__new__(_ThreadingEvent, shield=shield)
             elif library == "eventlet":
-                self = _EventletEvent.__new__(_EventletEvent)
+                self = _EventletEvent.__new__(_EventletEvent, shield=shield)
             elif library == "gevent":
-                self = _GeventEvent.__new__(_GeventEvent)
+                self = _GeventEvent.__new__(_GeventEvent, shield=shield)
             else:
                 msg = f"unsupported green library {library!r}"
                 raise RuntimeError(msg)
         else:
-            self = super().__new__(cls)
+            self = super().__new__(cls, shield=shield)
 
         return self
 
@@ -174,8 +177,8 @@ def get_eventlet_event_class():
             "__hub",
         )
 
-        def __new__(cls, /):
-            self = _BaseEvent.__new__(cls)
+        def __new__(cls, /, *, shield=False):
+            self = _BaseEvent.__new__(cls, shield=shield)
 
             self.__hub = get_eventlet_hub()
             self.__greenlet = None
@@ -199,7 +202,7 @@ def get_eventlet_event_class():
                 try:
                     hub = self.__hub
 
-                    if timeout is None:
+                    if timeout is None or self._shield:
                         timer = None
                     elif timeout > 0:
                         timer = hub.schedule_call_local(
@@ -215,7 +218,14 @@ def get_eventlet_event_class():
                         )
 
                     try:
-                        success = hub.switch()
+                        if self._shield:
+                            success = _cp._eventlet_repeat_if_cancelled(
+                                hub.switch,
+                                (),
+                                {},
+                            )
+                        else:
+                            success = hub.switch()
                     finally:
                         if timer is not None:
                             timer.cancel()
@@ -282,8 +292,8 @@ def get_gevent_event_class():
             "__hub",
         )
 
-        def __new__(cls, /):
-            self = _BaseEvent.__new__(cls)
+        def __new__(cls, /, *, shield=False):
+            self = _BaseEvent.__new__(cls, shield=shield)
 
             self.__hub = get_gevent_hub()
             self.__event = None
@@ -317,7 +327,13 @@ def get_gevent_event_class():
                     hub._aiologic_watcher_count += 1
 
                     try:
-                        if timeout is None:
+                        if self._shield:
+                            success = _cp._gevent_repeat_if_cancelled(
+                                self.__event.wait,
+                                (),
+                                {},
+                            )
+                        elif timeout is None:
                             success = self.__event.wait()
                         elif timeout > 0:
                             success = self.__event.wait(timeout)
@@ -375,8 +391,8 @@ def get_gevent_event_class():
 class _ThreadingEvent(GreenEvent):
     __slots__ = ("__lock",)
 
-    def __new__(cls, /):
-        self = _BaseEvent.__new__(cls)
+    def __new__(cls, /, *, shield=False):
+        self = _BaseEvent.__new__(cls, shield=shield)
 
         self.__lock = allocate_lock()
         self.__lock.acquire()
@@ -395,7 +411,7 @@ class _ThreadingEvent(GreenEvent):
         success = True
 
         if self._is_unset:
-            if timeout is None:
+            if timeout is None or self._shield:
                 success = self.__lock.acquire()
             elif timeout > 0:
                 success = self.__lock.acquire(timeout=timeout)
@@ -425,13 +441,13 @@ class _ThreadingEvent(GreenEvent):
 class _EventletEvent(GreenEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         try:
             cls = get_eventlet_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
-            self = cls.__new__(cls)
+            self = cls.__new__(cls, shield=shield)
 
         return self
 
@@ -439,13 +455,13 @@ class _EventletEvent(GreenEvent):
 class _GeventEvent(GreenEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         try:
             cls = get_gevent_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
-            self = cls.__new__(cls)
+            self = cls.__new__(cls, shield=shield)
 
         return self
 
@@ -453,21 +469,21 @@ class _GeventEvent(GreenEvent):
 class AsyncEvent(_BaseEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         if cls is AsyncEvent:
             library = current_async_library()
 
             if library == "asyncio":
-                self = _AsyncioEvent.__new__(_AsyncioEvent)
+                self = _AsyncioEvent.__new__(_AsyncioEvent, shield=shield)
             elif library == "curio":
-                self = _CurioEvent.__new__(_CurioEvent)
+                self = _CurioEvent.__new__(_CurioEvent, shield=shield)
             elif library == "trio":
-                self = _TrioEvent.__new__(_TrioEvent)
+                self = _TrioEvent.__new__(_TrioEvent, shield=shield)
             else:
                 msg = f"unsupported async library {library!r}"
                 raise RuntimeError(msg)
         else:
-            self = super().__new__(cls)
+            self = super().__new__(cls, shield=shield)
 
         return self
 
@@ -483,6 +499,7 @@ def get_asyncio_event_class():
     from asyncio import (
         InvalidStateError,
         get_running_loop as get_running_asyncio_loop,
+        shield as asyncio_shield,
     )
 
     class _AsyncioEvent(AsyncEvent):
@@ -491,8 +508,8 @@ def get_asyncio_event_class():
             "__loop",
         )
 
-        def __new__(cls, /):
-            self = _BaseEvent.__new__(cls)
+        def __new__(cls, /, *, shield=False):
+            self = _BaseEvent.__new__(cls, shield=shield)
 
             self.__loop = get_running_asyncio_loop()
             self.__future = None
@@ -512,7 +529,14 @@ def get_asyncio_event_class():
                 self.__future = self.__loop.create_future()
 
                 try:
-                    yield from self.__future.__await__()
+                    if self._shield:
+                        yield from _cp._asyncio_repeat_if_cancelled(
+                            asyncio_shield,
+                            [self.__future],
+                            {},
+                        ).__await__()
+                    else:
+                        yield from self.__future.__await__()
                 except BaseException:
                     self.cancel()
                     raise
@@ -565,13 +589,14 @@ def get_curio_event_class():
 
     from concurrent.futures import Future, InvalidStateError
 
+    from curio import check_cancellation
     from curio.traps import _future_wait
 
     class _CurioEvent(AsyncEvent):
         __slots__ = ("__future",)
 
-        def __new__(cls, /):
-            self = _BaseEvent.__new__(cls)
+        def __new__(cls, /, *, shield=False):
+            self = _BaseEvent.__new__(cls, shield=shield)
 
             self.__future = None
 
@@ -590,7 +615,15 @@ def get_curio_event_class():
                 self.__future = Future()
 
                 try:
-                    yield from _future_wait(self.__future).__await__()
+                    if self._shield:
+                        yield from _cp._curio_repeat_if_cancelled(
+                            _future_wait,
+                            [self.__future],
+                            {},
+                        ).__await__()
+                        yield from check_cancellation().__await__()
+                    else:
+                        yield from _future_wait(self.__future).__await__()
                 except BaseException:
                     self.cancel()
                     raise
@@ -642,8 +675,8 @@ def get_trio_event_class():
             "__token",
         )
 
-        def __new__(cls, /):
-            self = _BaseEvent.__new__(cls)
+        def __new__(cls, /, *, shield=False):
+            self = _BaseEvent.__new__(cls, shield=shield)
 
             self.__token = current_trio_token()
             self.__task = None
@@ -671,6 +704,9 @@ def get_trio_event_class():
             return True
 
         def __abort(self, /, raise_cancel):
+            if self._shield:
+                return Abort.FAILED
+
             self.__task = None
 
             self.cancel()
@@ -713,13 +749,13 @@ def get_trio_event_class():
 class _AsyncioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         try:
             cls = get_asyncio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
-            self = cls.__new__(cls)
+            self = cls.__new__(cls, shield=shield)
 
         return self
 
@@ -727,13 +763,13 @@ class _AsyncioEvent(AsyncEvent):
 class _CurioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         try:
             cls = get_curio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
-            self = cls.__new__(cls)
+            self = cls.__new__(cls, shield=shield)
 
         return self
 
@@ -741,12 +777,12 @@ class _CurioEvent(AsyncEvent):
 class _TrioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /):
+    def __new__(cls, /, *, shield=False):
         try:
             cls = get_trio_event_class()  # noqa: PLW0642
         except ImportError:
             raise NotImplementedError from None
         else:
-            self = cls.__new__(cls)
+            self = cls.__new__(cls, shield=shield)
 
         return self

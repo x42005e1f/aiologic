@@ -19,6 +19,12 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
+### Added
+
+- Low-level events can now be shielded from external cancellation by passing
+  `shield=True`. This allows to implement efficient finalization strategies
+  while preserving the one-time nature of low-level events.
+
 ### Changed
 
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
