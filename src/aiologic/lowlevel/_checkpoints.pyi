@@ -5,16 +5,17 @@
 
 import sys
 
+from collections.abc import Awaitable
 from contextvars import ContextVar
-from typing import Any, Callable, Final, TypeVar, overload
+from typing import Callable, Final, TypeVar, overload
 
-if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
 else:
-    from typing_extensions import TypeVarTuple, Unpack
+    from typing_extensions import ParamSpec
 
 _T = TypeVar("_T")
-_Ts = TypeVarTuple("_Ts")
+_P = ParamSpec("_P")
 
 threading_checkpoints_cvar: Final[ContextVar[bool]]
 eventlet_checkpoints_cvar: Final[ContextVar[bool]]
@@ -28,18 +29,7 @@ async def checkpoint(*, force: bool = False) -> None: ...
 async def async_checkpoint(*, force: bool = False) -> None: ...
 async def checkpoint_if_cancelled(*, force: bool = False) -> None: ...
 @overload
-def repeat_if_cancelled(func: Callable[[], _T], /) -> _T: ...
+def repeat_if_cancelled(wrapped: Awaitable[_T], /) -> Awaitable[_T]: ...
 @overload
-def repeat_if_cancelled(
-    func: Callable[[Unpack[_Ts]], _T],
-    /,
-    *args: Unpack[_Ts],
-) -> _T: ...
-@overload
-def repeat_if_cancelled(
-    func: Callable[..., _T],
-    /,
-    *args: Any,
-    **kwargs: Any,
-) -> _T: ...
+def repeat_if_cancelled(wrapped: Callable[_P, _T], /) -> Callable[_P, _T]: ...
 async def cancel_shielded_checkpoint(*, force: bool = False) -> None: ...

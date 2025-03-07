@@ -7,9 +7,9 @@ import os
 import time
 
 from contextvars import ContextVar
-from inspect import iscoroutinefunction
+from inspect import isawaitable, iscoroutinefunction
 
-from wrapt import when_imported
+from wrapt import decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
 
@@ -167,20 +167,20 @@ async def checkpoint_if_cancelled(*, force=False):
             await _trio_checkpoint_if_cancelled()
 
 
-def _eventlet_repeat_if_cancelled(func, /, *args, **kwargs):
+def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _eventlet_repeat_if_cancelled
 
     from eventlet import Timeout
     from eventlet.hubs import get_hub
     from greenlet import getcurrent
 
-    def _eventlet_repeat_if_cancelled(func, /, *args, **kwargs):
+    def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
         timeouts = []
 
         try:
             while True:
                 try:
-                    result = func(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
                 except Timeout as timeout:
                     timeouts.append(timeout)
                 else:
@@ -202,21 +202,21 @@ def _eventlet_repeat_if_cancelled(func, /, *args, **kwargs):
 
         return result
 
-    return _eventlet_repeat_if_cancelled(func, *args, **kwargs)
+    return _eventlet_repeat_if_cancelled(wrapped, args, kwargs)
 
 
-def _gevent_repeat_if_cancelled(func, /, *args, **kwargs):
+def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _gevent_repeat_if_cancelled
 
     from gevent import Timeout
 
-    def _gevent_repeat_if_cancelled(func, /, *args, **kwargs):
+    def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
         timeouts = []
 
         try:
             while True:
                 try:
-                    result = func(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
                 except Timeout as timeout:
                     timeouts.append(timeout)
                 else:
@@ -234,18 +234,19 @@ def _gevent_repeat_if_cancelled(func, /, *args, **kwargs):
 
         return result
 
-    return _gevent_repeat_if_cancelled(func, *args, **kwargs)
+    return _gevent_repeat_if_cancelled(wrapped, args, kwargs)
 
 
-def _green_repeat_if_cancelled(func, /, *args, **kwargs):
+@decorator
+def _green_repeat_if_cancelled(wrapped, instance, args, kwargs, /):
     library = current_green_library()
 
     if library == "threading":
-        result = func(*args, **kwargs)
+        result = wrapped(*args, **kwargs)
     elif library == "eventlet":
-        result = _eventlet_repeat_if_cancelled(func, *args, **kwargs)
+        result = _eventlet_repeat_if_cancelled(wrapped, args, kwargs)
     elif library == "gevent":
-        result = _gevent_repeat_if_cancelled(func, *args, **kwargs)
+        result = _gevent_repeat_if_cancelled(wrapped, args, kwargs)
     else:
         msg = f"unsupported green library {library!r}"
         raise RuntimeError(msg)
@@ -253,18 +254,21 @@ def _green_repeat_if_cancelled(func, /, *args, **kwargs):
     return result
 
 
-async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _asyncio_repeat_if_cancelled
 
     from asyncio import CancelledError
 
-    async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+    async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
         exc = None
 
         try:
             while True:
                 try:
-                    result = await func(*args, **kwargs)
+                    if args is None:
+                        result = await wrapped
+                    else:
+                        result = await wrapped(*args, **kwargs)
                 except CancelledError as e:
                     exc = e
                 else:
@@ -277,28 +281,31 @@ async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
 
         return result
 
-    return await _asyncio_repeat_if_cancelled(func, *args, **kwargs)
+    return await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
 
 
 @when_imported("anyio")
 def _asyncio_repeat_if_cancelled_hook(_):
     global _asyncio_repeat_if_cancelled
 
-    async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+    async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
         global _asyncio_repeat_if_cancelled
 
         from asyncio import CancelledError
 
         from anyio import CancelScope
 
-        async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+        async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
             with CancelScope(shield=True):
                 exc = None
 
                 try:
                     while True:
                         try:
-                            result = await func(*args, **kwargs)
+                            if args is None:
+                                result = await wrapped
+                            else:
+                                result = await wrapped(*args, **kwargs)
                         except CancelledError as e:
                             exc = e
                         else:
@@ -311,42 +318,49 @@ def _asyncio_repeat_if_cancelled_hook(_):
 
             return result
 
-        return await _asyncio_repeat_if_cancelled(func, *args, **kwargs)
+        return await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
 
 
-async def _curio_repeat_if_cancelled(func, /, *args, **kwargs):
+async def _curio_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _curio_repeat_if_cancelled
 
     from curio import disable_cancellation
 
-    async def _curio_repeat_if_cancelled(func, /, *args, **kwargs):
+    async def _curio_repeat_if_cancelled(wrapped, args, kwargs, /):
         async with disable_cancellation():
-            return await func(*args, **kwargs)
+            if args is None:
+                return await wrapped
+            else:
+                return await wrapped(*args, **kwargs)
 
-    return await _curio_repeat_if_cancelled(func, *args, **kwargs)
+    return await _curio_repeat_if_cancelled(wrapped, args, kwargs)
 
 
-async def _trio_repeat_if_cancelled(func, /, *args, **kwargs):
+async def _trio_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _trio_repeat_if_cancelled
 
     from trio import CancelScope
 
-    async def _trio_repeat_if_cancelled(func, /, *args, **kwargs):
+    async def _trio_repeat_if_cancelled(wrapped, args, kwargs, /):
         with CancelScope(shield=True):
-            return await func(*args, **kwargs)
+            if args is None:
+                return await wrapped
+            else:
+                return await wrapped(*args, **kwargs)
 
-    return await _trio_repeat_if_cancelled(func, *args, **kwargs)
+    return await _trio_repeat_if_cancelled(wrapped, args, kwargs)
 
 
-async def _async_repeat_if_cancelled(func, /, *args, **kwargs):
+@decorator
+async def _async_repeat_if_cancelled(wrapped, instance, args, kwargs, /):
     library = current_async_library()
 
     if library == "asyncio":
-        result = await _asyncio_repeat_if_cancelled(func, *args, **kwargs)
+        result = await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
     elif library == "curio":
-        result = await _curio_repeat_if_cancelled(func, *args, **kwargs)
+        result = await _curio_repeat_if_cancelled(wrapped, args, kwargs)
     elif library == "trio":
-        result = await _trio_repeat_if_cancelled(func, *args, **kwargs)
+        result = await _trio_repeat_if_cancelled(wrapped, args, kwargs)
     else:
         msg = f"unsupported async library {library!r}"
         raise RuntimeError(msg)
@@ -354,11 +368,29 @@ async def _async_repeat_if_cancelled(func, /, *args, **kwargs):
     return result
 
 
-def repeat_if_cancelled(func, /, *args, **kwargs):
-    if not iscoroutinefunction(func):
-        return _green_repeat_if_cancelled(func, *args, **kwargs)
+async def _async_repeat_if_cancelled_for_awaitable(wrapped, /):
+    library = current_async_library()
+
+    if library == "asyncio":
+        result = await _asyncio_repeat_if_cancelled(wrapped, None, None)
+    elif library == "curio":
+        result = await _curio_repeat_if_cancelled(wrapped, None, None)
+    elif library == "trio":
+        result = await _trio_repeat_if_cancelled(wrapped, None, None)
     else:
-        return _async_repeat_if_cancelled(func, *args, **kwargs)
+        msg = f"unsupported async library {library!r}"
+        raise RuntimeError(msg)
+
+    return result
+
+
+def repeat_if_cancelled(wrapped, /):
+    if isawaitable(wrapped):
+        return _async_repeat_if_cancelled_for_awaitable(wrapped)
+    elif iscoroutinefunction(wrapped):
+        return _async_repeat_if_cancelled(wrapped)
+    else:
+        return _green_repeat_if_cancelled(wrapped)
 
 
 async def _asyncio_cancel_shielded_checkpoint():

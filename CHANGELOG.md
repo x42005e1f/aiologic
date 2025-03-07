@@ -21,7 +21,8 @@ Commit messages are consistent with
 
 ### Changed
 
-- `aiologic.lowlevel.repeat_if_cancelled()` now supports green functions:
+- `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
+  supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
@@ -35,14 +36,13 @@ Commit messages are consistent with
 
 ### Fixed
 
-- In `aiologic.lowlevel.repeat_if_cancelled()`, hangs could occur when using
-  `anyio.CancelScope()` with the `asyncio` backend. Now this case is handled in
-  a special way. Related:
-  [agronholm/anyio#884](https://github.com/agronholm/anyio/issues/884).
-- In `aiologic.lowlevel.repeat_if_cancelled()`, reference cycles were possible
-  when another exception was raised after a `asyncio.CancelledError` was
-  caught: in this case, the last `asyncio.CancelledError` was not removed from
-  the frame.
+- In `aiologic.lowlevel.repeat_if_cancelled()`:
+  + Hangs could occur when using `anyio.CancelScope()` with the `asyncio`
+    backend. Now this case is handled in a special way. Related:
+    [agronholm/anyio#884](https://github.com/agronholm/anyio/issues/884).
+  + Reference cycles were possible when another exception was raised after a
+    `asyncio.CancelledError` was caught: in this case, the last
+    `asyncio.CancelledError` was not removed from the frame.
 
 [0.14.0] - 2025-02-12
 ---------------------
