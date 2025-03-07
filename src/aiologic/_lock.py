@@ -89,7 +89,7 @@ class PLock:
                                 except ValueError:
                                     pass
                             else:
-                                self.release()
+                                self.__release()
                 else:
                     try:
                         waiters.remove(event)
@@ -125,7 +125,7 @@ class PLock:
                                 except ValueError:
                                     pass
                             else:
-                                self.release()
+                                self.__release()
                 else:
                     try:
                         waiters.remove(event)

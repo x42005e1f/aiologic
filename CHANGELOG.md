@@ -43,6 +43,9 @@ Commit messages are consistent with
   + Reference cycles were possible when another exception was raised after a
     `asyncio.CancelledError` was caught: in this case, the last
     `asyncio.CancelledError` was not removed from the frame.
+- In very rare cases, lock acquiring methods did not notify newcomers due to
+  calling a non-existent method when racing during cancellation, causing a hang
+  (`0.14.0` regression).
 
 [0.14.0] - 2025-02-12
 ---------------------
