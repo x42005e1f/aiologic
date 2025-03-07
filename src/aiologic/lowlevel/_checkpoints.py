@@ -280,6 +280,40 @@ async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
     return await _asyncio_repeat_if_cancelled(func, *args, **kwargs)
 
 
+@when_imported("anyio")
+def _asyncio_repeat_if_cancelled_hook(_):
+    global _asyncio_repeat_if_cancelled
+
+    async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+        global _asyncio_repeat_if_cancelled
+
+        from asyncio import CancelledError
+
+        from anyio import CancelScope
+
+        async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
+            with CancelScope(shield=True):
+                exc = None
+
+                try:
+                    while True:
+                        try:
+                            result = await func(*args, **kwargs)
+                        except CancelledError as e:
+                            exc = e
+                        else:
+                            break
+
+                    if exc is not None:
+                        raise exc
+                finally:
+                    del exc
+
+            return result
+
+        return await _asyncio_repeat_if_cancelled(func, *args, **kwargs)
+
+
 async def _curio_repeat_if_cancelled(func, /, *args, **kwargs):
     global _curio_repeat_if_cancelled
 

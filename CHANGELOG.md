@@ -35,6 +35,10 @@ Commit messages are consistent with
 
 ### Fixed
 
+- In `aiologic.lowlevel.repeat_if_cancelled()`, hangs could occur when using
+  `anyio.CancelScope()` with the `asyncio` backend. Now this case is handled in
+  a special way. Related:
+  [agronholm/anyio#884](https://github.com/agronholm/anyio/issues/884).
 - In `aiologic.lowlevel.repeat_if_cancelled()`, reference cycles were possible
   when another exception was raised after a `asyncio.CancelledError` was
   caught: in this case, the last `asyncio.CancelledError` was not removed from
