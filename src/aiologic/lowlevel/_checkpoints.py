@@ -7,6 +7,7 @@ import os
 import time
 
 from contextvars import ContextVar
+from inspect import iscoroutinefunction
 
 from wrapt import when_imported
 
@@ -166,6 +167,92 @@ async def checkpoint_if_cancelled(*, force=False):
             await _trio_checkpoint_if_cancelled()
 
 
+def _eventlet_repeat_if_cancelled(func, /, *args, **kwargs):
+    global _eventlet_repeat_if_cancelled
+
+    from eventlet import Timeout
+    from eventlet.hubs import get_hub
+    from greenlet import getcurrent
+
+    def _eventlet_repeat_if_cancelled(func, /, *args, **kwargs):
+        timeouts = []
+
+        try:
+            while True:
+                try:
+                    result = func(*args, **kwargs)
+                except Timeout as timeout:
+                    timeouts.append(timeout)
+                else:
+                    break
+        finally:
+            try:
+                if timeouts:
+                    for timeout in timeouts[1:]:
+                        if not timeout.pending:
+                            timeout.timer = get_hub().schedule_call_global(
+                                0,
+                                getcurrent().throw,
+                                timeout,
+                            )
+
+                    raise timeouts[0]
+            finally:
+                del timeouts
+
+        return result
+
+    return _eventlet_repeat_if_cancelled(func, *args, **kwargs)
+
+
+def _gevent_repeat_if_cancelled(func, /, *args, **kwargs):
+    global _gevent_repeat_if_cancelled
+
+    from gevent import Timeout
+
+    def _gevent_repeat_if_cancelled(func, /, *args, **kwargs):
+        timeouts = []
+
+        try:
+            while True:
+                try:
+                    result = func(*args, **kwargs)
+                except Timeout as timeout:
+                    timeouts.append(timeout)
+                else:
+                    break
+        finally:
+            try:
+                if timeouts:
+                    for timeout in timeouts[:0:-1]:
+                        if not timeout.pending:
+                            timeout.start()
+
+                    raise timeouts[0]
+            finally:
+                del timeouts
+
+        return result
+
+    return _gevent_repeat_if_cancelled(func, *args, **kwargs)
+
+
+def _green_repeat_if_cancelled(func, /, *args, **kwargs):
+    library = current_green_library()
+
+    if library == "threading":
+        result = func(*args, **kwargs)
+    elif library == "eventlet":
+        result = _eventlet_repeat_if_cancelled(func, *args, **kwargs)
+    elif library == "gevent":
+        result = _gevent_repeat_if_cancelled(func, *args, **kwargs)
+    else:
+        msg = f"unsupported green library {library!r}"
+        raise RuntimeError(msg)
+
+    return result
+
+
 async def _asyncio_repeat_if_cancelled(func, /, *args, **kwargs):
     global _asyncio_repeat_if_cancelled
 
@@ -217,7 +304,7 @@ async def _trio_repeat_if_cancelled(func, /, *args, **kwargs):
     return await _trio_repeat_if_cancelled(func, *args, **kwargs)
 
 
-async def repeat_if_cancelled(func, /, *args, **kwargs):
+async def _async_repeat_if_cancelled(func, /, *args, **kwargs):
     library = current_async_library()
 
     if library == "asyncio":
@@ -231,6 +318,13 @@ async def repeat_if_cancelled(func, /, *args, **kwargs):
         raise RuntimeError(msg)
 
     return result
+
+
+def repeat_if_cancelled(func, /, *args, **kwargs):
+    if not iscoroutinefunction(func):
+        return _green_repeat_if_cancelled(func, *args, **kwargs)
+    else:
+        return _async_repeat_if_cancelled(func, *args, **kwargs)
 
 
 async def _asyncio_cancel_shielded_checkpoint():

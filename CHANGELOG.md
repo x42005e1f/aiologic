@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Changed
 
+- `aiologic.lowlevel.repeat_if_cancelled()` now supports green functions:
+  timeouts are suppressed, and are re-raised after the call completes.
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
   logging, and builds cleaner source distributions (without `setup.cfg`).
