@@ -5,11 +5,11 @@
 
 from abc import ABC, abstractmethod
 
-from . import _checkpoints as _cp
 from ._checkpoints import checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
-from ._thread import allocate_lock
 from ._threads import once
+
+object___new__ = object.__new__
 
 
 class Event(ABC):
@@ -78,49 +78,10 @@ class DummyEvent(Event):
         return False
 
 
-DUMMY_EVENT = object.__new__(DummyEvent)
+DUMMY_EVENT = object___new__(DummyEvent)
 
 
-class _BaseEvent(Event):
-    __slots__ = (
-        "_is_cancelled",
-        "_is_unset",
-        "_shield",
-    )
-
-    def __new__(cls, /, *, shield=False):
-        self = super().__new__(cls)
-
-        self._shield = shield
-        self._is_unset = [True]
-        self._is_cancelled = False
-
-        return self
-
-    def __bool__(self, /):
-        return not self._is_unset
-
-    def cancel(self, /):
-        cancelled = self._is_cancelled
-
-        if not cancelled and (is_unset := self._is_unset):
-            try:
-                is_unset.pop()
-            except IndexError:
-                pass
-            else:
-                self._is_cancelled = cancelled = True
-
-        return cancelled
-
-    def is_set(self, /):
-        return not self._is_unset
-
-    def is_cancelled(self, /):
-        return self._is_cancelled
-
-
-class GreenEvent(_BaseEvent):
+class GreenEvent(Event):
     __slots__ = ()
 
     def __new__(cls, /, *, shield=False):
@@ -128,46 +89,206 @@ class GreenEvent(_BaseEvent):
             library = current_green_library()
 
             if library == "threading":
-                self = _ThreadingEvent.__new__(_ThreadingEvent, shield=shield)
+                imp = _ThreadingEvent
             elif library == "eventlet":
-                self = _EventletEvent.__new__(_EventletEvent, shield=shield)
+                imp = _EventletEvent
             elif library == "gevent":
-                self = _GeventEvent.__new__(_GeventEvent, shield=shield)
+                imp = _GeventEvent
             else:
                 msg = f"unsupported green library {library!r}"
                 raise RuntimeError(msg)
-        else:
-            self = super().__new__(cls, shield=shield)
 
-        return self
+            return imp.__new__(imp, shield)
+
+        return super().__new__(cls)
 
     @abstractmethod
     def wait(self, /, timeout=None):
         raise NotImplementedError
 
 
+class AsyncEvent(Event):
+    __slots__ = ()
+
+    def __new__(cls, /, *, shield=False):
+        if cls is AsyncEvent:
+            library = current_async_library()
+
+            if library == "asyncio":
+                imp = _AsyncioEvent
+            elif library == "curio":
+                imp = _CurioEvent
+            elif library == "trio":
+                imp = _TrioEvent
+            else:
+                msg = f"unsupported async library {library!r}"
+                raise RuntimeError(msg)
+
+            return imp.__new__(imp, shield)
+
+        return super().__new__(cls)
+
+    @abstractmethod
+    def __await__(self, /):
+        raise NotImplementedError
+
+
+class _ThreadingEvent(GreenEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_threading_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+class _EventletEvent(GreenEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_eventlet_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+class _GeventEvent(GreenEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_gevent_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+class _AsyncioEvent(AsyncEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_asyncio_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+class _CurioEvent(AsyncEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_curio_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+class _TrioEvent(AsyncEvent):
+    __slots__ = ()
+
+    def __new__(cls, /, shield=False):
+        imp = get_trio_event_class()
+
+        return imp.__new__(imp, shield)
+
+
+@once
+def get_threading_event_class():
+    global _ThreadingEvent
+
+    from ._thread import allocate_lock
+
+    class _ThreadingEvent(GreenEvent):
+        __slots__ = (
+            "__lock",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
+        )
+
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
+
+            self.__lock = allocate_lock()
+            self.__lock.acquire()
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
+
+            return self
+
+        def __init_subclass__(cls, /, **kwargs):
+            msg = "type 'ThreadingEvent' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /):
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __bool__(self, /):
+            return not self._is_unset
+
+        def wait(self, /, timeout=None):
+            if not self._is_unset:
+                green_checkpoint()
+
+                return True
+
+            try:
+                if timeout is None or self._is_shielded:
+                    return self.__lock.acquire()
+                elif timeout > 0:
+                    return self.__lock.acquire(True, timeout)
+                else:
+                    return self.__lock.acquire(False)
+            finally:
+                if self._is_unset:
+                    try:
+                        self._is_unset.pop()
+                    except IndexError:
+                        pass
+                    else:
+                        self._is_cancelled = True
+
+        def set(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return False
+            else:
+                return False
+
+            self.__lock.release()
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
+
+    return _ThreadingEvent
+
+
 @once
 def get_eventlet_event_class():
     global _EventletEvent
 
-    from eventlet.hubs import get_hub as get_eventlet_hub
-    from greenlet import getcurrent as current_greenlet
+    from eventlet.hubs import _threadlocal, get_hub
+    from greenlet import getcurrent
 
-    from . import _patcher
-
-    try:
-        from eventlet.hubs import _threadlocal as eventlet_hubs
-    except ImportError:
-        current_eventlet_hub = get_eventlet_hub
-    else:
-
-        def current_eventlet_hub():
-            try:
-                hub = eventlet_hubs.hub
-            except AttributeError:
-                hub = None
-
-            return hub
+    from . import _checkpoints as _cp, _patcher
 
     _patcher.patch_eventlet()
 
@@ -175,13 +296,20 @@ def get_eventlet_event_class():
         __slots__ = (
             "__greenlet",
             "__hub",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
         )
 
-        def __new__(cls, /, *, shield=False):
-            self = _BaseEvent.__new__(cls, shield=shield)
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
 
-            self.__hub = get_eventlet_hub()
             self.__greenlet = None
+            self.__hub = get_hub()
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
 
             return self
 
@@ -193,86 +321,98 @@ def get_eventlet_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        def wait(self, /, timeout=None):
-            success = True
+        def __bool__(self, /):
+            return not self._is_unset
 
-            if self._is_unset:
-                self.__greenlet = current_greenlet()
+        def wait(self, /, timeout=None):
+            if not self._is_unset:
+                green_checkpoint()
+
+                return True
+
+            try:
+                self.__greenlet = getcurrent()
 
                 try:
                     hub = self.__hub
 
-                    if timeout is None or self._shield:
+                    if timeout is None or self._is_shielded:
                         timer = None
                     elif timeout > 0:
-                        timer = hub.schedule_call_local(
-                            timeout,
-                            self.__set,
-                            False,
-                        )
+                        timer = hub.schedule_call_local(timeout, self.__cancel)
                     else:
-                        timer = hub.schedule_call_local(
-                            0,
-                            self.__set,
-                            False,
-                        )
+                        timer = hub.schedule_call_local(0, self.__cancel)
 
                     try:
-                        if self._shield:
-                            success = _cp._eventlet_repeat_if_cancelled(
+                        if self._is_shielded:
+                            return _cp._eventlet_repeat_if_cancelled(
                                 hub.switch,
                                 (),
                                 {},
                             )
                         else:
-                            success = hub.switch()
-
-                        if not success:
-                            self.cancel()
+                            return hub.switch()
                     finally:
                         if timer is not None:
                             timer.cancel()
-                except BaseException:
-                    self.cancel()
-                    raise
                 finally:
                     self.__greenlet = None
-            else:
-                green_checkpoint()
+            finally:
+                if self._is_unset:
+                    try:
+                        self._is_unset.pop()
+                    except IndexError:
+                        pass
+                    else:
+                        self._is_cancelled = True
 
-            return success
+        def __set(self, /):
+            if self.__greenlet is not None:
+                self.__greenlet.switch(True)
 
-        def __set(self, /, success):
-            if (greenlet := self.__greenlet) is not None:
-                greenlet.switch(success)
+        def __cancel(self, /):
+            if self.__greenlet is not None:
+                self.__greenlet.switch(False)
 
         def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
+            if self._is_unset:
                 try:
-                    is_unset.pop()
+                    self._is_unset.pop()
                 except IndexError:
-                    success = False
-                else:
-                    hub = current_eventlet_hub()
-
-                    if hub is self.__hub:
-                        hub.schedule_call_global(
-                            0,
-                            self.__set,
-                            True,
-                        )
-                    else:
-                        self.__hub.schedule_call_threadsafe(
-                            0,
-                            self.__set,
-                            True,
-                        )
+                    return False
             else:
-                success = False
+                return False
 
-            return success
+            try:
+                current_hub = _threadlocal.hub
+            except AttributeError:  # no running hub
+                current_hub = None
+
+            if current_hub is self.__hub:
+                self.__hub.schedule_call_global(0, self.__set)
+            else:
+                self.__hub.schedule_call_threadsafe(0, self.__set)
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
 
     return _EventletEvent
 
@@ -281,25 +421,33 @@ def get_eventlet_event_class():
 def get_gevent_event_class():
     global _GeventEvent
 
-    from gevent import get_hub as get_gevent_hub
-    from gevent.event import Event as GeventPEvent
+    from gevent import get_hub
+    from gevent._hub_local import get_hub_if_exists
+    from greenlet import getcurrent
 
-    try:
-        from gevent._hub_local import get_hub_if_exists as current_gevent_hub
-    except ImportError:
-        current_gevent_hub = get_gevent_hub
+    from . import _checkpoints as _cp
+
+    def noop():
+        pass
 
     class _GeventEvent(GreenEvent):
         __slots__ = (
-            "__event",
+            "__greenlet",
             "__hub",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
         )
 
-        def __new__(cls, /, *, shield=False):
-            self = _BaseEvent.__new__(cls, shield=shield)
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
 
-            self.__hub = get_gevent_hub()
-            self.__event = None
+            self.__greenlet = None
+            self.__hub = get_hub()
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
 
             return self
 
@@ -311,221 +459,137 @@ def get_gevent_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        def wait(self, /, timeout=None):
-            success = True
+        def __bool__(self, /):
+            return not self._is_unset
 
-            if self._is_unset:
-                self.__event = GeventPEvent()
+        def wait(self, /, timeout=None):
+            if not self._is_unset:
+                green_checkpoint()
+
+                return True
+
+            try:
+                self.__greenlet = getcurrent()
 
                 try:
                     hub = self.__hub
 
-                    if not hasattr(hub, "_aiologic_watcher_count"):
-                        hub._aiologic_watcher_count = 0
-                        hub._aiologic_watcher = hub.loop.async_()
+                    if timeout is None or self._is_shielded:
+                        timer = None
+                    else:
+                        if timeout > 0:
+                            timer = hub.loop.timer(timeout)
+                        else:
+                            timer = hub.loop.timer(0)
 
-                        # suppress LoopExit
-                        hub._aiologic_watcher.start(lambda: None)
-
-                    hub._aiologic_watcher_count += 1
+                        timer.start(self.__cancel, update=True)
 
                     try:
-                        if self._shield:
-                            success = _cp._gevent_repeat_if_cancelled(
-                                self.__event.wait,
-                                (),
-                                {},
-                            )
-                        elif timeout is None:
-                            success = self.__event.wait()
-                        elif timeout > 0:
-                            success = self.__event.wait(timeout)
-                        else:
-                            success = self.__event.wait(0)
+                        watcher = hub.loop.async_()  # avoid LoopExit
+                        watcher.start(noop)
 
-                        if not success:
-                            self.cancel()
+                        try:
+                            if self._is_shielded:
+                                return _cp._gevent_repeat_if_cancelled(
+                                    hub.switch,
+                                    (),
+                                    {},
+                                )
+                            else:
+                                return hub.switch()
+                        finally:
+                            watcher.close()
                     finally:
-                        hub._aiologic_watcher_count -= 1
-
-                        if not hub._aiologic_watcher_count:
-                            hub._aiologic_watcher.close()
-
-                            del hub._aiologic_watcher
-                            del hub._aiologic_watcher_count
-                except BaseException:
-                    self.cancel()
-                    raise
+                        if timer is not None:
+                            timer.close()
                 finally:
-                    self.__event = None
-            else:
-                green_checkpoint()
-
-            return success
+                    self.__greenlet = None
+            finally:
+                if self._is_unset:
+                    try:
+                        self._is_unset.pop()
+                    except IndexError:
+                        pass
+                    else:
+                        self._is_cancelled = True
 
         def __set(self, /):
-            if (event := self.__event) is not None:
-                event.set()
+            if self.__greenlet is not None:
+                self.__greenlet.switch(True)
+
+        def __cancel(self, /):
+            if self.__greenlet is not None:
+                self.__greenlet.switch(False)
 
         def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
+            if self._is_unset:
                 try:
-                    is_unset.pop()
+                    self._is_unset.pop()
                 except IndexError:
-                    success = False
-                else:
-                    hub = current_gevent_hub()
-
-                    if hub is self.__hub:
-                        self.__set()
-                    else:
-                        if (loop := self.__hub.loop) is not None:
-                            try:
-                                loop.run_callback_threadsafe(self.__set)
-                            except ValueError:  # event loop is destroyed
-                                pass
+                    return False
             else:
-                success = False
+                return False
 
-            return success
+            current_hub = get_hub_if_exists()
+
+            try:
+                if current_hub is self.__hub:
+                    self.__hub.loop.run_callback(self.__set)
+                else:
+                    self.__hub.loop.run_callback_threadsafe(self.__set)
+            except ValueError:  # event loop is destroyed
+                pass
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
 
     return _GeventEvent
-
-
-class _ThreadingEvent(GreenEvent):
-    __slots__ = ("__lock",)
-
-    def __new__(cls, /, *, shield=False):
-        self = _BaseEvent.__new__(cls, shield=shield)
-
-        self.__lock = allocate_lock()
-        self.__lock.acquire()
-
-        return self
-
-    def __init_subclass__(cls, /, **kwargs):
-        msg = "type 'ThreadingEvent' is not an acceptable base type"
-        raise TypeError(msg)
-
-    def __reduce__(self, /):
-        msg = f"cannot reduce {self!r}"
-        raise TypeError(msg)
-
-    def wait(self, /, timeout=None):
-        success = True
-
-        if self._is_unset:
-            try:
-                if timeout is None or self._shield:
-                    success = self.__lock.acquire()
-                elif timeout > 0:
-                    success = self.__lock.acquire(timeout=timeout)
-                else:
-                    success = self.__lock.acquire(blocking=False)
-
-                if not success:
-                    self.cancel()
-            except BaseException:
-                self.cancel()
-                raise
-        else:
-            green_checkpoint()
-
-        return success
-
-    def set(self, /):
-        success = True
-
-        if is_unset := self._is_unset:
-            try:
-                is_unset.pop()
-            except IndexError:
-                success = False
-            else:
-                self.__lock.release()
-        else:
-            success = False
-
-        return success
-
-
-class _EventletEvent(GreenEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        try:
-            cls = get_eventlet_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls, shield=shield)
-
-        return self
-
-
-class _GeventEvent(GreenEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        try:
-            cls = get_gevent_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls, shield=shield)
-
-        return self
-
-
-class AsyncEvent(_BaseEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        if cls is AsyncEvent:
-            library = current_async_library()
-
-            if library == "asyncio":
-                self = _AsyncioEvent.__new__(_AsyncioEvent, shield=shield)
-            elif library == "curio":
-                self = _CurioEvent.__new__(_CurioEvent, shield=shield)
-            elif library == "trio":
-                self = _TrioEvent.__new__(_TrioEvent, shield=shield)
-            else:
-                msg = f"unsupported async library {library!r}"
-                raise RuntimeError(msg)
-        else:
-            self = super().__new__(cls, shield=shield)
-
-        return self
-
-    @abstractmethod
-    def __await__(self, /):
-        raise NotImplementedError
 
 
 @once
 def get_asyncio_event_class():
     global _AsyncioEvent
 
-    from asyncio import (
-        InvalidStateError,
-        get_running_loop as get_running_asyncio_loop,
-        shield as asyncio_shield,
-    )
+    from asyncio import InvalidStateError, get_running_loop, shield
+
+    from . import _checkpoints as _cp
 
     class _AsyncioEvent(AsyncEvent):
         __slots__ = (
             "__future",
             "__loop",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
         )
 
-        def __new__(cls, /, *, shield=False):
-            self = _BaseEvent.__new__(cls, shield=shield)
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
 
-            self.__loop = get_running_asyncio_loop()
             self.__future = None
+            self.__loop = get_running_loop()
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
 
             return self
 
@@ -537,61 +601,87 @@ def get_asyncio_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __bool__(self, /):
+            return not self._is_unset
+
         def __await__(self, /):
             if self._is_unset:
-                self.__future = self.__loop.create_future()
-
                 try:
-                    if self._shield:
-                        yield from _cp._asyncio_repeat_if_cancelled(
-                            asyncio_shield,
-                            [self.__future],
-                            {},
-                        ).__await__()
-                    else:
-                        yield from self.__future.__await__()
-                except BaseException:
-                    self.cancel()
-                    raise
+                    self.__future = self.__loop.create_future()
+
+                    try:
+                        if self._is_shielded:
+                            yield from _cp._asyncio_repeat_if_cancelled(
+                                shield,
+                                [self.__future],
+                                {},
+                            ).__await__()
+                        else:
+                            yield from self.__future.__await__()
+                    finally:
+                        self.__future = None
                 finally:
-                    self.__future = None
+                    if self._is_unset:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            pass
+                        else:
+                            self._is_cancelled = True
             else:
                 yield from checkpoint().__await__()
 
             return True
 
         def __set(self, /):
-            if (future := self.__future) is not None:
+            if self.__future is not None:
                 try:
-                    future.set_result(True)
+                    self.__future.set_result(True)
                 except InvalidStateError:  # future is cancelled
                     pass
 
         def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
+            if self._is_unset:
                 try:
-                    is_unset.pop()
+                    self._is_unset.pop()
                 except IndexError:
-                    success = False
-                else:
-                    try:
-                        loop = get_running_asyncio_loop()
-                    except RuntimeError:  # no running event loop
-                        loop = None
-
-                    if loop is self.__loop:
-                        self.__set()
-                    else:
-                        try:
-                            self.__loop.call_soon_threadsafe(self.__set)
-                        except RuntimeError:  # event loop is closed
-                            pass
+                    return False
             else:
-                success = False
+                return False
 
-            return success
+            try:
+                current_loop = get_running_loop()
+            except RuntimeError:  # no running event loop
+                current_loop = None
+
+            if current_loop is self.__loop:
+                self.__set()
+            else:
+                try:
+                    self.__loop.call_soon_threadsafe(self.__set)
+                except RuntimeError:  # event loop is closed
+                    pass
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
 
     return _AsyncioEvent
 
@@ -605,13 +695,24 @@ def get_curio_event_class():
     from curio import check_cancellation
     from curio.traps import _future_wait
 
-    class _CurioEvent(AsyncEvent):
-        __slots__ = ("__future",)
+    from . import _checkpoints as _cp
 
-        def __new__(cls, /, *, shield=False):
-            self = _BaseEvent.__new__(cls, shield=shield)
+    class _CurioEvent(AsyncEvent):
+        __slots__ = (
+            "__future",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
+        )
+
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
 
             self.__future = None
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
 
             return self
 
@@ -623,48 +724,76 @@ def get_curio_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __bool__(self, /):
+            return not self._is_unset
+
         def __await__(self, /):
             if self._is_unset:
-                self.__future = Future()
-
                 try:
-                    if self._shield:
-                        yield from _cp._curio_repeat_if_cancelled(
-                            _future_wait,
-                            [self.__future],
-                            {},
-                        ).__await__()
-                        yield from check_cancellation().__await__()
-                    else:
-                        yield from _future_wait(self.__future).__await__()
-                except BaseException:
-                    self.cancel()
-                    raise
+                    self.__future = Future()
+
+                    try:
+                        if self._is_shielded:
+                            yield from _cp._curio_repeat_if_cancelled(
+                                _future_wait,
+                                [self.__future],
+                                {},
+                            ).__await__()
+                            yield from check_cancellation().__await__()
+                        else:
+                            yield from _future_wait(self.__future).__await__()
+                    finally:
+                        self.__future = None
                 finally:
-                    self.__future = None
+                    if self._is_unset:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            pass
+                        else:
+                            self._is_cancelled = True
             else:
                 yield from checkpoint().__await__()
 
             return True
 
         def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
+            if self._is_unset:
                 try:
-                    is_unset.pop()
+                    self._is_unset.pop()
                 except IndexError:
-                    success = False
-                else:
-                    if (future := self.__future) is not None:
-                        try:
-                            future.set_result(True)
-                        except InvalidStateError:  # future is cancelled
-                            pass
+                    return False
             else:
-                success = False
+                return False
 
-            return success
+            future = self.__future
+
+            if future is not None:
+                try:
+                    future.set_result(True)
+                except InvalidStateError:  # future is cancelled
+                    pass
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
 
     return _CurioEvent
 
@@ -676,23 +805,32 @@ def get_trio_event_class():
     from trio import RunFinishedError
     from trio.lowlevel import (
         Abort,
-        current_task as current_trio_task,
+        current_task,
         current_trio_token,
-        reschedule as reschedule_trio_task,
-        wait_task_rescheduled as wait_trio_task_rescheduled,
+        reschedule,
+        wait_task_rescheduled,
     )
+
+    from . import _checkpoints as _cp
 
     class _TrioEvent(AsyncEvent):
         __slots__ = (
             "__task",
             "__token",
+            "_is_cancelled",
+            "_is_shielded",
+            "_is_unset",
         )
 
-        def __new__(cls, /, *, shield=False):
-            self = _BaseEvent.__new__(cls, shield=shield)
+        def __new__(cls, /, shield=False):
+            self = object___new__(cls)
 
-            self.__token = current_trio_token()
             self.__task = None
+            self.__token = current_trio_token()
+
+            self._is_cancelled = False
+            self._is_shielded = shield
+            self._is_unset = [True]
 
             return self
 
@@ -704,11 +842,21 @@ def get_trio_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __bool__(self, /):
+            return not self._is_unset
+
         def __await__(self, /):
             if self._is_unset:
-                self.__task = current_trio_task()
+                self.__task = current_task()
 
-                yield from wait_trio_task_rescheduled(self.__abort).__await__()
+                if self._is_shielded:
+                    yield from _cp._trio_repeat_if_cancelled(
+                        wait_task_rescheduled,
+                        [self.__abort],
+                        {},
+                    ).__await__()
+                else:
+                    yield from wait_task_rescheduled(self.__abort).__await__()
 
                 self.__task = None
             else:
@@ -717,85 +865,63 @@ def get_trio_event_class():
             return True
 
         def __abort(self, /, raise_cancel):
-            if self._shield:
-                return Abort.FAILED
-
             self.__task = None
 
-            self.cancel()
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    pass
+                else:
+                    self._is_cancelled = True
 
             return Abort.SUCCEEDED
 
         def __set(self, /):
-            if (task := self.__task) is not None:
-                reschedule_trio_task(task)
+            if self.__task is not None:
+                reschedule(self.__task)
 
         def set(self, /):
-            success = True
-
-            if is_unset := self._is_unset:
+            if self._is_unset:
                 try:
-                    is_unset.pop()
+                    self._is_unset.pop()
                 except IndexError:
-                    success = False
-                else:
-                    try:
-                        token = current_trio_token()
-                    except RuntimeError:  # no called trio.run
-                        token = None
-
-                    if token is self.__token:
-                        self.__set()
-                    else:
-                        try:
-                            self.__token.run_sync_soon(self.__set)
-                        except RunFinishedError:
-                            pass
+                    return False
             else:
-                success = False
+                return False
 
-            return success
+            try:
+                current_token = current_trio_token()
+            except RuntimeError:  # no called trio.run()
+                current_token = None
+
+            if current_token is self.__token:
+                self.__set()
+            else:
+                try:
+                    self.__token.run_sync_soon(self.__set)
+                except RunFinishedError:  # trio.run() is finished
+                    pass
+
+            return True
+
+        def cancel(self, /):
+            if self._is_unset:
+                try:
+                    self._is_unset.pop()
+                except IndexError:
+                    return self._is_cancelled
+            else:
+                return self._is_cancelled
+
+            self._is_cancelled = True
+
+            return True
+
+        def is_set(self, /):
+            return not self._is_unset
+
+        def is_cancelled(self, /):
+            return self._is_cancelled
 
     return _TrioEvent
-
-
-class _AsyncioEvent(AsyncEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        try:
-            cls = get_asyncio_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls, shield=shield)
-
-        return self
-
-
-class _CurioEvent(AsyncEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        try:
-            cls = get_curio_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls, shield=shield)
-
-        return self
-
-
-class _TrioEvent(AsyncEvent):
-    __slots__ = ()
-
-    def __new__(cls, /, *, shield=False):
-        try:
-            cls = get_trio_event_class()  # noqa: PLW0642
-        except ImportError:
-            raise NotImplementedError from None
-        else:
-            self = cls.__new__(cls, shield=shield)
-
-        return self
