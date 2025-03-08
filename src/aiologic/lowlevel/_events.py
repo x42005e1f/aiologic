@@ -191,7 +191,12 @@ class _TrioEvent(AsyncEvent):
 def get_threading_event_class():
     global _ThreadingEvent
 
+    import time
+
+    from . import _checkpoints as _cp
     from ._thread import allocate_lock
+
+    sleep = time.sleep
 
     class _ThreadingEvent(GreenEvent):
         __slots__ = (
@@ -226,7 +231,8 @@ def get_threading_event_class():
 
         def wait(self, /, timeout=None):
             if not self._is_unset:
-                green_checkpoint()
+                if _cp.threading_checkpoints_cvar.get():
+                    sleep(0)
 
                 return True
 
@@ -285,6 +291,7 @@ def get_threading_event_class():
 def get_eventlet_event_class():
     global _EventletEvent
 
+    from eventlet import sleep
     from eventlet.hubs import _threadlocal, get_hub
     from greenlet import getcurrent
 
@@ -326,7 +333,8 @@ def get_eventlet_event_class():
 
         def wait(self, /, timeout=None):
             if not self._is_unset:
-                green_checkpoint()
+                if _cp.eventlet_checkpoints_cvar.get():
+                    sleep()
 
                 return True
 
@@ -421,7 +429,7 @@ def get_eventlet_event_class():
 def get_gevent_event_class():
     global _GeventEvent
 
-    from gevent import get_hub
+    from gevent import get_hub, sleep
     from gevent._hub_local import get_hub_if_exists
     from greenlet import getcurrent
 
@@ -464,7 +472,8 @@ def get_gevent_event_class():
 
         def wait(self, /, timeout=None):
             if not self._is_unset:
-                green_checkpoint()
+                if _cp.gevent_checkpoints_cvar.get():
+                    sleep()
 
                 return True
 
@@ -568,7 +577,7 @@ def get_gevent_event_class():
 def get_asyncio_event_class():
     global _AsyncioEvent
 
-    from asyncio import InvalidStateError, get_running_loop, shield
+    from asyncio import InvalidStateError, get_running_loop, shield, sleep
 
     from . import _checkpoints as _cp
 
@@ -629,7 +638,8 @@ def get_asyncio_event_class():
                         else:
                             self._is_cancelled = True
             else:
-                yield from checkpoint().__await__()
+                if _cp.asyncio_checkpoints_cvar.get():
+                    yield from sleep(0).__await__()
 
             return True
 
@@ -692,7 +702,7 @@ def get_curio_event_class():
 
     from concurrent.futures import Future, InvalidStateError
 
-    from curio import check_cancellation
+    from curio import check_cancellation, sleep
     from curio.traps import _future_wait
 
     from . import _checkpoints as _cp
@@ -753,7 +763,8 @@ def get_curio_event_class():
                         else:
                             self._is_cancelled = True
             else:
-                yield from checkpoint().__await__()
+                if _cp.curio_checkpoints_cvar.get():
+                    yield from sleep(0).__await__()
 
             return True
 
@@ -805,6 +816,7 @@ def get_trio_event_class():
     from trio import RunFinishedError
     from trio.lowlevel import (
         Abort,
+        checkpoint,
         current_task,
         current_trio_token,
         reschedule,
@@ -860,7 +872,8 @@ def get_trio_event_class():
 
                 self.__task = None
             else:
-                yield from checkpoint().__await__()
+                if _cp.trio_checkpoints_cvar.get():
+                    yield from checkpoint().__await__()
 
             return True
 
