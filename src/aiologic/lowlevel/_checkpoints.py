@@ -208,7 +208,8 @@ def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
 def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
     global _gevent_repeat_if_cancelled
 
-    from gevent import Timeout
+    from gevent import Timeout, get_hub
+    from greenlet import getcurrent
 
     def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
         timeouts = []
@@ -226,7 +227,11 @@ def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
                 if timeouts:
                     for timeout in timeouts[:0:-1]:
                         if not timeout.pending:
-                            timeout.start()
+                            timeout.timer.close()
+                            timeout.timer = get_hub().loop.run_callback(
+                                getcurrent().throw,
+                                timeout,
+                            )
 
                     raise timeouts[0]
             finally:
