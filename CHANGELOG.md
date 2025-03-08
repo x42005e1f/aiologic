@@ -27,6 +27,10 @@ Commit messages are consistent with
 
 ### Changed
 
+- Low-level events are now always cancelled on timeouts. This should make it
+  easier to work with them outside of `aiologic` and simplify some things,
+  since now there is no need to explicitly call `event.cancel()`. Previously,
+  green events were not cancelled when a timeout was passed.
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
   supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.

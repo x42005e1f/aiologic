@@ -226,6 +226,9 @@ def get_eventlet_event_class():
                             )
                         else:
                             success = hub.switch()
+
+                        if not success:
+                            self.cancel()
                     finally:
                         if timer is not None:
                             timer.cancel()
@@ -339,6 +342,9 @@ def get_gevent_event_class():
                             success = self.__event.wait(timeout)
                         else:
                             success = self.__event.wait(0)
+
+                        if not success:
+                            self.cancel()
                     finally:
                         hub._aiologic_watcher_count -= 1
 
@@ -411,12 +417,19 @@ class _ThreadingEvent(GreenEvent):
         success = True
 
         if self._is_unset:
-            if timeout is None or self._shield:
-                success = self.__lock.acquire()
-            elif timeout > 0:
-                success = self.__lock.acquire(timeout=timeout)
-            else:
-                success = self.__lock.acquire(blocking=False)
+            try:
+                if timeout is None or self._shield:
+                    success = self.__lock.acquire()
+                elif timeout > 0:
+                    success = self.__lock.acquire(timeout=timeout)
+                else:
+                    success = self.__lock.acquire(blocking=False)
+
+                if not success:
+                    self.cancel()
+            except BaseException:
+                self.cancel()
+                raise
         else:
             green_checkpoint()
 
