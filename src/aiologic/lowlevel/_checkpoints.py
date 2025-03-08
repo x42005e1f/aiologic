@@ -185,18 +185,18 @@ def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
                     timeouts.append(timeout)
                 else:
                     break
+
+            if timeouts:
+                raise timeouts[0]
         finally:
             try:
-                if timeouts:
-                    for timeout in timeouts[1:]:
-                        if not timeout.pending:
-                            timeout.timer = get_hub().schedule_call_global(
-                                0,
-                                getcurrent().throw,
-                                timeout,
-                            )
-
-                    raise timeouts[0]
+                for timeout in timeouts[1:]:
+                    if not timeout.pending:
+                        timeout.timer = get_hub().schedule_call_global(
+                            0,
+                            getcurrent().throw,
+                            timeout,
+                        )
             finally:
                 del timeouts
 
@@ -222,18 +222,18 @@ def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
                     timeouts.append(timeout)
                 else:
                     break
+
+            if timeouts:
+                raise timeouts[0]
         finally:
             try:
-                if timeouts:
-                    for timeout in timeouts[:0:-1]:
-                        if not timeout.pending:
-                            timeout.timer.close()
-                            timeout.timer = get_hub().loop.run_callback(
-                                getcurrent().throw,
-                                timeout,
-                            )
-
-                    raise timeouts[0]
+                for timeout in timeouts[:0:-1]:
+                    if not timeout.pending:
+                        timeout.timer.close()
+                        timeout.timer = get_hub().loop.run_callback(
+                            getcurrent().throw,
+                            timeout,
+                        )
             finally:
                 del timeouts
 
