@@ -33,7 +33,12 @@ class ResourceGuard:
         return args
 
     def __repr__(self, /):
-        return f"ResourceGuard({self.action!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.action!r})"
 
     def __bool__(self, /):
         return bool(self.__unlocked)

@@ -44,7 +44,12 @@ class Latch:
         return (self.parties,)
 
     def __repr__(self, /):
-        return f"Latch({self.parties})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.parties!r})"
 
     def __await__(self, /):
         reached = self.__reached
@@ -158,7 +163,12 @@ class Barrier:
         return (self.parties,)
 
     def __repr__(self, /):
-        return f"Barrier({self.parties})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.parties!r})"
 
     def __acquire_nowait(self, /):
         if unlocked := self.__unlocked:

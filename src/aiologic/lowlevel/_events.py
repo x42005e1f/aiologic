@@ -50,7 +50,7 @@ class DummyEvent(Event):
         return "DUMMY_EVENT"
 
     def __repr__(self, /):
-        return "DUMMY_EVENT"
+        return f"{self.__class__.__module__}.DUMMY_EVENT"
 
     def __bool__(self, /):
         return True
@@ -229,6 +229,21 @@ def get_threading_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __repr__(self, /):
+            cls_repr = f"{GreenEvent.__module__}.GreenEvent[threading]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
+
         def __bool__(self, /):
             return not self._is_unset
 
@@ -330,6 +345,21 @@ def get_eventlet_event_class():
         def __reduce__(self, /):
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
+
+        def __repr__(self, /):
+            cls_repr = f"{GreenEvent.__module__}.GreenEvent[eventlet]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
             return not self._is_unset
@@ -469,6 +499,21 @@ def get_gevent_event_class():
         def __reduce__(self, /):
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
+
+        def __repr__(self, /):
+            cls_repr = f"{GreenEvent.__module__}.GreenEvent[gevent]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
             return not self._is_unset
@@ -613,6 +658,21 @@ def get_asyncio_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __repr__(self, /):
+            cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[asyncio]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
+
         def __bool__(self, /):
             return not self._is_unset
 
@@ -737,6 +797,21 @@ def get_curio_event_class():
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
+        def __repr__(self, /):
+            cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[curio]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
+
         def __bool__(self, /):
             return not self._is_unset
 
@@ -856,6 +931,21 @@ def get_trio_event_class():
         def __reduce__(self, /):
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
+
+        def __repr__(self, /):
+            cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[trio]"
+
+            if self._is_unset:
+                if self._is_shielded:
+                    state = "unset (shielded)"
+                else:
+                    state = "unset"
+            elif self._is_cancelled:
+                state = "cancelled"
+            else:
+                state = "set"
+
+            return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
             return not self._is_unset

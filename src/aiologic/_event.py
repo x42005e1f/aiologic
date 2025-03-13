@@ -39,7 +39,12 @@ class Event:
         return args
 
     def __repr__(self, /):
-        return f"Event(is_set={not self.__is_unset})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}(is_set={not self.__is_unset!r})"
 
     def __bool__(self, /):
         return not self.__is_unset
@@ -166,7 +171,12 @@ class REvent:
         return args
 
     def __repr__(self, /):
-        return f"REvent(is_set={not self.__is_unset})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}(is_set={not self.__is_unset!r})"
 
     def __bool__(self, /):
         return not self.__is_unset
@@ -332,7 +342,12 @@ class CountdownEvent:
         return args
 
     def __repr__(self, /):
-        return f"CountdownEvent({len(self.__markers)!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({len(self.__markers)!r})"
 
     def __bool__(self, /):
         return not self.__markers

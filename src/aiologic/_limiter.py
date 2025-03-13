@@ -33,7 +33,12 @@ class CapacityLimiter:
         return (self.__semaphore.initial_value,)
 
     def __repr__(self, /):
-        return f"CapacityLimiter({self.__semaphore.initial_value!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.__semaphore.initial_value!r})"
 
     async def __aenter__(self, /):
         await self.async_acquire()
@@ -209,7 +214,12 @@ class RCapacityLimiter:
         return (self.__semaphore.initial_value,)
 
     def __repr__(self, /):
-        return f"RCapacityLimiter({self.__semaphore.initial_value!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.__semaphore.initial_value!r})"
 
     async def __aenter__(self, /):
         await self.async_acquire()

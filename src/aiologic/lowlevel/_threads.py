@@ -201,6 +201,11 @@ except ImportError:
             return ((), object___getattribute__(self, "_kwargs_"))
 
         def __repr__(self, /):
+            cls = self.__class__
+
+            cls_module = cls.__module__
+            cls_name = cls.__qualname__.rpartition(">.")[-1]
+
             namespace = get_thread_namespace(self, init=False)
 
             if namespace is not None:
@@ -210,7 +215,7 @@ except ImportError:
 
             items = (f"{key}={value!r}" for key, value in kwargs.items())
 
-            return f"{self.__class__.__name__}({', '.join(items)})"
+            return f"{cls_module}.{cls_name}({', '.join(items)})"
 
         def __dir__(self, /):
             names = object___dir__(self)

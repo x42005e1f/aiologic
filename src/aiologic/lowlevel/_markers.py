@@ -18,7 +18,7 @@ class MissingType:
         return "MISSING"
 
     def __repr__(self, /):
-        return "MISSING"
+        return f"{self.__class__.__module__}.MISSING"
 
     def __bool__(self, /):
         return False

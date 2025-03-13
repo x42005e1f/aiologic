@@ -34,6 +34,10 @@ Commit messages are consistent with
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
   supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.
+- The representation of primitives has been changed. All instances now include
+  the module name and use the correct class name in subclasses (except for
+  private classes). Low-level events now show their library identity and
+  status.
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
   logging, and builds cleaner source distributions (without `setup.cfg`).

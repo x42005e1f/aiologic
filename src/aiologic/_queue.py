@@ -50,7 +50,12 @@ class SimpleQueue:
         return (list(self._data),)
 
     def __repr__(self, /):
-        return f"SimpleQueue({list(self._data)!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({list(self._data)!r})"
 
     def __bool__(self, /):
         return bool(self._data)
@@ -151,12 +156,17 @@ class Queue:
         return args
 
     def __repr__(self, /):
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
         if (maxsize := self.maxsize) != 0:
             args_repr = f"{self._items()!r}, maxsize={maxsize!r}"
         else:
             args_repr = repr(self._items())
 
-        return f"{self.__class__.__name__}({args_repr})"
+        return f"{cls_module}.{cls_name}({args_repr})"
 
     def __bool__(self, /):
         return self._qsize() > 0

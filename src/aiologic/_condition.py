@@ -41,7 +41,12 @@ class Condition:
         return (self.lock,)
 
     def __repr__(self, /):
-        return f"Condition({self.lock!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.lock!r})"
 
     def __bool__(self, /):
         if (lock := self.lock) is not None:

@@ -77,7 +77,12 @@ class Semaphore:
         return args
 
     def __repr__(self, /):
-        return f"Semaphore({self.initial_value!r})"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}({self.initial_value!r})"
 
     async def __aenter__(self, /):
         await self.async_acquire()
@@ -279,6 +284,11 @@ class BoundedSemaphore(Semaphore):
         return args
 
     def __repr__(self, /):
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
         initial_value = self.initial_value
         max_value = self.max_value
 
@@ -287,7 +297,7 @@ class BoundedSemaphore(Semaphore):
         else:
             args_repr = f"{initial_value!r}"
 
-        return f"BoundedSemaphore({args_repr})"
+        return f"{cls_module}.{cls_name}({args_repr})"
 
     async def async_acquire(self, /, *, blocking=True):
         success = await super().async_acquire(blocking=blocking)

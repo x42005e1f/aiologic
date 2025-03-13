@@ -34,6 +34,11 @@ class Flag:
         return args
 
     def __repr__(self, /):
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
         if markers := self.__markers:
             try:
                 marker_repr = repr(markers[0])
@@ -42,7 +47,7 @@ class Flag:
         else:
             marker_repr = ""
 
-        return f"Flag({marker_repr})"
+        return f"{cls_module}.{cls_name}({marker_repr})"
 
     def __bool__(self, /):
         return bool(self.__markers)

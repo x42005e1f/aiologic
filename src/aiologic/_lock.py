@@ -31,7 +31,12 @@ class PLock:
         return self
 
     def __repr__(self, /):
-        return "PLock()"
+        cls = self.__class__
+
+        cls_module = cls.__module__
+        cls_name = cls.__qualname__.rpartition(">.")[-1]
+
+        return f"{cls_module}.{cls_name}()"
 
     def __bool__(self, /):
         return not self.__unlocked
@@ -184,9 +189,6 @@ class Lock(PLock):
 
         return self
 
-    def __repr__(self, /):
-        return "Lock()"
-
     async def async_acquire(self, /, *, blocking=True):
         task = current_async_task_ident()
 
@@ -259,9 +261,6 @@ class RLock(PLock):
         self.level = 0
 
         return self
-
-    def __repr__(self, /):
-        return "RLock()"
 
     async def async_acquire(self, /, *, blocking=True):
         task = current_async_task_ident()
