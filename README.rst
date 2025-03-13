@@ -145,6 +145,8 @@ Supported concurrency libraries:
   <https://anyio.readthedocs.io>`_ (coroutine-based)
 * `eventlet <https://eventlet.readthedocs.io>`_ and `gevent <https://
   www.gevent.org/>`_ (greenlet-based)
+* `threading <https://docs.python.org/3/library/threading.html>`_
+  (thread-based)
 
 All synchronization and communication primitives are implemented entirely on
 effectively atomic operations, which gives `an incredible speedup on PyPy
