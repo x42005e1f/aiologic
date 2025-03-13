@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: ISC
 
 import os
-import time
 
 from contextvars import ContextVar
 from inspect import isawaitable, iscoroutinefunction
@@ -40,6 +39,24 @@ trio_checkpoints_cvar = ContextVar(
 )
 
 
+def _threading_checkpoint():
+    global _threading_checkpoint
+
+    from . import _monkey
+
+    if _monkey._eventlet_patched("time"):
+        sleep = _monkey._import_eventlet_original("time").sleep
+    elif _monkey._gevent_patched("time"):
+        sleep = _monkey._import_gevent_original("time").sleep
+    else:
+        sleep = _monkey._import_python_original("time").sleep
+
+    def _threading_checkpoint():
+        sleep(0)
+
+    _threading_checkpoint()
+
+
 def _eventlet_checkpoint():
     global _eventlet_checkpoint
 
@@ -61,7 +78,7 @@ def green_checkpoint(*, force=False):
 
     if library == "threading":
         if force or threading_checkpoints_cvar.get():
-            time.sleep(0)
+            _threading_checkpoint()
     elif library == "eventlet":
         if force or eventlet_checkpoints_cvar.get():
             _eventlet_checkpoint()

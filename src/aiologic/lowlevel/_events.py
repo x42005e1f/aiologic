@@ -191,12 +191,15 @@ class _TrioEvent(AsyncEvent):
 def get_threading_event_class():
     global _ThreadingEvent
 
-    import time
-
-    from . import _checkpoints as _cp
+    from . import _checkpoints as _cp, _monkey
     from ._thread import allocate_lock
 
-    sleep = time.sleep
+    if _monkey._eventlet_patched("time"):
+        sleep = _monkey._import_eventlet_original("time").sleep
+    elif _monkey._gevent_patched("time"):
+        sleep = _monkey._import_gevent_original("time").sleep
+    else:
+        sleep = _monkey._import_python_original("time").sleep
 
     class _ThreadingEvent(GreenEvent):
         __slots__ = (
