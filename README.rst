@@ -140,8 +140,9 @@ Communication primitives:
 
 Supported concurrency libraries:
 
-* `asyncio <https://docs.python.org/3/library/asyncio.html>`_ and `trio
-  <https://trio.readthedocs.io>`_ (coroutine-based)
+* `asyncio <https://docs.python.org/3/library/asyncio.html>`_, `curio <https://
+  curio.readthedocs.io>`_, `trio <https://trio.readthedocs.io>`_, and `anyio
+  <https://anyio.readthedocs.io>`_ (coroutine-based)
 * `eventlet <https://eventlet.readthedocs.io>`_ and `gevent <https://
   www.gevent.org/>`_ (greenlet-based)
 
