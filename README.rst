@@ -127,7 +127,7 @@ Features
 Synchronization primitives:
 
 * Flags
-* Events: one-time, reusable, and countdown
+* Events: low-level, one-time, reusable, and countdown
 * Barriers: single-use, and cyclic
 * Semaphores: counting, and bounded
 * Capacity limiters: borrowable, and reentrant
