@@ -11,7 +11,10 @@ class MissingType:
         return MISSING
 
     def __init_subclass__(cls, /, **kwargs):
-        msg = "type 'MissingType' is not an acceptable base type"
+        bcs = MissingType
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
         raise TypeError(msg)
 
     def __reduce__(self, /):

@@ -39,7 +39,10 @@ class DummyEvent(Event):
         return DUMMY_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
-        msg = "type 'DummyEvent' is not an acceptable base type"
+        bcs = DummyEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
         raise TypeError(msg)
 
     def __reduce__(self, /):
@@ -217,7 +220,10 @@ def get_threading_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'ThreadingEvent' is not an acceptable base type"
+            bcs = _ThreadingEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
@@ -324,7 +330,10 @@ def get_eventlet_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'EventletEvent' is not an acceptable base type"
+            bcs = _EventletEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
@@ -468,7 +477,10 @@ def get_gevent_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'GeventEvent' is not an acceptable base type"
+            bcs = _GeventEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
@@ -616,7 +628,10 @@ def get_asyncio_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'AsyncioEvent' is not an acceptable base type"
+            bcs = _AsyncioEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
@@ -747,7 +762,10 @@ def get_curio_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'CurioEvent' is not an acceptable base type"
+            bcs = _CurioEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
@@ -874,7 +892,10 @@ def get_trio_event_class():
             return self
 
         def __init_subclass__(cls, /, **kwargs):
-            msg = "type 'TrioEvent' is not an acceptable base type"
+            bcs = _TrioEvent
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
             raise TypeError(msg)
 
         def __reduce__(self, /):
