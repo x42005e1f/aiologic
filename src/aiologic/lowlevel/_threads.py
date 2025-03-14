@@ -204,7 +204,7 @@ except ImportError:
             cls = self.__class__
 
             cls_module = cls.__module__
-            cls_name = cls.__qualname__.rpartition(">.")[-1]
+            cls_name = cls.__qualname__
 
             namespace = get_thread_namespace(self, init=False)
 

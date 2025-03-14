@@ -53,7 +53,7 @@ class SimpleQueue:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}({list(self._data)!r})"
 
@@ -159,7 +159,7 @@ class Queue:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         if (maxsize := self.maxsize) != 0:
             args_repr = f"{self._items()!r}, maxsize={maxsize!r}"

@@ -37,7 +37,7 @@ class Flag:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         if markers := self.__markers:
             try:

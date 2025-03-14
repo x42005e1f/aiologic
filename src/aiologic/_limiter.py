@@ -36,7 +36,7 @@ class CapacityLimiter:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}({self.__semaphore.initial_value!r})"
 
@@ -217,7 +217,7 @@ class RCapacityLimiter:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}({self.__semaphore.initial_value!r})"
 

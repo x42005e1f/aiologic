@@ -42,7 +42,7 @@ class Event:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}(is_set={not self.__is_unset!r})"
 
@@ -174,7 +174,7 @@ class REvent:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}(is_set={not self.__is_unset!r})"
 
@@ -345,7 +345,7 @@ class CountdownEvent:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}({len(self.__markers)!r})"
 

@@ -80,7 +80,7 @@ class Semaphore:
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         return f"{cls_module}.{cls_name}({self.initial_value!r})"
 
@@ -287,7 +287,7 @@ class BoundedSemaphore(Semaphore):
         cls = self.__class__
 
         cls_module = cls.__module__
-        cls_name = cls.__qualname__.rpartition(">.")[-1]
+        cls_name = cls.__qualname__
 
         initial_value = self.initial_value
         max_value = self.max_value
