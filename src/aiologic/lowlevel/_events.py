@@ -137,6 +137,13 @@ class _ThreadingEvent(GreenEvent):
 
         return imp.__new__(imp, shield)
 
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _ThreadingEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
 
 class _EventletEvent(GreenEvent):
     __slots__ = ()
@@ -145,6 +152,13 @@ class _EventletEvent(GreenEvent):
         imp = get_eventlet_event_class()
 
         return imp.__new__(imp, shield)
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _EventletEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
 
 
 class _GeventEvent(GreenEvent):
@@ -155,6 +169,13 @@ class _GeventEvent(GreenEvent):
 
         return imp.__new__(imp, shield)
 
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _GeventEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
 
 class _AsyncioEvent(AsyncEvent):
     __slots__ = ()
@@ -163,6 +184,13 @@ class _AsyncioEvent(AsyncEvent):
         imp = get_asyncio_event_class()
 
         return imp.__new__(imp, shield)
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _AsyncioEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
 
 
 class _CurioEvent(AsyncEvent):
@@ -173,6 +201,13 @@ class _CurioEvent(AsyncEvent):
 
         return imp.__new__(imp, shield)
 
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _CurioEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
 
 class _TrioEvent(AsyncEvent):
     __slots__ = ()
@@ -181,6 +216,13 @@ class _TrioEvent(AsyncEvent):
         imp = get_trio_event_class()
 
         return imp.__new__(imp, shield)
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = _TrioEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
 
 
 @once
