@@ -293,7 +293,7 @@ class Queue:
                             success = await event
                             rescheduled = True
                     finally:
-                        if success or event.cancel():
+                        if success or event.is_cancelled():
                             try:
                                 put_waiters.remove(event)
                             except ValueError:
@@ -340,7 +340,7 @@ class Queue:
                             success = event.wait(timeout)
                             rescheduled = True
                     finally:
-                        if success or event.cancel():
+                        if success or event.is_cancelled():
                             try:
                                 put_waiters.remove(event)
                             except ValueError:
@@ -387,7 +387,7 @@ class Queue:
                             success = await event
                             rescheduled = True
                     finally:
-                        if success or event.cancel():
+                        if success or event.is_cancelled():
                             try:
                                 get_waiters.remove(event)
                             except ValueError:
@@ -436,7 +436,7 @@ class Queue:
                             success = event.wait(timeout)
                             rescheduled = True
                     finally:
-                        if success or event.cancel():
+                        if success or event.is_cancelled():
                             try:
                                 get_waiters.remove(event)
                             except ValueError:

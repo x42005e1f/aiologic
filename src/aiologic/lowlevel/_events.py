@@ -24,10 +24,6 @@ class Event(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def cancel(self, /):
-        raise NotImplementedError
-
-    @abstractmethod
     def is_set(self, /):
         raise NotImplementedError
 
@@ -66,9 +62,6 @@ class DummyEvent(Event):
         return True
 
     def set(self, /):
-        return False
-
-    def cancel(self, /):
         return False
 
     def is_set(self, /):
@@ -283,19 +276,6 @@ def get_threading_event_class():
 
             return True
 
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
-
-            return True
-
         def is_set(self, /):
             return not self._is_unset
 
@@ -433,19 +413,6 @@ def get_eventlet_event_class():
                 self.__hub.schedule_call_global(0, self.__set)
             else:
                 self.__hub.schedule_call_threadsafe(0, self.__set)
-
-            return True
-
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
 
             return True
 
@@ -599,19 +566,6 @@ def get_gevent_event_class():
 
             return True
 
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
-
-            return True
-
         def is_set(self, /):
             return not self._is_unset
 
@@ -737,19 +691,6 @@ def get_asyncio_event_class():
 
             return True
 
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
-
-            return True
-
         def is_set(self, /):
             return not self._is_unset
 
@@ -862,19 +803,6 @@ def get_curio_event_class():
                     future.set_result(True)
                 except InvalidStateError:  # future is cancelled
                     pass
-
-            return True
-
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
 
             return True
 
@@ -1008,19 +936,6 @@ def get_trio_event_class():
                     self.__token.run_sync_soon(self.__set)
                 except RunFinishedError:  # trio.run() is finished
                     pass
-
-            return True
-
-        def cancel(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return self._is_cancelled
-            else:
-                return self._is_cancelled
-
-            self._is_cancelled = True
 
             return True
 

@@ -19,25 +19,29 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
-### Added
-
-- Low-level events can now be shielded from external cancellation by passing
-  `shield=True`. This allows to implement efficient finalization strategies
-  while preserving the one-time nature of low-level events.
-
 ### Changed
 
-- Low-level events are now always cancelled on timeouts. This should make it
-  easier to work with them outside of `aiologic` and simplify some things,
-  since now there is no need to explicitly call `event.cancel()`. Previously,
-  green events were not cancelled when a timeout was passed.
+- Low-level events have been rewritten:
+  + They are now always cancelled on timeouts, and the `event.cancel()` method
+    has been removed to avoid redundancy. This should make it easier to work
+    with them outside of `aiologic` and simplify some things, since now there
+    is no need to call `event.cancel()`. Previously, green events were not
+    cancelled when a timeout was passed.
+  + They can now be shielded from external cancellation by passing
+    `shield=True`. This allows to implement efficient finalization strategies
+    while preserving the one-time nature of low-level events.
+  + Their performance has been greatly improved. Checkpoints now use their own
+    implementation without calling public `aiologic.lowlevel` functions, which
+    bypasses redundant current library detection and speeds up `event.set()`
+    call. The `gevent` events have been rewritten to be similar to the
+    `eventlet` events, making them faster than the native `gevent` events.
+  + They are now show their library identity and status in representation.
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
   supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
-  private classes). Low-level events now show their library identity and
-  status.
+  private classes).
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
   logging, and builds cleaner source distributions (without `setup.cfg`).
