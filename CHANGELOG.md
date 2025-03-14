@@ -19,6 +19,17 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
+### Added
+
+- Low-level events can now be shielded from external cancellation by passing
+  `shield=True`. This allows to implement efficient finalization strategies
+  while preserving the one-time nature of low-level events.
+- `aiologic.lowlevel.SET_EVENT` and `aiologic.lowlevel.CANCELLED_EVENT` as
+  variants of `aiologic.lowlevel.DUMMY_EVENT` for a set event and a cancelled
+  event respectively. In fact, `aiologic.lowlevel.SET_EVENT` is just a copy of
+  `aiologic.lowlevel.DUMMY_EVENT`, but to avoid confusion both variants will
+  coexist (maybe temporarily, maybe not).
+
 ### Changed
 
 - Low-level events have been rewritten:
@@ -30,21 +41,21 @@ Commit messages are consistent with
   + They are no longer considered set after being cancelled. This affects the
     return value of `bool(event)` and `event.is_set()`, which now return
     `False` for cancelled events.
-  + They can now be shielded from external cancellation by passing
-    `shield=True`. This allows to implement efficient finalization strategies
-    while preserving the one-time nature of low-level events.
+  + They now return `False` after waiting again if they were previously
+    cancelled. Previously `True` was returned, which could be considered
+    unexpected behavior.
   + Their performance has been greatly improved. Checkpoints now use their own
     implementation without calling public `aiologic.lowlevel` functions, which
-    bypasses redundant current library detection and speeds up `event.set()`
-    call. The `gevent` events have been rewritten to be similar to the
-    `eventlet` events, making them faster than the native `gevent` events.
-  + They are now show their library identity and status in representation.
+    bypasses redundant current library detection. The `gevent` events have been
+    rewritten to be similar to the `eventlet` events, making them faster than
+    the native `gevent` events.
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
   supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
-  private classes).
+  private classes). Low-level events now show their library identity and status
+  in representation.
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
   logging, and builds cleaner source distributions (without `setup.cfg`).

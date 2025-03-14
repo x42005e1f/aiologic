@@ -18,11 +18,15 @@ from ._checkpoints import (
     trio_checkpoints_cvar as trio_checkpoints_cvar,
 )
 from ._events import (
+    CANCELLED_EVENT as CANCELLED_EVENT,
     DUMMY_EVENT as DUMMY_EVENT,
+    SET_EVENT as SET_EVENT,
     AsyncEvent as AsyncEvent,
+    CancelledEvent as CancelledEvent,
     DummyEvent as DummyEvent,
     Event as Event,
     GreenEvent as GreenEvent,
+    SetEvent as SetEvent,
 )
 from ._flags import (
     Flag as Flag,

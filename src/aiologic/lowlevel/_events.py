@@ -32,6 +32,48 @@ class Event(ABC):
         raise NotImplementedError
 
 
+class SetEvent(Event):
+    __slots__ = ()
+
+    def __new__(cls, /, *, shield=False):
+        return SET_EVENT
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = SetEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /):
+        return "SET_EVENT"
+
+    def __repr__(self, /):
+        return f"{self.__class__.__module__}.SET_EVENT"
+
+    def __bool__(self, /):
+        return True
+
+    def __await__(self, /):
+        yield from checkpoint().__await__()
+
+        return True
+
+    def wait(self, /, timeout=None):
+        green_checkpoint()
+
+        return True
+
+    def set(self, /):
+        return False
+
+    def is_set(self, /):
+        return True
+
+    def is_cancelled(self, /):
+        return False
+
+
 class DummyEvent(Event):
     __slots__ = ()
 
@@ -74,7 +116,51 @@ class DummyEvent(Event):
         return False
 
 
+class CancelledEvent(Event):
+    __slots__ = ()
+
+    def __new__(cls, /, *, shield=False):
+        return CANCELLED_EVENT
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = CancelledEvent
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /):
+        return "CANCELLED_EVENT"
+
+    def __repr__(self, /):
+        return f"{self.__class__.__module__}.CANCELLED_EVENT"
+
+    def __bool__(self, /):
+        return False
+
+    def __await__(self, /):
+        yield from checkpoint().__await__()
+
+        return False
+
+    def wait(self, /, timeout=None):
+        green_checkpoint()
+
+        return False
+
+    def set(self, /):
+        return False
+
+    def is_set(self, /):
+        return False
+
+    def is_cancelled(self, /):
+        return True
+
+
+SET_EVENT = object___new__(SetEvent)
 DUMMY_EVENT = object___new__(DummyEvent)
+CANCELLED_EVENT = object___new__(CancelledEvent)
 
 
 class GreenEvent(Event):
