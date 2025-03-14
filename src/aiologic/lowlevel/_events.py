@@ -198,6 +198,7 @@ def get_threading_event_class():
         __slots__ = (
             "__lock",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -209,6 +210,7 @@ def get_threading_event_class():
             self.__lock.acquire()
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -225,23 +227,22 @@ def get_threading_event_class():
         def __repr__(self, /):
             cls_repr = f"{GreenEvent.__module__}.GreenEvent[threading]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def wait(self, /, timeout=None):
-            if not self._is_unset:
+            if self._is_set or self._is_cancelled:
                 if _cp.threading_checkpoints_cvar.get():
                     sleep(0)
 
@@ -255,29 +256,31 @@ def get_threading_event_class():
                 else:
                     return self.__lock.acquire(False)
             finally:
-                if self._is_unset:
+                if not self._is_set:
                     try:
                         self._is_unset.pop()
                     except IndexError:
-                        pass
+                        self._is_set = True
                     else:
                         self._is_cancelled = True
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             self.__lock.release()
 
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled
@@ -302,6 +305,7 @@ def get_eventlet_event_class():
             "__greenlet",
             "__hub",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -313,6 +317,7 @@ def get_eventlet_event_class():
             self.__hub = get_hub()
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -329,23 +334,22 @@ def get_eventlet_event_class():
         def __repr__(self, /):
             cls_repr = f"{GreenEvent.__module__}.GreenEvent[eventlet]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def wait(self, /, timeout=None):
-            if not self._is_unset:
+            if self._is_set or self._is_cancelled:
                 if _cp.eventlet_checkpoints_cvar.get():
                     sleep()
 
@@ -379,11 +383,11 @@ def get_eventlet_event_class():
                 finally:
                     self.__greenlet = None
             finally:
-                if self._is_unset:
+                if not self._is_set:
                     try:
                         self._is_unset.pop()
                     except IndexError:
-                        pass
+                        self._is_set = True
                     else:
                         self._is_cancelled = True
 
@@ -396,13 +400,15 @@ def get_eventlet_event_class():
                 self.__greenlet.switch(False)
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             try:
                 current_hub = _threadlocal.hub
@@ -417,7 +423,7 @@ def get_eventlet_event_class():
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled
@@ -443,6 +449,7 @@ def get_gevent_event_class():
             "__greenlet",
             "__hub",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -454,6 +461,7 @@ def get_gevent_event_class():
             self.__hub = get_hub()
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -470,23 +478,22 @@ def get_gevent_event_class():
         def __repr__(self, /):
             cls_repr = f"{GreenEvent.__module__}.GreenEvent[gevent]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def wait(self, /, timeout=None):
-            if not self._is_unset:
+            if self._is_set or self._is_cancelled:
                 if _cp.gevent_checkpoints_cvar.get():
                     sleep()
 
@@ -529,11 +536,11 @@ def get_gevent_event_class():
                 finally:
                     self.__greenlet = None
             finally:
-                if self._is_unset:
+                if not self._is_set:
                     try:
                         self._is_unset.pop()
                     except IndexError:
-                        pass
+                        self._is_set = True
                     else:
                         self._is_cancelled = True
 
@@ -546,13 +553,15 @@ def get_gevent_event_class():
                 self.__greenlet.switch(False)
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             current_hub = get_hub_if_exists()
 
@@ -567,7 +576,7 @@ def get_gevent_event_class():
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled
@@ -588,6 +597,7 @@ def get_asyncio_event_class():
             "__future",
             "__loop",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -599,6 +609,7 @@ def get_asyncio_event_class():
             self.__loop = get_running_loop()
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -615,48 +626,49 @@ def get_asyncio_event_class():
         def __repr__(self, /):
             cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[asyncio]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def __await__(self, /):
-            if self._is_unset:
-                try:
-                    self.__future = self.__loop.create_future()
-
-                    try:
-                        if self._is_shielded:
-                            yield from _cp._asyncio_repeat_if_cancelled(
-                                shield,
-                                [self.__future],
-                                {},
-                            ).__await__()
-                        else:
-                            yield from self.__future.__await__()
-                    finally:
-                        self.__future = None
-                finally:
-                    if self._is_unset:
-                        try:
-                            self._is_unset.pop()
-                        except IndexError:
-                            pass
-                        else:
-                            self._is_cancelled = True
-            else:
+            if self._is_set or self._is_cancelled:
                 if _cp.asyncio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
+
+                return True
+
+            try:
+                self.__future = self.__loop.create_future()
+
+                try:
+                    if self._is_shielded:
+                        yield from _cp._asyncio_repeat_if_cancelled(
+                            shield,
+                            [self.__future],
+                            {},
+                        ).__await__()
+                    else:
+                        yield from self.__future.__await__()
+                finally:
+                    self.__future = None
+            finally:
+                if not self._is_set:
+                    try:
+                        self._is_unset.pop()
+                    except IndexError:
+                        self._is_set = True
+                    else:
+                        self._is_cancelled = True
 
             return True
 
@@ -668,13 +680,15 @@ def get_asyncio_event_class():
                     pass
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             try:
                 current_loop = get_running_loop()
@@ -692,7 +706,7 @@ def get_asyncio_event_class():
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled
@@ -715,6 +729,7 @@ def get_curio_event_class():
         __slots__ = (
             "__future",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -725,6 +740,7 @@ def get_curio_event_class():
             self.__future = None
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -741,60 +757,63 @@ def get_curio_event_class():
         def __repr__(self, /):
             cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[curio]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def __await__(self, /):
-            if self._is_unset:
-                try:
-                    self.__future = Future()
-
-                    try:
-                        if self._is_shielded:
-                            yield from _cp._curio_repeat_if_cancelled(
-                                _future_wait,
-                                [self.__future],
-                                {},
-                            ).__await__()
-                            yield from check_cancellation().__await__()
-                        else:
-                            yield from _future_wait(self.__future).__await__()
-                    finally:
-                        self.__future = None
-                finally:
-                    if self._is_unset:
-                        try:
-                            self._is_unset.pop()
-                        except IndexError:
-                            pass
-                        else:
-                            self._is_cancelled = True
-            else:
+            if self._is_set or self._is_cancelled:
                 if _cp.curio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
+
+                return True
+
+            try:
+                self.__future = Future()
+
+                try:
+                    if self._is_shielded:
+                        yield from _cp._curio_repeat_if_cancelled(
+                            _future_wait,
+                            [self.__future],
+                            {},
+                        ).__await__()
+                        yield from check_cancellation().__await__()
+                    else:
+                        yield from _future_wait(self.__future).__await__()
+                finally:
+                    self.__future = None
+            finally:
+                if not self._is_set:
+                    try:
+                        self._is_unset.pop()
+                    except IndexError:
+                        self._is_set = True
+                    else:
+                        self._is_cancelled = True
 
             return True
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             future = self.__future
 
@@ -807,7 +826,7 @@ def get_curio_event_class():
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled
@@ -836,6 +855,7 @@ def get_trio_event_class():
             "__task",
             "__token",
             "_is_cancelled",
+            "_is_set",
             "_is_shielded",
             "_is_unset",
         )
@@ -847,6 +867,7 @@ def get_trio_event_class():
             self.__token = current_trio_token()
 
             self._is_cancelled = False
+            self._is_set = False
             self._is_shielded = shield
             self._is_unset = [True]
 
@@ -863,49 +884,50 @@ def get_trio_event_class():
         def __repr__(self, /):
             cls_repr = f"{AsyncEvent.__module__}.AsyncEvent[trio]"
 
-            if self._is_unset:
-                if self._is_shielded:
-                    state = "unset (shielded)"
-                else:
-                    state = "unset"
+            if self._is_set:
+                state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
+            elif self._is_shielded:
+                state = "unset (shielded)"
             else:
-                state = "set"
+                state = "unset"
 
             return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
         def __bool__(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def __await__(self, /):
-            if self._is_unset:
-                self.__task = current_task()
-
-                if self._is_shielded:
-                    yield from _cp._trio_repeat_if_cancelled(
-                        wait_task_rescheduled,
-                        [self.__abort],
-                        {},
-                    ).__await__()
-                else:
-                    yield from wait_task_rescheduled(self.__abort).__await__()
-
-                self.__task = None
-            else:
+            if self._is_set or self._is_cancelled:
                 if _cp.trio_checkpoints_cvar.get():
                     yield from checkpoint().__await__()
+
+                return True
+
+            self.__task = current_task()
+
+            if self._is_shielded:
+                yield from _cp._trio_repeat_if_cancelled(
+                    wait_task_rescheduled,
+                    [self.__abort],
+                    {},
+                ).__await__()
+            else:
+                yield from wait_task_rescheduled(self.__abort).__await__()
+
+            self.__task = None
 
             return True
 
         def __abort(self, /, raise_cancel):
             self.__task = None
 
-            if self._is_unset:
+            if not self._is_set:
                 try:
                     self._is_unset.pop()
                 except IndexError:
-                    pass
+                    self._is_set = True
                 else:
                     self._is_cancelled = True
 
@@ -916,13 +938,15 @@ def get_trio_event_class():
                 reschedule(self.__task)
 
         def set(self, /):
-            if self._is_unset:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    return False
-            else:
+            if self._is_set or self._is_cancelled:
                 return False
+
+            try:
+                self._is_unset.pop()
+            except IndexError:
+                return False
+            else:
+                self._is_set = True
 
             try:
                 current_token = current_trio_token()
@@ -940,7 +964,7 @@ def get_trio_event_class():
             return True
 
         def is_set(self, /):
-            return not self._is_unset
+            return self._is_set
 
         def is_cancelled(self, /):
             return self._is_cancelled

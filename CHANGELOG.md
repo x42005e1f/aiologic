@@ -27,6 +27,9 @@ Commit messages are consistent with
     with them outside of `aiologic` and simplify some things, since now there
     is no need to call `event.cancel()`. Previously, green events were not
     cancelled when a timeout was passed.
+  + They are no longer considered set after being cancelled. This affects the
+    return value of `bool(event)` and `event.is_set()`, which now return
+    `False` for cancelled events.
   + They can now be shielded from external cancellation by passing
     `shield=True`. This allows to implement efficient finalization strategies
     while preserving the one-time nature of low-level events.
