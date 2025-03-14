@@ -65,6 +65,11 @@ Commit messages are consistent with
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been
   exceeded.
+- The methods of complex queues (all except `aiologic.SimpleQueue`) used an
+  incorrect condition for cancellation handling, which could break
+  thread-safety after cancellation. Now the handling is changed to match that
+  of locks and semaphores, which additionally speeds up methods by reducing
+  operations.
 - In very rare cases, lock acquiring methods did not notify newcomers due to
   calling a non-existent method when racing during cancellation, causing a hang
   (`0.14.0` regression).
