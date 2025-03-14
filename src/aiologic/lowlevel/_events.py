@@ -294,7 +294,7 @@ def get_threading_event_class():
                 if _cp.threading_checkpoints_cvar.get():
                     sleep(0)
 
-                return True
+                return self._is_set
 
             try:
                 if timeout is None or self._is_shielded:
@@ -404,7 +404,7 @@ def get_eventlet_event_class():
                 if _cp.eventlet_checkpoints_cvar.get():
                     sleep()
 
-                return True
+                return self._is_set
 
             try:
                 self.__greenlet = getcurrent()
@@ -551,7 +551,7 @@ def get_gevent_event_class():
                 if _cp.gevent_checkpoints_cvar.get():
                     sleep()
 
-                return True
+                return self._is_set
 
             try:
                 self.__greenlet = getcurrent()
@@ -702,7 +702,7 @@ def get_asyncio_event_class():
                 if _cp.asyncio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
 
-                return True
+                return self._is_set
 
             try:
                 self.__future = self.__loop.create_future()
@@ -836,7 +836,7 @@ def get_curio_event_class():
                 if _cp.curio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
 
-                return True
+                return self._is_set
 
             try:
                 self.__future = Future()
@@ -966,7 +966,7 @@ def get_trio_event_class():
                 if _cp.trio_checkpoints_cvar.get():
                     yield from checkpoint().__await__()
 
-                return True
+                return self._is_set
 
             self.__task = current_task()
 
