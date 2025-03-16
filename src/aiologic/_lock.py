@@ -32,11 +32,9 @@ class PLock:
 
     def __repr__(self, /):
         cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        cls_module = cls.__module__
-        cls_name = cls.__qualname__
-
-        return f"{cls_module}.{cls_name}()"
+        return f"{cls_repr}()"
 
     def __bool__(self, /):
         return not self.__unlocked

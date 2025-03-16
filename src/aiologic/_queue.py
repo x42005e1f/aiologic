@@ -51,11 +51,9 @@ class SimpleQueue:
 
     def __repr__(self, /):
         cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        cls_module = cls.__module__
-        cls_name = cls.__qualname__
-
-        return f"{cls_module}.{cls_name}({list(self._data)!r})"
+        return f"{cls_repr}({list(self._data)!r})"
 
     def __bool__(self, /):
         return bool(self._data)
@@ -157,16 +155,14 @@ class Queue:
 
     def __repr__(self, /):
         cls = self.__class__
-
-        cls_module = cls.__module__
-        cls_name = cls.__qualname__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
         if (maxsize := self.maxsize) != 0:
             args_repr = f"{self._items()!r}, maxsize={maxsize!r}"
         else:
             args_repr = repr(self._items())
 
-        return f"{cls_module}.{cls_name}({args_repr})"
+        return f"{cls_repr}({args_repr})"
 
     def __bool__(self, /):
         return self._qsize() > 0

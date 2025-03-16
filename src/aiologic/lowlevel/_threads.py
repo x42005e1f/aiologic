@@ -202,9 +202,7 @@ except ImportError:
 
         def __repr__(self, /):
             cls = self.__class__
-
-            cls_module = cls.__module__
-            cls_name = cls.__qualname__
+            cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
             namespace = get_thread_namespace(self, init=False)
 
@@ -215,7 +213,7 @@ except ImportError:
 
             items = (f"{key}={value!r}" for key, value in kwargs.items())
 
-            return f"{cls_module}.{cls_name}({', '.join(items)})"
+            return f"{cls_repr}({', '.join(items)})"
 
         def __dir__(self, /):
             names = object___dir__(self)

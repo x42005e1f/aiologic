@@ -34,11 +34,9 @@ class ResourceGuard:
 
     def __repr__(self, /):
         cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        cls_module = cls.__module__
-        cls_name = cls.__qualname__
-
-        return f"{cls_module}.{cls_name}({self.action!r})"
+        return f"{cls_repr}({self.action!r})"
 
     def __bool__(self, /):
         return bool(self.__unlocked)
