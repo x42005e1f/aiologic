@@ -95,6 +95,9 @@ Commit messages are consistent with
 - In very rare cases, lock acquiring methods did not notify newcomers due to
   calling a non-existent method when racing during cancellation, causing a hang
   (`0.14.0` regression).
+- Semaphores with value > 1 incorrectly handled the optimistic acquire case
+  after adding an event to the queue, resulting in excessive decrements in a
+  free-threading mode (`0.2.0` regression).
 
 [0.14.0] - 2025-02-12
 ---------------------

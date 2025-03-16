@@ -286,36 +286,26 @@ class Queue:
                     waiters.append(event)
                     put_waiters.append(event)
 
-                    success = self.__acquire_nowait_put()
+                    try:
+                        if self.__acquire_nowait_put():
+                            event.set()
 
-                    if not success:
-                        try:
-                            success = await event
-                            rescheduled = True
-                        finally:
-                            if not success:
-                                if event.is_cancelled():
-                                    try:
-                                        put_waiters.remove(event)
-                                    except ValueError:
-                                        pass
+                        success = await event
+                        rescheduled = True
+                    finally:
+                        if not success:
+                            if event.is_cancelled():
+                                try:
+                                    put_waiters.remove(event)
+                                except ValueError:
+                                    pass
 
-                                    try:
-                                        waiters.remove(event)
-                                    except ValueError:
-                                        pass
-                                else:
-                                    success = True
-                    else:
-                        try:
-                            put_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                success = True
 
                 if not rescheduled:
                     await checkpoint()
@@ -344,36 +334,26 @@ class Queue:
                     waiters.append(event)
                     put_waiters.append(event)
 
-                    success = self.__acquire_nowait_put()
+                    try:
+                        if self.__acquire_nowait_put():
+                            event.set()
 
-                    if not success:
-                        try:
-                            success = event.wait(timeout)
-                            rescheduled = True
-                        finally:
-                            if not success:
-                                if event.is_cancelled():
-                                    try:
-                                        put_waiters.remove(event)
-                                    except ValueError:
-                                        pass
+                        success = event.wait(timeout)
+                        rescheduled = True
+                    finally:
+                        if not success:
+                            if event.is_cancelled():
+                                try:
+                                    put_waiters.remove(event)
+                                except ValueError:
+                                    pass
 
-                                    try:
-                                        waiters.remove(event)
-                                    except ValueError:
-                                        pass
-                                else:
-                                    success = True
-                    else:
-                        try:
-                            put_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                success = True
 
                 if not rescheduled:
                     green_checkpoint()
@@ -402,36 +382,26 @@ class Queue:
                     waiters.append(event)
                     get_waiters.append(event)
 
-                    success = self.__acquire_nowait_get()
+                    try:
+                        if self.__acquire_nowait_get():
+                            event.set()
 
-                    if not success:
-                        try:
-                            success = await event
-                            rescheduled = True
-                        finally:
-                            if not success:
-                                if event.is_cancelled():
-                                    try:
-                                        get_waiters.remove(event)
-                                    except ValueError:
-                                        pass
+                        success = await event
+                        rescheduled = True
+                    finally:
+                        if not success:
+                            if event.is_cancelled():
+                                try:
+                                    get_waiters.remove(event)
+                                except ValueError:
+                                    pass
 
-                                    try:
-                                        waiters.remove(event)
-                                    except ValueError:
-                                        pass
-                                else:
-                                    success = True
-                    else:
-                        try:
-                            get_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                success = True
 
                 if not rescheduled:
                     await checkpoint()
@@ -462,36 +432,26 @@ class Queue:
                     waiters.append(event)
                     get_waiters.append(event)
 
-                    success = self.__acquire_nowait_get()
+                    try:
+                        if self.__acquire_nowait_get():
+                            event.set()
 
-                    if not success:
-                        try:
-                            success = event.wait(timeout)
-                            rescheduled = True
-                        finally:
-                            if not success:
-                                if event.is_cancelled():
-                                    try:
-                                        get_waiters.remove(event)
-                                    except ValueError:
-                                        pass
+                        success = event.wait(timeout)
+                        rescheduled = True
+                    finally:
+                        if not success:
+                            if event.is_cancelled():
+                                try:
+                                    get_waiters.remove(event)
+                                except ValueError:
+                                    pass
 
-                                    try:
-                                        waiters.remove(event)
-                                    except ValueError:
-                                        pass
-                                else:
-                                    success = True
-                    else:
-                        try:
-                            get_waiters.remove(event)
-                        except ValueError:
-                            pass
-
-                        try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
+                                try:
+                                    waiters.remove(event)
+                                except ValueError:
+                                    pass
+                            else:
+                                success = True
 
                 if not rescheduled:
                     green_checkpoint()
