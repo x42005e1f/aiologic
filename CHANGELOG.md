@@ -49,6 +49,12 @@ Commit messages are consistent with
     bypasses redundant current library detection. The `gevent` events have been
     rewritten to be similar to the `eventlet` events, making them faster than
     the native `gevent` events.
+  + They are now bound to the event loop in the wait function rather than in
+    the event constructor (there is also an option to defer library detection
+    to the wait function by introducing a new abstraction (waiters) and adding
+    a generic `aiologic.lowlevel.AnyEvent`, but this has a negative impact on
+    memory, and the performance gain for high-level primitives is only in the
+    race condition).
 - `aiologic.lowlevel.repeat_if_cancelled()` is now a universal decorator. It
   supports awaitable objects, coroutine functions, and green functions:
   timeouts are suppressed, and are re-raised after the call completes.
@@ -84,6 +90,8 @@ Commit messages are consistent with
   thread-safety after cancellation. Now the handling is changed to match that
   of locks and semaphores, which additionally speeds up methods by reducing
   operations.
+- In very rare cases, `curio` events would set the future attribute after the
+  `set()` method was completed and thus cause a hang.
 - In very rare cases, lock acquiring methods did not notify newcomers due to
   calling a non-existent method when racing during cancellation, causing a hang
   (`0.14.0` regression).

@@ -219,7 +219,7 @@ class _ThreadingEvent(GreenEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_threading_event_class()
+        imp = _get_threading_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -235,7 +235,7 @@ class _EventletEvent(GreenEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_eventlet_event_class()
+        imp = _get_eventlet_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -251,7 +251,7 @@ class _GeventEvent(GreenEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_gevent_event_class()
+        imp = _get_gevent_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -267,7 +267,7 @@ class _AsyncioEvent(AsyncEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_asyncio_event_class()
+        imp = _get_asyncio_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -283,7 +283,7 @@ class _CurioEvent(AsyncEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_curio_event_class()
+        imp = _get_curio_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -299,7 +299,7 @@ class _TrioEvent(AsyncEvent):
     __slots__ = ()
 
     def __new__(cls, /, shield=False):
-        imp = get_trio_event_class()
+        imp = _get_trio_event_class()
 
         return imp.__new__(imp, shield)
 
@@ -312,7 +312,7 @@ class _TrioEvent(AsyncEvent):
 
 
 @once
-def get_threading_event_class():
+def _get_threading_event_class():
     global _ThreadingEvent
 
     from . import _checkpoints as _cp, _monkey
@@ -337,8 +337,7 @@ def get_threading_event_class():
         def __new__(cls, /, shield=False):
             self = object___new__(cls)
 
-            self.__lock = allocate_lock()
-            self.__lock.acquire()
+            self.__lock = None
 
             self._is_cancelled = False
             self._is_set = False
@@ -376,27 +375,47 @@ def get_threading_event_class():
             return self._is_set
 
         def wait(self, /, timeout=None):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.threading_checkpoints_cvar.get():
                     sleep(0)
 
-                return self._is_set
+                return True
+
+            if self._is_cancelled:
+                if _cp.threading_checkpoints_cvar.get():
+                    sleep(0)
+
+                return False
+
+            lock = allocate_lock()
+            lock.acquire()
+
+            self.__lock = lock
 
             try:
-                if timeout is None or self._is_shielded:
-                    return self.__lock.acquire()
-                elif timeout > 0:
-                    return self.__lock.acquire(True, timeout)
-                else:
-                    return self.__lock.acquire(False)
-            finally:
-                if not self._is_set:
-                    try:
-                        self._is_unset.pop()
-                    except IndexError:
-                        self._is_set = True
+                if self._is_set:
+                    if _cp.threading_checkpoints_cvar.get():
+                        sleep(0)
+
+                    return True
+
+                try:
+                    if timeout is None or self._is_shielded:
+                        return self.__lock.acquire()
+                    elif timeout > 0:
+                        return self.__lock.acquire(True, timeout)
                     else:
-                        self._is_cancelled = True
+                        return self.__lock.acquire(False)
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__lock = None
 
         def set(self, /):
             if self._is_set or self._is_cancelled:
@@ -409,7 +428,8 @@ def get_threading_event_class():
             else:
                 self._is_set = True
 
-            self.__lock.release()
+            if (lock := self.__lock) is not None:
+                lock.release()
 
             return True
 
@@ -423,7 +443,7 @@ def get_threading_event_class():
 
 
 @once
-def get_eventlet_event_class():
+def _get_eventlet_event_class():
     global _EventletEvent
 
     from eventlet import sleep
@@ -448,7 +468,7 @@ def get_eventlet_event_class():
             self = object___new__(cls)
 
             self.__greenlet = None
-            self.__hub = get_hub()
+            self.__hub = None
 
             self._is_cancelled = False
             self._is_set = False
@@ -486,55 +506,74 @@ def get_eventlet_event_class():
             return self._is_set
 
         def wait(self, /, timeout=None):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.eventlet_checkpoints_cvar.get():
                     sleep()
 
-                return self._is_set
+                return True
+
+            if self._is_cancelled:
+                if _cp.eventlet_checkpoints_cvar.get():
+                    sleep()
+
+                return False
+
+            self.__hub = get_hub()
 
             try:
-                self.__greenlet = getcurrent()
+                if self._is_set:
+                    if _cp.eventlet_checkpoints_cvar.get():
+                        sleep()
+
+                    return True
 
                 try:
-                    hub = self.__hub
-
-                    if timeout is None or self._is_shielded:
-                        timer = None
-                    elif timeout > 0:
-                        timer = hub.schedule_call_local(timeout, self.__cancel)
-                    else:
-                        timer = hub.schedule_call_local(0, self.__cancel)
+                    self.__greenlet = getcurrent()
 
                     try:
-                        if self._is_shielded:
-                            return _cp._eventlet_repeat_if_cancelled(
-                                hub.switch,
-                                (),
-                                {},
+                        if timeout is None or self._is_shielded:
+                            timer = None
+                        elif timeout > 0:
+                            timer = self.__hub.schedule_call_local(
+                                timeout,
+                                self.__greenlet.switch,
+                                False,
                             )
                         else:
-                            return hub.switch()
-                    finally:
-                        if timer is not None:
-                            timer.cancel()
-                finally:
-                    self.__greenlet = None
-            finally:
-                if not self._is_set:
-                    try:
-                        self._is_unset.pop()
-                    except IndexError:
-                        self._is_set = True
-                    else:
-                        self._is_cancelled = True
+                            timer = self.__hub.schedule_call_local(
+                                0,
+                                self.__greenlet.switch,
+                                False,
+                            )
 
-        def __set(self, /):
+                        try:
+                            if self._is_shielded:
+                                return _cp._eventlet_repeat_if_cancelled(
+                                    self.__hub.switch,
+                                    (),
+                                    {},
+                                )
+                            else:
+                                return self.__hub.switch()
+                        finally:
+                            if timer is not None:
+                                timer.cancel()
+                    finally:
+                        self.__greenlet = None
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__hub = None
+
+        def __notify(self, /):
             if self.__greenlet is not None:
                 self.__greenlet.switch(True)
-
-        def __cancel(self, /):
-            if self.__greenlet is not None:
-                self.__greenlet.switch(False)
 
         def set(self, /):
             if self._is_set or self._is_cancelled:
@@ -547,15 +586,13 @@ def get_eventlet_event_class():
             else:
                 self._is_set = True
 
-            try:
-                current_hub = _threadlocal.hub
-            except AttributeError:  # no running hub
-                current_hub = None
+            if (actual_hub := self.__hub) is not None:
+                current_hub = getattr(_threadlocal, "hub", None)
 
-            if current_hub is self.__hub:
-                self.__hub.schedule_call_global(0, self.__set)
-            else:
-                self.__hub.schedule_call_threadsafe(0, self.__set)
+                if current_hub is actual_hub:
+                    actual_hub.schedule_call_global(0, self.__notify)
+                else:
+                    actual_hub.schedule_call_threadsafe(0, self.__notify)
 
             return True
 
@@ -569,7 +606,7 @@ def get_eventlet_event_class():
 
 
 @once
-def get_gevent_event_class():
+def _get_gevent_event_class():
     global _GeventEvent
 
     from gevent import get_hub, sleep
@@ -595,7 +632,7 @@ def get_gevent_event_class():
             self = object___new__(cls)
 
             self.__greenlet = None
-            self.__hub = get_hub()
+            self.__hub = None
 
             self._is_cancelled = False
             self._is_set = False
@@ -633,64 +670,79 @@ def get_gevent_event_class():
             return self._is_set
 
         def wait(self, /, timeout=None):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.gevent_checkpoints_cvar.get():
                     sleep()
 
-                return self._is_set
+                return True
+
+            if self._is_cancelled:
+                if _cp.gevent_checkpoints_cvar.get():
+                    sleep()
+
+                return False
+
+            self.__hub = get_hub()
 
             try:
-                self.__greenlet = getcurrent()
+                if self._is_set:
+                    if _cp.gevent_checkpoints_cvar.get():
+                        sleep()
+
+                    return True
 
                 try:
-                    hub = self.__hub
-
-                    if timeout is None or self._is_shielded:
-                        timer = None
-                    else:
-                        if timeout > 0:
-                            timer = hub.loop.timer(timeout)
-                        else:
-                            timer = hub.loop.timer(0)
-
-                        timer.start(self.__cancel, update=True)
+                    self.__greenlet = getcurrent()
 
                     try:
-                        watcher = hub.loop.async_()  # avoid LoopExit
-                        watcher.start(noop)
+                        if timeout is None or self._is_shielded:
+                            timer = None
+                        else:
+                            if timeout > 0:
+                                timer = self.__hub.loop.timer(timeout)
+                            else:
+                                timer = self.__hub.loop.timer(0)
+
+                            timer.start(
+                                self.__greenlet.switch,
+                                False,
+                                update=True,
+                            )
 
                         try:
-                            if self._is_shielded:
-                                return _cp._gevent_repeat_if_cancelled(
-                                    hub.switch,
-                                    (),
-                                    {},
-                                )
-                            else:
-                                return hub.switch()
-                        finally:
-                            watcher.close()
-                    finally:
-                        if timer is not None:
-                            timer.close()
-                finally:
-                    self.__greenlet = None
-            finally:
-                if not self._is_set:
-                    try:
-                        self._is_unset.pop()
-                    except IndexError:
-                        self._is_set = True
-                    else:
-                        self._is_cancelled = True
+                            watcher = self.__hub.loop.async_()
+                            watcher.start(noop)  # avoid LoopExit
 
-        def __set(self, /):
+                            try:
+                                if self._is_shielded:
+                                    return _cp._gevent_repeat_if_cancelled(
+                                        self.__hub.switch,
+                                        (),
+                                        {},
+                                    )
+                                else:
+                                    return self.__hub.switch()
+                            finally:
+                                watcher.close()
+                        finally:
+                            if timer is not None:
+                                timer.close()
+                    finally:
+                        self.__greenlet = None
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__hub = None
+
+        def __notify(self, /):
             if self.__greenlet is not None:
                 self.__greenlet.switch(True)
-
-        def __cancel(self, /):
-            if self.__greenlet is not None:
-                self.__greenlet.switch(False)
 
         def set(self, /):
             if self._is_set or self._is_cancelled:
@@ -703,15 +755,16 @@ def get_gevent_event_class():
             else:
                 self._is_set = True
 
-            current_hub = get_hub_if_exists()
+            if (actual_hub := self.__hub) is not None:
+                current_hub = get_hub_if_exists()
 
-            try:
-                if current_hub is self.__hub:
-                    self.__hub.loop.run_callback(self.__set)
-                else:
-                    self.__hub.loop.run_callback_threadsafe(self.__set)
-            except ValueError:  # event loop is destroyed
-                pass
+                try:
+                    if current_hub is actual_hub:
+                        actual_hub.loop.run_callback(self.__notify)
+                    else:
+                        actual_hub.loop.run_callback_threadsafe(self.__notify)
+                except ValueError:  # event loop is destroyed
+                    pass
 
             return True
 
@@ -725,10 +778,16 @@ def get_gevent_event_class():
 
 
 @once
-def get_asyncio_event_class():
+def _get_asyncio_event_class():
     global _AsyncioEvent
 
-    from asyncio import InvalidStateError, get_running_loop, shield, sleep
+    from asyncio import (
+        InvalidStateError,
+        _get_running_loop as get_running_loop_if_exists,
+        get_running_loop,
+        shield,
+        sleep,
+    )
 
     from . import _checkpoints as _cp
 
@@ -746,7 +805,7 @@ def get_asyncio_event_class():
             self = object___new__(cls)
 
             self.__future = None
-            self.__loop = get_running_loop()
+            self.__loop = None
 
             self._is_cancelled = False
             self._is_set = False
@@ -784,42 +843,59 @@ def get_asyncio_event_class():
             return self._is_set
 
         def __await__(self, /):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.asyncio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
 
-                return self._is_set
+                return True
+
+            if self._is_cancelled:
+                if _cp.asyncio_checkpoints_cvar.get():
+                    yield from sleep(0).__await__()
+
+                return False
+
+            self.__loop = get_running_loop()
 
             try:
-                self.__future = self.__loop.create_future()
+                if self._is_set:
+                    if _cp.asyncio_checkpoints_cvar.get():
+                        yield from sleep(0).__await__()
+
+                    return True
 
                 try:
-                    if self._is_shielded:
-                        yield from _cp._asyncio_repeat_if_cancelled(
-                            shield,
-                            [self.__future],
-                            {},
-                        ).__await__()
-                    else:
-                        yield from self.__future.__await__()
-                finally:
-                    self.__future = None
-            finally:
-                if not self._is_set:
+                    self.__future = self.__loop.create_future()
+
                     try:
-                        self._is_unset.pop()
-                    except IndexError:
-                        self._is_set = True
-                    else:
-                        self._is_cancelled = True
+                        if self._is_shielded:
+                            yield from _cp._asyncio_repeat_if_cancelled(
+                                shield,
+                                [self.__future],
+                                {},
+                            ).__await__()
+                        else:
+                            yield from self.__future.__await__()
+                    finally:
+                        self.__future = None
 
-            return True
+                    return True
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__loop = None
 
-        def __set(self, /):
+        def __notify(self, /):
             if self.__future is not None:
                 try:
                     self.__future.set_result(True)
-                except InvalidStateError:  # future is cancelled
+                except InvalidStateError:  # task is cancelled
                     pass
 
         def set(self, /):
@@ -833,18 +909,16 @@ def get_asyncio_event_class():
             else:
                 self._is_set = True
 
-            try:
-                current_loop = get_running_loop()
-            except RuntimeError:  # no running event loop
-                current_loop = None
+            if (actual_loop := self.__loop) is not None:
+                current_loop = get_running_loop_if_exists()
 
-            if current_loop is self.__loop:
-                self.__set()
-            else:
-                try:
-                    self.__loop.call_soon_threadsafe(self.__set)
-                except RuntimeError:  # event loop is closed
-                    pass
+                if current_loop is actual_loop:
+                    self.__notify()
+                else:
+                    try:
+                        actual_loop.call_soon_threadsafe(self.__notify)
+                    except RuntimeError:  # event loop is closed
+                        pass
 
             return True
 
@@ -858,7 +932,7 @@ def get_asyncio_event_class():
 
 
 @once
-def get_curio_event_class():
+def _get_curio_event_class():
     global _CurioEvent
 
     from concurrent.futures import Future, InvalidStateError
@@ -918,14 +992,26 @@ def get_curio_event_class():
             return self._is_set
 
         def __await__(self, /):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.curio_checkpoints_cvar.get():
                     yield from sleep(0).__await__()
 
-                return self._is_set
+                return True
+
+            if self._is_cancelled:
+                if _cp.curio_checkpoints_cvar.get():
+                    yield from sleep(0).__await__()
+
+                return False
+
+            self.__future = Future()
 
             try:
-                self.__future = Future()
+                if self._is_set:
+                    if _cp.curio_checkpoints_cvar.get():
+                        yield from sleep(0).__await__()
+
+                    return True
 
                 try:
                     if self._is_shielded:
@@ -937,18 +1023,18 @@ def get_curio_event_class():
                         yield from check_cancellation().__await__()
                     else:
                         yield from _future_wait(self.__future).__await__()
-                finally:
-                    self.__future = None
-            finally:
-                if not self._is_set:
-                    try:
-                        self._is_unset.pop()
-                    except IndexError:
-                        self._is_set = True
-                    else:
-                        self._is_cancelled = True
 
-            return True
+                    return True
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__future = None
 
         def set(self, /):
             if self._is_set or self._is_cancelled:
@@ -961,9 +1047,7 @@ def get_curio_event_class():
             else:
                 self._is_set = True
 
-            future = self.__future
-
-            if future is not None:
+            if (future := self.__future) is not None:
                 try:
                     future.set_result(True)
                 except InvalidStateError:  # future is cancelled
@@ -981,7 +1065,7 @@ def get_curio_event_class():
 
 
 @once
-def get_trio_event_class():
+def _get_trio_event_class():
     global _TrioEvent
 
     from trio import RunFinishedError
@@ -995,6 +1079,9 @@ def get_trio_event_class():
     )
 
     from . import _checkpoints as _cp
+
+    def abort(raise_cancel):
+        return Abort.SUCCEEDED
 
     class _TrioEvent(AsyncEvent):
         __slots__ = (
@@ -1010,7 +1097,7 @@ def get_trio_event_class():
             self = object___new__(cls)
 
             self.__task = None
-            self.__token = current_trio_token()
+            self.__token = None
 
             self._is_cancelled = False
             self._is_set = False
@@ -1048,41 +1135,55 @@ def get_trio_event_class():
             return self._is_set
 
         def __await__(self, /):
-            if self._is_set or self._is_cancelled:
+            if self._is_set:
                 if _cp.trio_checkpoints_cvar.get():
                     yield from checkpoint().__await__()
 
-                return self._is_set
+                return True
 
-            self.__task = current_task()
+            if self._is_cancelled:
+                if _cp.trio_checkpoints_cvar.get():
+                    yield from checkpoint().__await__()
 
-            if self._is_shielded:
-                yield from _cp._trio_repeat_if_cancelled(
-                    wait_task_rescheduled,
-                    [self.__abort],
-                    {},
-                ).__await__()
-            else:
-                yield from wait_task_rescheduled(self.__abort).__await__()
+                return False
 
-            self.__task = None
+            self.__token = current_trio_token()
+
+            try:
+                if self._is_set:
+                    if _cp.trio_checkpoints_cvar.get():
+                        yield from checkpoint().__await__()
+
+                    return True
+
+                try:
+                    self.__task = current_task()
+
+                    try:
+                        if self._is_shielded:
+                            yield from _cp._trio_repeat_if_cancelled(
+                                wait_task_rescheduled,
+                                [abort],
+                                {},
+                            ).__await__()
+                        else:
+                            yield from wait_task_rescheduled(abort).__await__()
+                    finally:
+                        self.__task = None
+                finally:
+                    if not self._is_set:
+                        try:
+                            self._is_unset.pop()
+                        except IndexError:
+                            self._is_set = True
+                        else:
+                            self._is_cancelled = True
+            finally:
+                self.__token = None
 
             return True
 
-        def __abort(self, /, raise_cancel):
-            self.__task = None
-
-            if not self._is_set:
-                try:
-                    self._is_unset.pop()
-                except IndexError:
-                    self._is_set = True
-                else:
-                    self._is_cancelled = True
-
-            return Abort.SUCCEEDED
-
-        def __set(self, /):
+        def __notify(self, /):
             if self.__task is not None:
                 reschedule(self.__task)
 
@@ -1097,18 +1198,19 @@ def get_trio_event_class():
             else:
                 self._is_set = True
 
-            try:
-                current_token = current_trio_token()
-            except RuntimeError:  # no called trio.run()
-                current_token = None
-
-            if current_token is self.__token:
-                self.__set()
-            else:
+            if (actual_token := self.__token) is not None:
                 try:
-                    self.__token.run_sync_soon(self.__set)
-                except RunFinishedError:  # trio.run() is finished
-                    pass
+                    current_token = current_trio_token()
+                except RuntimeError:  # no called trio.run()
+                    current_token = None
+
+                if current_token is actual_token:
+                    self.__notify()
+                else:
+                    try:
+                        actual_token.run_sync_soon(self.__notify)
+                    except RunFinishedError:  # trio.run() is finished
+                        pass
 
             return True
 
