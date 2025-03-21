@@ -10,7 +10,7 @@ from .lowlevel import (
     AsyncEvent,
     Flag,
     GreenEvent,
-    checkpoint,
+    async_checkpoint,
     green_checkpoint,
 )
 
@@ -75,7 +75,7 @@ class Event:
             self.__wakeup()
 
         if not rescheduled:
-            yield from checkpoint().__await__()
+            yield from async_checkpoint().__await__()
 
         return success
 
@@ -216,7 +216,7 @@ class REvent:
                 self.__wakeup()
 
         if not rescheduled:
-            yield from checkpoint().__await__()
+            yield from async_checkpoint().__await__()
 
         return success
 
@@ -385,7 +385,7 @@ class CountdownEvent:
                 self.__wakeup()
 
         if not rescheduled:
-            yield from checkpoint().__await__()
+            yield from async_checkpoint().__await__()
 
         return success
 

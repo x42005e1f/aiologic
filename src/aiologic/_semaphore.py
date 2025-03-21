@@ -7,7 +7,12 @@ import platform
 
 from collections import deque
 
-from .lowlevel import AsyncEvent, GreenEvent, checkpoint, green_checkpoint
+from .lowlevel import (
+    AsyncEvent,
+    GreenEvent,
+    async_checkpoint,
+    green_checkpoint,
+)
 
 try:
     from sys import _is_gil_enabled
@@ -139,7 +144,7 @@ class Semaphore:
                             self.release()
 
             if not rescheduled:
-                await checkpoint()
+                await async_checkpoint()
 
         return success
 

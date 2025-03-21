@@ -11,7 +11,7 @@ from collections import deque
 from itertools import count
 
 from ._lock import RLock
-from .lowlevel import MISSING, AsyncEvent, GreenEvent, repeat_if_cancelled
+from .lowlevel import MISSING, AsyncEvent, GreenEvent, shield
 
 
 class Condition:
@@ -266,7 +266,7 @@ class Condition:
         if (func := getattr(lock, "_async_acquire_restore", None)) is not None:
             await func(state)
         else:
-            await repeat_if_cancelled(lock.__aenter__)()
+            await shield(lock.__aenter__)()
 
     def _green_acquire_restore(self, /, state):
         lock = self.lock

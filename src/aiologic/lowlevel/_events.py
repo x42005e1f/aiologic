@@ -5,7 +5,7 @@
 
 from abc import ABC, abstractmethod
 
-from ._checkpoints import checkpoint, green_checkpoint
+from ._checkpoints import async_checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
 from ._threads import once
 
@@ -55,7 +55,7 @@ class SetEvent(Event):
         return True
 
     def __await__(self, /):
-        yield from checkpoint().__await__()
+        yield from async_checkpoint().__await__()
 
         return True
 
@@ -97,7 +97,7 @@ class DummyEvent(Event):
         return True
 
     def __await__(self, /):
-        yield from checkpoint().__await__()
+        yield from async_checkpoint().__await__()
 
         return True
 
@@ -139,7 +139,7 @@ class CancelledEvent(Event):
         return False
 
     def __await__(self, /):
-        yield from checkpoint().__await__()
+        yield from async_checkpoint().__await__()
 
         return False
 
@@ -315,15 +315,8 @@ class _TrioEvent(AsyncEvent):
 def _get_threading_event_class():
     global _ThreadingEvent
 
-    from . import _checkpoints as _cp, _monkey
+    from . import _checkpoints as _cp, _time
     from ._thread import allocate_lock
-
-    if _monkey._eventlet_patched("time"):
-        sleep = _monkey._import_eventlet_original("time").sleep
-    elif _monkey._gevent_patched("time"):
-        sleep = _monkey._import_gevent_original("time").sleep
-    else:
-        sleep = _monkey._import_python_original("time").sleep
 
     class _ThreadingEvent(GreenEvent):
         __slots__ = (
@@ -376,14 +369,14 @@ def _get_threading_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp.threading_checkpoints_cvar.get():
-                    sleep(0)
+                if _cp._threading_checkpoints_enabled():
+                    _time._threading_sleep(0)
 
                 return True
 
             if self._is_cancelled:
-                if _cp.threading_checkpoints_cvar.get():
-                    sleep(0)
+                if _cp._threading_checkpoints_enabled():
+                    _time._threading_sleep(0)
 
                 return False
 
@@ -394,8 +387,8 @@ def _get_threading_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.threading_checkpoints_cvar.get():
-                        sleep(0)
+                    if _cp._threading_checkpoints_enabled():
+                        _time._threading_sleep(0)
 
                     return True
 
@@ -446,11 +439,10 @@ def _get_threading_event_class():
 def _get_eventlet_event_class():
     global _EventletEvent
 
-    from eventlet import sleep
     from eventlet.hubs import _threadlocal, get_hub
     from greenlet import getcurrent
 
-    from . import _checkpoints as _cp, _patcher
+    from . import _checkpoints as _cp, _patcher, _tasks, _time
 
     _patcher.patch_eventlet()
 
@@ -507,14 +499,14 @@ def _get_eventlet_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp.eventlet_checkpoints_cvar.get():
-                    sleep()
+                if _cp._eventlet_checkpoints_enabled():
+                    _time._eventlet_sleep()
 
                 return True
 
             if self._is_cancelled:
-                if _cp.eventlet_checkpoints_cvar.get():
-                    sleep()
+                if _cp._eventlet_checkpoints_enabled():
+                    _time._eventlet_sleep()
 
                 return False
 
@@ -522,8 +514,8 @@ def _get_eventlet_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.eventlet_checkpoints_cvar.get():
-                        sleep()
+                    if _cp._eventlet_checkpoints_enabled():
+                        _time._eventlet_sleep()
 
                     return True
 
@@ -548,10 +540,10 @@ def _get_eventlet_event_class():
 
                         try:
                             if self._is_shielded:
-                                return _cp._eventlet_repeat_if_cancelled(
-                                    self.__hub.switch,
-                                    (),
-                                    {},
+                                return _tasks._eventlet_shield(
+                                    self.__hub,
+                                    None,
+                                    None,
                                 )
                             else:
                                 return self.__hub.switch()
@@ -609,11 +601,11 @@ def _get_eventlet_event_class():
 def _get_gevent_event_class():
     global _GeventEvent
 
-    from gevent import get_hub, sleep
+    from gevent import get_hub
     from gevent._hub_local import get_hub_if_exists
     from greenlet import getcurrent
 
-    from . import _checkpoints as _cp
+    from . import _checkpoints as _cp, _tasks, _time
 
     def noop():
         pass
@@ -671,14 +663,14 @@ def _get_gevent_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp.gevent_checkpoints_cvar.get():
-                    sleep()
+                if _cp._gevent_checkpoints_enabled():
+                    _time._gevent_sleep()
 
                 return True
 
             if self._is_cancelled:
-                if _cp.gevent_checkpoints_cvar.get():
-                    sleep()
+                if _cp._gevent_checkpoints_enabled():
+                    _time._gevent_sleep()
 
                 return False
 
@@ -686,8 +678,8 @@ def _get_gevent_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.gevent_checkpoints_cvar.get():
-                        sleep()
+                    if _cp._gevent_checkpoints_enabled():
+                        _time._gevent_sleep()
 
                     return True
 
@@ -715,10 +707,10 @@ def _get_gevent_event_class():
 
                             try:
                                 if self._is_shielded:
-                                    return _cp._gevent_repeat_if_cancelled(
-                                        self.__hub.switch,
-                                        (),
-                                        {},
+                                    return _tasks._gevent_shield(
+                                        self.__hub,
+                                        None,
+                                        None,
                                     )
                                 else:
                                     return self.__hub.switch()
@@ -785,11 +777,9 @@ def _get_asyncio_event_class():
         InvalidStateError,
         _get_running_loop as get_running_loop_if_exists,
         get_running_loop,
-        shield,
-        sleep,
     )
 
-    from . import _checkpoints as _cp
+    from . import _checkpoints as _cp, _tasks, _time
 
     class _AsyncioEvent(AsyncEvent):
         __slots__ = (
@@ -844,14 +834,14 @@ def _get_asyncio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp.asyncio_checkpoints_cvar.get():
-                    yield from sleep(0).__await__()
+                if _cp._asyncio_checkpoints_enabled():
+                    yield from _time._asyncio_sleep(0).__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp.asyncio_checkpoints_cvar.get():
-                    yield from sleep(0).__await__()
+                if _cp._asyncio_checkpoints_enabled():
+                    yield from _time._asyncio_sleep(0).__await__()
 
                 return False
 
@@ -859,8 +849,8 @@ def _get_asyncio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.asyncio_checkpoints_cvar.get():
-                        yield from sleep(0).__await__()
+                    if _cp._asyncio_checkpoints_enabled():
+                        yield from _time._asyncio_sleep(0).__await__()
 
                     return True
 
@@ -869,10 +859,10 @@ def _get_asyncio_event_class():
 
                     try:
                         if self._is_shielded:
-                            yield from _cp._asyncio_repeat_if_cancelled(
-                                shield,
-                                [self.__future],
-                                {},
+                            yield from _tasks._asyncio_shield(
+                                self.__future,
+                                None,
+                                None,
                             ).__await__()
                         else:
                             yield from self.__future.__await__()
@@ -937,10 +927,10 @@ def _get_curio_event_class():
 
     from concurrent.futures import Future, InvalidStateError
 
-    from curio import check_cancellation, sleep
+    from curio import check_cancellation
     from curio.traps import _future_wait
 
-    from . import _checkpoints as _cp
+    from . import _checkpoints as _cp, _tasks, _time
 
     class _CurioEvent(AsyncEvent):
         __slots__ = (
@@ -993,14 +983,14 @@ def _get_curio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp.curio_checkpoints_cvar.get():
-                    yield from sleep(0).__await__()
+                if _cp._curio_checkpoints_enabled():
+                    yield from _time._curio_sleep(0).__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp.curio_checkpoints_cvar.get():
-                    yield from sleep(0).__await__()
+                if _cp._curio_checkpoints_enabled():
+                    yield from _time._curio_sleep(0).__await__()
 
                 return False
 
@@ -1008,14 +998,14 @@ def _get_curio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.curio_checkpoints_cvar.get():
-                        yield from sleep(0).__await__()
+                    if _cp._curio_checkpoints_enabled():
+                        yield from _time._curio_sleep(0).__await__()
 
                     return True
 
                 try:
                     if self._is_shielded:
-                        yield from _cp._curio_repeat_if_cancelled(
+                        yield from _tasks._curio_shield(
                             _future_wait,
                             [self.__future],
                             {},
@@ -1071,14 +1061,13 @@ def _get_trio_event_class():
     from trio import RunFinishedError
     from trio.lowlevel import (
         Abort,
-        checkpoint,
         current_task,
         current_trio_token,
         reschedule,
         wait_task_rescheduled,
     )
 
-    from . import _checkpoints as _cp
+    from . import _checkpoints as _cp, _tasks
 
     def abort(raise_cancel):
         return Abort.SUCCEEDED
@@ -1136,14 +1125,14 @@ def _get_trio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp.trio_checkpoints_cvar.get():
-                    yield from checkpoint().__await__()
+                if _cp._trio_checkpoints_enabled():
+                    yield from _cp._trio_checkpoint().__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp.trio_checkpoints_cvar.get():
-                    yield from checkpoint().__await__()
+                if _cp._trio_checkpoints_enabled():
+                    yield from _cp._trio_checkpoint().__await__()
 
                 return False
 
@@ -1151,8 +1140,8 @@ def _get_trio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp.trio_checkpoints_cvar.get():
-                        yield from checkpoint().__await__()
+                    if _cp._trio_checkpoints_enabled():
+                        yield from _cp._trio_checkpoint().__await__()
 
                     return True
 
@@ -1161,7 +1150,7 @@ def _get_trio_event_class():
 
                     try:
                         if self._is_shielded:
-                            yield from _cp._trio_repeat_if_cancelled(
+                            yield from _tasks._trio_shield(
                                 wait_task_rescheduled,
                                 [abort],
                                 {},

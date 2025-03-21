@@ -6,107 +6,259 @@
 import os
 
 from contextvars import ContextVar
-from inspect import isawaitable, iscoroutinefunction
 
-from wrapt import decorator, when_imported
+from wrapt import when_imported
 
+from . import _time
+from ._ident import current_thread_ident
 from ._libraries import current_async_library, current_green_library
 
-threading_checkpoints_cvar = ContextVar(
-    "threading_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_THREADING_CHECKPOINTS", "")),
+THREADING_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_THREADING_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_GREEN_CHECKPOINTS", "") else "",
+    )
 )
-eventlet_checkpoints_cvar = ContextVar(
-    "eventlet_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_EVENTLET_CHECKPOINTS", "")),
+EVENTLET_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_EVENTLET_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_GREEN_CHECKPOINTS", "") else "",
+    )
 )
-gevent_checkpoints_cvar = ContextVar(
-    "gevent_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_GEVENT_CHECKPOINTS", "")),
+GEVENT_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_GEVENT_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_GREEN_CHECKPOINTS", "") else "",
+    )
+)
+ASYNCIO_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_ASYNCIO_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_ASYNC_CHECKPOINTS", "") else "",
+    )
+)
+CURIO_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_CURIO_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_ASYNC_CHECKPOINTS", "") else "",
+    )
+)
+TRIO_CHECKPOINTS_ENABLED = bool(
+    os.getenv(
+        "AIOLOGIC_TRIO_CHECKPOINTS",
+        "1" if os.getenv("AIOLOGIC_ASYNC_CHECKPOINTS", "1") else "",
+    )
 )
 
-asyncio_checkpoints_cvar = ContextVar(
-    "asyncio_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_ASYNCIO_CHECKPOINTS", "")),
+_green_checkpoints_cvar = ContextVar(
+    "_green_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
 )
-curio_checkpoints_cvar = ContextVar(
-    "curio_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_CURIO_CHECKPOINTS", "")),
+_async_checkpoints_cvar = ContextVar(
+    "_async_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
 )
-trio_checkpoints_cvar = ContextVar(
-    "trio_checkpoints_cvar",
-    default=bool(os.getenv("AIOLOGIC_TRIO_CHECKPOINTS", "1")),
-)
+
+_green_checkpoints_enabled = THREADING_CHECKPOINTS_ENABLED
+_async_checkpoints_enabled = False
 
 
-def _threading_checkpoint():
-    global _threading_checkpoint
+@when_imported("eventlet")
+def _green_checkpoints_enabled_hook(_):
+    global _green_checkpoints_enabled
 
-    from . import _monkey
-
-    if _monkey._eventlet_patched("time"):
-        sleep = _monkey._import_eventlet_original("time").sleep
-    elif _monkey._gevent_patched("time"):
-        sleep = _monkey._import_gevent_original("time").sleep
-    else:
-        sleep = _monkey._import_python_original("time").sleep
-
-    def _threading_checkpoint():
-        sleep(0)
-
-    _threading_checkpoint()
+    if EVENTLET_CHECKPOINTS_ENABLED:
+        _green_checkpoints_enabled = True
 
 
-def _eventlet_checkpoint():
-    global _eventlet_checkpoint
+@when_imported("gevent")
+def _green_checkpoints_enabled_hook(_):
+    global _green_checkpoints_enabled
 
-    from eventlet import sleep as _eventlet_checkpoint
-
-    _eventlet_checkpoint()
-
-
-def _gevent_checkpoint():
-    global _gevent_checkpoint
-
-    from gevent import sleep as _gevent_checkpoint
-
-    _gevent_checkpoint()
+    if GEVENT_CHECKPOINTS_ENABLED:
+        _green_checkpoints_enabled = True
 
 
-def green_checkpoint(*, force=False):
-    library = current_green_library(failsafe=True)
+@when_imported("asyncio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
 
-    if library == "threading":
-        if force or threading_checkpoints_cvar.get():
-            _threading_checkpoint()
-    elif library == "eventlet":
-        if force or eventlet_checkpoints_cvar.get():
-            _eventlet_checkpoint()
-    elif library == "gevent":
-        if force or gevent_checkpoints_cvar.get():
-            _gevent_checkpoint()
+    if ASYNCIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
 
 
-async def _asyncio_checkpoint():
-    global _asyncio_checkpoint
+@when_imported("curio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
 
-    from asyncio import sleep
-
-    async def _asyncio_checkpoint():
-        await sleep(0)
-
-    await _asyncio_checkpoint()
+    if CURIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
 
 
-async def _curio_checkpoint():
-    global _curio_checkpoint
+@when_imported("trio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
 
-    from curio import sleep
+    if TRIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
 
-    async def _curio_checkpoint():
-        await sleep(0)
 
-    await _curio_checkpoint()
+def _threading_checkpoints_enabled():
+    return THREADING_CHECKPOINTS_ENABLED
+
+
+def _eventlet_checkpoints_enabled():
+    return EVENTLET_CHECKPOINTS_ENABLED
+
+
+def _gevent_checkpoints_enabled():
+    return GEVENT_CHECKPOINTS_ENABLED
+
+
+def _asyncio_checkpoints_enabled():
+    return ASYNCIO_CHECKPOINTS_ENABLED
+
+
+def _curio_checkpoints_enabled():
+    return CURIO_CHECKPOINTS_ENABLED
+
+
+def _trio_checkpoints_enabled():
+    return TRIO_CHECKPOINTS_ENABLED
+
+
+def _green_checkpoints_reset(token):
+    pass
+
+
+def _async_checkpoints_reset(token):
+    pass
+
+
+def _green_checkpoints_set(enabled):
+    global _threading_checkpoints_enabled
+    global _eventlet_checkpoints_enabled
+    global _gevent_checkpoints_enabled
+
+    global _green_checkpoints_enabled
+    global _green_checkpoints_reset
+    global _green_checkpoints_set
+
+    if enabled or _green_checkpoints_enabled:
+
+        def _threading_checkpoints_enabled():
+            ident, enabled = _green_checkpoints_cvar.get()
+
+            if enabled is None:
+                return THREADING_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return THREADING_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        def _eventlet_checkpoints_enabled():
+            ident, enabled = _green_checkpoints_cvar.get()
+
+            if enabled is None:
+                return EVENTLET_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return EVENTLET_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        def _gevent_checkpoints_enabled():
+            ident, enabled = _green_checkpoints_cvar.get()
+
+            if enabled is None:
+                return GEVENT_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return GEVENT_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        _green_checkpoints_enabled = True
+
+        def _green_checkpoints_reset(token):
+            _green_checkpoints_cvar.reset(token)
+
+        def _green_checkpoints_set(enabled):
+            return _green_checkpoints_cvar.set((
+                current_thread_ident(),
+                enabled,
+            ))
+
+        return _green_checkpoints_set(enabled)
+
+    return None
+
+
+def _async_checkpoints_set(enabled):
+    global _asyncio_checkpoints_enabled
+    global _curio_checkpoints_enabled
+    global _trio_checkpoints_enabled
+
+    global _async_checkpoints_enabled
+    global _async_checkpoints_reset
+    global _async_checkpoints_set
+
+    if enabled or _async_checkpoints_enabled:
+
+        def _asyncio_checkpoints_enabled():
+            ident, enabled = _async_checkpoints_cvar.get()
+
+            if enabled is None:
+                return ASYNCIO_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return ASYNCIO_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        def _curio_checkpoints_enabled():
+            ident, enabled = _async_checkpoints_cvar.get()
+
+            if enabled is None:
+                return CURIO_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return CURIO_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        def _trio_checkpoints_enabled():
+            ident, enabled = _async_checkpoints_cvar.get()
+
+            if enabled is None:
+                return TRIO_CHECKPOINTS_ENABLED
+
+            if ident != current_thread_ident():
+                return TRIO_CHECKPOINTS_ENABLED
+
+            return enabled
+
+        _async_checkpoints_enabled = True
+
+        def _async_checkpoints_reset(token):
+            _async_checkpoints_cvar.reset(token)
+
+        def _async_checkpoints_set(enabled):
+            return _async_checkpoints_cvar.set((
+                current_thread_ident(),
+                enabled,
+            ))
+
+        return _async_checkpoints_set(enabled)
+
+    return None
 
 
 async def _trio_checkpoint():
@@ -117,360 +269,31 @@ async def _trio_checkpoint():
     await _trio_checkpoint()
 
 
-async def checkpoint(*, force=False):
-    library = current_async_library(failsafe=True)
-
-    if library == "asyncio":
-        if force or asyncio_checkpoints_cvar.get():
-            await _asyncio_checkpoint()
-    elif library == "curio":
-        if force or curio_checkpoints_cvar.get():
-            await _curio_checkpoint()
-    elif library == "trio":
-        if force or trio_checkpoints_cvar.get():
-            await _trio_checkpoint()
-
-
-async_checkpoint = checkpoint
-
-
-async def _asyncio_checkpoint_if_cancelled():
-    pass
-
-
-@when_imported("anyio")
-def _asyncio_checkpoint_if_cancelled_hook(_):
-    global _asyncio_checkpoint_if_cancelled
-
-    async def _asyncio_checkpoint_if_cancelled():
-        global _asyncio_checkpoint_if_cancelled
-
-        from anyio.lowlevel import checkpoint_if_cancelled
-
-        _asyncio_checkpoint_if_cancelled = checkpoint_if_cancelled
-
-        await _asyncio_checkpoint_if_cancelled()
-
-
-async def _curio_checkpoint_if_cancelled():
-    global _curio_checkpoint_if_cancelled
-
-    from curio import check_cancellation as _curio_checkpoint_if_cancelled
-
-    await _curio_checkpoint_if_cancelled()
-
-
-async def _trio_checkpoint_if_cancelled():
-    global _trio_checkpoint_if_cancelled
-
-    from trio.lowlevel import checkpoint_if_cancelled
-
-    _trio_checkpoint_if_cancelled = checkpoint_if_cancelled
-
-    await _trio_checkpoint_if_cancelled()
-
-
-async def checkpoint_if_cancelled(*, force=False):
-    library = current_async_library(failsafe=True)
-
-    if library == "asyncio":
-        if force or asyncio_checkpoints_cvar.get():
-            await _asyncio_checkpoint_if_cancelled()
-    elif library == "curio":
-        if force or curio_checkpoints_cvar.get():
-            await _curio_checkpoint_if_cancelled()
-    elif library == "trio":
-        if force or trio_checkpoints_cvar.get():
-            await _trio_checkpoint_if_cancelled()
-
-
-def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
-    global _eventlet_repeat_if_cancelled
-
-    from eventlet import Timeout
-    from eventlet.hubs import get_hub
-    from greenlet import getcurrent
-
-    def _eventlet_repeat_if_cancelled(wrapped, args, kwargs, /):
-        timeouts = []
-
-        try:
-            while True:
-                try:
-                    result = wrapped(*args, **kwargs)
-                except Timeout as timeout:
-                    timeouts.append(timeout)
-                else:
-                    break
-
-            if timeouts:
-                raise timeouts[0]
-        finally:
-            try:
-                for timeout in timeouts[1:]:
-                    if not timeout.pending:
-                        timeout.timer = get_hub().schedule_call_global(
-                            0,
-                            getcurrent().throw,
-                            timeout,
-                        )
-            finally:
-                del timeouts
-
-        return result
-
-    return _eventlet_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
-    global _gevent_repeat_if_cancelled
-
-    from gevent import Timeout, get_hub
-    from greenlet import getcurrent
-
-    def _gevent_repeat_if_cancelled(wrapped, args, kwargs, /):
-        timeouts = []
-
-        try:
-            while True:
-                try:
-                    result = wrapped(*args, **kwargs)
-                except Timeout as timeout:
-                    timeouts.append(timeout)
-                else:
-                    break
-
-            if timeouts:
-                raise timeouts[0]
-        finally:
-            try:
-                for timeout in timeouts[:0:-1]:
-                    if not timeout.pending:
-                        timeout.timer.close()
-                        timeout.timer = get_hub().loop.run_callback(
-                            getcurrent().throw,
-                            timeout,
-                        )
-            finally:
-                del timeouts
-
-        return result
-
-    return _gevent_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-@decorator
-def _green_repeat_if_cancelled(wrapped, instance, args, kwargs, /):
-    library = current_green_library()
-
-    if library == "threading":
-        result = wrapped(*args, **kwargs)
-    elif library == "eventlet":
-        result = _eventlet_repeat_if_cancelled(wrapped, args, kwargs)
-    elif library == "gevent":
-        result = _gevent_repeat_if_cancelled(wrapped, args, kwargs)
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
-
-    return result
-
-
-async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
-    global _asyncio_repeat_if_cancelled
-
-    from asyncio import CancelledError
-
-    async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
-        exc = None
-
-        try:
-            while True:
-                try:
-                    if args is None:
-                        result = await wrapped
-                    else:
-                        result = await wrapped(*args, **kwargs)
-                except CancelledError as e:
-                    exc = e
-                else:
-                    break
-
-            if exc is not None:
-                raise exc
-        finally:
-            del exc
-
-        return result
-
-    return await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-@when_imported("anyio")
-def _asyncio_repeat_if_cancelled_hook(_):
-    global _asyncio_repeat_if_cancelled
-
-    async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
-        global _asyncio_repeat_if_cancelled
-
-        from asyncio import CancelledError
-
-        from anyio import CancelScope
-
-        async def _asyncio_repeat_if_cancelled(wrapped, args, kwargs, /):
-            with CancelScope(shield=True):
-                exc = None
-
-                try:
-                    while True:
-                        try:
-                            if args is None:
-                                result = await wrapped
-                            else:
-                                result = await wrapped(*args, **kwargs)
-                        except CancelledError as e:
-                            exc = e
-                        else:
-                            break
-
-                    if exc is not None:
-                        raise exc
-                finally:
-                    del exc
-
-            return result
-
-        return await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-async def _curio_repeat_if_cancelled(wrapped, args, kwargs, /):
-    global _curio_repeat_if_cancelled
-
-    from curio import disable_cancellation
-
-    async def _curio_repeat_if_cancelled(wrapped, args, kwargs, /):
-        async with disable_cancellation():
-            if args is None:
-                return await wrapped
-            else:
-                return await wrapped(*args, **kwargs)
-
-    return await _curio_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-async def _trio_repeat_if_cancelled(wrapped, args, kwargs, /):
-    global _trio_repeat_if_cancelled
-
-    from trio import CancelScope
-
-    async def _trio_repeat_if_cancelled(wrapped, args, kwargs, /):
-        with CancelScope(shield=True):
-            if args is None:
-                return await wrapped
-            else:
-                return await wrapped(*args, **kwargs)
-
-    return await _trio_repeat_if_cancelled(wrapped, args, kwargs)
-
-
-@decorator
-async def _async_repeat_if_cancelled(wrapped, instance, args, kwargs, /):
-    library = current_async_library()
-
-    if library == "asyncio":
-        result = await _asyncio_repeat_if_cancelled(wrapped, args, kwargs)
-    elif library == "curio":
-        result = await _curio_repeat_if_cancelled(wrapped, args, kwargs)
-    elif library == "trio":
-        result = await _trio_repeat_if_cancelled(wrapped, args, kwargs)
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
-
-    return result
-
-
-async def _async_repeat_if_cancelled_for_awaitable(wrapped, /):
-    library = current_async_library()
-
-    if library == "asyncio":
-        result = await _asyncio_repeat_if_cancelled(wrapped, None, None)
-    elif library == "curio":
-        result = await _curio_repeat_if_cancelled(wrapped, None, None)
-    elif library == "trio":
-        result = await _trio_repeat_if_cancelled(wrapped, None, None)
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
-
-    return result
-
-
-def repeat_if_cancelled(wrapped, /):
-    if isawaitable(wrapped):
-        return _async_repeat_if_cancelled_for_awaitable(wrapped)
-    elif iscoroutinefunction(wrapped):
-        return _async_repeat_if_cancelled(wrapped)
-    else:
-        return _green_repeat_if_cancelled(wrapped)
-
-
-async def _asyncio_cancel_shielded_checkpoint():
-    global _asyncio_cancel_shielded_checkpoint
-
-    from asyncio import shield, sleep
-
-    async def _asyncio_cancel_shielded_checkpoint():
-        await shield(sleep(0))
-
-    await _asyncio_cancel_shielded_checkpoint()
-
-
-@when_imported("anyio")
-def _asyncio_cancel_shielded_checkpoint_hook(_):
-    global _asyncio_cancel_shielded_checkpoint
-
-    async def _asyncio_cancel_shielded_checkpoint():
-        global _asyncio_cancel_shielded_checkpoint
-
-        from anyio.lowlevel import cancel_shielded_checkpoint
-
-        _asyncio_cancel_shielded_checkpoint = cancel_shielded_checkpoint
-
-        await _asyncio_cancel_shielded_checkpoint()
-
-
-async def _curio_cancel_shielded_checkpoint():
-    global _curio_cancel_shielded_checkpoint
-
-    from curio import disable_cancellation, sleep
-
-    async def _curio_cancel_shielded_checkpoint():
-        async with disable_cancellation():
-            await sleep(0)
-
-    await _curio_cancel_shielded_checkpoint()
-
-
-async def _trio_cancel_shielded_checkpoint():
-    global _trio_cancel_shielded_checkpoint
-
-    from trio.lowlevel import cancel_shielded_checkpoint
-
-    _trio_cancel_shielded_checkpoint = cancel_shielded_checkpoint
-
-    await _trio_cancel_shielded_checkpoint()
-
-
-async def cancel_shielded_checkpoint(*, force=False):
-    library = current_async_library(failsafe=True)
-
-    if library == "asyncio":
-        if force or asyncio_checkpoints_cvar.get():
-            await _asyncio_cancel_shielded_checkpoint()
-    elif library == "curio":
-        if force or curio_checkpoints_cvar.get():
-            await _curio_cancel_shielded_checkpoint()
-    elif library == "trio":
-        if force or trio_checkpoints_cvar.get():
-            await _trio_cancel_shielded_checkpoint()
+def green_checkpoint(*, force=False):
+    if _green_checkpoints_enabled or force:
+        library = current_green_library(failsafe=True)
+
+        if library == "threading":
+            if force or _threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+        elif library == "eventlet":
+            if force or _eventlet_checkpoints_enabled():
+                _time._eventlet_sleep()
+        elif library == "gevent":
+            if force or _gevent_checkpoints_enabled():
+                _time._gevent_sleep()
+
+
+async def async_checkpoint(*, force=False):
+    if _async_checkpoints_enabled or force:
+        library = current_async_library(failsafe=True)
+
+        if library == "asyncio":
+            if force or _asyncio_checkpoints_enabled():
+                await _time._asyncio_sleep(0)
+        elif library == "curio":
+            if force or _curio_checkpoints_enabled():
+                await _time._curio_sleep(0)
+        elif library == "trio":
+            if force or _trio_checkpoints_enabled():
+                await _trio_checkpoint()

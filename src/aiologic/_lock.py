@@ -8,7 +8,7 @@ from collections import deque
 from .lowlevel import (
     AsyncEvent,
     GreenEvent,
-    checkpoint,
+    async_checkpoint,
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
@@ -95,7 +95,7 @@ class PLock:
                             self.__release()
 
             if not rescheduled:
-                await checkpoint()
+                await async_checkpoint()
 
         return success
 

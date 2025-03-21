@@ -14,7 +14,7 @@ from .lowlevel import (
     MISSING,
     AsyncEvent,
     GreenEvent,
-    checkpoint,
+    async_checkpoint,
     green_checkpoint,
 )
 
@@ -67,7 +67,7 @@ class SimpleQueue:
 
     async def async_put(self, /, item, *, blocking=True):
         if blocking:
-            await checkpoint()
+            await async_checkpoint()
 
         self._data.append(item)
         self.__sem.async_release()
@@ -304,7 +304,7 @@ class Queue:
                                 success = True
 
                 if not rescheduled:
-                    await checkpoint()
+                    await async_checkpoint()
 
             if not success:
                 raise QueueFull
@@ -400,7 +400,7 @@ class Queue:
                                 success = True
 
                 if not rescheduled:
-                    await checkpoint()
+                    await async_checkpoint()
 
             if not success:
                 raise QueueEmpty

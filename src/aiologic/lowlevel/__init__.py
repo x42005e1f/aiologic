@@ -5,17 +5,7 @@
 
 from ._checkpoints import (
     async_checkpoint as async_checkpoint,
-    asyncio_checkpoints_cvar as asyncio_checkpoints_cvar,
-    cancel_shielded_checkpoint as cancel_shielded_checkpoint,
-    checkpoint as checkpoint,
-    checkpoint_if_cancelled as checkpoint_if_cancelled,
-    curio_checkpoints_cvar as curio_checkpoints_cvar,
-    eventlet_checkpoints_cvar as eventlet_checkpoints_cvar,
-    gevent_checkpoints_cvar as gevent_checkpoints_cvar,
     green_checkpoint as green_checkpoint,
-    repeat_if_cancelled as repeat_if_cancelled,
-    threading_checkpoints_cvar as threading_checkpoints_cvar,
-    trio_checkpoints_cvar as trio_checkpoints_cvar,
 )
 from ._events import (
     CANCELLED_EVENT as CANCELLED_EVENT,
@@ -58,6 +48,9 @@ from ._libraries import (
 from ._markers import (
     MISSING as MISSING,
     MissingType as MissingType,
+)
+from ._tasks import (
+    shield as shield,
 )
 from ._threads import (
     current_thread as current_thread,

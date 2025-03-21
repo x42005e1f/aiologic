@@ -9,7 +9,7 @@ from .lowlevel import (
     AsyncEvent,
     Flag,
     GreenEvent,
-    checkpoint,
+    async_checkpoint,
     green_checkpoint,
 )
 
@@ -74,7 +74,7 @@ class Latch:
             raise BrokenBarrierError
 
         if not rescheduled or force_checkpoint:
-            yield from checkpoint(force=force_checkpoint).__await__()
+            yield from async_checkpoint(force=force_checkpoint).__await__()
 
     def wait(self, /, timeout=None):
         reached = self.__reached
@@ -292,7 +292,7 @@ class Barrier:
                     if self.__acquire_nowait_as_waiter(token):
                         self.__wakeup_as_waiter()
 
-                        yield from checkpoint(force=True).__await__()
+                        yield from async_checkpoint(force=True).__await__()
 
                         rescheduled = True
                     else:
@@ -312,7 +312,7 @@ class Barrier:
             raise BrokenBarrierError
 
         if not rescheduled:
-            yield from checkpoint().__await__()
+            yield from async_checkpoint().__await__()
 
         return index
 
