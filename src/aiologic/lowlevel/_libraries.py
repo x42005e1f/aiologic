@@ -28,7 +28,7 @@ def _eventlet_running():
 
 
 @when_imported("eventlet")
-def _eventlet_running_hook():
+def _eventlet_running_hook(_):
     global _eventlet_running
 
     def _eventlet_running():
