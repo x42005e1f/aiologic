@@ -75,6 +75,9 @@ Commit messages are consistent with
   the module name and use the correct class name in subclasses (except for
   private classes). Low-level events now show their library identity and status
   in representation.
+- `sniffio` is now a required dependency. This is done to simplify the code
+  logic (which previously treated `sniffio` as an optional dependency) and
+  should not introduce any additional complexity.
 - The build system has been changed from `setuptools` to `uv` + `hatch`. It
   keeps the same `pyproject.toml` format, but has better performance, better
   logging, and builds cleaner source distributions (without `setup.cfg`).
@@ -87,6 +90,8 @@ Commit messages are consistent with
 
 ### Removed
 
+- `aiologic.lowlevel.<library>_running()`: these functions have not been used
+  and could be misleading.
 - `aiologic.lowlevel.checkpoint()` in favor of
   `aiologic.lowlevel.async_checkpoint()` (previously alias): checkpoints are
   now strictly separated into green and async checkpoints.
@@ -96,6 +101,12 @@ Commit messages are consistent with
 - `aiologic.lowlevel.<library>_checkpoints_cvar` in favor of
   `aiologic.lowlevel.checkpoints()` and `aiologic.lowlevel.nocheckpoints()`
   (not yet implemented).
+- `AIOLOGIC_GREEN_LIBRARY` and `AIOLOGIC_ASYNC_LIBRARY` environment variables:
+  they could be confusing because they did not affect
+  `sniffio.current_async_library()`. The alternative of setting the default
+  directly in `sniffio` (via `sniffio.thread_local.__class__.name`) affects
+  `anyio`, which refuses to make a successful `anyio.run()` call when the
+  current async library is set.
 
 ### Fixed
 

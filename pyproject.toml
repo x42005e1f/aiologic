@@ -59,6 +59,7 @@ keywords = [
     "trio",
 ]
 dependencies = [
+    "sniffio>=1.3.0",
     "wrapt>=1.16.0",
 ]
 
@@ -67,7 +68,6 @@ anyio = ["anyio>=3.0.0"]
 curio = ["curio>=1.4"]
 eventlet = ["eventlet>=0.17.0"]
 gevent = ["gevent>=21.1.0"]
-sniffio = ["sniffio>=1.3.0"]
 trio = ["trio>=0.23.0"]
 trio-asyncio = ["trio-asyncio>=0.13.0"]
 typing-extensions = ["typing-extensions>=4.1.0"]

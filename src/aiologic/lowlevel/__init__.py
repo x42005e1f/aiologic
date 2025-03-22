@@ -34,16 +34,10 @@ from ._ident import (
 from ._libraries import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
     GreenLibraryNotFoundError as GreenLibraryNotFoundError,
-    asyncio_running as asyncio_running,
-    curio_running as curio_running,
     current_async_library as current_async_library,
     current_async_library_tlocal as current_async_library_tlocal,
     current_green_library as current_green_library,
     current_green_library_tlocal as current_green_library_tlocal,
-    eventlet_running as eventlet_running,
-    gevent_running as gevent_running,
-    threading_running as threading_running,
-    trio_running as trio_running,
 )
 from ._markers import (
     MISSING as MISSING,
