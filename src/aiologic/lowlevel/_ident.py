@@ -6,7 +6,13 @@
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread, current_thread_ident
 
-_None_id = id(None)
+
+def _current_threading_token():
+    global _current_threading_token
+
+    from multiprocessing import current_process as _current_threading_token
+
+    return _current_threading_token()
 
 
 def _current_eventlet_token():
@@ -62,7 +68,7 @@ def current_green_token():
     library = current_green_library()
 
     if library == "threading":
-        return None
+        return _current_threading_token()
     elif library == "eventlet":
         return _current_eventlet_token()
     elif library == "gevent":
@@ -90,7 +96,7 @@ def current_green_token_ident():
     library = current_green_library()
 
     if library == "threading":
-        return (library, _None_id)
+        return (library, _current_threading_token().pid)
     elif library == "eventlet":
         return (library, id(_current_eventlet_token()))
     elif library == "gevent":
