@@ -116,7 +116,7 @@ _finalizers_lock = allocate_lock()
 _shutdown_locks = deque()
 
 try:
-    from _thread import _local as ThreadLocal
+    from ._thread import _local as ThreadLocal
 except ImportError:
     object___new__ = object.__new__
     object___dir__ = object.__dir__
