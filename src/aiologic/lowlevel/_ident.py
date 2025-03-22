@@ -7,12 +7,32 @@ from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread, current_thread_ident
 
 
-def _current_threading_token():
-    global _current_threading_token
+def _current_process():
+    global _current_process
 
-    from multiprocessing import current_process as _current_threading_token
+    try:
+        from multiprocessing import current_process as _current_process
+    except ImportError:
 
-    return _current_threading_token()
+        def _current_process():
+            return None
+
+    return _current_process()
+
+
+def _current_process_ident():
+    global _current_process_ident
+
+    try:
+        from multiprocessing import current_process
+    except ImportError:
+        from os import getpid as _current_process_ident
+    else:
+
+        def _current_process_ident():
+            return current_process().pid
+
+    return _current_process_ident()
 
 
 def _current_eventlet_token():
@@ -68,7 +88,7 @@ def current_green_token():
     library = current_green_library()
 
     if library == "threading":
-        return _current_threading_token()
+        return _current_process()
     elif library == "eventlet":
         return _current_eventlet_token()
     elif library == "gevent":
@@ -96,7 +116,7 @@ def current_green_token_ident():
     library = current_green_library()
 
     if library == "threading":
-        return (library, _current_threading_token().pid)
+        return (library, _current_process_ident())
     elif library == "eventlet":
         return (library, id(_current_eventlet_token()))
     elif library == "gevent":
