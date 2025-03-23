@@ -95,7 +95,11 @@ class PLock:
                             self.__release()
 
             if not rescheduled:
-                await async_checkpoint()
+                try:
+                    await async_checkpoint()
+                except BaseException:
+                    self.__release()
+                    raise
 
         return success
 
@@ -126,7 +130,11 @@ class PLock:
                             self.__release()
 
             if not rescheduled:
-                green_checkpoint()
+                try:
+                    green_checkpoint()
+                except BaseException:
+                    self.__release()
+                    raise
 
         return success
 

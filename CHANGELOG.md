@@ -128,6 +128,9 @@ Commit messages are consistent with
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been
   exceeded.
+- The locks and semaphores (and the capacity limiters and simple queues based
+  on them) did not handle exceptions at checkpoints, so that cancelling at
+  checkpoints (`trio` case by default) did not release the primitive.
 - The methods of complex queues (all except `aiologic.SimpleQueue`) used an
   incorrect condition for cancellation handling, which could break
   thread-safety after cancellation. Now the handling is changed to match that

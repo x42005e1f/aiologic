@@ -144,7 +144,11 @@ class Semaphore:
                             self.release()
 
             if not rescheduled:
-                await async_checkpoint()
+                try:
+                    await async_checkpoint()
+                except BaseException:
+                    self.release()
+                    raise
 
         return success
 
@@ -176,7 +180,11 @@ class Semaphore:
                             self.release()
 
             if not rescheduled:
-                green_checkpoint()
+                try:
+                    green_checkpoint()
+                except BaseException:
+                    self.release()
+                    raise
 
         return success
 
