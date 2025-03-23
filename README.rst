@@ -131,7 +131,7 @@ Synchronization primitives:
 * Barriers: single-use, and cyclic
 * Semaphores: counting, and bounded
 * Capacity limiters: borrowable, and reentrant
-* Locks: primitive, ownable, and reentrant
+* Locks: primitive, bounded, ownable, and reentrant
 * Condition variables
 * Resource guards
 

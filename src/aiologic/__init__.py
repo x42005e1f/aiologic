@@ -28,6 +28,7 @@ from ._limiter import (
     RCapacityLimiter as RCapacityLimiter,
 )
 from ._lock import (
+    BLock as BLock,
     Lock as Lock,
     PLock as PLock,
     RLock as RLock,

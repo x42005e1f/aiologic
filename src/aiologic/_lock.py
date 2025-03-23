@@ -167,6 +167,61 @@ class PLock:
         return len(self.__waiters)
 
 
+class BLock(PLock):
+    __slots__ = ("__locked",)
+
+    def __new__(cls, /):
+        self = super().__new__(cls)
+
+        self.__locked = []
+
+        return self
+
+    async def async_acquire(self, /, *, blocking=True):
+        success = await super().async_acquire(blocking=blocking)
+
+        if success:
+            self.__locked.append(True)
+
+        return success
+
+    def green_acquire(self, /, *, blocking=True, timeout=None):
+        success = super().green_acquire(blocking=blocking, timeout=timeout)
+
+        if success:
+            self.__locked.append(True)
+
+        return success
+
+    def async_release(self, /):
+        try:
+            self.__locked.pop()
+        except IndexError:
+            success = False
+        else:
+            success = True
+
+        if not success:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
+
+        super().async_release()
+
+    def green_release(self, /):
+        try:
+            self.__locked.pop()
+        except IndexError:
+            success = False
+        else:
+            success = True
+
+        if not success:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
+
+        super().green_release()
+
+
 class Lock(PLock):
     __slots__ = ("owner",)
 

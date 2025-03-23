@@ -10,7 +10,7 @@ import threading
 from types import TracebackType
 from typing import Any, Callable, Generator, Generic, TypeVar, overload
 
-from ._lock import Lock, PLock, RLock
+from ._lock import BLock, Lock, PLock, RLock
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -22,6 +22,7 @@ _T_co = TypeVar(
     bound=(
         RLock
         | Lock
+        | BLock
         | PLock
         | threading.RLock
         | threading.Lock
