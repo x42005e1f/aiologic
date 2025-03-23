@@ -41,6 +41,16 @@ class Event(ABC):
     def shield(self, /, value):
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def force(self, /):
+        raise NotImplementedError
+
+    @force.setter
+    @abstractmethod
+    def force(self, /, value):
+        raise NotImplementedError
+
 
 class SetEvent(Event):
     __slots__ = ()
@@ -93,6 +103,18 @@ class SetEvent(Event):
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
         msg = f"'{cls_repr}' object attribute 'shield' is read-only"
+        raise AttributeError(msg)
+
+    @property
+    def force(self, /):
+        return False
+
+    @force.setter
+    def force(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'force' is read-only"
         raise AttributeError(msg)
 
 
@@ -149,6 +171,18 @@ class DummyEvent(Event):
         msg = f"'{cls_repr}' object attribute 'shield' is read-only"
         raise AttributeError(msg)
 
+    @property
+    def force(self, /):
+        return False
+
+    @force.setter
+    def force(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'force' is read-only"
+        raise AttributeError(msg)
+
 
 class CancelledEvent(Event):
     __slots__ = ()
@@ -203,6 +237,18 @@ class CancelledEvent(Event):
         msg = f"'{cls_repr}' object attribute 'shield' is read-only"
         raise AttributeError(msg)
 
+    @property
+    def force(self, /):
+        return False
+
+    @force.setter
+    def force(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'force' is read-only"
+        raise AttributeError(msg)
+
 
 SET_EVENT = object___new__(SetEvent)
 DUMMY_EVENT = object___new__(DummyEvent)
@@ -212,7 +258,7 @@ CANCELLED_EVENT = object___new__(CancelledEvent)
 class GreenEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /, *, shield=False):
+    def __new__(cls, /, *, shield=False, force=False):
         if cls is GreenEvent:
             library = current_green_library()
 
@@ -226,7 +272,7 @@ class GreenEvent(Event):
                 msg = f"unsupported green library {library!r}"
                 raise RuntimeError(msg)
 
-            return imp.__new__(imp, shield)
+            return imp.__new__(imp, shield, force)
 
         return super().__new__(cls)
 
@@ -238,7 +284,7 @@ class GreenEvent(Event):
 class AsyncEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /, *, shield=False):
+    def __new__(cls, /, *, shield=False, force=False):
         if cls is AsyncEvent:
             library = current_async_library()
 
@@ -252,7 +298,7 @@ class AsyncEvent(Event):
                 msg = f"unsupported async library {library!r}"
                 raise RuntimeError(msg)
 
-            return imp.__new__(imp, shield)
+            return imp.__new__(imp, shield, force)
 
         return super().__new__(cls)
 
@@ -264,10 +310,10 @@ class AsyncEvent(Event):
 class _ThreadingEvent(GreenEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_threading_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _ThreadingEvent
@@ -280,10 +326,10 @@ class _ThreadingEvent(GreenEvent):
 class _EventletEvent(GreenEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_eventlet_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _EventletEvent
@@ -296,10 +342,10 @@ class _EventletEvent(GreenEvent):
 class _GeventEvent(GreenEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_gevent_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _GeventEvent
@@ -312,10 +358,10 @@ class _GeventEvent(GreenEvent):
 class _AsyncioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_asyncio_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _AsyncioEvent
@@ -328,10 +374,10 @@ class _AsyncioEvent(AsyncEvent):
 class _CurioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_curio_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _CurioEvent
@@ -344,10 +390,10 @@ class _CurioEvent(AsyncEvent):
 class _TrioEvent(AsyncEvent):
     __slots__ = ()
 
-    def __new__(cls, /, shield=False):
+    def __new__(cls, /, shield=False, force=False):
         imp = _get_trio_event_class()
 
-        return imp.__new__(imp, shield)
+        return imp.__new__(imp, shield, force)
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = _TrioEvent
@@ -370,10 +416,11 @@ def _get_threading_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__lock = None
@@ -382,6 +429,7 @@ def _get_threading_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -414,13 +462,13 @@ def _get_threading_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp._threading_checkpoints_enabled():
+                if self.force or _cp._threading_checkpoints_enabled():
                     _time._threading_sleep(0)
 
                 return True
 
             if self._is_cancelled:
-                if _cp._threading_checkpoints_enabled():
+                if self.force or _cp._threading_checkpoints_enabled():
                     _time._threading_sleep(0)
 
                 return False
@@ -432,7 +480,7 @@ def _get_threading_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._threading_checkpoints_enabled():
+                    if self.force or _cp._threading_checkpoints_enabled():
                         _time._threading_sleep(0)
 
                     return True
@@ -498,10 +546,11 @@ def _get_eventlet_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__greenlet = None
@@ -511,6 +560,7 @@ def _get_eventlet_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -543,13 +593,13 @@ def _get_eventlet_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp._eventlet_checkpoints_enabled():
+                if self.force or _cp._eventlet_checkpoints_enabled():
                     _time._eventlet_sleep()
 
                 return True
 
             if self._is_cancelled:
-                if _cp._eventlet_checkpoints_enabled():
+                if self.force or _cp._eventlet_checkpoints_enabled():
                     _time._eventlet_sleep()
 
                 return False
@@ -558,7 +608,7 @@ def _get_eventlet_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._eventlet_checkpoints_enabled():
+                    if self.force or _cp._eventlet_checkpoints_enabled():
                         _time._eventlet_sleep()
 
                     return True
@@ -661,10 +711,11 @@ def _get_gevent_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__greenlet = None
@@ -674,6 +725,7 @@ def _get_gevent_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -706,13 +758,13 @@ def _get_gevent_event_class():
 
         def wait(self, /, timeout=None):
             if self._is_set:
-                if _cp._gevent_checkpoints_enabled():
+                if self.force or _cp._gevent_checkpoints_enabled():
                     _time._gevent_sleep()
 
                 return True
 
             if self._is_cancelled:
-                if _cp._gevent_checkpoints_enabled():
+                if self.force or _cp._gevent_checkpoints_enabled():
                     _time._gevent_sleep()
 
                 return False
@@ -721,7 +773,7 @@ def _get_gevent_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._gevent_checkpoints_enabled():
+                    if self.force or _cp._gevent_checkpoints_enabled():
                         _time._gevent_sleep()
 
                     return True
@@ -831,10 +883,11 @@ def _get_asyncio_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__future = None
@@ -844,6 +897,7 @@ def _get_asyncio_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -876,13 +930,13 @@ def _get_asyncio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp._asyncio_checkpoints_enabled():
+                if self.force or _cp._asyncio_checkpoints_enabled():
                     yield from _time._asyncio_sleep(0).__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp._asyncio_checkpoints_enabled():
+                if self.force or _cp._asyncio_checkpoints_enabled():
                     yield from _time._asyncio_sleep(0).__await__()
 
                 return False
@@ -891,7 +945,7 @@ def _get_asyncio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._asyncio_checkpoints_enabled():
+                    if self.force or _cp._asyncio_checkpoints_enabled():
                         yield from _time._asyncio_sleep(0).__await__()
 
                     return True
@@ -980,10 +1034,11 @@ def _get_curio_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__future = None
@@ -992,6 +1047,7 @@ def _get_curio_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -1024,13 +1080,13 @@ def _get_curio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp._curio_checkpoints_enabled():
+                if self.force or _cp._curio_checkpoints_enabled():
                     yield from _time._curio_sleep(0).__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp._curio_checkpoints_enabled():
+                if self.force or _cp._curio_checkpoints_enabled():
                     yield from _time._curio_sleep(0).__await__()
 
                 return False
@@ -1039,7 +1095,7 @@ def _get_curio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._curio_checkpoints_enabled():
+                    if self.force or _cp._curio_checkpoints_enabled():
                         yield from _time._curio_sleep(0).__await__()
 
                     return True
@@ -1120,10 +1176,11 @@ def _get_trio_event_class():
             "_is_cancelled",
             "_is_set",
             "_is_unset",
+            "force",
             "shield",
         )
 
-        def __new__(cls, /, shield=False):
+        def __new__(cls, /, shield=False, force=False):
             self = object___new__(cls)
 
             self.__task = None
@@ -1133,6 +1190,7 @@ def _get_trio_event_class():
             self._is_set = False
             self._is_unset = [True]
 
+            self.force = force
             self.shield = shield
 
             return self
@@ -1165,13 +1223,13 @@ def _get_trio_event_class():
 
         def __await__(self, /):
             if self._is_set:
-                if _cp._trio_checkpoints_enabled():
+                if self.force or _cp._trio_checkpoints_enabled():
                     yield from _cp._trio_checkpoint().__await__()
 
                 return True
 
             if self._is_cancelled:
-                if _cp._trio_checkpoints_enabled():
+                if self.force or _cp._trio_checkpoints_enabled():
                     yield from _cp._trio_checkpoint().__await__()
 
                 return False
@@ -1180,7 +1238,7 @@ def _get_trio_event_class():
 
             try:
                 if self._is_set:
-                    if _cp._trio_checkpoints_enabled():
+                    if self.force or _cp._trio_checkpoints_enabled():
                         yield from _cp._trio_checkpoint().__await__()
 
                     return True

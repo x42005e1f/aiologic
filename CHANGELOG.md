@@ -26,6 +26,9 @@ Commit messages are consistent with
 - Low-level events can now be shielded from external cancellation by passing
   `shield=True`. This allows to implement efficient finalization strategies
   while preserving the one-time nature of low-level events.
+- Low-level events can now be forced (like checkpoints) by passing
+  `force=True`. This allows to use existing event objects instead of
+  checkpoints to minimize possible overhead.
 - `aiologic.lowlevel.SET_EVENT` and `aiologic.lowlevel.CANCELLED_EVENT` as
   variants of `aiologic.lowlevel.DUMMY_EVENT` for a set event and a cancelled
   event respectively. In fact, `aiologic.lowlevel.SET_EVENT` is just a copy of
