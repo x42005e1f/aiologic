@@ -321,11 +321,13 @@ class RLock(PLock):
 
             if success:
                 self.owner = task
+                self.level += 1
         else:
-            success = True
+            await async_checkpoint()
 
-        if success:
             self.level += 1
+
+            success = True
 
         return success
 
@@ -337,11 +339,13 @@ class RLock(PLock):
 
             if success:
                 self.owner = task
+                self.level += 1
         else:
-            success = True
+            green_checkpoint()
 
-        if success:
             self.level += 1
+
+            success = True
 
         return success
 

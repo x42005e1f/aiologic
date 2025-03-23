@@ -36,6 +36,9 @@ Commit messages are consistent with
 
 ### Changed
 
+- Reentrant primitives now have checkpoints on reentrant acquires. This should
+  make their behavior more predictable. Previously, checkpoints were not called
+  if a primitive had already been acquired (for performance reasons).
 - Checkpoints have been rewritten:
   + `aiologic.lowlevel.repeat_if_cancelled()` has been replaced by
     `aiologic.lowlevel.shield()`. Unlike the pre-0.10.0 function of the same

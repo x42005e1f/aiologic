@@ -4,7 +4,12 @@
 # SPDX-License-Identifier: ISC
 
 from ._semaphore import Semaphore
-from .lowlevel import current_async_task_ident, current_green_task_ident
+from .lowlevel import (
+    async_checkpoint,
+    current_async_task_ident,
+    current_green_task_ident,
+    green_checkpoint,
+)
 
 
 class CapacityLimiter:
@@ -259,14 +264,15 @@ class RCapacityLimiter:
                 )
             finally:
                 if success:
-                    self.borrowers[borrower] = 0
+                    self.borrowers[borrower] = 1
                 else:
                     del self.__waiters[borrower]
         else:
-            success = True
+            await async_checkpoint()
 
-        if success:
             self.borrowers[borrower] += 1
+
+            success = True
 
         return success
 
@@ -310,14 +316,15 @@ class RCapacityLimiter:
                 )
             finally:
                 if success:
-                    self.borrowers[borrower] = 0
+                    self.borrowers[borrower] = 1
                 else:
                     del self.__waiters[borrower]
         else:
-            success = True
+            green_checkpoint()
 
-        if success:
             self.borrowers[borrower] += 1
+
+            success = True
 
         return success
 
