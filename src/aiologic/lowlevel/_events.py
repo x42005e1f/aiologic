@@ -31,11 +31,21 @@ class Event(ABC):
     def is_cancelled(self, /):
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def shield(self, /):
+        raise NotImplementedError
+
+    @shield.setter
+    @abstractmethod
+    def shield(self, /, value):
+        raise NotImplementedError
+
 
 class SetEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /, *, shield=False):
+    def __new__(cls, /):
         return SET_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
@@ -73,11 +83,23 @@ class SetEvent(Event):
     def is_cancelled(self, /):
         return False
 
+    @property
+    def shield(self, /):
+        return False
+
+    @shield.setter
+    def shield(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'shield' is read-only"
+        raise AttributeError(msg)
+
 
 class DummyEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /, *, shield=False):
+    def __new__(cls, /):
         return DUMMY_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
@@ -115,11 +137,23 @@ class DummyEvent(Event):
     def is_cancelled(self, /):
         return False
 
+    @property
+    def shield(self, /):
+        return False
+
+    @shield.setter
+    def shield(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'shield' is read-only"
+        raise AttributeError(msg)
+
 
 class CancelledEvent(Event):
     __slots__ = ()
 
-    def __new__(cls, /, *, shield=False):
+    def __new__(cls, /):
         return CANCELLED_EVENT
 
     def __init_subclass__(cls, /, **kwargs):
@@ -156,6 +190,18 @@ class CancelledEvent(Event):
 
     def is_cancelled(self, /):
         return True
+
+    @property
+    def shield(self, /):
+        return False
+
+    @shield.setter
+    def shield(self, /, value):
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        msg = f"'{cls_repr}' object attribute 'shield' is read-only"
+        raise AttributeError(msg)
 
 
 SET_EVENT = object___new__(SetEvent)
@@ -323,8 +369,8 @@ def _get_threading_event_class():
             "__lock",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -334,8 +380,9 @@ def _get_threading_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -357,8 +404,6 @@ def _get_threading_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -393,7 +438,7 @@ def _get_threading_event_class():
                     return True
 
                 try:
-                    if timeout is None or self._is_shielded:
+                    if timeout is None or self.shield:
                         return self.__lock.acquire()
                     elif timeout > 0:
                         return self.__lock.acquire(True, timeout)
@@ -452,8 +497,8 @@ def _get_eventlet_event_class():
             "__hub",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -464,8 +509,9 @@ def _get_eventlet_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -487,8 +533,6 @@ def _get_eventlet_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -523,7 +567,7 @@ def _get_eventlet_event_class():
                     self.__greenlet = getcurrent()
 
                     try:
-                        if timeout is None or self._is_shielded:
+                        if timeout is None or self.shield:
                             timer = None
                         elif timeout > 0:
                             timer = self.__hub.schedule_call_local(
@@ -539,7 +583,7 @@ def _get_eventlet_event_class():
                             )
 
                         try:
-                            if self._is_shielded:
+                            if self.shield:
                                 return _tasks._eventlet_shield(
                                     self.__hub,
                                     None,
@@ -616,8 +660,8 @@ def _get_gevent_event_class():
             "__hub",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -628,8 +672,9 @@ def _get_gevent_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -651,8 +696,6 @@ def _get_gevent_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -687,7 +730,7 @@ def _get_gevent_event_class():
                     self.__greenlet = getcurrent()
 
                     try:
-                        if timeout is None or self._is_shielded:
+                        if timeout is None or self.shield:
                             timer = None
                         else:
                             if timeout > 0:
@@ -706,7 +749,7 @@ def _get_gevent_event_class():
                             watcher.start(noop)  # avoid LoopExit
 
                             try:
-                                if self._is_shielded:
+                                if self.shield:
                                     return _tasks._gevent_shield(
                                         self.__hub,
                                         None,
@@ -787,8 +830,8 @@ def _get_asyncio_event_class():
             "__loop",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -799,8 +842,9 @@ def _get_asyncio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -822,8 +866,6 @@ def _get_asyncio_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -858,7 +900,7 @@ def _get_asyncio_event_class():
                     self.__future = self.__loop.create_future()
 
                     try:
-                        if self._is_shielded:
+                        if self.shield:
                             yield from _tasks._asyncio_shield(
                                 self.__future,
                                 None,
@@ -937,8 +979,8 @@ def _get_curio_event_class():
             "__future",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -948,8 +990,9 @@ def _get_curio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -971,8 +1014,6 @@ def _get_curio_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -1004,7 +1045,7 @@ def _get_curio_event_class():
                     return True
 
                 try:
-                    if self._is_shielded:
+                    if self.shield:
                         yield from _tasks._curio_shield(
                             _future_wait,
                             [self.__future],
@@ -1078,8 +1119,8 @@ def _get_trio_event_class():
             "__token",
             "_is_cancelled",
             "_is_set",
-            "_is_shielded",
             "_is_unset",
+            "shield",
         )
 
         def __new__(cls, /, shield=False):
@@ -1090,8 +1131,9 @@ def _get_trio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_shielded = shield
             self._is_unset = [True]
+
+            self.shield = shield
 
             return self
 
@@ -1113,8 +1155,6 @@ def _get_trio_event_class():
                 state = "set"
             elif self._is_cancelled:
                 state = "cancelled"
-            elif self._is_shielded:
-                state = "unset (shielded)"
             else:
                 state = "unset"
 
@@ -1149,7 +1189,7 @@ def _get_trio_event_class():
                     self.__task = current_task()
 
                     try:
-                        if self._is_shielded:
+                        if self.shield:
                             yield from _tasks._trio_shield(
                                 wait_task_rescheduled,
                                 [abort],
