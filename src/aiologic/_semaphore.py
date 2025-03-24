@@ -135,7 +135,7 @@ class Semaphore:
                     rescheduled = True
                 finally:
                     if not success:
-                        if event.is_cancelled():
+                        if event.cancelled():
                             try:
                                 waiters.remove(event)
                             except ValueError:
@@ -171,7 +171,7 @@ class Semaphore:
                     rescheduled = True
                 finally:
                     if not success:
-                        if event.is_cancelled():
+                        if event.cancelled():
                             try:
                                 waiters.remove(event)
                             except ValueError:

@@ -57,6 +57,8 @@ Commit messages are consistent with
     the thread level. This prevents checkpoints from being enabled in created
     worker threads.
 - Low-level events have been rewritten:
+  + `event.is_cancelled()` has been renamed to `event.cancelled()`. This makes
+    them more similar to `asyncio` futures and thus more familiar to new users.
   + They are now always cancelled on timeouts, and the `event.cancel()` method
     has been removed to avoid redundancy. This should make it easier to work
     with them outside of `aiologic` and simplify some things, since now there

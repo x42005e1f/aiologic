@@ -86,7 +86,7 @@ class PLock:
                     rescheduled = True
                 finally:
                     if not success:
-                        if event.is_cancelled():
+                        if event.cancelled():
                             try:
                                 waiters.remove(event)
                             except ValueError:
@@ -121,7 +121,7 @@ class PLock:
                     rescheduled = True
                 finally:
                     if not success:
-                        if event.is_cancelled():
+                        if event.cancelled():
                             try:
                                 waiters.remove(event)
                             except ValueError:

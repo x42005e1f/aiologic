@@ -28,7 +28,7 @@ class Event(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def is_cancelled(self, /):
+    def cancelled(self, /):
         raise NotImplementedError
 
     @property
@@ -90,7 +90,7 @@ class SetEvent(Event):
     def is_set(self, /):
         return True
 
-    def is_cancelled(self, /):
+    def cancelled(self, /):
         return False
 
     @property
@@ -156,7 +156,7 @@ class DummyEvent(Event):
     def is_set(self, /):
         return True
 
-    def is_cancelled(self, /):
+    def cancelled(self, /):
         return False
 
     @property
@@ -222,7 +222,7 @@ class CancelledEvent(Event):
     def is_set(self, /):
         return False
 
-    def is_cancelled(self, /):
+    def cancelled(self, /):
         return True
 
     @property
@@ -522,7 +522,7 @@ def _get_threading_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _ThreadingEvent
@@ -685,7 +685,7 @@ def _get_eventlet_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _EventletEvent
@@ -858,7 +858,7 @@ def _get_gevent_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _GeventEvent
@@ -1011,7 +1011,7 @@ def _get_asyncio_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _AsyncioEvent
@@ -1145,7 +1145,7 @@ def _get_curio_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _CurioEvent
@@ -1304,7 +1304,7 @@ def _get_trio_event_class():
         def is_set(self, /):
             return self._is_set
 
-        def is_cancelled(self, /):
+        def cancelled(self, /):
             return self._is_cancelled
 
     return _TrioEvent
