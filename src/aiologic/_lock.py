@@ -83,7 +83,9 @@ class PLock:
         self.__waiters.append(event := AsyncEvent())
 
         if self.__acquire_nowait():
-            event.set()  # event will be removed on release
+            self.__waiters.remove(event)
+
+            event.set()
 
         success = False
 
@@ -118,7 +120,9 @@ class PLock:
         self.__waiters.append(event := GreenEvent())
 
         if self.__acquire_nowait():
-            event.set()  # event will be removed on release
+            self.__waiters.remove(event)
+
+            event.set()
 
         success = False
 
