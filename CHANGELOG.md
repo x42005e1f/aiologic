@@ -23,6 +23,14 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `aiologic.lowlevel.green_checkpoint_if_cancelled()` and
+  `aiologic.lowlevel.async_checkpoint_if_cancelled()`. Currently,
+  `aiologic.lowlevel.async_checkpoint_if_cancelled()` is equivalent to removed
+  `aiologic.lowlevel.checkpoint_if_cancelled()`, and
+  `aiologic.lowlevel.green_checkpoint_if_cancelled()` does nothing. However,
+  these methods have a slightly different meaning: they are intended to
+  accompany `aiologic.lowlevel.shield()` calls to pre-check for cancellation,
+  and do not guarantee actual checking.
 - `green_owned()` and `async_owned()` methods to ownable and reentrant locks.
   They allow to check if the lock is owned by the current task without
   importing additional functions.

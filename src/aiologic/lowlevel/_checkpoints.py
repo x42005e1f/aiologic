@@ -297,3 +297,58 @@ async def async_checkpoint(*, force=False):
         elif library == "trio":
             if force or _trio_checkpoints_enabled():
                 await _trio_checkpoint()
+
+
+async def _asyncio_checkpoint_if_cancelled():
+    pass
+
+
+@when_imported("anyio")
+def _asyncio_checkpoint_if_cancelled_hook(_):
+    global _asyncio_checkpoint_if_cancelled
+
+    async def _asyncio_checkpoint_if_cancelled():
+        global _asyncio_checkpoint_if_cancelled
+
+        from anyio.lowlevel import checkpoint_if_cancelled
+
+        _asyncio_checkpoint_if_cancelled = checkpoint_if_cancelled
+
+        await _asyncio_checkpoint_if_cancelled()
+
+
+async def _curio_checkpoint_if_cancelled():
+    global _curio_checkpoint_if_cancelled
+
+    from curio import check_cancellation as _curio_checkpoint_if_cancelled
+
+    await _curio_checkpoint_if_cancelled()
+
+
+async def _trio_checkpoint_if_cancelled():
+    global _trio_checkpoint_if_cancelled
+
+    from trio.lowlevel import checkpoint_if_cancelled
+
+    _trio_checkpoint_if_cancelled = checkpoint_if_cancelled
+
+    await _trio_checkpoint_if_cancelled()
+
+
+def green_checkpoint_if_cancelled(*, force=False):
+    pass
+
+
+async def async_checkpoint_if_cancelled(*, force=False):
+    if _async_checkpoints_enabled or force:
+        library = current_async_library(failsafe=True)
+
+        if library == "asyncio":
+            if force or _asyncio_checkpoints_enabled():
+                await _asyncio_checkpoint_if_cancelled()
+        elif library == "curio":
+            if force or _curio_checkpoints_enabled():
+                await _curio_checkpoint_if_cancelled()
+        elif library == "trio":
+            if force or _trio_checkpoints_enabled():
+                await _trio_checkpoint_if_cancelled()
