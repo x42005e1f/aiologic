@@ -286,6 +286,12 @@ class Lock(PLock):
 
         self._release()
 
+    def async_owned(self, /):
+        return self.owner == current_async_task_ident()
+
+    def green_owned(self, /):
+        return self.owner == current_green_task_ident()
+
 
 class RLock(PLock):
     __slots__ = (
@@ -380,6 +386,12 @@ class RLock(PLock):
             self.owner = None
 
             self._release()
+
+    def async_owned(self, /):
+        return self.owner == current_async_task_ident()
+
+    def green_owned(self, /):
+        return self.owner == current_green_task_ident()
 
     # Internal methods used by condition variables
 

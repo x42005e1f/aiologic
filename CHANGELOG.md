@@ -23,6 +23,9 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `green_owned()` and `async_owned()` methods to ownable and reentrant locks.
+  They allow to check if the lock is owned by the current task without
+  importing additional functions.
 - Reentrant locks can now be acquired and released multiple times in a single
   call.
 - Low-level events can now be shielded from external cancellation by passing
