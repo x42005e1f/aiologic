@@ -25,8 +25,8 @@ class PLock:
     def __new__(cls, /):
         self = super().__new__(cls)
 
-        self.__waiters = deque()
         self.__unlocked = [True]
+        self.__waiters = deque()
 
         return self
 
@@ -56,116 +56,114 @@ class PLock:
         self.green_release()
 
     def __acquire_nowait(self, /):
-        if unlocked := self.__unlocked:
+        if self.__unlocked:
             try:
-                unlocked.pop()
+                self.__unlocked.pop()
             except IndexError:
-                success = False
+                return False
             else:
-                success = True
-        else:
-            success = False
+                return True
 
-        return success
+        return False
 
     async def async_acquire(self, /, *, blocking=True):
-        waiters = self.__waiters  # abnormal speedup on PyPy3
-        success = self.__acquire_nowait()
-
-        if blocking:
-            rescheduled = False
-
-            if not success:
-                waiters.append(event := AsyncEvent())
-
-                try:
-                    if self.__acquire_nowait():
-                        event.set()
-
-                    success = await event
-                    rescheduled = True
-                finally:
-                    if not success:
-                        if event.cancelled():
-                            try:
-                                waiters.remove(event)
-                            except ValueError:
-                                pass
-                        else:
-                            self.__release()
-
-            if not rescheduled:
+        if self.__acquire_nowait():
+            if blocking:
                 try:
                     await async_checkpoint()
                 except BaseException:
-                    self.__release()
+                    self._release()
                     raise
+
+            return True
+
+        if not blocking:
+            return False
+
+        self.__waiters.append(event := AsyncEvent())
+
+        if self.__acquire_nowait():
+            event.set()  # event will be removed on release
+
+        success = False
+
+        try:
+            success = await event
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self.__waiters.remove(event)
+                    except ValueError:
+                        pass
+                else:
+                    self._release()
 
         return success
 
     def green_acquire(self, /, *, blocking=True, timeout=None):
-        waiters = self.__waiters  # abnormal speedup on PyPy3
-        success = self.__acquire_nowait()
-
-        if blocking:
-            rescheduled = False
-
-            if not success:
-                waiters.append(event := GreenEvent())
-
-                try:
-                    if self.__acquire_nowait():
-                        event.set()
-
-                    success = event.wait(timeout)
-                    rescheduled = True
-                finally:
-                    if not success:
-                        if event.cancelled():
-                            try:
-                                waiters.remove(event)
-                            except ValueError:
-                                pass
-                        else:
-                            self.__release()
-
-            if not rescheduled:
+        if self.__acquire_nowait():
+            if blocking:
                 try:
                     green_checkpoint()
                 except BaseException:
-                    self.__release()
+                    self._release()
                     raise
+
+            return True
+
+        if not blocking:
+            return False
+
+        self.__waiters.append(event := GreenEvent())
+
+        if self.__acquire_nowait():
+            event.set()  # event will be removed on release
+
+        success = False
+
+        try:
+            success = event.wait(timeout)
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self.__waiters.remove(event)
+                    except ValueError:
+                        pass
+                else:
+                    self._release()
 
         return success
 
-    def __release(self, /):
+    def _release(self, /):
         waiters = self.__waiters
-        unlocked = self.__unlocked
 
         while True:
-            if waiters:
+            while waiters:
                 try:
                     event = waiters.popleft()
                 except IndexError:
                     pass
                 else:
                     if event.set():
-                        break
-                    else:
-                        continue
+                        return
 
-            unlocked.append(True)
+            self.__unlocked.append(True)
 
             if waiters:
-                if self.__acquire_nowait():
-                    continue
-                else:
+                try:
+                    self.__unlocked.pop()
+                except IndexError:
                     break
             else:
                 break
 
-    async_release = __release
-    green_release = __release
+    _async_acquire = async_acquire
+    _green_acquire = green_acquire
+
+    async_release = _release
+    green_release = _release
 
     def locked(self, /):
         return not self.__unlocked
@@ -186,7 +184,7 @@ class BLock(PLock):
         return self
 
     async def async_acquire(self, /, *, blocking=True):
-        success = await super().async_acquire(blocking=blocking)
+        success = await self._async_acquire(blocking=blocking)
 
         if success:
             self.__locked.append(True)
@@ -194,7 +192,7 @@ class BLock(PLock):
         return success
 
     def green_acquire(self, /, *, blocking=True, timeout=None):
-        success = super().green_acquire(blocking=blocking, timeout=timeout)
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             self.__locked.append(True)
@@ -205,29 +203,19 @@ class BLock(PLock):
         try:
             self.__locked.pop()
         except IndexError:
-            success = False
-        else:
-            success = True
-
-        if not success:
             msg = "release unlocked lock"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from None
 
-        super().async_release()
+        self._release()
 
     def green_release(self, /):
         try:
             self.__locked.pop()
         except IndexError:
-            success = False
-        else:
-            success = True
-
-        if not success:
             msg = "release unlocked lock"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from None
 
-        super().green_release()
+        self._release()
 
 
 class Lock(PLock):
@@ -247,7 +235,7 @@ class Lock(PLock):
             msg = "the current task is already holding this lock"
             raise RuntimeError(msg)
 
-        success = await super().async_acquire(blocking=blocking)
+        success = await self._async_acquire(blocking=blocking)
 
         if success:
             self.owner = task
@@ -261,7 +249,7 @@ class Lock(PLock):
             msg = "the current task is already holding this lock"
             raise RuntimeError(msg)
 
-        success = super().green_acquire(blocking=blocking, timeout=timeout)
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             self.owner = task
@@ -281,7 +269,7 @@ class Lock(PLock):
 
         self.owner = None
 
-        super().async_release()
+        self._release()
 
     def green_release(self, /):
         if self.owner is None:
@@ -296,7 +284,7 @@ class Lock(PLock):
 
         self.owner = None
 
-        super().green_release()
+        self._release()
 
 
 class RLock(PLock):
@@ -308,48 +296,48 @@ class RLock(PLock):
     def __new__(cls, /):
         self = super().__new__(cls)
 
-        self.owner = None
         self.level = 0
+        self.owner = None
 
         return self
 
-    async def async_acquire(self, /, *, blocking=True):
+    async def async_acquire(self, /, count=1, *, blocking=True):
         task = current_async_task_ident()
 
-        if self.owner != task:
-            success = await super().async_acquire(blocking=blocking)
-
-            if success:
-                self.owner = task
-                self.level += 1
-        else:
+        if self.owner == task:
             await async_checkpoint()
 
-            self.level += 1
+            self.level += count
 
-            success = True
+            return True
+
+        success = await self._async_acquire(blocking=blocking)
+
+        if success:
+            self.owner = task
+            self.level = count
 
         return success
 
-    def green_acquire(self, /, *, blocking=True, timeout=None):
+    def green_acquire(self, /, count=1, *, blocking=True, timeout=None):
         task = current_green_task_ident()
 
-        if self.owner != task:
-            success = super().green_acquire(blocking=blocking, timeout=timeout)
-
-            if success:
-                self.owner = task
-                self.level += 1
-        else:
+        if self.owner == task:
             green_checkpoint()
 
-            self.level += 1
+            self.level += count
 
-            success = True
+            return True
+
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
+
+        if success:
+            self.owner = task
+            self.level = count
 
         return success
 
-    def async_release(self, /):
+    def async_release(self, /, count=1):
         if self.owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
@@ -360,14 +348,18 @@ class RLock(PLock):
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
-        self.level -= 1
+        if self.level < count:
+            msg = "lock released too many times"
+            raise RuntimeError(msg)
+
+        self.level -= count
 
         if not self.level:
             self.owner = None
 
-            super().async_release()
+            self._release()
 
-    def green_release(self, /):
+    def green_release(self, /, count=1):
         if self.owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
@@ -378,12 +370,18 @@ class RLock(PLock):
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
-        self.level -= 1
+        if self.level < count:
+            msg = "lock released too many times"
+            raise RuntimeError(msg)
+
+        self.level -= count
 
         if not self.level:
             self.owner = None
 
-            super().green_release()
+            self._release()
+
+    # Internal methods used by condition variables
 
     def _async_release_save(self, /):
         if self.owner is None:
@@ -401,7 +399,7 @@ class RLock(PLock):
         self.level = 0
         self.owner = None
 
-        super().async_release()
+        self._release()
 
         return state
 
@@ -421,12 +419,12 @@ class RLock(PLock):
         self.level = 0
         self.owner = None
 
-        super().green_release()
+        self._release()
 
         return state
 
     async def _async_acquire_restore(self, /, state):
-        success = await super().async_acquire()
+        success = await self._async_acquire()
 
         if success:
             self.owner, self.level = state
@@ -434,7 +432,7 @@ class RLock(PLock):
         return success
 
     def _green_acquire_restore(self, /, state):
-        success = super().green_acquire()
+        success = self._green_acquire()
 
         if success:
             self.owner, self.level = state

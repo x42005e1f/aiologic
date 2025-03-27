@@ -23,6 +23,8 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- Reentrant locks can now be acquired and released multiple times in a single
+  call.
 - Low-level events can now be shielded from external cancellation by passing
   `shield=True`. This allows to implement efficient finalization strategies
   while preserving the one-time nature of low-level events.
