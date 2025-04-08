@@ -315,7 +315,8 @@ class RLock(PLock):
         task = current_async_task_ident()
 
         if self.owner == task:
-            await async_checkpoint()
+            if blocking:
+                await async_checkpoint()
 
             self.level += count
 
@@ -333,7 +334,8 @@ class RLock(PLock):
         task = current_green_task_ident()
 
         if self.owner == task:
-            green_checkpoint()
+            if blocking:
+                green_checkpoint()
 
             self.level += count
 
