@@ -296,6 +296,62 @@ class Lock(PLock):
     def green_owned(self, /):
         return self.owner == current_green_task_ident()
 
+    # Internal methods used by condition variables
+
+    async def _async_acquire_restore(self, /, state):
+        success = await self._async_acquire()
+
+        if success:
+            self.owner = state
+
+        return success
+
+    def _green_acquire_restore(self, /, state):
+        success = self._green_acquire()
+
+        if success:
+            self.owner = state
+
+        return success
+
+    def _async_release_save(self, /):
+        if self.owner is None:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
+
+        task = current_async_task_ident()
+
+        if self.owner != task:
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
+
+        state = self.owner
+
+        self.owner = None
+
+        self._release()
+
+        return state
+
+    def _green_release_save(self, /):
+        if self.owner is None:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
+
+        task = current_green_task_ident()
+
+        if self.owner != task:
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
+
+        state = self.owner
+
+        self.owner = None
+
+        self._release()
+
+        return state
+
 
 class RLock(PLock):
     __slots__ = (
@@ -401,6 +457,22 @@ class RLock(PLock):
 
     # Internal methods used by condition variables
 
+    async def _async_acquire_restore(self, /, state):
+        success = await self._async_acquire()
+
+        if success:
+            self.owner, self.level = state
+
+        return success
+
+    def _green_acquire_restore(self, /, state):
+        success = self._green_acquire()
+
+        if success:
+            self.owner, self.level = state
+
+        return success
+
     def _async_release_save(self, /):
         if self.owner is None:
             msg = "release unlocked lock"
@@ -440,19 +512,3 @@ class RLock(PLock):
         self._release()
 
         return state
-
-    async def _async_acquire_restore(self, /, state):
-        success = await self._async_acquire()
-
-        if success:
-            self.owner, self.level = state
-
-        return success
-
-    def _green_acquire_restore(self, /, state):
-        success = self._green_acquire()
-
-        if success:
-            self.owner, self.level = state
-
-        return success

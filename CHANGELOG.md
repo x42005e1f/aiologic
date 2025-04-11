@@ -36,6 +36,10 @@ Commit messages are consistent with
   importing additional functions.
 - Reentrant locks can now be acquired and released multiple times in a single
   call.
+- `for_()` method to condition variables as an async analog of `wait_for()`.
+- Conditional variables now support user-defined timers. They can be passed to
+  the constructor, called via the `timer` property, and used to pass the
+  deadline to the notification methods.
 - Low-level events can now be shielded from external cancellation by passing
   `shield=True`. This allows to implement efficient finalization strategies
   while preserving the one-time nature of low-level events.
@@ -94,6 +98,37 @@ Commit messages are consistent with
     a generic `aiologic.lowlevel.AnyEvent`, but this has a negative impact on
     memory, and the performance gain for high-level primitives is only in the
     race condition).
+- Condition variables have been rewritten:
+  + They now only support passing locks from the `threading` module
+    (synchronous mode), locks from the `aiologic` module (mixed mode), and
+    `None` (lockless mode). This change was made to simplify their
+    implementation. For special cases it is recommended to use low-level events
+    directly.
+  + They now count the number of lock acquires to avoid redundant `release()`
+    calls when used as context managers. Because of this, they will now never
+    throw a `RuntimeError` when a `wait()` call fails (e.g. due to a
+    `KeyboardInterrupt` while trying to reacquire `threading.Lock`). This makes
+    it safe (with some caveats) to use condition variables even when shielding
+    from external cancellation is not guaranteed.
+  + They now shield lock state restoring not only in async methods, but also in
+    green methods. It is still not guaranteed that a `wait()` call cannot be
+    cancelled in any unpredictable way (e.g. when a greenlet is killed by an
+    exception other than `GreenletExit`), but now condition variables can be
+    safely used in more scenarios.
+  + They now check that the current task is the owner of the lock before
+    starting the wait. This corresponds to the behavior of the standard
+    condition variables, and allows exceptions to be raised with more
+    meaningful messages.
+  + They now return the original value of the predicate, allowing the
+    `wait_for()` and `for_()` methods to be used in more scenarios. Previously,
+    a value of type `bool` was returned.
+  + They are now more accurately interpreted as `bool`. For locks from the
+    `threading` module, `True` is returned if the lock is locked and `False`
+    otherwise, which matches the behavior of locks from the `aiologic` module.
+    For `None`, `False` is always returned. With this change, condition
+    variables can now be used to determine the status of an operation (just
+    like normal `aiologic` locks) regardless of the lock used. Previously,
+    `True` was always returned for both cases.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
   private classes). Low-level events now show their library identity and status
