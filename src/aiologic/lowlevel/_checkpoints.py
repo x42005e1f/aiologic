@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: ISC
 
 import os
+import sys
 
 from contextvars import ContextVar
 
@@ -12,6 +13,11 @@ from wrapt import when_imported
 from . import _time
 from ._ident import current_thread_ident
 from ._libraries import current_async_library, current_green_library
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 THREADING_CHECKPOINTS_ENABLED = bool(
     os.getenv(
@@ -310,6 +316,22 @@ def green_checkpoint(*, force=False):
         elif library == "gevent":
             if force or _gevent_checkpoints_enabled():
                 _time._gevent_sleep()
+
+
+@deprecated("Use async_checkpoint() instead")
+async def checkpoint(*, force=False):
+    if _async_checkpoints_enabled or force:
+        library = current_async_library(failsafe=True)
+
+        if library == "asyncio":
+            if force or _asyncio_checkpoints_enabled():
+                await _time._asyncio_sleep(0)
+        elif library == "curio":
+            if force or _curio_checkpoints_enabled():
+                await _time._curio_sleep(0)
+        elif library == "trio":
+            if force or _trio_checkpoints_enabled():
+                await _trio_checkpoint()
 
 
 async def async_checkpoint(*, force=False):
