@@ -5,8 +5,10 @@
 
 from ._checkpoints import (
     async_checkpoint as async_checkpoint,
+    async_checkpoint_enabled as async_checkpoint_enabled,
     async_checkpoint_if_cancelled as async_checkpoint_if_cancelled,
     green_checkpoint as green_checkpoint,
+    green_checkpoint_enabled as green_checkpoint_enabled,
     green_checkpoint_if_cancelled as green_checkpoint_if_cancelled,
 )
 from ._events import (

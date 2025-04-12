@@ -133,6 +133,34 @@ def _trio_checkpoints_enabled():
     return TRIO_CHECKPOINTS_ENABLED
 
 
+def green_checkpoint_enabled():
+    if _green_checkpoints_enabled:
+        library = current_green_library(failsafe=True)
+
+        if library == "threading":
+            return _threading_checkpoints_enabled()
+        elif library == "eventlet":
+            return _eventlet_checkpoints_enabled()
+        elif library == "gevent":
+            return _gevent_checkpoints_enabled()
+
+    return False
+
+
+def async_checkpoint_enabled():
+    if _async_checkpoints_enabled:
+        library = current_async_library(failsafe=True)
+
+        if library == "asyncio":
+            return _asyncio_checkpoints_enabled()
+        elif library == "curio":
+            return _curio_checkpoints_enabled()
+        elif library == "trio":
+            return _trio_checkpoints_enabled()
+
+    return False
+
+
 def _green_checkpoints_reset(token):
     pass
 

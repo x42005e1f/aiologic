@@ -23,6 +23,9 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `aiologic.lowlevel.green_checkpoint_enabled()` and
+  `aiologic.lowlevel.async_checkpoint_enabled()` to determine if checkpoints
+  are enabled for the current library.
 - `aiologic.lowlevel.green_checkpoint_if_cancelled()` and
   `aiologic.lowlevel.async_checkpoint_if_cancelled()`. Currently,
   `aiologic.lowlevel.async_checkpoint_if_cancelled()` is equivalent to removed
