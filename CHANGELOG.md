@@ -136,10 +136,11 @@ Commit messages are consistent with
   the module name and use the correct class name in subclasses (except for
   private classes). Low-level events now show their library identity and status
   in representation.
-- `aiologic.lowlevel.current_green_token()` now returns the current process,
-  and `aiologic.lowlevel.current_green_token_ident()` now uses the current
-  process ID for `threading`. This makes these functions more meaningful, since
-  previously constant values were returned for `threading`.
+- `aiologic.lowlevel.current_green_token()` now returns the current thread, and
+  `aiologic.lowlevel.current_green_token_ident()` now uses the current thread
+  ID for `threading`. This makes these functions more meaningful, and leads to
+  the expected behavior in group-level locks. Previously, constant values were
+  returned for `threading`.
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.
