@@ -14,7 +14,14 @@ def _threading_sleep(seconds):
     elif _monkey._gevent_patched("time"):
         _threading_sleep = _monkey._import_gevent_original("time").sleep
     else:
-        _threading_sleep = _monkey._import_python_original("time").sleep
+        time_sleep = _monkey._import_python_original("time").sleep
+
+        if _monkey._eventlet_patched("time"):
+            _threading_sleep = _monkey._import_eventlet_original("time").sleep
+        elif _monkey._gevent_patched("time"):
+            _threading_sleep = _monkey._import_gevent_original("time").sleep
+        else:
+            _threading_sleep = time_sleep
 
     _threading_sleep(seconds)
 
