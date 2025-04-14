@@ -56,64 +56,6 @@ TRIO_CHECKPOINTS_ENABLED = bool(
     )
 )
 
-_green_checkpoints_cvar = ContextVar(
-    "_green_checkpoints_cvar",
-    default=(
-        current_thread_ident(),
-        None,
-    ),
-)
-_async_checkpoints_cvar = ContextVar(
-    "_async_checkpoints_cvar",
-    default=(
-        current_thread_ident(),
-        None,
-    ),
-)
-
-_green_checkpoints_enabled = THREADING_CHECKPOINTS_ENABLED
-_async_checkpoints_enabled = False
-
-
-@when_imported("eventlet")
-def _green_checkpoints_enabled_hook(_):
-    global _green_checkpoints_enabled
-
-    if EVENTLET_CHECKPOINTS_ENABLED:
-        _green_checkpoints_enabled = True
-
-
-@when_imported("gevent")
-def _green_checkpoints_enabled_hook(_):
-    global _green_checkpoints_enabled
-
-    if GEVENT_CHECKPOINTS_ENABLED:
-        _green_checkpoints_enabled = True
-
-
-@when_imported("asyncio")
-def _async_checkpoints_enabled_hook(_):
-    global _async_checkpoints_enabled
-
-    if ASYNCIO_CHECKPOINTS_ENABLED:
-        _async_checkpoints_enabled = True
-
-
-@when_imported("curio")
-def _async_checkpoints_enabled_hook(_):
-    global _async_checkpoints_enabled
-
-    if CURIO_CHECKPOINTS_ENABLED:
-        _async_checkpoints_enabled = True
-
-
-@when_imported("trio")
-def _async_checkpoints_enabled_hook(_):
-    global _async_checkpoints_enabled
-
-    if TRIO_CHECKPOINTS_ENABLED:
-        _async_checkpoints_enabled = True
-
 
 def _threading_checkpoints_enabled():
     return THREADING_CHECKPOINTS_ENABLED
@@ -165,6 +107,66 @@ def async_checkpoint_enabled():
             return _trio_checkpoints_enabled()
 
     return False
+
+
+_green_checkpoints_enabled = THREADING_CHECKPOINTS_ENABLED
+_async_checkpoints_enabled = False
+
+
+@when_imported("eventlet")
+def _green_checkpoints_enabled_hook(_):
+    global _green_checkpoints_enabled
+
+    if EVENTLET_CHECKPOINTS_ENABLED:
+        _green_checkpoints_enabled = True
+
+
+@when_imported("gevent")
+def _green_checkpoints_enabled_hook(_):
+    global _green_checkpoints_enabled
+
+    if GEVENT_CHECKPOINTS_ENABLED:
+        _green_checkpoints_enabled = True
+
+
+@when_imported("asyncio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
+
+    if ASYNCIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
+
+
+@when_imported("curio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
+
+    if CURIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
+
+
+@when_imported("trio")
+def _async_checkpoints_enabled_hook(_):
+    global _async_checkpoints_enabled
+
+    if TRIO_CHECKPOINTS_ENABLED:
+        _async_checkpoints_enabled = True
+
+
+_green_checkpoints_cvar = ContextVar(
+    "_green_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
+)
+_async_checkpoints_cvar = ContextVar(
+    "_async_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
+)
 
 
 def _green_checkpoints_reset(token):
@@ -220,9 +222,7 @@ def _green_checkpoints_set(enabled):
             return enabled
 
         _green_checkpoints_enabled = True
-
-        def _green_checkpoints_reset(token):
-            _green_checkpoints_cvar.reset(token)
+        _green_checkpoints_reset = _green_checkpoints_cvar.reset
 
         def _green_checkpoints_set(enabled):
             return _green_checkpoints_cvar.set((
@@ -280,9 +280,7 @@ def _async_checkpoints_set(enabled):
             return enabled
 
         _async_checkpoints_enabled = True
-
-        def _async_checkpoints_reset(token):
-            _async_checkpoints_cvar.reset(token)
+        _async_checkpoints_reset = _async_checkpoints_cvar.reset
 
         def _async_checkpoints_set(enabled):
             return _async_checkpoints_cvar.set((

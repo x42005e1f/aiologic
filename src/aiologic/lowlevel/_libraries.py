@@ -27,6 +27,18 @@ def _eventlet_running():
     return False
 
 
+def _gevent_running():
+    return False
+
+
+def _asyncio_running():
+    return False
+
+
+def _curio_running():
+    return False
+
+
 @when_imported("eventlet")
 def _eventlet_running_hook(_):
     global _eventlet_running
@@ -42,10 +54,6 @@ def _eventlet_running_hook(_):
         return _eventlet_running()
 
 
-def _gevent_running():
-    return False
-
-
 @when_imported("gevent")
 def _gevent_running_hook(_):
     global _gevent_running
@@ -59,10 +67,6 @@ def _gevent_running_hook(_):
             return get_hub_if_exists() is not None
 
         return _gevent_running()
-
-
-def _asyncio_running():
-    return False
 
 
 @when_imported("asyncio")
@@ -92,10 +96,6 @@ def _asyncio_running_hook(_):
                 )
 
         return _asyncio_running()
-
-
-def _curio_running():
-    return False
 
 
 @when_imported("curio")
