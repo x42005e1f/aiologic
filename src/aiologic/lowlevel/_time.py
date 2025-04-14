@@ -3,27 +3,14 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from . import _monkey
 
-def _threading_sleep(seconds):
-    global _threading_sleep
-
-    from . import _monkey
-
-    if _monkey._eventlet_patched("time"):
-        _threading_sleep = _monkey._import_eventlet_original("time").sleep
-    elif _monkey._gevent_patched("time"):
-        _threading_sleep = _monkey._import_gevent_original("time").sleep
-    else:
-        time_sleep = _monkey._import_python_original("time").sleep
-
-        if _monkey._eventlet_patched("time"):
-            _threading_sleep = _monkey._import_eventlet_original("time").sleep
-        elif _monkey._gevent_patched("time"):
-            _threading_sleep = _monkey._import_gevent_original("time").sleep
-        else:
-            _threading_sleep = time_sleep
-
-    _threading_sleep(seconds)
+if _monkey._eventlet_patched("time"):
+    _threading_sleep = _monkey._import_eventlet_original("time").sleep
+elif _monkey._gevent_patched("time"):
+    _threading_sleep = _monkey._import_gevent_original("time").sleep
+else:
+    _threading_sleep = _monkey._import_python_original("time").sleep
 
 
 def _eventlet_sleep(seconds=0):
