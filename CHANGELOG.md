@@ -23,6 +23,11 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `aiologic.lowlevel.enable_checkpoints()` and
+  `aiologic.lowlevel.disable_checkpoints()` universal decorators to enable and
+  disable checkpoints in the current thread's context. They support awaitable
+  objects, coroutine functions, and green functions, and can be used directly
+  as context managers.
 - `aiologic.lowlevel.green_checkpoint_enabled()` and
   `aiologic.lowlevel.async_checkpoint_enabled()` to determine if checkpoints
   are enabled for the current library.
@@ -171,8 +176,8 @@ Commit messages are consistent with
   `aiologic.lowlevel.cancel_shielded_checkpoint()`: they only supported
   asynchronous libraries and were not actually used in high-level primitives.
 - `aiologic.lowlevel.<library>_checkpoints_cvar` in favor of
-  `aiologic.lowlevel.checkpoints()` and `aiologic.lowlevel.nocheckpoints()`
-  (not yet implemented).
+  `aiologic.lowlevel.enable_checkpoints()` and
+  `aiologic.lowlevel.disable_checkpoints()`.
 - `AIOLOGIC_GREEN_LIBRARY` and `AIOLOGIC_ASYNC_LIBRARY` environment variables:
   they could be confusing because they did not affect
   `sniffio.current_async_library()`. The alternative of setting the default

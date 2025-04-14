@@ -7,12 +7,14 @@ import os
 import sys
 
 from contextvars import ContextVar
+from inspect import isawaitable, iscoroutinefunction
 
-from wrapt import when_imported
+from wrapt import decorator, when_imported
 
 from . import _time
 from ._ident import current_thread_ident
 from ._libraries import current_async_library, current_green_library
+from ._markers import MISSING
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -291,6 +293,124 @@ def _async_checkpoints_set(enabled):
         return _async_checkpoints_set(enabled)
 
     return None
+
+
+async def _enable_async_checkpoints_for_awaitable(wrapped, /):
+    token = _async_checkpoints_set(True)
+
+    try:
+        return await wrapped
+    finally:
+        _async_checkpoints_reset(token)
+
+
+async def _disable_async_checkpoints_for_awaitable(wrapped, /):
+    token = _async_checkpoints_set(False)
+
+    try:
+        return await wrapped
+    finally:
+        _async_checkpoints_reset(token)
+
+
+@decorator
+async def _enable_async_checkpoints(wrapped, instance, args, kwargs, /):
+    token = _async_checkpoints_set(True)
+
+    try:
+        return await wrapped(*args, **kwargs)
+    finally:
+        _async_checkpoints_reset(token)
+
+
+@decorator
+async def _disable_async_checkpoints(wrapped, instance, args, kwargs, /):
+    token = _async_checkpoints_set(False)
+
+    try:
+        return await wrapped(*args, **kwargs)
+    finally:
+        _async_checkpoints_reset(token)
+
+
+@decorator
+def _enable_green_checkpoints(wrapped, instance, args, kwargs, /):
+    token = _green_checkpoints_set(True)
+
+    try:
+        return wrapped(*args, **kwargs)
+    finally:
+        _green_checkpoints_reset(token)
+
+
+@decorator
+def _disable_green_checkpoints(wrapped, instance, args, kwargs, /):
+    token = _green_checkpoints_set(False)
+
+    try:
+        return wrapped(*args, **kwargs)
+    finally:
+        _green_checkpoints_reset(token)
+
+
+class enable_checkpoints:
+    __slots__ = ("__token",)
+
+    def __new__(cls, wrapped=MISSING, /):
+        if wrapped is MISSING:
+            return super().__new__(cls)
+        elif isawaitable(wrapped):
+            return _enable_async_checkpoints_for_awaitable(wrapped)
+        elif iscoroutinefunction(wrapped):
+            return _enable_async_checkpoints(wrapped)
+        else:
+            return _enable_green_checkpoints(wrapped)
+
+    async def __aenter__(self, /):
+        self.__token = _async_checkpoints_set(True)
+
+        return True
+
+    async def __aexit__(self, /, exc_type, exc_value, traceback):
+        _async_checkpoints_reset(self.__token)
+
+    def __enter__(self, /):
+        self.__token = _green_checkpoints_set(True)
+
+        return True
+
+    def __exit__(self, /, exc_type, exc_value, traceback):
+        _green_checkpoints_reset(self.__token)
+
+
+class disable_checkpoints:
+    __slots__ = ("__token",)
+
+    def __new__(cls, wrapped=MISSING, /):
+        if wrapped is MISSING:
+            return super().__new__(cls)
+        elif isawaitable(wrapped):
+            return _disable_async_checkpoints_for_awaitable(wrapped)
+        elif iscoroutinefunction(wrapped):
+            return _disable_async_checkpoints(wrapped)
+        else:
+            return _disable_green_checkpoints(wrapped)
+
+    async def __aenter__(self, /):
+        self.__token = _async_checkpoints_set(False)
+
+        return False
+
+    async def __aexit__(self, /, exc_type, exc_value, traceback):
+        _async_checkpoints_reset(self.__token)
+
+    def __enter__(self, /):
+        self.__token = _green_checkpoints_set(False)
+
+        return False
+
+    def __exit__(self, /, exc_type, exc_value, traceback):
+        _green_checkpoints_reset(self.__token)
 
 
 async def _trio_checkpoint():

@@ -8,6 +8,8 @@ from ._checkpoints import (
     async_checkpoint_enabled as async_checkpoint_enabled,
     async_checkpoint_if_cancelled as async_checkpoint_if_cancelled,
     checkpoint as checkpoint,
+    disable_checkpoints as disable_checkpoints,
+    enable_checkpoints as enable_checkpoints,
     green_checkpoint as green_checkpoint,
     green_checkpoint_enabled as green_checkpoint_enabled,
     green_checkpoint_if_cancelled as green_checkpoint_if_cancelled,
