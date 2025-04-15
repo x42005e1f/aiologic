@@ -23,51 +23,43 @@ class Flag:
         return self
 
     def __getnewargs__(self, /):
-        if markers := self.__markers:
+        if self.__markers:
             try:
-                args = (markers[0],)
+                return (self.__markers[0],)
             except IndexError:
-                args = ()
-        else:
-            args = ()
+                pass
 
-        return args
+        return ()
 
     def __repr__(self, /):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        if markers := self.__markers:
+        if self.__markers:
             try:
-                marker_repr = repr(markers[0])
+                return f"{cls_repr}({self.__markers[0]!r})"
             except IndexError:
-                marker_repr = ""
-        else:
-            marker_repr = ""
+                pass
 
-        return f"{cls_repr}({marker_repr})"
+        return f"{cls_repr}()"
 
     def __bool__(self, /):
         return bool(self.__markers)
 
     def get(self, /, default=MISSING, *, default_factory=MISSING):
-        if markers := self.__markers:
+        if self.__markers:
             try:
-                marker = markers[0]
+                return self.__markers[0]
             except IndexError:
-                marker = MISSING
-        else:
-            marker = MISSING
+                pass
 
-        if marker is MISSING:
-            if default is not MISSING:
-                marker = default
-            elif default_factory is not MISSING:
-                marker = default_factory()
-            else:
-                raise LookupError(self) from None
+        if default is not MISSING:
+            return default
 
-        return marker
+        if default_factory is not MISSING:
+            return default_factory()
+
+        raise LookupError(self)
 
     def set(self, /, marker=MISSING):
         markers = self.__markers
@@ -83,15 +75,11 @@ class Flag:
 
         if marker is not MISSING:
             try:
-                actual_marker = markers[0]
+                return marker is markers[0]
             except IndexError:
-                success = False
-            else:
-                success = marker is actual_marker
-        else:
-            success = False
+                pass
 
-        return success
+        return False
 
     def clear(self, /):
         self.__markers.clear()
