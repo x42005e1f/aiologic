@@ -9,7 +9,7 @@ import sys
 from contextvars import ContextVar
 from inspect import isawaitable, iscoroutinefunction
 
-from wrapt import decorator, when_imported
+from wrapt import ObjectProxy, decorator, when_imported
 
 from . import _time
 from ._ident import current_thread_ident
@@ -295,22 +295,28 @@ def _async_checkpoints_set(enabled):
     return None
 
 
-async def _enable_async_checkpoints_for_awaitable(wrapped, /):
-    token = _async_checkpoints_set(True)
+class _AwaitableWithCheckpoints(ObjectProxy):
+    __slots__ = ()
 
-    try:
-        return await wrapped
-    finally:
-        _async_checkpoints_reset(token)
+    def __await__(self, /):
+        token = _async_checkpoints_set(True)
+
+        try:
+            return (yield from self.__wrapped__.__await__())
+        finally:
+            _async_checkpoints_reset(token)
 
 
-async def _disable_async_checkpoints_for_awaitable(wrapped, /):
-    token = _async_checkpoints_set(False)
+class _AwaitableWithoutCheckpoints(ObjectProxy):
+    __slots__ = ()
 
-    try:
-        return await wrapped
-    finally:
-        _async_checkpoints_reset(token)
+    def __await__(self, /):
+        token = _async_checkpoints_set(False)
+
+        try:
+            return (yield from self.__wrapped__.__await__())
+        finally:
+            _async_checkpoints_reset(token)
 
 
 @decorator
@@ -360,7 +366,7 @@ class enable_checkpoints:
         if wrapped is MISSING:
             return super().__new__(cls)
         elif isawaitable(wrapped):
-            return _enable_async_checkpoints_for_awaitable(wrapped)
+            return _AwaitableWithCheckpoints(wrapped)
         elif iscoroutinefunction(wrapped):
             return _enable_async_checkpoints(wrapped)
         else:
@@ -390,7 +396,7 @@ class disable_checkpoints:
         if wrapped is MISSING:
             return super().__new__(cls)
         elif isawaitable(wrapped):
-            return _disable_async_checkpoints_for_awaitable(wrapped)
+            return _AwaitableWithoutCheckpoints(wrapped)
         elif iscoroutinefunction(wrapped):
             return _disable_async_checkpoints(wrapped)
         else:

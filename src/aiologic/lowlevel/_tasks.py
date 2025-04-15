@@ -5,7 +5,7 @@
 
 from inspect import isawaitable, iscoroutinefunction
 
-from wrapt import decorator, when_imported
+from wrapt import ObjectProxy, decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
 
@@ -261,23 +261,28 @@ async def _async_shield(wrapped, instance, args, kwargs, /):
         raise RuntimeError(msg)
 
 
-async def _async_shield_for_awaitable(wrapped, /):
-    library = current_async_library()
+class _ShieldedAwaitable(ObjectProxy):
+    __slots__ = ()
 
-    if library == "asyncio":
-        return await _asyncio_shield(wrapped, None, None)
-    elif library == "curio":
-        return await _curio_shield(wrapped, None, None)
-    elif library == "trio":
-        return await _trio_shield(wrapped, None, None)
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+    def __await__(self, /):
+        library = current_async_library()
+
+        if library == "asyncio":
+            coro = _asyncio_shield(self.__wrapped__, None, None)
+        elif library == "curio":
+            coro = _curio_shield(self.__wrapped__, None, None)
+        elif library == "trio":
+            coro = _trio_shield(self.__wrapped__, None, None)
+        else:
+            msg = f"unsupported async library {library!r}"
+            raise RuntimeError(msg)
+
+        return (yield from coro.__await__())
 
 
 def shield(wrapped, /):
     if isawaitable(wrapped):
-        return _async_shield_for_awaitable(wrapped)
+        return _ShieldedAwaitable(wrapped)
     elif iscoroutinefunction(wrapped):
         return _async_shield(wrapped)
     else:
