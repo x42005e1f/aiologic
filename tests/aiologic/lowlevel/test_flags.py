@@ -22,9 +22,10 @@ class TestFlag:
         assert self.factory(None).get() is None
         assert self.factory(marker="marker").get() == "marker"
 
-        assert repr(self.factory()) == "Flag()"
-        assert repr(self.factory(None)) == "Flag(None)"
-        assert repr(self.factory(marker="marker")) == "Flag('marker')"
+        pkg = "aiologic.lowlevel"
+        assert repr(self.factory()) == f"{pkg}.Flag()"
+        assert repr(self.factory(None)) == f"{pkg}.Flag(None)"
+        assert repr(self.factory(marker="marker")) == f"{pkg}.Flag('marker')"
 
         assert not self.factory()
         assert self.factory(None)
