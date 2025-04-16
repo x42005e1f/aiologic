@@ -210,6 +210,7 @@ ignore = [
     "SIM211",  # if-expr-with-false-true
     "SIM300",  # yoda-conditions
     # pylint
+    "PLC0414",  # useless-import-alias
     "PLC0415",  # import-outside-top-level
     "PLC2701",  # import-private-name
     "PLC2801",  # unnecessary-dunder-call
@@ -277,10 +278,6 @@ unfixable = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = [
-    # pylint
-    "PLC0414",  # useless-import-alias
-]
 "tests/**.py" = [
     # flake8-bandit
     "S301",  # suspicious-pickle-usage
