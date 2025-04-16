@@ -3,11 +3,13 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread, current_thread_ident
 
 
-def _current_eventlet_token():
+def _current_eventlet_token() -> object:
     global _current_eventlet_token
 
     from eventlet.hubs import get_hub as _current_eventlet_token
@@ -15,7 +17,7 @@ def _current_eventlet_token():
     return _current_eventlet_token()
 
 
-def _current_gevent_token():
+def _current_gevent_token() -> object:
     global _current_gevent_token
 
     from gevent import get_hub as _current_gevent_token
@@ -23,7 +25,7 @@ def _current_gevent_token():
     return _current_gevent_token()
 
 
-def _current_asyncio_token():
+def _current_asyncio_token() -> object:
     global _current_asyncio_token
 
     from asyncio import get_running_loop as _current_asyncio_token
@@ -31,12 +33,12 @@ def _current_asyncio_token():
     return _current_asyncio_token()
 
 
-def _current_curio_token():
+def _current_curio_token() -> object:
     global _current_curio_token
 
     from curio.meta import _locals
 
-    def _current_curio_token():
+    def _current_curio_token() -> object:
         kernel = getattr(_locals, "kernel", None)
 
         if kernel is None:
@@ -48,7 +50,7 @@ def _current_curio_token():
     return _current_curio_token()
 
 
-def _current_trio_token():
+def _current_trio_token() -> object:
     global _current_trio_token
 
     from trio.lowlevel import current_trio_token as _current_trio_token
@@ -56,63 +58,71 @@ def _current_trio_token():
     return _current_trio_token()
 
 
-def current_green_token():
+def current_green_token() -> object:
     library = current_green_library()
 
     if library == "threading":
         return current_thread()
-    elif library == "eventlet":
+
+    if library == "eventlet":
         return _current_eventlet_token()
-    elif library == "gevent":
+
+    if library == "gevent":
         return _current_gevent_token()
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_async_token():
+def current_async_token() -> object:
     library = current_async_library()
 
     if library == "asyncio":
         return _current_asyncio_token()
-    elif library == "curio":
+
+    if library == "curio":
         return _current_curio_token()
-    elif library == "trio":
+
+    if library == "trio":
         return _current_trio_token()
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_green_token_ident():
+def current_green_token_ident() -> tuple[str, int]:
     library = current_green_library()
 
     if library == "threading":
         return (library, current_thread_ident())
-    elif library == "eventlet":
+
+    if library == "eventlet":
         return (library, id(_current_eventlet_token()))
-    elif library == "gevent":
+
+    if library == "gevent":
         return (library, id(_current_gevent_token()))
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_async_token_ident():
+def current_async_token_ident() -> tuple[str, int]:
     library = current_async_library()
 
     if library == "asyncio":
         return (library, id(_current_asyncio_token()))
-    elif library == "curio":
+
+    if library == "curio":
         return (library, id(_current_curio_token()))
-    elif library == "trio":
+
+    if library == "trio":
         return (library, id(_current_trio_token()))
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)
 
 
-def _current_greenlet():
+def _current_greenlet() -> object:
     global _current_greenlet
 
     from greenlet import getcurrent as _current_greenlet
@@ -120,7 +130,7 @@ def _current_greenlet():
     return _current_greenlet()
 
 
-def _current_asyncio_task():
+def _current_asyncio_task() -> object:
     global _current_asyncio_task
 
     from asyncio import current_task as _current_asyncio_task
@@ -128,14 +138,14 @@ def _current_asyncio_task():
     return _current_asyncio_task()
 
 
-def _current_curio_task():
+def _current_curio_task() -> object:
     global _current_curio_task
 
     from functools import partial
 
     from curio.meta import _locals
 
-    def _current_curio_task():
+    def _current_curio_task() -> object:
         try:
             _aiologic_task_cell = _locals._aiologic_task_cell
         except AttributeError:
@@ -160,7 +170,7 @@ def _current_curio_task():
     return _current_curio_task()
 
 
-def _current_trio_task():
+def _current_trio_task() -> object:
     global _current_trio_task
 
     from trio.lowlevel import current_task as _current_trio_task
@@ -168,57 +178,65 @@ def _current_trio_task():
     return _current_trio_task()
 
 
-def current_green_task():
+def current_green_task() -> object:
     library = current_green_library()
 
     if library == "threading":
         return current_thread()
-    elif library == "eventlet":
+
+    if library == "eventlet":
         return _current_greenlet()
-    elif library == "gevent":
+
+    if library == "gevent":
         return _current_greenlet()
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_async_task():
+def current_async_task() -> object:
     library = current_async_library()
 
     if library == "asyncio":
         return _current_asyncio_task()
-    elif library == "curio":
+
+    if library == "curio":
         return _current_curio_task()
-    elif library == "trio":
+
+    if library == "trio":
         return _current_trio_task()
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_green_task_ident():
+def current_green_task_ident() -> tuple[str, int]:
     library = current_green_library()
 
     if library == "threading":
         return (library, current_thread_ident())
-    elif library == "eventlet":
+
+    if library == "eventlet":
         return (library, id(_current_greenlet()))
-    elif library == "gevent":
+
+    if library == "gevent":
         return (library, id(_current_greenlet()))
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
 
 
-def current_async_task_ident():
+def current_async_task_ident() -> tuple[str, int]:
     library = current_async_library()
 
     if library == "asyncio":
         return (library, id(_current_asyncio_task()))
-    elif library == "curio":
+
+    if library == "curio":
         return (library, id(_current_curio_task()))
-    elif library == "trio":
+
+    if library == "trio":
         return (library, id(_current_trio_task()))
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)
