@@ -8,7 +8,7 @@ from __future__ import annotations
 from . import _monkey
 
 
-def _threading_sleep(seconds: float) -> None:
+def _threading_sleep(seconds: float, /) -> None:
     global _threading_sleep
 
     if _monkey._eventlet_patched("time"):
@@ -28,7 +28,7 @@ def _threading_sleep(seconds: float) -> None:
     _threading_sleep(seconds)
 
 
-def _eventlet_sleep(seconds: float = 0) -> None:
+def _eventlet_sleep(seconds: float = 0, /) -> None:
     global _eventlet_sleep
 
     from eventlet import sleep as _eventlet_sleep
@@ -36,7 +36,7 @@ def _eventlet_sleep(seconds: float = 0) -> None:
     _eventlet_sleep(seconds)
 
 
-def _gevent_sleep(seconds: float = 0) -> None:
+def _gevent_sleep(seconds: float = 0, /) -> None:
     global _gevent_sleep
 
     from gevent import sleep as _gevent_sleep
@@ -44,7 +44,7 @@ def _gevent_sleep(seconds: float = 0) -> None:
     _gevent_sleep(seconds)
 
 
-async def _asyncio_sleep(seconds: float) -> None:
+async def _asyncio_sleep(seconds: float, /) -> None:
     global _asyncio_sleep
 
     from asyncio import sleep as _asyncio_sleep
@@ -52,7 +52,7 @@ async def _asyncio_sleep(seconds: float) -> None:
     await _asyncio_sleep(seconds)
 
 
-async def _curio_sleep(seconds: float) -> None:
+async def _curio_sleep(seconds: float, /) -> None:
     global _curio_sleep
 
     from curio import sleep as _curio_sleep
