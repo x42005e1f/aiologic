@@ -7,19 +7,13 @@ import sys
 
 from collections.abc import Awaitable
 from types import TracebackType
-from typing import (
-    Callable,
-    Literal,
-    Protocol,
-    TypeVar,
-    overload,
-    type_check_only,
-)
+from typing import Callable, Literal, Protocol, overload, type_check_only
 
 if sys.version_info >= (3, 13):
+    from typing import TypeVar
     from warnings import deprecated
 else:
-    from typing_extensions import deprecated
+    from typing_extensions import TypeVar, deprecated
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
