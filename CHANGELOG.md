@@ -212,6 +212,10 @@ Commit messages are consistent with
 - In very rare cases, lock acquiring methods did not notify newcomers due to
   calling a non-existent method when racing during cancellation, causing a hang
   (`0.14.0` regression).
+- A non-existent function was imported for `trio` tokens, which resulted in
+  inability to use `aiologic.lowlevel.current_async_token()` and
+  `aiologic.lowlevel.current_async_token_ident()` for `trio` (`0.14.0`
+  regression).
 - The `_local` class was imported directly from the `_thread` module, which
   caused the current library to be set only for the current greenlet and not
   for the whole thread after monkey patching (`0.14.0` regression).

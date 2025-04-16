@@ -51,7 +51,7 @@ def _current_curio_token():
 def _current_trio_token():
     global _current_trio_token
 
-    from trio.lowlevel import _current_trio_token
+    from trio.lowlevel import current_trio_token as _current_trio_token
 
     return _current_trio_token()
 
