@@ -6,10 +6,8 @@
 from threading import local
 from typing import Final, Literal, overload
 
-from sniffio import (
-    AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
-    thread_local,
-)
+from sniffio import AsyncLibraryNotFoundError as AsyncLibraryNotFoundError
+from sniffio._impl import _ThreadLocal
 
 class GreenLibraryNotFoundError(RuntimeError): ...
 
@@ -17,7 +15,7 @@ class _NamedLocal(local):
     name: str | None = None
 
 current_green_library_tlocal: Final[_NamedLocal]
-current_async_library_tlocal: Final = thread_local
+current_async_library_tlocal: Final[_ThreadLocal]
 
 def _eventlet_running() -> bool: ...
 def _gevent_running() -> bool: ...

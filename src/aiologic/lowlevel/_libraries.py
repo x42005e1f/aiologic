@@ -18,6 +18,8 @@ from ._threads import ThreadLocal
 if TYPE_CHECKING:
     from types import ModuleType
 
+    from sniffio._impl import _ThreadLocal
+
 
 class GreenLibraryNotFoundError(RuntimeError):
     pass
@@ -28,7 +30,7 @@ class _NamedLocal(ThreadLocal):
 
 
 current_green_library_tlocal: Final[_NamedLocal] = _NamedLocal()
-current_async_library_tlocal: Final = thread_local
+current_async_library_tlocal: Final[_ThreadLocal] = thread_local
 
 
 def _eventlet_running() -> bool:
