@@ -67,6 +67,19 @@ Commit messages are consistent with
 - Reentrant primitives now have checkpoints on reentrant acquires. This should
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
+- Interfaces and type hints have been improved:
+  + `aiologic.lowlevel.current_green_library()` and
+    `aiologic.lowlevel.current_async_library()` now return `Optional[str]` when
+    passing `fallback=True`. Previously, `str` was returned, which was not the
+    expected behavior.
+  + `aiologic.lowlevel.AsyncLibraryNotFoundError` and
+    `aiologic.lowlevel.current_async_library_tlocal` are now exactly the same
+    as `sniffio.AsyncLibraryNotFoundError` and `sniffio.thread_local`. This
+    allows them to be used interchangeably.
+  + In some modules, type information is now also inline. This allows such
+    information to be used in cases where stubs are not supported. In
+    particular, for `sphinx.ext.autodoc`. Stubs are still preserved to reduce
+    issues with type checkers.
 - Checkpoints have been rewritten:
   + `aiologic.lowlevel.repeat_if_cancelled()` has been replaced by
     `aiologic.lowlevel.shield()`. Unlike the pre-0.10.0 function of the same
