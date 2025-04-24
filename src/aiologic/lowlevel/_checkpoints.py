@@ -116,7 +116,7 @@ _async_checkpoints_enabled = False
 
 
 @when_imported("eventlet")
-def _green_checkpoints_enabled_hook(_):
+def _(_):
     global _green_checkpoints_enabled
 
     if EVENTLET_CHECKPOINTS_ENABLED:
@@ -124,7 +124,7 @@ def _green_checkpoints_enabled_hook(_):
 
 
 @when_imported("gevent")
-def _green_checkpoints_enabled_hook(_):
+def _(_):
     global _green_checkpoints_enabled
 
     if GEVENT_CHECKPOINTS_ENABLED:
@@ -132,7 +132,7 @@ def _green_checkpoints_enabled_hook(_):
 
 
 @when_imported("asyncio")
-def _async_checkpoints_enabled_hook(_):
+def _(_):
     global _async_checkpoints_enabled
 
     if ASYNCIO_CHECKPOINTS_ENABLED:
@@ -140,7 +140,7 @@ def _async_checkpoints_enabled_hook(_):
 
 
 @when_imported("curio")
-def _async_checkpoints_enabled_hook(_):
+def _(_):
     global _async_checkpoints_enabled
 
     if CURIO_CHECKPOINTS_ENABLED:
@@ -148,7 +148,7 @@ def _async_checkpoints_enabled_hook(_):
 
 
 @when_imported("trio")
-def _async_checkpoints_enabled_hook(_):
+def _(_):
     global _async_checkpoints_enabled
 
     if TRIO_CHECKPOINTS_ENABLED:
@@ -478,7 +478,7 @@ async def _asyncio_checkpoint_if_cancelled():
 
 
 @when_imported("anyio")
-def _asyncio_checkpoint_if_cancelled_hook(_):
+def _(_):
     global _asyncio_checkpoint_if_cancelled
 
     async def _asyncio_checkpoint_if_cancelled():

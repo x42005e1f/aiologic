@@ -50,7 +50,7 @@ def _curio_running() -> bool:
 
 
 @when_imported("eventlet")
-def _eventlet_running_hook(_: ModuleType) -> None:
+def _(_: ModuleType) -> None:
     global _eventlet_running
 
     def _eventlet_running() -> bool:
@@ -65,7 +65,7 @@ def _eventlet_running_hook(_: ModuleType) -> None:
 
 
 @when_imported("gevent")
-def _gevent_running_hook(_: ModuleType) -> None:
+def _(_: ModuleType) -> None:
     global _gevent_running
 
     def _gevent_running() -> bool:
@@ -80,7 +80,7 @@ def _gevent_running_hook(_: ModuleType) -> None:
 
 
 @when_imported("asyncio")
-def _asyncio_running_hook(_: ModuleType) -> None:
+def _(_: ModuleType) -> None:
     global _asyncio_running
 
     def _asyncio_running() -> bool:
@@ -109,7 +109,7 @@ def _asyncio_running_hook(_: ModuleType) -> None:
 
 
 @when_imported("curio")
-def _curio_running_hook(_: ModuleType) -> None:
+def _(_: ModuleType) -> None:
     global _curio_running
 
     def _curio_running() -> bool:

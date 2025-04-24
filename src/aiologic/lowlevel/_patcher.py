@@ -176,7 +176,7 @@ def _patch_eventlet_threading():
 
 
 @when_imported("eventlet.patcher")
-def _patch_eventlet_threading_hook(_):
+def _(_):
     global _patch_eventlet_threading
 
     @once

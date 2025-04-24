@@ -163,7 +163,7 @@ async def _asyncio_shield(wrapped, args, kwargs, /):
 
 
 @when_imported("anyio")
-def _asyncio_shield_hook(_):
+def _(_):
     global _asyncio_shield
 
     async def _asyncio_shield(wrapped, args, kwargs, /):

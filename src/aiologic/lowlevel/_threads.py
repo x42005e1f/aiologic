@@ -46,7 +46,7 @@ def _get_eventlet_thread(ident, /):
 
 
 @when_imported("eventlet.patcher")
-def _get_eventlet_thread_hook(_):
+def _(_):
     global _get_eventlet_thread
 
     def _get_eventlet_thread(ident, /):
