@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 from sniffio import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
@@ -29,8 +29,8 @@ class _NamedLocal(ThreadLocal):
     name: str | None = None
 
 
-current_green_library_tlocal: Final[_NamedLocal] = _NamedLocal()
-current_async_library_tlocal: Final[_ThreadLocal] = thread_local
+current_green_library_tlocal: _NamedLocal = _NamedLocal()
+current_async_library_tlocal: _ThreadLocal = thread_local
 
 
 def _eventlet_running() -> bool:
