@@ -634,8 +634,8 @@ def _get_eventlet_event_class():
 
                         try:
                             if self.shield:
-                                return _tasks._eventlet_shield(
-                                    self.__hub,
+                                return _tasks._eventlet_shielded_call(
+                                    self.__hub.switch,
                                     None,
                                     None,
                                 )
@@ -802,8 +802,8 @@ def _get_gevent_event_class():
 
                             try:
                                 if self.shield:
-                                    return _tasks._gevent_shield(
-                                        self.__hub,
+                                    return _tasks._gevent_shielded_call(
+                                        self.__hub.switch,
                                         None,
                                         None,
                                     )
@@ -955,7 +955,7 @@ def _get_asyncio_event_class():
 
                     try:
                         if self.shield:
-                            yield from _tasks._asyncio_shield(
+                            yield from _tasks._asyncio_shielded_call(
                                 self.__future,
                                 None,
                                 None,
@@ -1102,7 +1102,7 @@ def _get_curio_event_class():
 
                 try:
                     if self.shield:
-                        yield from _tasks._curio_shield(
+                        yield from _tasks._curio_shielded_call(
                             _future_wait,
                             [self.__future],
                             {},
@@ -1248,7 +1248,7 @@ def _get_trio_event_class():
 
                     try:
                         if self.shield:
-                            yield from _tasks._trio_shield(
+                            yield from _tasks._trio_shielded_call(
                                 wait_task_rescheduled,
                                 [abort],
                                 {},

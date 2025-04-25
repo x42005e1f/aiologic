@@ -14,7 +14,78 @@ else:
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+_T = TypeVar("_T")
 
+@overload
+def _eventlet_shielded_call(
+    wrapped: Callable[[], _T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+def _eventlet_shielded_call(
+    wrapped: Callable[..., _T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+@overload
+def _gevent_shielded_call(
+    wrapped: Callable[[], _T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+def _gevent_shielded_call(
+    wrapped: Callable[..., _T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+@overload
+async def _asyncio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _asyncio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+@overload
+async def _curio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _curio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+@overload
+async def _trio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _trio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
 @overload
 def shield(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload

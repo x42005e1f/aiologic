@@ -3,22 +3,49 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
+import sys
+
 from inspect import isawaitable, iscoroutinefunction
+from typing import Any, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
 
+if sys.version_info >= (3, 9):
+    from collections.abc import Awaitable, Callable
+else:
+    from typing import Awaitable, Callable
 
-def _eventlet_shield(wrapped, args, kwargs, /):
-    global _eventlet_shield
+_AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
+_CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+_T = TypeVar("_T")
+
+
+@overload
+def _eventlet_shielded_call(
+    wrapped: Callable[[], _T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+def _eventlet_shielded_call(
+    wrapped: Callable[..., _T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+def _eventlet_shielded_call(wrapped, args, kwargs, /):
+    global _eventlet_shielded_call
 
     from eventlet import Timeout, spawn
-    from eventlet.greenthread import GreenThread
     from eventlet.hubs import get_hub
     from greenlet import GreenletExit, getcurrent
 
-    def _eventlet_shield(wrapped, args, kwargs, /):
+    def _eventlet_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
         try:
@@ -27,10 +54,7 @@ def _eventlet_shield(wrapped, args, kwargs, /):
             try:
                 try:
                     if args is None:
-                        if isinstance(wrapped, GreenThread):
-                            wait = wrapped.wait
-                        else:
-                            wait = wrapped.switch
+                        wait = wrapped
                     else:
                         wait = spawn(wrapped, *args, **kwargs).wait
 
@@ -68,16 +92,30 @@ def _eventlet_shield(wrapped, args, kwargs, /):
 
         return result
 
-    return _eventlet_shield(wrapped, args, kwargs)
+    return _eventlet_shielded_call(wrapped, args, kwargs)
 
 
-def _gevent_shield(wrapped, args, kwargs, /):
-    global _gevent_shield
+@overload
+def _gevent_shielded_call(
+    wrapped: Callable[[], _T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+def _gevent_shielded_call(
+    wrapped: Callable[..., _T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+def _gevent_shielded_call(wrapped, args, kwargs, /):
+    global _gevent_shielded_call
 
-    from gevent import Greenlet, Timeout, get_hub, spawn
+    from gevent import Timeout, get_hub, spawn
     from greenlet import GreenletExit, getcurrent
 
-    def _gevent_shield(wrapped, args, kwargs, /):
+    def _gevent_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
         try:
@@ -86,10 +124,7 @@ def _gevent_shield(wrapped, args, kwargs, /):
             try:
                 try:
                     if args is None:
-                        if isinstance(wrapped, Greenlet):
-                            wait = wrapped.get
-                        else:
-                            wait = wrapped.switch
+                        wait = wrapped
                     else:
                         wait = spawn(wrapped, *args, **kwargs).get
 
@@ -127,15 +162,29 @@ def _gevent_shield(wrapped, args, kwargs, /):
 
         return result
 
-    return _gevent_shield(wrapped, args, kwargs)
+    return _gevent_shielded_call(wrapped, args, kwargs)
 
 
-async def _asyncio_shield(wrapped, args, kwargs, /):
-    global _asyncio_shield
+@overload
+async def _asyncio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _asyncio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+async def _asyncio_shielded_call(wrapped, args, kwargs, /):
+    global _asyncio_shielded_call
 
     from asyncio import CancelledError, ensure_future, shield
 
-    async def _asyncio_shield(wrapped, args, kwargs, /):
+    async def _asyncio_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
         try:
@@ -159,21 +208,35 @@ async def _asyncio_shield(wrapped, args, kwargs, /):
 
         return result
 
-    return await _asyncio_shield(wrapped, args, kwargs)
+    return await _asyncio_shielded_call(wrapped, args, kwargs)
 
 
 @when_imported("anyio")
 def _(_):
-    global _asyncio_shield
+    global _asyncio_shielded_call
 
-    async def _asyncio_shield(wrapped, args, kwargs, /):
-        global _asyncio_shield
+    @overload
+    async def _asyncio_shielded_call(
+        wrapped: Awaitable[_T],
+        args: None,
+        kwargs: None,
+        /,
+    ) -> _T: ...
+    @overload
+    async def _asyncio_shielded_call(
+        wrapped: Callable[..., Awaitable[_T]],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        /,
+    ) -> _T: ...
+    async def _asyncio_shielded_call(wrapped, args, kwargs, /):
+        global _asyncio_shielded_call
 
         from asyncio import CancelledError, ensure_future, shield
 
         from anyio import CancelScope
 
-        async def _asyncio_shield(wrapped, args, kwargs, /):
+        async def _asyncio_shielded_call(wrapped, args, kwargs, /):
             with CancelScope(shield=True):
                 exc = None
 
@@ -198,81 +261,113 @@ def _(_):
 
             return result
 
-        return await _asyncio_shield(wrapped, args, kwargs)
+        return await _asyncio_shielded_call(wrapped, args, kwargs)
 
 
-async def _curio_shield(wrapped, args, kwargs, /):
-    global _curio_shield
+@overload
+async def _curio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _curio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+async def _curio_shielded_call(wrapped, args, kwargs, /):
+    global _curio_shielded_call
 
     from curio import disable_cancellation
 
-    async def _curio_shield(wrapped, args, kwargs, /):
+    async def _curio_shielded_call(wrapped, args, kwargs, /):
         async with disable_cancellation():
             if args is None:
                 return await wrapped
             else:
                 return await wrapped(*args, **kwargs)
 
-    return await _curio_shield(wrapped, args, kwargs)
+    return await _curio_shielded_call(wrapped, args, kwargs)
 
 
-async def _trio_shield(wrapped, args, kwargs, /):
-    global _trio_shield
+@overload
+async def _trio_shielded_call(
+    wrapped: Awaitable[_T],
+    args: None,
+    kwargs: None,
+    /,
+) -> _T: ...
+@overload
+async def _trio_shielded_call(
+    wrapped: Callable[..., Awaitable[_T]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    /,
+) -> _T: ...
+async def _trio_shielded_call(wrapped, args, kwargs, /):
+    global _trio_shielded_call
 
     from trio import CancelScope
 
-    async def _trio_shield(wrapped, args, kwargs, /):
+    async def _trio_shielded_call(wrapped, args, kwargs, /):
         with CancelScope(shield=True):
             if args is None:
                 return await wrapped
             else:
                 return await wrapped(*args, **kwargs)
 
-    return await _trio_shield(wrapped, args, kwargs)
+    return await _trio_shielded_call(wrapped, args, kwargs)
 
 
 @decorator
-def _green_shield(wrapped, instance, args, kwargs, /):
+def __green_shield(wrapped, instance, args, kwargs, /):
     library = current_green_library()
 
     if library == "threading":
         return wrapped(*args, **kwargs)
-    elif library == "eventlet":
-        return _eventlet_shield(wrapped, args, kwargs)
-    elif library == "gevent":
-        return _gevent_shield(wrapped, args, kwargs)
-    else:
-        msg = f"unsupported green library {library!r}"
-        raise RuntimeError(msg)
+
+    if library == "eventlet":
+        return _eventlet_shielded_call(wrapped, args, kwargs)
+
+    if library == "gevent":
+        return _gevent_shielded_call(wrapped, args, kwargs)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
 
 
 @decorator
-async def _async_shield(wrapped, instance, args, kwargs, /):
+async def __async_shield(wrapped, instance, args, kwargs, /):
     library = current_async_library()
 
     if library == "asyncio":
-        return await _asyncio_shield(wrapped, args, kwargs)
-    elif library == "curio":
-        return await _curio_shield(wrapped, args, kwargs)
-    elif library == "trio":
-        return await _trio_shield(wrapped, args, kwargs)
-    else:
-        msg = f"unsupported async library {library!r}"
-        raise RuntimeError(msg)
+        return await _asyncio_shielded_call(wrapped, args, kwargs)
+
+    if library == "curio":
+        return await _curio_shielded_call(wrapped, args, kwargs)
+
+    if library == "trio":
+        return await _trio_shielded_call(wrapped, args, kwargs)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)
 
 
-class _ShieldedAwaitable(ObjectProxy):
+class __ShieldedAwaitable(ObjectProxy):
     __slots__ = ()
 
     def __await__(self, /):
         library = current_async_library()
 
         if library == "asyncio":
-            coro = _asyncio_shield(self.__wrapped__, None, None)
+            coro = _asyncio_shielded_call(self.__wrapped__, None, None)
         elif library == "curio":
-            coro = _curio_shield(self.__wrapped__, None, None)
+            coro = _curio_shielded_call(self.__wrapped__, None, None)
         elif library == "trio":
-            coro = _trio_shield(self.__wrapped__, None, None)
+            coro = _trio_shielded_call(self.__wrapped__, None, None)
         else:
             msg = f"unsupported async library {library!r}"
             raise RuntimeError(msg)
@@ -280,10 +375,15 @@ class _ShieldedAwaitable(ObjectProxy):
         return (yield from coro.__await__())
 
 
-def shield(wrapped, /):
+@overload
+def shield(wrapped: _AwaitableT, /) -> _AwaitableT: ...
+@overload
+def shield(wrapped: _CallableT, /) -> _CallableT: ...
+def shield(wrapped: Any, /) -> Any:
     if isawaitable(wrapped):
-        return _ShieldedAwaitable(wrapped)
-    elif iscoroutinefunction(wrapped):
-        return _async_shield(wrapped)
-    else:
-        return _green_shield(wrapped)
+        return __ShieldedAwaitable(wrapped)
+
+    if iscoroutinefunction(wrapped):
+        return __async_shield(wrapped)
+
+    return __green_shield(wrapped)
