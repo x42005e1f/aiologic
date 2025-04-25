@@ -39,7 +39,7 @@ else:
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
-    from types import ModuleType, TracebackType
+    from types import TracebackType
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -129,7 +129,7 @@ _async_checkpoints_enabled: bool = False
 
 
 @when_imported("eventlet")
-def _(_: ModuleType) -> None:
+def _(_):
     global _green_checkpoints_enabled
 
     if _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT:
@@ -137,7 +137,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("gevent")
-def _(_: ModuleType) -> None:
+def _(_):
     global _green_checkpoints_enabled
 
     if _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT:
@@ -145,7 +145,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("asyncio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _async_checkpoints_enabled
 
     if _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
@@ -153,7 +153,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("curio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _async_checkpoints_enabled
 
     if _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
@@ -161,7 +161,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("trio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _async_checkpoints_enabled
 
     if _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
@@ -585,7 +585,7 @@ async def _asyncio_checkpoint_if_cancelled() -> None:
 
 
 @when_imported("anyio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _asyncio_checkpoint_if_cancelled
 
     async def _asyncio_checkpoint_if_cancelled() -> None:

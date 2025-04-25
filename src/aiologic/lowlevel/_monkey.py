@@ -20,7 +20,7 @@ def _gevent_patched(module_name: str, /) -> bool:
 
 
 @when_imported("eventlet.patcher")
-def _(_: ModuleType) -> None:
+def _(_):
     global _eventlet_patched
 
     def _eventlet_patched(module_name: str, /) -> bool:
@@ -44,7 +44,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("gevent.monkey")
-def _(_: ModuleType) -> None:
+def _(_):
     global _gevent_patched
 
     def _gevent_patched(module_name: str, /) -> bool:
@@ -72,7 +72,7 @@ def _import_gevent_original(module_name: str, /) -> ModuleType:
 
 
 @when_imported("eventlet.patcher")
-def _(_: ModuleType) -> None:
+def _(_):
     global _import_eventlet_original
 
     def _import_eventlet_original(module_name: str, /) -> ModuleType:
@@ -84,7 +84,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("gevent.monkey")
-def _(_: ModuleType) -> None:
+def _(_):
     global _import_gevent_original
 
     def _import_gevent_original(module_name: str, /) -> ModuleType:

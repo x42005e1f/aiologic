@@ -16,8 +16,6 @@ from wrapt import when_imported
 from ._threads import ThreadLocal
 
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from sniffio._impl import _ThreadLocal
 
 
@@ -50,7 +48,7 @@ def _curio_running() -> bool:
 
 
 @when_imported("eventlet")
-def _(_: ModuleType) -> None:
+def _(_):
     global _eventlet_running
 
     def _eventlet_running() -> bool:
@@ -65,7 +63,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("gevent")
-def _(_: ModuleType) -> None:
+def _(_):
     global _gevent_running
 
     def _gevent_running() -> bool:
@@ -80,7 +78,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("asyncio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _asyncio_running
 
     def _asyncio_running() -> bool:
@@ -109,7 +107,7 @@ def _(_: ModuleType) -> None:
 
 
 @when_imported("curio")
-def _(_: ModuleType) -> None:
+def _(_):
     global _curio_running
 
     def _curio_running() -> bool:
