@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from ._greenlets import _current_greenlet
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread, current_thread_ident
 
@@ -120,14 +121,6 @@ def current_async_token_ident() -> tuple[str, int]:
 
     msg = f"unsupported async library {library!r}"
     raise RuntimeError(msg)
-
-
-def _current_greenlet() -> object:
-    global _current_greenlet
-
-    from greenlet import getcurrent as _current_greenlet
-
-    return _current_greenlet()
 
 
 def _current_asyncio_task() -> object:
