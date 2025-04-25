@@ -32,17 +32,16 @@ if sys.version_info >= (3, 13):
 else:
     from typing_extensions import deprecated
 
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
+if sys.version_info >= (3, 9):
+    from collections.abc import Awaitable
 else:
-    from typing_extensions import ParamSpec
+    from typing import Awaitable
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
     from types import TracebackType
 
-_T = TypeVar("_T")
-_P = ParamSpec("_P")
+_AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
+_CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 
 _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT: Final[bool] = bool(
     os.getenv(
@@ -488,9 +487,9 @@ def enable_checkpoints(
     /,
 ) -> _CheckpointsManager: ...
 @overload
-def enable_checkpoints(wrapped: Awaitable[_T], /) -> Awaitable[_T]: ...
+def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-def enable_checkpoints(wrapped: Callable[_P, _T], /) -> Callable[_P, _T]: ...
+def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_checkpoints(wrapped: Any = MISSING, /) -> Any:
     if wrapped is MISSING:
         return _CheckpointsManager()
@@ -510,9 +509,9 @@ def disable_checkpoints(
     /,
 ) -> _NoCheckpointsManager: ...
 @overload
-def disable_checkpoints(wrapped: Awaitable[_T], /) -> Awaitable[_T]: ...
+def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-def disable_checkpoints(wrapped: Callable[_P, _T], /) -> Callable[_P, _T]: ...
+def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_checkpoints(wrapped: Any = MISSING, /) -> Any:
     if wrapped is MISSING:
         return _NoCheckpointsManager()
