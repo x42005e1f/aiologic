@@ -7,7 +7,7 @@ import sys
 
 from contextvars import ContextVar, Token
 from types import TracebackType
-from typing import Any, Callable, Final, Literal, TypeVar, overload
+from typing import Any, Final, Literal, TypeVar, overload
 
 from ._markers import MissingType
 
@@ -17,9 +17,9 @@ else:
     from typing_extensions import deprecated
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 else:
-    from typing import Awaitable
+    from typing import Awaitable, Callable
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])

@@ -8,7 +8,7 @@ import sys
 import threading
 
 from types import TracebackType
-from typing import Any, Callable, Generator, Generic, TypeVar, overload
+from typing import Any, Generic, TypeVar, overload
 
 from ._lock import PLock, RLock
 
@@ -16,6 +16,11 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable, Generator
+else:
+    from typing import Callable, Generator
 
 _T = TypeVar("_T")
 _T_co = TypeVar(

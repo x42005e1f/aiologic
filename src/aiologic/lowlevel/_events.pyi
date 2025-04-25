@@ -5,13 +5,17 @@
 
 import sys
 
-from collections.abc import Generator
 from typing import Any, Final, Literal, NoReturn, Protocol, final
 
 if sys.version_info >= (3, 11):
     from typing import Never, Self
 else:
     from typing_extensions import Never, Self
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Generator
+else:
+    from typing import Generator
 
 class Event(Protocol):
     def __bool__(self, /) -> bool: ...

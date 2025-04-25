@@ -5,13 +5,17 @@
 
 import sys
 
-from collections.abc import Iterable
 from typing import Generic, TypeVar, overload
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Iterable
+else:
+    from typing import Iterable
 
 _T = TypeVar("_T")
 

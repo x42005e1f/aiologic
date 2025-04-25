@@ -6,12 +6,17 @@
 import sys
 
 from threading import Thread, local
-from typing import Any, Callable, TypeVar, overload
+from typing import Any, TypeVar, overload
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
 else:
     from typing_extensions import TypeVarTuple, Unpack
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+else:
+    from typing import Callable
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")

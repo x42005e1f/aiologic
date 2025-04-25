@@ -3,8 +3,14 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from collections.abc import Awaitable
-from typing import Any, Callable, TypeVar, overload
+import sys
+
+from typing import Any, TypeVar, overload
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Awaitable, Callable
+else:
+    from typing import Awaitable, Callable
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])

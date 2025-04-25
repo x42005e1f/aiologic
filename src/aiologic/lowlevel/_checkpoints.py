@@ -10,15 +10,7 @@ import sys
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Final,
-    Literal,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator, when_imported
 
@@ -33,9 +25,9 @@ else:
     from typing_extensions import deprecated
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 else:
-    from typing import Awaitable
+    from typing import Awaitable, Callable
 
 if TYPE_CHECKING:
     from types import TracebackType
