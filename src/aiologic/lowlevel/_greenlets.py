@@ -65,3 +65,12 @@ def _current_greenlet() -> _GreenletLike:
     from greenlet import getcurrent as _current_greenlet
 
     return _current_greenlet()
+
+
+def _main_greenlet() -> _GreenletLike:
+    greenlet = _current_greenlet()
+
+    while greenlet.parent is not None:
+        greenlet = greenlet.parent
+
+    return greenlet

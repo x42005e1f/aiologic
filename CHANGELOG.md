@@ -23,6 +23,9 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `aiologic.lowlevel.is_main_thread()` to fast check that the current thread is
+  the main thread. It can be used to handle the main thread in a special way,
+  and it works even after monkey patching.
 - `aiologic.lowlevel.enable_checkpoints()` and
   `aiologic.lowlevel.disable_checkpoints()` universal decorators to enable and
   disable checkpoints in the current thread's context. They support awaitable

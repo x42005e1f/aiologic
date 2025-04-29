@@ -7,6 +7,7 @@ import weakref
 
 from collections import deque
 from functools import wraps
+from threading import main_thread
 
 from wrapt import when_imported
 
@@ -16,6 +17,34 @@ from ._thread import (
     get_ident as current_thread_ident,
     start_new_thread as _start_new_thread,
 )
+
+try:
+    from ._thread import _get_main_thread_ident
+except ImportError:
+    from ._greenlets import _main_greenlet
+
+    def is_main_thread():
+        thread = main_thread()
+        thread_ident = thread.ident
+        thread_greenlet = getattr(thread, "_greenlet", None)  # gevent
+
+        if thread_greenlet is not None:
+            thread_ident = getattr(thread, "_gevent_real_ident", None)
+
+            if thread_ident is None:
+                result = _main_greenlet() is thread_greenlet
+
+                if result:
+                    thread._gevent_real_ident = current_thread_ident()
+
+                return result
+
+        return current_thread_ident() == thread_ident
+
+else:
+
+    def is_main_thread():
+        return current_thread_ident() == _get_main_thread_ident()
 
 
 def _get_python_thread(ident, /):
