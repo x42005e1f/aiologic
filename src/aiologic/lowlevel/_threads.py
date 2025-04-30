@@ -50,14 +50,12 @@ else:
 def _get_python_thread(ident, /):
     global _get_python_thread
 
-    from . import _monkey, _patcher
+    from . import _monkey
 
     threading = _monkey._import_python_original("threading")
 
     DummyThread = threading._DummyThread
     _active = threading._active
-
-    _patcher.patch_threading()
 
     def _get_python_thread(ident, /):
         thread = _active.get(ident)
@@ -81,14 +79,12 @@ def _(_):
     def _get_eventlet_thread(ident, /):
         global _get_eventlet_thread
 
-        from . import _monkey, _patcher
+        from . import _monkey
 
         threading = _monkey._import_eventlet_original("threading")
 
         DummyThread = threading._DummyThread
         _active = threading._active
-
-        _patcher.patch_threading()
 
         def _get_eventlet_thread(ident, /):
             thread = _active.get(ident)

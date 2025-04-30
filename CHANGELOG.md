@@ -162,6 +162,12 @@ Commit messages are consistent with
   ID for `threading`. This makes these functions more meaningful, and leads to
   the expected behavior in group-level locks. Previously, constant values were
   returned for `threading`.
+- The first `aiologic.lowlevel.current_thread()` call no longer patches the
+  `threading` module for PyPy (to fix the race in `Thread.join()`). This is
+  done to eliminate side effects and possible conflicts with debuggers. Use
+  PyPy 7.3.18 or higher instead, or apply [a separate
+  patch](https://gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe)
+  yourself.
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.
