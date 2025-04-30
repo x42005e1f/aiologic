@@ -211,6 +211,8 @@ Commit messages are consistent with
   + Reference cycles were possible when another exception was raised after a
     `asyncio.CancelledError` was caught: in this case, the last
     `asyncio.CancelledError` was not removed from the frame.
+- `aiologic.lowlevel.current_thread()` returned `None` for the main thread
+  after monkey patching the `threading` module with `gevent`.
 - Using checkpoints for `threading` could cause hub spawning in worker threads
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been

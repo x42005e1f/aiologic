@@ -116,6 +116,9 @@ def current_thread():
     if thread is None:
         thread = _get_python_thread(current_thread_ident())
 
+    if thread is None and is_main_thread():
+        thread = main_thread()
+
     return thread
 
 
