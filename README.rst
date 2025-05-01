@@ -187,7 +187,9 @@ astral-sh/uv>`_.
 Documentation
 =============
 
-Read the Docs: https://aiologic.readthedocs.io
+Read the Docs: https://aiologic.readthedocs.io (official)
+
+DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated)
 
 Communication channels
 ======================
