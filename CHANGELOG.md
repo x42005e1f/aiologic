@@ -168,6 +168,13 @@ Commit messages are consistent with
   PyPy 7.3.18 or higher instead, or apply [a separate
   patch](https://gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe)
   yourself.
+- The first `aiologic.lowlevel.GreenEvent` instantiation no longer injects
+  `destroy()` into `eventlet` hubs. This is delegated to [a separate
+  patch](https://gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe) as
+  it gives more predictable behavior. However, `aiologic` still injects
+  `schedule_call_threadsafe()` since
+  [eventlet/eventlet#1023](https://github.com/eventlet/eventlet/issues/1023) is
+  still unresolved.
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.

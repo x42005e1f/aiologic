@@ -537,7 +537,7 @@ def _get_eventlet_event_class():
 
     from . import _checkpoints as _cp, _patcher, _tasks, _time
 
-    _patcher.patch_eventlet()
+    _patcher._patch_eventlet()
 
     class _EventletEvent(GreenEvent):
         __slots__ = (
