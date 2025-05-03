@@ -5,13 +5,10 @@
 
 import sys
 
-from threading import Thread, local
-from typing import Any, TypeVar, overload
+from threading import Thread, get_ident, local
+from typing import TypeVar
 
-if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
-else:
-    from typing_extensions import TypeVarTuple, Unpack
+from ._greenlets import _GreenletLike
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -19,49 +16,15 @@ else:
     from typing import Callable
 
 _T = TypeVar("_T")
-_Ts = TypeVarTuple("_Ts")
 
-def is_main_thread() -> bool: ...
-def get_thread(ident: int, /) -> Thread | None: ...
-def current_thread() -> Thread | None: ...
-def current_thread_ident() -> int: ...
-def once(func: Callable[[], _T], /) -> Callable[[], _T]: ...
+def _is_main_thread() -> bool: ...
+def _current_python_thread() -> Thread | None: ...
+def _current_eventlet_thread() -> Thread | None: ...
+def _current_thread_or_main_greenlet() -> Thread | _GreenletLike: ...
+def current_thread() -> Thread: ...
 
-ThreadLocal = local
+current_thread_ident = get_ident
 
-@overload
-def start_new_thread(
-    target: Callable[[], object],
-    *,
-    daemon: bool = True,
-) -> int: ...
-@overload
-def start_new_thread(
-    target: Callable[[Unpack[_Ts]], object],
-    args: tuple[Unpack[_Ts]],
-    *,
-    daemon: bool = True,
-) -> int: ...
-@overload
-def start_new_thread(
-    target: Callable[..., object],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    *,
-    daemon: bool = True,
-) -> int: ...
-@overload
-def start_new_thread(
-    target: Callable[..., object],
-    *,
-    kwargs: dict[str, Any],
-    daemon: bool = True,
-) -> int: ...
-def add_thread_finalizer(
-    ident: int,
-    func: Callable[[], object],
-    /,
-    *,
-    ref: object = None,
-) -> object: ...
-def remove_thread_finalizer(ident: int, key: object, /) -> bool: ...
+_local = local
+
+def _once(func: Callable[[], _T], /) -> Callable[[], _T]: ...

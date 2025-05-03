@@ -13,7 +13,7 @@ from sniffio import (
 )
 from wrapt import when_imported
 
-from ._threads import ThreadLocal
+from ._threads import _local
 
 if TYPE_CHECKING:
     from sniffio._impl import _ThreadLocal
@@ -23,7 +23,7 @@ class GreenLibraryNotFoundError(RuntimeError):
     pass
 
 
-class _NamedLocal(ThreadLocal):
+class _NamedLocal(_local):
     name: str | None = None
 
 

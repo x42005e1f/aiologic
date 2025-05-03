@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 from ._checkpoints import async_checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
-from ._threads import once
+from ._threads import _once as once
 
 object___new__ = object.__new__
 

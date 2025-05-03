@@ -23,9 +23,6 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
-- `aiologic.lowlevel.is_main_thread()` to fast check that the current thread is
-  the main thread. It can be used to handle the main thread in a special way,
-  and it works even after monkey patching.
 - `aiologic.lowlevel.enable_checkpoints()` and
   `aiologic.lowlevel.disable_checkpoints()` universal decorators to enable and
   disable checkpoints in the current thread's context. They support awaitable
@@ -83,6 +80,15 @@ Commit messages are consistent with
     information to be used in cases where stubs are not supported. In
     particular, for `sphinx.ext.autodoc`. Stubs are still preserved to reduce
     issues with type checkers.
+- Thread-related functions have been rewritten:
+  + `aiologic.lowlevel.current_thread()` now raises `RuntimeError` for threads
+    started outside of the `threading` module instead of returning `None`. This
+    is to prevent situations where the function is used for identification
+    without proper handling of dummy threads, since in such cases dummy threads
+    would share the same "identifier" - `None`.
+  + The fallback `_thread._local` implementation now works not only with thread
+    objects but also with main greenlet objects, so it now supports `gevent`'s
+    pool of native worker threads.
 - Checkpoints have been rewritten:
   + `aiologic.lowlevel.repeat_if_cancelled()` has been replaced by
     `aiologic.lowlevel.shield()`. Unlike the pre-0.10.0 function of the same
@@ -224,8 +230,13 @@ Commit messages are consistent with
   + Reference cycles were possible when another exception was raised after a
     `asyncio.CancelledError` was caught: in this case, the last
     `asyncio.CancelledError` was not removed from the frame.
-- `aiologic.lowlevel.current_thread()` returned `None` for the main thread
-  after monkey patching the `threading` module with `gevent`.
+- `aiologic.lowlevel.current_thread()` returned:
+  + another main thread object after monkey patching the `threading` module
+    with `eventlet` (now the same as from `threading.main_thread()`).
+  + `None` for the main thread after monkey patching the `threading` module
+    with `gevent` (now the same as from `threading.main_thread()`).
+  + green thread objects for dummy threads whose identifier matched the running
+    greenlets (now raises an exception according to the new behavior).
 - Using checkpoints for `threading` could cause hub spawning in worker threads
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been

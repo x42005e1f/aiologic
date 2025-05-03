@@ -56,7 +56,6 @@ from ._tasks import (
 from ._threads import (
     current_thread as current_thread,
     current_thread_ident as current_thread_ident,
-    is_main_thread as is_main_thread,
 )
 
 # modify __module__ for shorter repr() and better pickle support

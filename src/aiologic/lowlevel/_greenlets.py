@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
+from wrapt import when_imported
+
 if TYPE_CHECKING:
     import sys
 
@@ -74,3 +76,14 @@ def _main_greenlet() -> _GreenletLike:
         greenlet = greenlet.parent
 
     return greenlet
+
+
+def _main_greenlet_if_exists() -> _GreenletLike | None:
+    return None
+
+
+@when_imported("greenlet")
+def _(_):
+    global _main_greenlet_if_exists
+
+    _main_greenlet_if_exists = _main_greenlet
