@@ -10,6 +10,8 @@ from types import ModuleType
 
 from wrapt import when_imported
 
+from ._utils import _replaces as replaces
+
 
 def _eventlet_patched(module_name: str, /) -> bool:
     return False
@@ -23,7 +25,8 @@ def _gevent_patched(module_name: str, /) -> bool:
 def _(_):
     global _eventlet_patched
 
-    def _eventlet_patched(module_name: str, /) -> bool:
+    @replaces(_eventlet_patched)
+    def _eventlet_patched(module_name, /):
         global _eventlet_patched
 
         from eventlet.patcher import already_patched
@@ -37,7 +40,8 @@ def _(_):
             "threading": "thread",
         }
 
-        def _eventlet_patched(module_name: str, /) -> bool:
+        @replaces(_eventlet_patched)
+        def _eventlet_patched(module_name, /):
             return mapping.get(module_name, module_name) in already_patched
 
         return _eventlet_patched(module_name)
@@ -47,7 +51,8 @@ def _(_):
 def _(_):
     global _gevent_patched
 
-    def _gevent_patched(module_name: str, /) -> bool:
+    @replaces(_gevent_patched)
+    def _gevent_patched(module_name, /):
         global _gevent_patched
 
         from gevent.monkey import is_module_patched as _gevent_patched
@@ -75,7 +80,8 @@ def _import_gevent_original(module_name: str, /) -> ModuleType:
 def _(_):
     global _import_eventlet_original
 
-    def _import_eventlet_original(module_name: str, /) -> ModuleType:
+    @replaces(_import_eventlet_original)
+    def _import_eventlet_original(module_name, /):
         global _import_eventlet_original
 
         from eventlet.patcher import original as _import_eventlet_original
@@ -87,12 +93,14 @@ def _(_):
 def _(_):
     global _import_gevent_original
 
-    def _import_gevent_original(module_name: str, /) -> ModuleType:
+    @replaces(_import_gevent_original)
+    def _import_gevent_original(module_name, /):
         global _import_gevent_original
 
         from gevent.monkey import get_original
 
-        def _import_gevent_original(module_name: str, /) -> ModuleType:
+        @replaces(_import_gevent_original)
+        def _import_gevent_original(module_name, /):
             names = dir(import_module(module_name))
 
             module = ModuleType(module_name)

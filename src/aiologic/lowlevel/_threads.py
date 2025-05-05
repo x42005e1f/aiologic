@@ -14,6 +14,7 @@ from wrapt import when_imported
 from . import _greenlets, _monkey
 from ._markers import MISSING
 from ._thread import allocate_lock, get_ident
+from ._utils import _replaces as replaces
 
 if TYPE_CHECKING:
     import sys
@@ -46,7 +47,8 @@ except ImportError:
     def _(_):
         global _is_main_thread
 
-        def _is_main_thread() -> bool:
+        @replaces(_is_main_thread)
+        def _is_main_thread():
             thread = main_thread()
             thread_ident = thread.ident
             thread_greenlet = getattr(thread, "_greenlet", None)
@@ -78,7 +80,8 @@ def _current_python_thread() -> Thread | None:
     _DummyThread = threading._DummyThread
     _active = threading._active
 
-    def _current_python_thread() -> Thread | None:
+    @replaces(_current_python_thread)
+    def _current_python_thread():
         thread = _active.get(get_ident())
 
         if isinstance(thread, _DummyThread):
@@ -91,7 +94,8 @@ def _current_python_thread() -> Thread | None:
     def _(_):
         global _current_python_thread
 
-        def _current_python_thread() -> Thread | None:
+        @replaces(_current_python_thread)
+        def _current_python_thread():
             thread = _active.get(ident := get_ident())
 
             if thread is None:
@@ -119,7 +123,8 @@ def _current_eventlet_thread() -> Thread | None:
 def _(_):
     global _current_eventlet_thread
 
-    def _current_eventlet_thread() -> Thread | None:
+    @replaces(_current_eventlet_thread)
+    def _current_eventlet_thread():
         global _current_eventlet_thread
 
         threading = _monkey._import_eventlet_original("threading")
@@ -127,7 +132,8 @@ def _(_):
         _DummyThread = threading._DummyThread
         _active = threading._active
 
-        def _current_eventlet_thread() -> Thread | None:
+        @replaces(_current_eventlet_thread)
+        def _current_eventlet_thread():
             thread = _active.get(get_ident())
 
             if isinstance(thread, _DummyThread):

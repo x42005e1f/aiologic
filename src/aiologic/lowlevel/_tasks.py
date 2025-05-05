@@ -13,6 +13,7 @@ from typing import Any, TypeVar, overload
 from wrapt import ObjectProxy, decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
+from ._utils import _replaces as replaces
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -45,6 +46,7 @@ def _eventlet_shielded_call(wrapped, args, kwargs, /):
     from eventlet.hubs import get_hub
     from greenlet import GreenletExit, getcurrent
 
+    @replaces(_eventlet_shielded_call)
     def _eventlet_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -115,6 +117,7 @@ def _gevent_shielded_call(wrapped, args, kwargs, /):
     from gevent import Timeout, get_hub, spawn
     from greenlet import GreenletExit, getcurrent
 
+    @replaces(_gevent_shielded_call)
     def _gevent_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -184,6 +187,7 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
 
     from asyncio import CancelledError, ensure_future, shield
 
+    @replaces(_asyncio_shielded_call)
     async def _asyncio_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -215,20 +219,7 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
 def _(_):
     global _asyncio_shielded_call
 
-    @overload
-    async def _asyncio_shielded_call(
-        wrapped: Awaitable[_T],
-        args: None,
-        kwargs: None,
-        /,
-    ) -> _T: ...
-    @overload
-    async def _asyncio_shielded_call(
-        wrapped: Callable[..., Awaitable[_T]],
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        /,
-    ) -> _T: ...
+    @replaces(_asyncio_shielded_call)
     async def _asyncio_shielded_call(wrapped, args, kwargs, /):
         global _asyncio_shielded_call
 
@@ -236,6 +227,7 @@ def _(_):
 
         from anyio import CancelScope
 
+        @replaces(_asyncio_shielded_call)
         async def _asyncio_shielded_call(wrapped, args, kwargs, /):
             with CancelScope(shield=True):
                 exc = None
@@ -283,6 +275,7 @@ async def _curio_shielded_call(wrapped, args, kwargs, /):
 
     from curio import disable_cancellation
 
+    @replaces(_curio_shielded_call)
     async def _curio_shielded_call(wrapped, args, kwargs, /):
         async with disable_cancellation():
             if args is None:
@@ -312,6 +305,7 @@ async def _trio_shielded_call(wrapped, args, kwargs, /):
 
     from trio import CancelScope
 
+    @replaces(_trio_shielded_call)
     async def _trio_shielded_call(wrapped, args, kwargs, /):
         with CancelScope(shield=True):
             if args is None:

@@ -8,6 +8,7 @@ from __future__ import annotations
 from ._greenlets import _current_greenlet
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread, current_thread_ident
+from ._utils import _replaces as replaces
 
 
 def _current_eventlet_token() -> object:
@@ -39,7 +40,8 @@ def _current_curio_token() -> object:
 
     from curio.meta import _locals
 
-    def _current_curio_token() -> object:
+    @replaces(_current_curio_token)
+    def _current_curio_token():
         kernel = getattr(_locals, "kernel", None)
 
         if kernel is None:
@@ -138,7 +140,8 @@ def _current_curio_task() -> object:
 
     from curio.meta import _locals
 
-    def _current_curio_task() -> object:
+    @replaces(_current_curio_task)
+    def _current_curio_task():
         try:
             _aiologic_task_cell = _locals._aiologic_task_cell
         except AttributeError:
