@@ -36,11 +36,9 @@ def _current_asyncio_token() -> object:
 
 
 def _current_curio_token() -> object:
-    global _current_curio_token
-
     from curio.meta import _locals
 
-    @replaces(_current_curio_token)
+    @replaces(globals())
     def _current_curio_token():
         kernel = getattr(_locals, "kernel", None)
 
@@ -134,13 +132,11 @@ def _current_asyncio_task() -> object:
 
 
 def _current_curio_task() -> object:
-    global _current_curio_task
-
     from functools import partial
 
     from curio.meta import _locals
 
-    @replaces(_current_curio_task)
+    @replaces(globals())
     def _current_curio_task():
         try:
             _aiologic_task_cell = _locals._aiologic_task_cell

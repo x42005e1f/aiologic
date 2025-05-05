@@ -50,15 +50,11 @@ def _curio_running() -> bool:
 
 @when_imported("eventlet")
 def _(_):
-    global _eventlet_running
-
-    @replaces(_eventlet_running)
+    @replaces(globals())
     def _eventlet_running():
-        global _eventlet_running
-
         from eventlet.hubs import _threadlocal
 
-        @replaces(_eventlet_running)
+        @replaces(globals())
         def _eventlet_running():
             return getattr(_threadlocal, "hub", None) is not None
 
@@ -67,15 +63,11 @@ def _(_):
 
 @when_imported("gevent")
 def _(_):
-    global _gevent_running
-
-    @replaces(_gevent_running)
+    @replaces(globals())
     def _gevent_running():
-        global _gevent_running
-
         from gevent._hub_local import get_hub_if_exists
 
-        @replaces(_gevent_running)
+        @replaces(globals())
         def _gevent_running():
             return get_hub_if_exists() is not None
 
@@ -84,12 +76,8 @@ def _(_):
 
 @when_imported("asyncio")
 def _(_):
-    global _asyncio_running
-
-    @replaces(_asyncio_running)
+    @replaces(globals())
     def _asyncio_running():
-        global _asyncio_running
-
         from asyncio import _get_running_loop
         from sys import version_info
 
@@ -97,14 +85,14 @@ def _(_):
 
         if version_info >= (3, 12) and is_builtin:
 
-            @replaces(_asyncio_running)
+            @replaces(globals())
             def _asyncio_running():
                 return _get_running_loop() is not None
 
         else:
             from sniffio import current_async_library_cvar
 
-            @replaces(_asyncio_running)
+            @replaces(globals())
             def _asyncio_running():
                 return (
                     current_async_library_cvar.get() == "asyncio"
@@ -116,9 +104,7 @@ def _(_):
 
 @when_imported("curio")
 def _(_):
-    global _curio_running
-
-    @replaces(_curio_running)
+    @replaces(globals())
     def _curio_running():
         global _curio_running
 

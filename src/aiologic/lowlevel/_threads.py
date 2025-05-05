@@ -45,9 +45,7 @@ except ImportError:
 
     @when_imported("gevent.monkey")
     def _(_):
-        global _is_main_thread
-
-        @replaces(_is_main_thread)
+        @replaces(globals())
         def _is_main_thread():
             thread = main_thread()
             thread_ident = thread.ident
@@ -73,14 +71,12 @@ else:
 
 
 def _current_python_thread() -> Thread | None:
-    global _current_python_thread
-
     threading = _monkey._import_python_original("threading")
 
     _DummyThread = threading._DummyThread
     _active = threading._active
 
-    @replaces(_current_python_thread)
+    @replaces(globals())
     def _current_python_thread():
         thread = _active.get(get_ident())
 
@@ -92,9 +88,7 @@ def _current_python_thread() -> Thread | None:
     @when_imported("gevent.monkey")
     @when_imported("eventlet.patcher")
     def _(_):
-        global _current_python_thread
-
-        @replaces(_current_python_thread)
+        @replaces(globals())
         def _current_python_thread():
             thread = _active.get(ident := get_ident())
 
@@ -121,18 +115,14 @@ def _current_eventlet_thread() -> Thread | None:
 
 @when_imported("eventlet.patcher")
 def _(_):
-    global _current_eventlet_thread
-
-    @replaces(_current_eventlet_thread)
+    @replaces(globals())
     def _current_eventlet_thread():
-        global _current_eventlet_thread
-
         threading = _monkey._import_eventlet_original("threading")
 
         _DummyThread = threading._DummyThread
         _active = threading._active
 
-        @replaces(_current_eventlet_thread)
+        @replaces(globals())
         def _current_eventlet_thread():
             thread = _active.get(get_ident())
 

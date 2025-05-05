@@ -23,12 +23,8 @@ def _gevent_patched(module_name: str, /) -> bool:
 
 @when_imported("eventlet.patcher")
 def _(_):
-    global _eventlet_patched
-
-    @replaces(_eventlet_patched)
+    @replaces(globals())
     def _eventlet_patched(module_name, /):
-        global _eventlet_patched
-
         from eventlet.patcher import already_patched
 
         mapping = {
@@ -40,7 +36,7 @@ def _(_):
             "threading": "thread",
         }
 
-        @replaces(_eventlet_patched)
+        @replaces(globals())
         def _eventlet_patched(module_name, /):
             return mapping.get(module_name, module_name) in already_patched
 
@@ -49,9 +45,7 @@ def _(_):
 
 @when_imported("gevent.monkey")
 def _(_):
-    global _gevent_patched
-
-    @replaces(_gevent_patched)
+    @replaces(globals())
     def _gevent_patched(module_name, /):
         global _gevent_patched
 
@@ -78,9 +72,7 @@ def _import_gevent_original(module_name: str, /) -> ModuleType:
 
 @when_imported("eventlet.patcher")
 def _(_):
-    global _import_eventlet_original
-
-    @replaces(_import_eventlet_original)
+    @replaces(globals())
     def _import_eventlet_original(module_name, /):
         global _import_eventlet_original
 
@@ -91,15 +83,11 @@ def _(_):
 
 @when_imported("gevent.monkey")
 def _(_):
-    global _import_gevent_original
-
-    @replaces(_import_gevent_original)
+    @replaces(globals())
     def _import_gevent_original(module_name, /):
-        global _import_gevent_original
-
         from gevent.monkey import get_original
 
-        @replaces(_import_gevent_original)
+        @replaces(globals())
         def _import_gevent_original(module_name, /):
             names = dir(import_module(module_name))
 

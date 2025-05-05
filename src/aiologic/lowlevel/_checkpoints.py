@@ -227,17 +227,12 @@ def _async_checkpoints_reset(token: Token[tuple[int, bool | None]], /) -> None:
 
 
 def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _threading_checkpoints_enabled
-    global _eventlet_checkpoints_enabled
-    global _gevent_checkpoints_enabled
-
     global _green_checkpoints_enabled
     global _green_checkpoints_reset
-    global _green_checkpoints_set
 
     if enabled or _green_checkpoints_enabled:
 
-        @replaces(_threading_checkpoints_enabled)
+        @replaces(globals())
         def _threading_checkpoints_enabled():
             ident, enabled = _green_checkpoints_cvar.get()
 
@@ -249,7 +244,7 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        @replaces(_eventlet_checkpoints_enabled)
+        @replaces(globals())
         def _eventlet_checkpoints_enabled():
             ident, enabled = _green_checkpoints_cvar.get()
 
@@ -261,7 +256,7 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        @replaces(_gevent_checkpoints_enabled)
+        @replaces(globals())
         def _gevent_checkpoints_enabled():
             ident, enabled = _green_checkpoints_cvar.get()
 
@@ -276,7 +271,7 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
         _green_checkpoints_enabled = True
         _green_checkpoints_reset = _green_checkpoints_cvar.reset
 
-        @replaces(_green_checkpoints_set)
+        @replaces(globals())
         def _green_checkpoints_set(enabled):
             return _green_checkpoints_cvar.set((
                 current_thread_ident(),
@@ -289,17 +284,12 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
 
 def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _asyncio_checkpoints_enabled
-    global _curio_checkpoints_enabled
-    global _trio_checkpoints_enabled
-
     global _async_checkpoints_enabled
     global _async_checkpoints_reset
-    global _async_checkpoints_set
 
     if enabled or _async_checkpoints_enabled:
 
-        @replaces(_asyncio_checkpoints_enabled)
+        @replaces(globals())
         def _asyncio_checkpoints_enabled():
             ident, enabled = _async_checkpoints_cvar.get()
 
@@ -311,7 +301,7 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        @replaces(_curio_checkpoints_enabled)
+        @replaces(globals())
         def _curio_checkpoints_enabled():
             ident, enabled = _async_checkpoints_cvar.get()
 
@@ -323,7 +313,7 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        @replaces(_trio_checkpoints_enabled)
+        @replaces(globals())
         def _trio_checkpoints_enabled():
             ident, enabled = _async_checkpoints_cvar.get()
 
@@ -338,7 +328,7 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
         _async_checkpoints_enabled = True
         _async_checkpoints_reset = _async_checkpoints_cvar.reset
 
-        @replaces(_async_checkpoints_set)
+        @replaces(globals())
         def _async_checkpoints_set(enabled):
             return _async_checkpoints_cvar.set((
                 current_thread_ident(),
@@ -582,9 +572,7 @@ async def _asyncio_checkpoint_if_cancelled() -> None:
 
 @when_imported("anyio")
 def _(_):
-    global _asyncio_checkpoint_if_cancelled
-
-    @replaces(_asyncio_checkpoint_if_cancelled)
+    @replaces(globals())
     async def _asyncio_checkpoint_if_cancelled():
         global _asyncio_checkpoint_if_cancelled
 

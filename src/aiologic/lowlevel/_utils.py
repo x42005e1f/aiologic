@@ -27,26 +27,28 @@ _P = ParamSpec("_P")
 
 @overload
 def _replaces(
-    wrapped: Callable[_P, _T],
+    namespace: dict[str, Any],
     wrapper: None = None,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
 def _replaces(
-    wrapped: Callable[_P, _T],
+    namespace: dict[str, Any],
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
 def _replaces(
-    wrapped: Callable[_P, _T],
+    namespace: dict[str, Any],
     wrapper: Callable[_P, _T] | None = None,
     /,
 ) -> Callable[..., Any]:
     if wrapper is None:
-        return partial(_replaces, wrapped)
+        return partial(_replaces, namespace)
 
-    wrapper = update_wrapper(wrapper, wrapped)
+    wrapper = update_wrapper(wrapper, namespace[wrapper.__name__])
 
     del wrapper.__wrapped__
+
+    namespace[wrapper.__name__] = wrapper
 
     return wrapper

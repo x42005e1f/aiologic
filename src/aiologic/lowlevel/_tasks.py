@@ -40,13 +40,11 @@ def _eventlet_shielded_call(
     /,
 ) -> _T: ...
 def _eventlet_shielded_call(wrapped, args, kwargs, /):
-    global _eventlet_shielded_call
-
     from eventlet import Timeout, spawn
     from eventlet.hubs import get_hub
     from greenlet import GreenletExit, getcurrent
 
-    @replaces(_eventlet_shielded_call)
+    @replaces(globals())
     def _eventlet_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -112,12 +110,10 @@ def _gevent_shielded_call(
     /,
 ) -> _T: ...
 def _gevent_shielded_call(wrapped, args, kwargs, /):
-    global _gevent_shielded_call
-
     from gevent import Timeout, get_hub, spawn
     from greenlet import GreenletExit, getcurrent
 
-    @replaces(_gevent_shielded_call)
+    @replaces(globals())
     def _gevent_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -183,11 +179,9 @@ async def _asyncio_shielded_call(
     /,
 ) -> _T: ...
 async def _asyncio_shielded_call(wrapped, args, kwargs, /):
-    global _asyncio_shielded_call
-
     from asyncio import CancelledError, ensure_future, shield
 
-    @replaces(_asyncio_shielded_call)
+    @replaces(globals())
     async def _asyncio_shielded_call(wrapped, args, kwargs, /):
         exc = None
 
@@ -217,17 +211,13 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
 
 @when_imported("anyio")
 def _(_):
-    global _asyncio_shielded_call
-
-    @replaces(_asyncio_shielded_call)
+    @replaces(globals())
     async def _asyncio_shielded_call(wrapped, args, kwargs, /):
-        global _asyncio_shielded_call
-
         from asyncio import CancelledError, ensure_future, shield
 
         from anyio import CancelScope
 
-        @replaces(_asyncio_shielded_call)
+        @replaces(globals())
         async def _asyncio_shielded_call(wrapped, args, kwargs, /):
             with CancelScope(shield=True):
                 exc = None
@@ -271,11 +261,9 @@ async def _curio_shielded_call(
     /,
 ) -> _T: ...
 async def _curio_shielded_call(wrapped, args, kwargs, /):
-    global _curio_shielded_call
-
     from curio import disable_cancellation
 
-    @replaces(_curio_shielded_call)
+    @replaces(globals())
     async def _curio_shielded_call(wrapped, args, kwargs, /):
         async with disable_cancellation():
             if args is None:
@@ -301,11 +289,9 @@ async def _trio_shielded_call(
     /,
 ) -> _T: ...
 async def _trio_shielded_call(wrapped, args, kwargs, /):
-    global _trio_shielded_call
-
     from trio import CancelScope
 
-    @replaces(_trio_shielded_call)
+    @replaces(globals())
     async def _trio_shielded_call(wrapped, args, kwargs, /):
         with CancelScope(shield=True):
             if args is None:

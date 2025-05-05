@@ -5,7 +5,7 @@
 
 import sys
 
-from typing import TypeVar, overload
+from typing import Any, TypeVar, overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -22,13 +22,13 @@ _P = ParamSpec("_P")
 
 @overload
 def _replaces(
-    wrapped: Callable[_P, _T],
+    namespace: dict[str, Any],
     wrapper: None = None,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
 def _replaces(
-    wrapped: Callable[_P, _T],
+    namespace: dict[str, Any],
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
