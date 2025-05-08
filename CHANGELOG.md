@@ -68,6 +68,9 @@ Commit messages are consistent with
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
 - Interfaces and type hints have been improved:
+  + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static
+    analysis tools now correctly recognize `aiologic.lowlevel.MISSING` as a
+    singleton instance.
   + `aiologic.lowlevel.current_green_library()` and
     `aiologic.lowlevel.current_async_library()` now return `Optional[str]` when
     passing `fallback=True`. Previously, `str` was returned, which was not the

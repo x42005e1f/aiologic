@@ -3,11 +3,17 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from typing import Final, Literal, final
+import enum
+
+from typing import Any, Final, Literal, NoReturn, final
 
 @final
-class MissingType:
-    def __new__(cls, /) -> MissingType: ...
+class MissingType(enum.Enum):
+    __slots__ = ()
+
+    MISSING = "MISSING"
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
     def __bool__(self, /) -> Literal[False]: ...
 
-MISSING: Final[MissingType]
+MISSING: Final[Literal[MissingType.MISSING]]
