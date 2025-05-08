@@ -117,7 +117,7 @@ def _(_):
 def current_green_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
 def current_green_library(*, failsafe: Literal[True]) -> str | None: ...
-def current_green_library(*, failsafe: bool = False) -> str | None:
+def current_green_library(*, failsafe=False):
     if (name := current_green_library_tlocal.name) is not None:
         return name
 
@@ -134,7 +134,7 @@ def current_green_library(*, failsafe: bool = False) -> str | None:
 def current_async_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
 def current_async_library(*, failsafe: Literal[True]) -> str | None: ...
-def current_async_library(*, failsafe: bool = False) -> str | None:
+def current_async_library(*, failsafe=False):
     if (name := current_async_library_tlocal.name) is not None:
         return name
 

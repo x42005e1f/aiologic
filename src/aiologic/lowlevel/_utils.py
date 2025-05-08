@@ -37,11 +37,7 @@ def _replaces(
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
-def _replaces(
-    namespace: dict[str, Any],
-    wrapper: Callable[_P, _T] | None = None,
-    /,
-) -> Callable[..., Any]:
+def _replaces(namespace, wrapper=None, /):
     if wrapper is None:
         return partial(_replaces, namespace)
 

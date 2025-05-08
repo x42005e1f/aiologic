@@ -29,10 +29,6 @@ _D = TypeVar("_D")
 class Flag(Generic[_T]):
     __slots__ = ("__markers",)
 
-    @overload
-    def __new__(cls, /, marker: MissingType = MISSING) -> Self: ...
-    @overload
-    def __new__(cls, /, marker: _T) -> Self: ...
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
         self = super().__new__(cls)
 
@@ -71,25 +67,35 @@ class Flag(Generic[_T]):
     def get(
         self,
         /,
-        default: MissingType = MISSING,
+        default: _T | MissingType,
         *,
         default_factory: MissingType = MISSING,
     ) -> _T: ...
     @overload
-    def get(self, /, default: _T) -> _T: ...
-    @overload
-    def get(self, /, default: _D) -> _T | _D: ...
-    @overload
-    def get(self, /, *, default_factory: Callable[[], _T]) -> _T: ...
-    @overload
-    def get(self, /, *, default_factory: Callable[[], _D]) -> _T | _D: ...
     def get(
         self,
         /,
-        default: Any = MISSING,
+        default: _D,
         *,
-        default_factory: Any = MISSING,
-    ) -> Any:
+        default_factory: MissingType = MISSING,
+    ) -> _T | _D: ...
+    @overload
+    def get(
+        self,
+        /,
+        default: MissingType = MISSING,
+        *,
+        default_factory: Callable[[], _T],
+    ) -> _T: ...
+    @overload
+    def get(
+        self,
+        /,
+        default: MissingType = MISSING,
+        *,
+        default_factory: Callable[[], _D],
+    ) -> _T | _D: ...
+    def get(self, /, default=MISSING, *, default_factory=MISSING):
         if self.__markers:
             try:
                 return self.__markers[0]
@@ -105,10 +111,10 @@ class Flag(Generic[_T]):
         raise LookupError(self)
 
     @overload
-    def set(self: Flag[object], /) -> bool: ...
+    def set(self: Flag[object], /, marker: MissingType = MISSING) -> bool: ...
     @overload
     def set(self, /, marker: _T) -> bool: ...
-    def set(self, /, marker: _T | MissingType = MISSING) -> bool:
+    def set(self, /, marker=MISSING):
         markers = self.__markers
 
         if not markers:

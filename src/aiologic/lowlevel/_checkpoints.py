@@ -477,7 +477,7 @@ def enable_checkpoints(
 def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
-def enable_checkpoints(wrapped: Any = MISSING, /) -> Any:
+def enable_checkpoints(wrapped=MISSING, /):
     if wrapped is MISSING:
         return _CheckpointsManager()
 
@@ -499,7 +499,7 @@ def disable_checkpoints(
 def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
 def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
-def disable_checkpoints(wrapped: Any = MISSING, /) -> Any:
+def disable_checkpoints(wrapped=MISSING, /):
     if wrapped is MISSING:
         return _NoCheckpointsManager()
 
