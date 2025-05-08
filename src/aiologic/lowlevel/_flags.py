@@ -3,16 +3,37 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-import types
+from __future__ import annotations
 
-from ._markers import MISSING
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+
+from ._markers import MISSING, MissingType
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
+    if sys.version_info >= (3, 9):
+        from collections.abc import Callable
+    else:
+        from typing import Callable
+
+_T = TypeVar("_T")
+_D = TypeVar("_D")
 
 
-class Flag:
+class Flag(Generic[_T]):
     __slots__ = ("__markers",)
 
-    def __new__(cls, /, marker=MISSING):
+    @overload
+    def __new__(cls, /, marker: MissingType = MISSING) -> Self: ...
+    @overload
+    def __new__(cls, /, marker: _T) -> Self: ...
+    def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
         self = super().__new__(cls)
 
         if marker is not MISSING:
@@ -22,7 +43,7 @@ class Flag:
 
         return self
 
-    def __getnewargs__(self, /):
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
         if self.__markers:
             try:
                 return (self.__markers[0],)
@@ -31,7 +52,7 @@ class Flag:
 
         return ()
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -43,10 +64,32 @@ class Flag:
 
         return f"{cls_repr}()"
 
-    def __bool__(self, /):
+    def __bool__(self, /) -> bool:
         return bool(self.__markers)
 
-    def get(self, /, default=MISSING, *, default_factory=MISSING):
+    @overload
+    def get(
+        self,
+        /,
+        default: MissingType = MISSING,
+        *,
+        default_factory: MissingType = MISSING,
+    ) -> _T: ...
+    @overload
+    def get(self, /, default: _T) -> _T: ...
+    @overload
+    def get(self, /, default: _D) -> _T | _D: ...
+    @overload
+    def get(self, /, *, default_factory: Callable[[], _T]) -> _T: ...
+    @overload
+    def get(self, /, *, default_factory: Callable[[], _D]) -> _T | _D: ...
+    def get(
+        self,
+        /,
+        default: Any = MISSING,
+        *,
+        default_factory: Any = MISSING,
+    ) -> Any:
         if self.__markers:
             try:
                 return self.__markers[0]
@@ -61,7 +104,11 @@ class Flag:
 
         raise LookupError(self)
 
-    def set(self, /, marker=MISSING):
+    @overload
+    def set(self: Flag[object], /) -> bool: ...
+    @overload
+    def set(self, /, marker: _T) -> bool: ...
+    def set(self, /, marker: _T | MissingType = MISSING) -> bool:
         markers = self.__markers
 
         if not markers:
@@ -81,8 +128,5 @@ class Flag:
 
         return False
 
-    def clear(self, /):
+    def clear(self, /) -> None:
         self.__markers.clear()
-
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(types.GenericAlias)

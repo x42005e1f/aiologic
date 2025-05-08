@@ -68,6 +68,10 @@ Commit messages are consistent with
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
 - Interfaces and type hints have been improved:
+  + `aiologic.lowlevel.Flag` is now a generic type not only in stubs but also
+    at runtime, making it possible to use subscriptions on Python 3.8.
+  + Calling `flag.set()` without arguments is now only allowed for
+    `aiologic.lowlevel.Flag[object]`. Previously it ignored subscriptions.
   + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static
     analysis tools now correctly recognize `aiologic.lowlevel.MISSING` as a
     singleton instance.

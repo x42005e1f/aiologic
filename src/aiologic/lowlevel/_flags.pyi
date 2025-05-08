@@ -5,24 +5,40 @@
 
 import sys
 
-from typing import Callable, Generic, TypeVar, overload
+from typing import Any, Generic, TypeVar, overload
+
+from ._markers import MissingType
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+else:
+    from typing import Callable
+
 _T = TypeVar("_T")
 _D = TypeVar("_D")
 
 class Flag(Generic[_T]):
+    __slots__ = ("__markers",)
+
     @overload
-    def __new__(cls, /) -> Self: ...
+    def __new__(cls, /, marker: MissingType = ...) -> Self: ...
     @overload
     def __new__(cls, /, marker: _T) -> Self: ...
+    def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __bool__(self, /) -> bool: ...
     @overload
-    def get(self, /) -> _T: ...
+    def get(
+        self,
+        /,
+        default: MissingType = ...,
+        *,
+        default_factory: MissingType = ...,
+    ) -> _T: ...
     @overload
     def get(self, /, default: _T) -> _T: ...
     @overload
@@ -32,7 +48,7 @@ class Flag(Generic[_T]):
     @overload
     def get(self, /, *, default_factory: Callable[[], _D]) -> _T | _D: ...
     @overload
-    def set(self, /) -> bool: ...
+    def set(self: Flag[object], /) -> bool: ...
     @overload
     def set(self, /, marker: _T) -> bool: ...
     def clear(self, /) -> None: ...
