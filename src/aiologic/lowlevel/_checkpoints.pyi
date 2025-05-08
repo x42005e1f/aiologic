@@ -9,7 +9,7 @@ from contextvars import ContextVar, Token
 from types import TracebackType
 from typing import Any, Final, Literal, TypeVar, overload
 
-from ._markers import MissingType
+from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -104,7 +104,7 @@ class _NoCheckpointsManager:
 
 @overload
 def enable_checkpoints(
-    wrapped: MissingType = ...,
+    wrapped: MissingType = MISSING,
     /,
 ) -> _CheckpointsManager: ...
 @overload
@@ -113,7 +113,7 @@ def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 @overload
 def disable_checkpoints(
-    wrapped: MissingType = ...,
+    wrapped: MissingType = MISSING,
     /,
 ) -> _NoCheckpointsManager: ...
 @overload

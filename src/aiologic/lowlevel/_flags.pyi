@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, Generic, TypeVar, overload
 
-from ._markers import MissingType
+from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -25,7 +25,7 @@ _D = TypeVar("_D")
 class Flag(Generic[_T]):
     __slots__ = ("__markers",)
 
-    def __new__(cls, /, marker: _T | MissingType = ...) -> Self: ...
+    def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self: ...
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __bool__(self, /) -> bool: ...
     @overload
@@ -34,7 +34,7 @@ class Flag(Generic[_T]):
         /,
         default: _T | MissingType,
         *,
-        default_factory: MissingType = ...,
+        default_factory: MissingType = MISSING,
     ) -> _T: ...
     @overload
     def get(
@@ -42,13 +42,13 @@ class Flag(Generic[_T]):
         /,
         default: _D,
         *,
-        default_factory: MissingType = ...,
+        default_factory: MissingType = MISSING,
     ) -> _T | _D: ...
     @overload
     def get(
         self,
         /,
-        default: MissingType = ...,
+        default: MissingType = MISSING,
         *,
         default_factory: Callable[[], _T],
     ) -> _T: ...
@@ -56,12 +56,12 @@ class Flag(Generic[_T]):
     def get(
         self,
         /,
-        default: MissingType = ...,
+        default: MissingType = MISSING,
         *,
         default_factory: Callable[[], _D],
     ) -> _T | _D: ...
     @overload
-    def set(self: Flag[object], /, marker: MissingType = ...) -> bool: ...
+    def set(self: Flag[object], /, marker: MissingType = MISSING) -> bool: ...
     @overload
     def set(self, /, marker: _T) -> bool: ...
     def clear(self, /) -> None: ...
