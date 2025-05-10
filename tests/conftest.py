@@ -82,6 +82,9 @@ def pytest_collection_modifyitems(config, items):
     ordered_tests = defaultdict(
         list,
         {
+            "test_builtins": [],
+            "test_collections": [],
+            "test_itertools": [],
             "aiologic.lowlevel.test_markers": [],
             "aiologic.lowlevel.test_flags": [],
         },
