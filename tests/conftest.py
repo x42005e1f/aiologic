@@ -47,7 +47,7 @@ def _test_thread_safety_impl(*functions):
             barrier.wait()
 
             try:
-                for future in as_completed(futures, timeout=1):
+                for future in as_completed(futures, timeout=6):
                     future.result()  # reraise
             except WaitTimeout:
                 pass
