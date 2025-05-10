@@ -57,6 +57,13 @@ from ._threads import (
     current_thread as current_thread,
     current_thread_ident as current_thread_ident,
 )
+from ._waiters import (
+    AsyncWaiter as AsyncWaiter,
+    GreenWaiter as GreenWaiter,
+    Waiter as Waiter,
+    create_async_waiter as create_async_waiter,
+    create_green_waiter as create_green_waiter,
+)
 
 # modify __module__ for shorter repr() and better pickle support
 for __value in list(globals().values()):

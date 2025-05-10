@@ -1,0 +1,536 @@
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: ISC
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol
+
+from ._libraries import current_async_library, current_green_library
+from ._threads import _once as once
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 9):
+        from collections.abc import Generator
+    else:
+        from typing import Generator
+
+
+class Waiter(Protocol):
+    __slots__ = ()
+
+    def wake(self, /) -> None: ...
+
+
+class GreenWaiter(Waiter, Protocol):
+    __slots__ = ()
+
+    def __init__(self, /, shield: bool = False) -> None: ...
+    def wait(self, /, timeout: float | None = None) -> bool: ...
+
+
+class AsyncWaiter(Waiter, Protocol):
+    __slots__ = ()
+
+    def __init__(self, /, shield: bool = False) -> None: ...
+    def __await__(self, /) -> Generator[Any, Any, bool]: ...
+
+
+@once
+def _get_threading_waiter_class() -> type[GreenWaiter]:
+    from ._thread import allocate_lock
+
+    class _ThreadingWaiter(GreenWaiter):
+        __slots__ = (
+            "__lock",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__lock = allocate_lock()
+            self.__lock.acquire()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _ThreadingWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def wait(self, /, timeout: float | None = None) -> bool:
+            if timeout is None or self.shield:
+                return self.__lock.acquire()
+            elif timeout > 0:
+                return self.__lock.acquire(True, timeout)
+            else:
+                return self.__lock.acquire(False)
+
+        def wake(self, /) -> None:
+            try:
+                self.__lock.release()
+            except RuntimeError:  # unlocked
+                pass
+
+    return _ThreadingWaiter
+
+
+@once
+def _get_eventlet_waiter_class() -> type[GreenWaiter]:
+    from eventlet.hubs import _threadlocal, get_hub
+    from greenlet import getcurrent
+
+    from . import _patcher, _tasks
+
+    _patcher._patch_eventlet()
+
+    class _EventletWaiter(GreenWaiter):
+        __slots__ = (
+            "__greenlet",
+            "__hub",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__greenlet = None
+            self.__hub = get_hub()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _EventletWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def wait(self, /, timeout: float | None = None) -> bool:
+            self.__greenlet = getcurrent()
+
+            try:
+                if timeout is None or self.shield:
+                    timer = None
+                elif timeout > 0:
+                    timer = self.__hub.schedule_call_local(
+                        timeout,
+                        self.__greenlet.switch,
+                        False,
+                    )
+                else:
+                    timer = self.__hub.schedule_call_local(
+                        0,
+                        self.__greenlet.switch,
+                        False,
+                    )
+
+                try:
+                    if self.shield:
+                        return _tasks._eventlet_shielded_call(
+                            self.__hub.switch,
+                            None,
+                            None,
+                        )
+                    else:
+                        return self.__hub.switch()
+                finally:
+                    if timer is not None:
+                        timer.cancel()
+            finally:
+                self.__greenlet = None
+
+        def __notify(self, /) -> None:
+            if self.__greenlet is not None:
+                self.__greenlet.switch(True)
+
+        def wake(self, /) -> None:
+            current_hub = getattr(_threadlocal, "hub", None)
+
+            if current_hub is self.__hub:
+                self.__hub.schedule_call_global(0, self.__notify)
+            else:
+                self.__hub.schedule_call_threadsafe(0, self.__notify)
+
+    return _EventletWaiter
+
+
+@once
+def _get_gevent_waiter_class() -> type[GreenWaiter]:
+    from gevent import get_hub
+    from gevent._hub_local import get_hub_if_exists
+    from greenlet import getcurrent
+
+    from . import _tasks
+
+    def _noop() -> None:
+        pass
+
+    class _GeventWaiter(GreenWaiter):
+        __slots__ = (
+            "__greenlet",
+            "__hub",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__greenlet = None
+            self.__hub = get_hub()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _GeventWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def wait(self, /, timeout: float | None = None) -> bool:
+            self.__greenlet = getcurrent()
+
+            try:
+                if timeout is None or self.shield:
+                    timer = None
+                else:
+                    if timeout > 0:
+                        timer = self.__hub.loop.timer(timeout)
+                    else:
+                        timer = self.__hub.loop.timer(0)
+
+                    timer.start(self.__greenlet.switch, False, update=True)
+
+                try:
+                    watcher = self.__hub.loop.async_()
+                    watcher.start(_noop)  # avoid LoopExit
+
+                    try:
+                        if self.shield:
+                            return _tasks._gevent_shielded_call(
+                                self.__hub.switch,
+                                None,
+                                None,
+                            )
+                        else:
+                            return self.__hub.switch()
+                    finally:
+                        watcher.close()
+                finally:
+                    if timer is not None:
+                        timer.close()
+            finally:
+                self.__greenlet = None
+
+        def __notify(self, /) -> None:
+            if self.__greenlet is not None:
+                self.__greenlet.switch(True)
+
+        def wake(self, /) -> None:
+            current_hub = get_hub_if_exists()
+
+            try:
+                if current_hub is self.__hub:
+                    self.__hub.loop.run_callback(self.__notify)
+                else:
+                    self.__hub.loop.run_callback_threadsafe(self.__notify)
+            except ValueError:  # event loop is destroyed
+                pass
+
+    return _GeventWaiter
+
+
+@once
+def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
+    from asyncio import (
+        InvalidStateError,
+        _get_running_loop as get_running_loop_if_exists,
+        get_running_loop,
+    )
+
+    from . import _tasks
+
+    class _AsyncioWaiter(AsyncWaiter):
+        __slots__ = (
+            "__future",
+            "__loop",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__future = None
+            self.__loop = get_running_loop()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _AsyncioWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __await__(self, /) -> Generator[Any, Any, bool]:
+            self.__future = self.__loop.create_future()
+
+            try:
+                if self.shield:
+                    yield from _tasks._asyncio_shielded_call(
+                        self.__future,
+                        None,
+                        None,
+                    ).__await__()
+                else:
+                    yield from self.__future.__await__()
+            finally:
+                self.__future = None
+
+            return True
+
+        def __notify(self, /) -> None:
+            if self.__future is not None:
+                try:
+                    self.__future.set_result(True)
+                except InvalidStateError:  # task is cancelled
+                    pass
+
+        def wake(self, /) -> None:
+            current_loop = get_running_loop_if_exists()
+
+            if current_loop is self.__loop:
+                self.__notify()
+            else:
+                try:
+                    self.__loop.call_soon_threadsafe(self.__notify)
+                except RuntimeError:  # event loop is closed
+                    pass
+
+    return _AsyncioWaiter
+
+
+@once
+def _get_curio_waiter_class() -> type[AsyncWaiter]:
+    from concurrent.futures import Future, InvalidStateError
+
+    from curio import check_cancellation
+    from curio.traps import _future_wait
+
+    from . import _tasks
+
+    class _CurioWaiter(AsyncWaiter):
+        __slots__ = (
+            "__future",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__future = Future()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _CurioWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __await__(self, /) -> Generator[Any, Any, bool]:
+            if self.shield:
+                yield from _tasks._curio_shielded_call(
+                    _future_wait,
+                    [self.__future],
+                    {},
+                ).__await__()
+                yield from check_cancellation().__await__()
+            else:
+                yield from _future_wait(self.__future).__await__()
+
+            return True
+
+        def wake(self, /) -> None:
+            try:
+                self.__future.set_result(True)
+            except InvalidStateError:  # future is cancelled
+                pass
+
+    return _CurioWaiter
+
+
+@once
+def _get_trio_waiter_class() -> type[AsyncWaiter]:
+    from trio import RunFinishedError
+    from trio.lowlevel import (
+        Abort,
+        current_task,
+        current_trio_token,
+        reschedule,
+        wait_task_rescheduled,
+    )
+
+    from . import _tasks
+
+    def _abort(raise_cancel: Any) -> Literal[Abort.SUCCEEDED]:
+        return Abort.SUCCEEDED
+
+    class _TrioWaiter(AsyncWaiter):
+        __slots__ = (
+            "__task",
+            "__token",
+            "shield",
+        )
+
+        def __init__(self, /, shield: bool = False) -> None:
+            self.__task = None
+            self.__token = current_trio_token()
+
+            self.shield = shield
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _TrioWaiter
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __await__(self, /) -> Generator[Any, Any, bool]:
+            self.__task = current_task()
+
+            try:
+                if self.shield:
+                    yield from _tasks._trio_shielded_call(
+                        wait_task_rescheduled,
+                        [_abort],
+                        {},
+                    ).__await__()
+                else:
+                    yield from wait_task_rescheduled(_abort).__await__()
+            finally:
+                self.__task = None
+
+            return True
+
+        def __notify(self, /) -> None:
+            if self.__task is not None:
+                reschedule(self.__task)
+
+        def wake(self, /) -> None:
+            try:
+                current_token = current_trio_token()
+            except RuntimeError:  # no called trio.run()
+                current_token = None
+
+            if current_token is self.__token:
+                self.__notify()
+            else:
+                try:
+                    self.__token.run_sync_soon(self.__notify)
+                except RunFinishedError:  # trio.run() is finished
+                    pass
+
+    return _TrioWaiter
+
+
+def _create_threading_waiter(shield: bool = False) -> GreenWaiter:
+    global _create_threading_waiter
+
+    _create_threading_waiter = _get_threading_waiter_class()
+
+    return _create_threading_waiter(shield)
+
+
+def _create_eventlet_waiter(shield: bool = False) -> GreenWaiter:
+    global _create_eventlet_waiter
+
+    _create_eventlet_waiter = _get_eventlet_waiter_class()
+
+    return _create_eventlet_waiter(shield)
+
+
+def _create_gevent_waiter(shield: bool = False) -> GreenWaiter:
+    global _create_gevent_waiter
+
+    _create_gevent_waiter = _get_gevent_waiter_class()
+
+    return _create_gevent_waiter(shield)
+
+
+def _create_asyncio_waiter(shield: bool = False) -> AsyncWaiter:
+    global _create_asyncio_waiter
+
+    _create_asyncio_waiter = _get_asyncio_waiter_class()
+
+    return _create_asyncio_waiter(shield)
+
+
+def _create_curio_waiter(shield: bool = False) -> AsyncWaiter:
+    global _create_curio_waiter
+
+    _create_curio_waiter = _get_curio_waiter_class()
+
+    return _create_curio_waiter(shield)
+
+
+def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
+    global _create_trio_waiter
+
+    _create_trio_waiter = _get_trio_waiter_class()
+
+    return _create_trio_waiter(shield)
+
+
+def create_green_waiter(shield: bool = False) -> GreenWaiter:
+    library = current_green_library()
+
+    if library == "threading":
+        return _create_threading_waiter(shield)
+
+    if library == "eventlet":
+        return _create_eventlet_waiter(shield)
+
+    if library == "gevent":
+        return _create_gevent_waiter(shield)
+
+    msg = f"unsupported green library {library!r}"
+    raise RuntimeError(msg)
+
+
+def create_async_waiter(shield: bool = False) -> AsyncWaiter:
+    library = current_async_library()
+
+    if library == "asyncio":
+        return _create_asyncio_waiter(shield)
+
+    if library == "curio":
+        return _create_curio_waiter(shield)
+
+    if library == "trio":
+        return _create_trio_waiter(shield)
+
+    msg = f"unsupported async library {library!r}"
+    raise RuntimeError(msg)

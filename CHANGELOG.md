@@ -23,6 +23,14 @@ Commit messages are consistent with
 
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
+- `aiologic.lowlevel.create_green_waiter()` and
+  `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
+  i.e. new low-level primitives that encapsulate library-specific wait-wake
+  logic. Unlike low-level events, they have no state, and thus have less
+  efficiency for multiple notifications (in particular, they schedule calls
+  regardless of whether the wait has been completed or not). And, of course,
+  for the same reason, they are even less safe (they require more specific
+  conditions for their correct operation).
 - `aiologic.lowlevel.enable_checkpoints()` and
   `aiologic.lowlevel.disable_checkpoints()` universal decorators to enable and
   disable checkpoints in the current thread's context. They support awaitable
@@ -130,11 +138,7 @@ Commit messages are consistent with
     rewritten to be similar to the `eventlet` events, making them faster than
     the native `gevent` events.
   + They are now bound to the event loop in the wait function rather than in
-    the event constructor (there is also an option to defer library detection
-    to the wait function by introducing a new abstraction (waiters) and adding
-    a generic `aiologic.lowlevel.AnyEvent`, but this has a negative impact on
-    memory, and the performance gain for high-level primitives is only in the
-    race condition).
+    the event constructor.
 - Condition variables have been rewritten:
   + They now only support passing locks from the `threading` module
     (synchronous mode), locks from the `aiologic` module (mixed mode), and
