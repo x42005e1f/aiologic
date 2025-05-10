@@ -10,6 +10,13 @@ import pytest
 
 import aiologic
 
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    GIL_DISABLED = False
+else:
+    GIL_DISABLED = not _is_gil_enabled()
+
 
 class TestFlag:
     factory = aiologic.lowlevel.Flag
@@ -167,6 +174,7 @@ class TestFlag:
 
         test_thread_safety(a, b)
 
+    @pytest.mark.skipif(GIL_DISABLED, reason="SIGSEGV when GIL is disabled")
     def test_pickling_threadsafe(self, test_thread_safety):
         flag = self.factory()
 
