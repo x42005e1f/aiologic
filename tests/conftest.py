@@ -6,7 +6,10 @@
 import inspect
 import sys
 
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import chain
+from pathlib import Path
 
 import pytest
 
@@ -75,7 +78,19 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
+    directory = Path(__file__).parent
+    ordered_tests = defaultdict(
+        list,
+        {
+            "aiologic.lowlevel.test_markers": [],
+            "aiologic.lowlevel.test_flags": [],
+        },
+    )
+
     for item in items:
+        module_name = ".".join(item.path.relative_to(directory).parts)[:-3]
+        ordered_tests[module_name].append(item)
+
         if "test_thread_safety" in item.fixturenames:
             item.add_marker(pytest.mark.threadsafe)
 
@@ -86,3 +101,5 @@ def pytest_collection_modifyitems(config, items):
                         reason="need --thread-safety option to run",
                     )
                 )
+
+    items[:] = chain.from_iterable(ordered_tests.values())
