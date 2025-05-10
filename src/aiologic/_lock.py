@@ -14,6 +14,15 @@ from .lowlevel import (
     green_checkpoint,
 )
 
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    GIL_ENABLED = True
+else:
+    GIL_ENABLED = _is_gil_enabled()
+
+USE_DELATTR = GIL_ENABLED  # see gh-127266
+
 
 class PLock:
     __slots__ = (
@@ -180,18 +189,23 @@ class PLock:
 class BLock(PLock):
     __slots__ = ("__locked",)
 
-    def __new__(cls, /):
-        self = super().__new__(cls)
+    if not USE_DELATTR:
 
-        self.__locked = []
+        def __new__(cls, /):
+            self = super().__new__(cls)
 
-        return self
+            self.__locked = []
+
+            return self
 
     async def async_acquire(self, /, *, blocking=True):
         success = await self._async_acquire(blocking=blocking)
 
         if success:
-            self.__locked.append(True)
+            if USE_DELATTR:
+                self.__locked = True
+            else:
+                self.__locked.append(True)
 
         return success
 
@@ -199,14 +213,20 @@ class BLock(PLock):
         success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
-            self.__locked.append(True)
+            if USE_DELATTR:
+                self.__locked = True
+            else:
+                self.__locked.append(True)
 
         return success
 
     def async_release(self, /):
         try:
-            self.__locked.pop()
-        except IndexError:
+            if USE_DELATTR:
+                del self.__locked
+            else:
+                self.__locked.pop()
+        except (AttributeError, IndexError):
             msg = "release unlocked lock"
             raise RuntimeError(msg) from None
 
@@ -214,8 +234,11 @@ class BLock(PLock):
 
     def green_release(self, /):
         try:
-            self.__locked.pop()
-        except IndexError:
+            if USE_DELATTR:
+                del self.__locked
+            else:
+                self.__locked.pop()
+        except (AttributeError, IndexError):
             msg = "release unlocked lock"
             raise RuntimeError(msg) from None
 

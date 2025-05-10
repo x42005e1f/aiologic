@@ -3,6 +3,15 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    GIL_ENABLED = True
+else:
+    GIL_ENABLED = _is_gil_enabled()
+
+USE_DELATTR = GIL_ENABLED  # see gh-127266
+
 
 class BusyResourceError(RuntimeError):
     pass
@@ -18,7 +27,10 @@ class ResourceGuard:
     def __new__(cls, /, action="using"):
         self = super().__new__(cls)
 
-        self.__unlocked = [True]
+        if USE_DELATTR:
+            self.__unlocked = True
+        else:
+            self.__unlocked = [True]
 
         self.action = action
 
@@ -39,12 +51,18 @@ class ResourceGuard:
         return f"{cls_repr}({self.action!r})"
 
     def __bool__(self, /):
-        return bool(self.__unlocked)
+        try:
+            return bool(self.__unlocked)
+        except AttributeError:
+            return False
 
     def __enter__(self, /):
         try:
-            self.__unlocked.pop()
-        except IndexError:
+            if USE_DELATTR:
+                del self.__unlocked
+            else:
+                self.__unlocked.pop()
+        except (AttributeError, IndexError):
             success = False
         else:
             success = True
@@ -56,4 +74,7 @@ class ResourceGuard:
         return self
 
     def __exit__(self, /, exc_type, exc_value, traceback):
-        self.__unlocked.append(True)
+        if USE_DELATTR:
+            self.__unlocked = True
+        else:
+            self.__unlocked.append(True)

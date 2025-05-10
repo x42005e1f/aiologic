@@ -9,6 +9,15 @@ from ._checkpoints import async_checkpoint, green_checkpoint
 from ._libraries import current_async_library, current_green_library
 from ._threads import _once as once
 
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    GIL_ENABLED = True
+else:
+    GIL_ENABLED = _is_gil_enabled()
+
+USE_DELATTR = GIL_ENABLED  # see gh-127266
+
 object___new__ = object.__new__
 
 
@@ -427,7 +436,11 @@ def _get_threading_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -495,8 +508,11 @@ def _get_threading_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -508,8 +524,11 @@ def _get_threading_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
@@ -558,7 +577,11 @@ def _get_eventlet_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -649,8 +672,11 @@ def _get_eventlet_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -666,8 +692,11 @@ def _get_eventlet_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
@@ -723,7 +752,11 @@ def _get_gevent_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -819,8 +852,11 @@ def _get_gevent_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -836,8 +872,11 @@ def _get_gevent_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
@@ -895,7 +934,11 @@ def _get_asyncio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -969,8 +1012,11 @@ def _get_asyncio_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -989,8 +1035,11 @@ def _get_asyncio_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
@@ -1045,7 +1094,11 @@ def _get_curio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -1115,8 +1168,11 @@ def _get_curio_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -1128,8 +1184,11 @@ def _get_curio_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
@@ -1188,7 +1247,11 @@ def _get_trio_event_class():
 
             self._is_cancelled = False
             self._is_set = False
-            self._is_unset = [True]
+
+            if USE_DELATTR:
+                self._is_unset = True
+            else:
+                self._is_unset = [True]
 
             self.force = force
             self.shield = shield
@@ -1260,8 +1323,11 @@ def _get_trio_event_class():
                 finally:
                     if not self._is_set:
                         try:
-                            self._is_unset.pop()
-                        except IndexError:
+                            if USE_DELATTR:
+                                del self._is_unset
+                            else:
+                                self._is_unset.pop()
+                        except (AttributeError, IndexError):
                             self._is_set = True
                         else:
                             self._is_cancelled = True
@@ -1279,8 +1345,11 @@ def _get_trio_event_class():
                 return False
 
             try:
-                self._is_unset.pop()
-            except IndexError:
+                if USE_DELATTR:
+                    del self._is_unset
+                else:
+                    self._is_unset.pop()
+            except (AttributeError, IndexError):
                 return False
             else:
                 self._is_set = True
