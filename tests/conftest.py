@@ -3,7 +3,59 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: 0BSD
 
+import inspect
+import sys
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import pytest
+
+from wrapt import decorator
+
+import aiologic
+
+if sys.version_info >= (3, 11):
+    WaitTimeout = TimeoutError
+else:
+    from concurrent.futures import TimeoutError as WaitTimeout
+
+
+def _test_thread_safety_impl(*functions):
+    with ThreadPoolExecutor(len(functions)) as executor:
+        barrier = aiologic.Latch(len(functions) + 1)
+        stopped = aiologic.lowlevel.Flag()
+
+        @decorator
+        def wrapper(wrapped, instance, args, kwargs):
+            barrier.wait()
+
+            if "stopped" in inspect.signature(wrapped).parameters:
+                while not stopped:
+                    wrapped(*args, stopped=stopped, **kwargs)
+            else:
+                while not stopped:
+                    wrapped(*args, **kwargs)
+
+        interval = sys.getswitchinterval()
+        sys.setswitchinterval(min(1e-6, interval))
+
+        try:
+            futures = [executor.submit(wrapper(f)) for f in functions]
+            barrier.wait()
+
+            try:
+                for future in as_completed(futures, timeout=1):
+                    future.result()  # reraise
+            except WaitTimeout:
+                pass
+        finally:
+            sys.setswitchinterval(interval)
+            stopped.set()
+
+
+@pytest.fixture(scope="session")
+def test_thread_safety():
+    return _test_thread_safety_impl
 
 
 def pytest_addoption(parser):
@@ -18,16 +70,16 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "thread_safety: mark test as thread-safety test",
+        "threadsafe: mark test as thread-safety test",
     )
 
 
 def pytest_collection_modifyitems(config, items):
     for item in items:
-        if item.nodeid.endswith("_thread_safety"):
-            item.add_marker(pytest.mark.thread_safety)
+        if "test_thread_safety" in item.fixturenames:
+            item.add_marker(pytest.mark.threadsafe)
 
-        if "thread_safety" in item.keywords:
+        if "threadsafe" in item.keywords:
             if not config.getoption("--thread-safety"):
                 item.add_marker(
                     pytest.mark.skip(

@@ -6,11 +6,9 @@
 import pickle
 import time
 
-from concurrent.futures import ThreadPoolExecutor, wait
-
 import pytest
 
-import aiologic.lowlevel
+import aiologic
 
 
 class TestFlag:
@@ -132,102 +130,52 @@ class TestFlag:
         assert not flag
         assert copy
 
-    def test_base_thread_safety(self, /):
-        with ThreadPoolExecutor() as executor:
-            flag = self.factory()
-            stop = False
+    def test_base_threadsafe(self, test_thread_safety):
+        flag = self.factory()
 
-            def f():
-                while not stop:
-                    marker = repr(flag)
+        def f():
+            marker = repr(flag)
 
-                    if not flag.set(marker):
-                        flag.clear()
-                    else:
-                        while not flag and not stop:
-                            time.sleep(0)
+            if flag or not flag.set(marker):
+                flag.clear()
 
-            futures = [executor.submit(f), executor.submit(f)]
+        test_thread_safety(f, f)
 
-            try:
-                time.sleep(6)
-            finally:
-                stop = True
+    def test_set_and_get_threadsafe(self, test_thread_safety):
+        flag = self.factory()
 
-            wait(futures)
+        def a():
+            if flag.set(marker := object()):
+                assert flag.get(marker) is marker
+            else:
+                assert flag.get(None) is not marker
 
-    def test_set_and_get_thread_safety(self, /):
-        with ThreadPoolExecutor() as executor:
-            flag = self.factory()
-            stop = False
+        def b():
+            flag.clear()
+            time.sleep(0)
 
-            def a():
-                while not stop:
-                    flag.clear()
-                    time.sleep(0)
+        test_thread_safety(a, b)
 
-            def b():
-                marker = object()
+    def test_set_and_clear_threadsafe(self, test_thread_safety):
+        flag = self.factory()
 
-                while not stop:
-                    if flag.set(marker):
-                        assert flag.get(marker) is marker
-                    else:
-                        assert flag.get(None) is not marker
+        def a():
+            flag.set()
 
-            futures = [executor.submit(a), executor.submit(b)]
+        def b():
+            flag.clear()
 
-            try:
-                time.sleep(6)
-            finally:
-                stop = True
+        test_thread_safety(a, b)
 
-            wait(futures)
+    def test_pickling_threadsafe(self, test_thread_safety):
+        flag = self.factory()
 
-    def test_set_and_clear_thread_safety(self, /):
-        with ThreadPoolExecutor() as executor:
-            flag = self.factory()
-            stop = False
+        def a():
+            flag.set("something")
+            pickle.dumps(flag)
 
-            def a():
-                while not stop:
-                    flag.clear()
-                    time.sleep(0)
+        def b():
+            flag.clear()
+            time.sleep(0)
 
-            def b():
-                while not stop:
-                    flag.set()
-                    flag.clear()
-
-            futures = [executor.submit(a), executor.submit(b)]
-
-            try:
-                time.sleep(6)
-            finally:
-                stop = True
-
-            wait(futures)
-
-    def test_pickling_thread_safety(self, /):
-        with ThreadPoolExecutor() as executor:
-            flag = self.factory()
-            stop = False
-
-            def a():
-                while not stop:
-                    flag.clear()
-                    time.sleep(0)
-
-            def b():
-                while not stop:
-                    flag.set(None)
-                    pickle.dumps(flag)
-
-            futures = [executor.submit(a), executor.submit(b)]
-
-            try:
-                time.sleep(6)
-            finally:
-                stop = True
-
-            wait(futures)
+        test_thread_safety(a, b)
