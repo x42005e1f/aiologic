@@ -234,6 +234,9 @@ except ImportError:
 
             return self
 
+        def __getstate__(self, /) -> None:
+            return None
+
         def __dir__(self, /) -> list[str]:
             names = list(object___dir__(self))
 

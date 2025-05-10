@@ -38,6 +38,9 @@ class Event:
 
         return args
 
+    def __getstate__(self, /):
+        return None
+
     def __repr__(self, /):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
@@ -167,6 +170,9 @@ class REvent:
             args = ()
 
         return args
+
+    def __getstate__(self, /):
+        return None
 
     def __repr__(self, /):
         cls = self.__class__
@@ -336,6 +342,9 @@ class CountdownEvent:
             args = ()
 
         return args
+
+    def __getstate__(self, /):
+        return None
 
     def __repr__(self, /):
         cls = self.__class__

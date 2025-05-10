@@ -229,6 +229,9 @@ Commit messages are consistent with
 
 ### Fixed
 
+- Slotted classes lacked `__getstate__()`, which caused internal fields to be
+  copied during pickling even if `__getnewargs__()` was defined. As a result,
+  it was impossible to copy primitives while using them.
 - In `aiologic.lowlevel.shield()` (previously
   `aiologic.lowlevel.repeat_if_cancelled()`):
   + Hangs could occur when using `anyio.CancelScope()` with the `asyncio`

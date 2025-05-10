@@ -48,6 +48,9 @@ class Flag(Generic[_T]):
 
         return ()
 
+    def __getstate__(self, /) -> None:
+        return None
+
     def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"

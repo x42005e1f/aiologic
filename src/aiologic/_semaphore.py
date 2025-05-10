@@ -81,6 +81,9 @@ class Semaphore:
 
         return args
 
+    def __getstate__(self, /):
+        return None
+
     def __repr__(self, /):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
@@ -285,6 +288,9 @@ class BoundedSemaphore(Semaphore):
             args = ()
 
         return args
+
+    def __getstate__(self, /):
+        return None
 
     def __repr__(self, /):
         cls = self.__class__

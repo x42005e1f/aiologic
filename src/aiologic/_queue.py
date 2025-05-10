@@ -49,6 +49,9 @@ class SimpleQueue:
     def __getnewargs__(self, /):
         return (list(self._data),)
 
+    def __getstate__(self, /):
+        return None
+
     def __repr__(self, /):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
@@ -152,6 +155,9 @@ class Queue:
             args = (self._items(),)
 
         return args
+
+    def __getstate__(self, /):
+        return None
 
     def __repr__(self, /):
         cls = self.__class__
