@@ -12,9 +12,9 @@ from heapq import heapify, heappop, heappush
 from ._semaphore import Semaphore
 from .lowlevel import (
     MISSING,
-    AsyncEvent,
-    GreenEvent,
     async_checkpoint,
+    create_async_event,
+    create_green_event,
     green_checkpoint,
 )
 
@@ -283,7 +283,7 @@ class Queue:
                 rescheduled = False
 
                 if not success:
-                    event = AsyncEvent()
+                    event = create_async_event()
 
                     waiters.append(event)
                     put_waiters.append(event)
@@ -331,7 +331,7 @@ class Queue:
                 rescheduled = False
 
                 if not success:
-                    event = GreenEvent()
+                    event = create_green_event()
 
                     waiters.append(event)
                     put_waiters.append(event)
@@ -379,7 +379,7 @@ class Queue:
                 rescheduled = False
 
                 if not success:
-                    event = AsyncEvent()
+                    event = create_async_event()
 
                     waiters.append(event)
                     get_waiters.append(event)
@@ -429,7 +429,7 @@ class Queue:
                 rescheduled = False
 
                 if not success:
-                    event = GreenEvent()
+                    event = create_green_event()
 
                     waiters.append(event)
                     get_waiters.append(event)

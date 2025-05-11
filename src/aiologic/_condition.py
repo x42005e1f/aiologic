@@ -13,8 +13,8 @@ from itertools import count
 from ._lock import RLock
 from .lowlevel import (
     MISSING,
-    AsyncEvent,
-    GreenEvent,
+    create_async_event,
+    create_green_event,
     current_async_task_ident,
     current_green_task_ident,
     shield,
@@ -184,7 +184,7 @@ class _BaseCondition(Condition):
     def __await__(self, /):
         self._waiters.append(
             token := (
-                event := AsyncEvent(),
+                event := create_async_event(),
                 self.timer(),
             )
         )
@@ -208,7 +208,7 @@ class _BaseCondition(Condition):
     def wait(self, /, timeout=None):
         self._waiters.append(
             token := (
-                event := GreenEvent(),
+                event := create_green_event(),
                 self.timer(),
             )
         )
@@ -362,7 +362,7 @@ class _MixedCondition(_BaseCondition):
 
         self._waiters.append(
             token := (
-                event := AsyncEvent(),
+                event := create_async_event(),
                 self.timer(),
             )
         )
@@ -405,7 +405,7 @@ class _MixedCondition(_BaseCondition):
 
         self._waiters.append(
             token := (
-                event := GreenEvent(),
+                event := create_green_event(),
                 self.timer(),
             )
         )

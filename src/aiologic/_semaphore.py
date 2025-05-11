@@ -8,9 +8,9 @@ import platform
 from collections import deque
 
 from .lowlevel import (
-    AsyncEvent,
-    GreenEvent,
     async_checkpoint,
+    create_async_event,
+    create_green_event,
     green_checkpoint,
 )
 
@@ -127,7 +127,7 @@ class Semaphore:
             rescheduled = False
 
             if not success:
-                waiters.append(event := AsyncEvent())
+                waiters.append(event := create_async_event())
 
                 try:
                     if self.__acquire_nowait():
@@ -163,7 +163,7 @@ class Semaphore:
             rescheduled = False
 
             if not success:
-                waiters.append(event := GreenEvent())
+                waiters.append(event := create_green_event())
 
                 try:
                     if self.__acquire_nowait():

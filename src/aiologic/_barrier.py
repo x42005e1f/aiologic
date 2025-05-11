@@ -6,10 +6,10 @@
 from collections import deque
 
 from .lowlevel import (
-    AsyncEvent,
     Flag,
-    GreenEvent,
     async_checkpoint,
+    create_async_event,
+    create_green_event,
     green_checkpoint,
 )
 
@@ -59,7 +59,7 @@ class Latch:
 
         try:
             if not reached:
-                self.__waiters.append(event := AsyncEvent())
+                self.__waiters.append(event := create_async_event())
 
                 if not reached:
                     if len(self.__waiters) < self.parties:
@@ -86,7 +86,7 @@ class Latch:
 
         try:
             if not reached:
-                self.__waiters.append(event := GreenEvent())
+                self.__waiters.append(event := create_green_event())
 
                 if not reached:
                     if len(self.__waiters) < self.parties:
@@ -285,7 +285,7 @@ class Barrier:
         if not (is_broken := self.__is_broken):
             waiters.append(
                 token := [
-                    event := AsyncEvent(),
+                    event := create_async_event(),
                     Flag(),
                     -1,
                     None,
@@ -332,7 +332,7 @@ class Barrier:
         if not (is_broken := self.__is_broken):
             waiters.append(
                 token := [
-                    event := GreenEvent(),
+                    event := create_green_event(),
                     Flag(),
                     -1,
                     None,

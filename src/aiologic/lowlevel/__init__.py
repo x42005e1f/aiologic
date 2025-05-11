@@ -24,6 +24,8 @@ from ._events import (
     Event as Event,
     GreenEvent as GreenEvent,
     SetEvent as SetEvent,
+    create_async_event as create_async_event,
+    create_green_event as create_green_event,
 )
 from ._flags import (
     Flag as Flag,

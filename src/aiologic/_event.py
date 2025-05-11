@@ -7,10 +7,10 @@ from collections import deque
 from itertools import count
 
 from .lowlevel import (
-    AsyncEvent,
     Flag,
-    GreenEvent,
     async_checkpoint,
+    create_async_event,
+    create_green_event,
     green_checkpoint,
 )
 
@@ -54,7 +54,7 @@ class Event:
         rescheduled = False
 
         if self.__is_unset:
-            self.__waiters.append(event := AsyncEvent())
+            self.__waiters.append(event := create_async_event())
 
             if self.__is_unset:
                 success = False
@@ -86,7 +86,7 @@ class Event:
         rescheduled = False
 
         if self.__is_unset:
-            self.__waiters.append(event := GreenEvent())
+            self.__waiters.append(event := create_green_event())
 
             if self.__is_unset:
                 success = False
@@ -190,7 +190,7 @@ class REvent:
         if (marker := self.__is_unset.get(None)) is not None:
             self.__waiters.append(
                 token := [
-                    event := AsyncEvent(),
+                    event := create_async_event(),
                     marker,
                     self.__timer(),
                     None,
@@ -233,7 +233,7 @@ class REvent:
         if (marker := self.__is_unset.get(None)) is not None:
             self.__waiters.append(
                 token := [
-                    event := GreenEvent(),
+                    event := create_green_event(),
                     marker,
                     self.__timer(),
                     None,
@@ -362,7 +362,7 @@ class CountdownEvent:
         if (marker := self.__get()) is not None:
             self.__waiters.append(
                 token := [
-                    event := AsyncEvent(),
+                    event := create_async_event(),
                     marker,
                     self.__timer(),
                     None,
@@ -405,7 +405,7 @@ class CountdownEvent:
         if (marker := self.__get()) is not None:
             self.__waiters.append(
                 token := [
-                    event := GreenEvent(),
+                    event := create_green_event(),
                     marker,
                     self.__timer(),
                     None,

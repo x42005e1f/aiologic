@@ -31,6 +31,9 @@ Commit messages are consistent with
   regardless of whether the wait has been completed or not). And, of course,
   for the same reason, they are even less safe (they require more specific
   conditions for their correct operation).
+- `aiologic.lowlevel.create_green_event()` and
+  `aiologic.lowlevel.create_async_event()` as a new way to create low-level
+  events.
 - `aiologic.lowlevel.enable_checkpoints()` and
   `aiologic.lowlevel.disable_checkpoints()` universal decorators to enable and
   disable checkpoints in the current thread's context. They support awaitable
@@ -76,6 +79,8 @@ Commit messages are consistent with
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
 - Interfaces and type hints have been improved:
+  + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
+    runtime.
   + `aiologic.lowlevel.Flag` is now a generic type not only in stubs but also
     at runtime, making it possible to use subscriptions on Python 3.8.
   + Calling `flag.set()` without arguments is now only allowed for
@@ -119,6 +124,19 @@ Commit messages are consistent with
     the thread level. This prevents checkpoints from being enabled in created
     worker threads.
 - Low-level events have been rewritten:
+  + They are now built on waiters (new low-level primitives), due to which they
+    determine the current library and access the specific API only in wait
+    methods and only if they have not been pre-set. This allows them to be
+    created outside the event loop, and gives more predictable behavior and
+    some performance gains.
+  + They now prevent concurrent calls to the wait method by raising a
+    `RuntimeError` in such situations, making them safer. Previously, this was
+    not handled in any way on the `aiologic` side, which required special care
+    and could lead to undefined behavior if the conditions for their use were
+    not met.
+  + Placeholder events now inherit `aiologic.lowlevel.GreenEvent` and
+    `aiologic.lowlevel.AsyncEvent`, allowing them to be used in code sections
+    where wait methods are called.
   + `event.is_cancelled()` has been renamed to `event.cancelled()`. This makes
     them more similar to `asyncio` futures and thus more familiar to new users.
   + They are now always cancelled on timeouts, and the `event.cancel()` method
@@ -132,13 +150,6 @@ Commit messages are consistent with
   + They now return `False` after waiting again if they were previously
     cancelled. Previously `True` was returned, which could be considered
     unexpected behavior.
-  + Their performance has been greatly improved. Checkpoints now use their own
-    implementation without calling public `aiologic.lowlevel` functions, which
-    bypasses redundant current library detection. The `gevent` events have been
-    rewritten to be similar to the `eventlet` events, making them faster than
-    the native `gevent` events.
-  + They are now bound to the event loop in the wait function rather than in
-    the event constructor.
 - Condition variables have been rewritten:
   + They now only support passing locks from the `threading` module
     (synchronous mode), locks from the `aiologic` module (mixed mode), and
@@ -172,8 +183,7 @@ Commit messages are consistent with
     `True` was always returned for both cases.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
-  private classes). Low-level events now show their library identity and status
-  in representation.
+  private classes). Low-level events now show their status in representation.
 - `aiologic.lowlevel.current_green_token()` now returns the current thread, and
   `aiologic.lowlevel.current_green_token_ident()` now uses the current thread
   ID for `threading`. This makes these functions more meaningful, and leads to
@@ -210,6 +220,10 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `aiologic.lowlevel.GreenEvent` and `aiologic.lowlevel.AsyncEvent` direct
+  creation in favor of `aiologic.lowlevel.create_green_event()` and
+  `aiologic.lowlevel.create_async_event()`: they will become protocols in the
+  future.
 - `aiologic.lowlevel.checkpoint()` in favor of
   `aiologic.lowlevel.async_checkpoint()` (previously alias): checkpoints are
   now strictly separated into green and async checkpoints.

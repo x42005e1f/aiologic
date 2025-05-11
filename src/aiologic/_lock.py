@@ -6,9 +6,9 @@
 from collections import deque
 
 from .lowlevel import (
-    AsyncEvent,
-    GreenEvent,
     async_checkpoint,
+    create_async_event,
+    create_green_event,
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
@@ -92,7 +92,7 @@ class PLock:
         if not blocking:
             return False
 
-        self.__waiters.append(event := AsyncEvent())
+        self.__waiters.append(event := create_async_event())
 
         if self.__acquire_nowait():
             self.__waiters.remove(event)
@@ -129,7 +129,7 @@ class PLock:
         if not blocking:
             return False
 
-        self.__waiters.append(event := GreenEvent())
+        self.__waiters.append(event := create_green_event())
 
         if self.__acquire_nowait():
             self.__waiters.remove(event)
