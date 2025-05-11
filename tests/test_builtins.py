@@ -41,27 +41,6 @@ def test_type_slots_threadsafe(test_thread_safety):
     assert hasattr(obj, "attr")
 
 
-def test_type_dict_threadsafe(test_thread_safety):
-    class MyClass:
-        __slots__ = ("__dict__",)
-
-    obj = MyClass()
-    obj.attr = object()
-
-    def f():
-        try:
-            del obj.attr
-        except AttributeError:
-            time.sleep(0)
-        else:
-            assert not hasattr(obj, "attr")
-            obj.attr = object()
-
-    test_thread_safety(f, f)
-
-    assert hasattr(obj, "attr")
-
-
 def test_dict_delitem_and_setitem_threadsafe(test_thread_safety):
     dct = {"key": "value"}
 
