@@ -484,7 +484,7 @@ class _GreenEventImpl(_BaseEvent, GreenEvent):
             msg = "this event is already in use"
             raise RuntimeError(msg) from None
 
-        self._waiter = create_green_waiter(self.shield)
+        self._waiter = create_green_waiter(shield=self.shield)
 
         try:
             if self._is_set:
@@ -558,7 +558,7 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
             msg = "this event is already in use"
             raise RuntimeError(msg) from None
 
-        self._waiter = create_async_waiter(self.shield)
+        self._waiter = create_async_waiter(shield=self.shield)
 
         try:
             if self._is_set:

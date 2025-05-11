@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
 from ._libraries import current_async_library, current_green_library
 from ._threads import _once as once
@@ -28,14 +28,14 @@ class Waiter(Protocol):
 class GreenWaiter(Waiter, Protocol):
     __slots__ = ()
 
-    def __init__(self, /, shield: bool = False) -> None: ...
+    def __init__(self, /, *, shield: bool = False) -> None: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
 
 
 class AsyncWaiter(Waiter, Protocol):
     __slots__ = ()
 
-    def __init__(self, /, shield: bool = False) -> None: ...
+    def __init__(self, /, *, shield: bool = False) -> None: ...
     def __await__(self, /) -> Generator[Any, Any, bool]: ...
 
 
@@ -43,6 +43,7 @@ class AsyncWaiter(Waiter, Protocol):
 def _get_threading_waiter_class() -> type[GreenWaiter]:
     from ._thread import allocate_lock
 
+    @final
     class _ThreadingWaiter(GreenWaiter):
         __slots__ = (
             "__lock",
@@ -92,6 +93,7 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
 
     _patcher._patch_eventlet()
 
+    @final
     class _EventletWaiter(GreenWaiter):
         __slots__ = (
             "__greenlet",
@@ -176,6 +178,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
     def _noop() -> None:
         pass
 
+    @final
     class _GeventWaiter(GreenWaiter):
         __slots__ = (
             "__greenlet",
@@ -263,6 +266,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
 
     from . import _tasks
 
+    @final
     class _AsyncioWaiter(AsyncWaiter):
         __slots__ = (
             "__future",
@@ -334,6 +338,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
 
     from . import _tasks
 
+    @final
     class _CurioWaiter(AsyncWaiter):
         __slots__ = (
             "__future",
@@ -394,6 +399,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
     def _abort(raise_cancel: Any) -> Literal[Abort.SUCCEEDED]:
         return Abort.SUCCEEDED
 
+    @final
     class _TrioWaiter(AsyncWaiter):
         __slots__ = (
             "__task",
@@ -461,7 +467,7 @@ def _create_threading_waiter(shield: bool = False) -> GreenWaiter:
 
     _create_threading_waiter = _get_threading_waiter_class()
 
-    return _create_threading_waiter(shield)
+    return _create_threading_waiter(shield=shield)
 
 
 def _create_eventlet_waiter(shield: bool = False) -> GreenWaiter:
@@ -469,7 +475,7 @@ def _create_eventlet_waiter(shield: bool = False) -> GreenWaiter:
 
     _create_eventlet_waiter = _get_eventlet_waiter_class()
 
-    return _create_eventlet_waiter(shield)
+    return _create_eventlet_waiter(shield=shield)
 
 
 def _create_gevent_waiter(shield: bool = False) -> GreenWaiter:
@@ -477,7 +483,7 @@ def _create_gevent_waiter(shield: bool = False) -> GreenWaiter:
 
     _create_gevent_waiter = _get_gevent_waiter_class()
 
-    return _create_gevent_waiter(shield)
+    return _create_gevent_waiter(shield=shield)
 
 
 def _create_asyncio_waiter(shield: bool = False) -> AsyncWaiter:
@@ -485,7 +491,7 @@ def _create_asyncio_waiter(shield: bool = False) -> AsyncWaiter:
 
     _create_asyncio_waiter = _get_asyncio_waiter_class()
 
-    return _create_asyncio_waiter(shield)
+    return _create_asyncio_waiter(shield=shield)
 
 
 def _create_curio_waiter(shield: bool = False) -> AsyncWaiter:
@@ -493,7 +499,7 @@ def _create_curio_waiter(shield: bool = False) -> AsyncWaiter:
 
     _create_curio_waiter = _get_curio_waiter_class()
 
-    return _create_curio_waiter(shield)
+    return _create_curio_waiter(shield=shield)
 
 
 def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
@@ -501,10 +507,10 @@ def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
 
     _create_trio_waiter = _get_trio_waiter_class()
 
-    return _create_trio_waiter(shield)
+    return _create_trio_waiter(shield=shield)
 
 
-def create_green_waiter(shield: bool = False) -> GreenWaiter:
+def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
     library = current_green_library()
 
     if library == "threading":
@@ -520,7 +526,7 @@ def create_green_waiter(shield: bool = False) -> GreenWaiter:
     raise RuntimeError(msg)
 
 
-def create_async_waiter(shield: bool = False) -> AsyncWaiter:
+def create_async_waiter(*, shield: bool = False) -> AsyncWaiter:
     library = current_async_library()
 
     if library == "asyncio":
