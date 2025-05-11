@@ -221,10 +221,12 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
     def __await__(self, /) -> Generator[Any, Any, bool]: ...
 
 def create_green_event(
+    *,
     shield: bool = False,
     force: bool = False,
 ) -> GreenEvent: ...
 def create_async_event(
+    *,
     shield: bool = False,
     force: bool = False,
 ) -> AsyncEvent: ...
