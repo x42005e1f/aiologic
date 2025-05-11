@@ -3,8 +3,10 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: 0BSD
 
+import gc
 import pickle
 import time
+import weakref
 
 from copy import deepcopy
 
@@ -14,7 +16,7 @@ import aiologic
 
 
 class TestFlag:
-    factory = aiologic.lowlevel.Flag
+    factory = aiologic.Flag
 
     def test_base(self, /):
         with pytest.raises(LookupError):
@@ -22,7 +24,7 @@ class TestFlag:
         assert self.factory(None).get() is None
         assert self.factory(marker="marker").get() == "marker"
 
-        pkg = "aiologic.lowlevel"
+        pkg = "aiologic"
         assert repr(self.factory()) == f"{pkg}.Flag()"
         assert repr(self.factory(None)) == f"{pkg}.Flag(None)"
         assert repr(self.factory(marker="marker")) == f"{pkg}.Flag('marker')"
@@ -131,6 +133,17 @@ class TestFlag:
 
         assert not flag
         assert copy
+
+    def test_weakrefing(self, /):
+        flag = self.factory()
+        flag_ref = weakref.ref(flag)
+
+        assert flag_ref() is flag
+
+        del flag
+        gc.collect()
+
+        assert flag_ref() is None
 
     def test_base_threadsafe(self, test_thread_safety):
         flag = self.factory()

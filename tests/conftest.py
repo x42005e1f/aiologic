@@ -86,7 +86,7 @@ def pytest_collection_modifyitems(config, items):
             "test_collections": [],
             "test_itertools": [],
             "aiologic.lowlevel.test_markers": [],
-            "aiologic.lowlevel.test_flags": [],
+            "aiologic.test_flags": [],
         },
     )
 
