@@ -19,6 +19,9 @@ from ._event import (
     Event as Event,
     REvent as REvent,
 )
+from ._flag import (
+    Flag as Flag,
+)
 from ._guard import (
     BusyResourceError as BusyResourceError,
     ResourceGuard as ResourceGuard,

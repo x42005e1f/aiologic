@@ -9,6 +9,11 @@ from typing import Any, Generic, TypeVar, overload
 
 from ._markers import MISSING, MissingType
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -25,9 +30,9 @@ _D = TypeVar("_D")
 class Flag(Generic[_T]):
     __slots__ = ("__markers",)
 
+    @deprecated("Use aiologic.Flag instead")
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self: ...
-    def __getnewargs__(self, /) -> tuple[Any, ...]: ...
-    def __getstate__(self, /) -> None: ...
+    def __reduce__(self, /) -> tuple[Any, ...]: ...
     def __bool__(self, /) -> bool: ...
     @overload
     def get(

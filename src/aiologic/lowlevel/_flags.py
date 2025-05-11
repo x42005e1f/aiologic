@@ -5,13 +5,20 @@
 
 from __future__ import annotations
 
+import sys
+
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+
+import aiologic
 
 from ._markers import MISSING, MissingType
 
-if TYPE_CHECKING:
-    import sys
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
+if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
@@ -29,6 +36,7 @@ _D = TypeVar("_D")
 class Flag(Generic[_T]):
     __slots__ = ("__markers",)
 
+    @deprecated("Use aiologic.Flag instead")
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
         self = super().__new__(cls)
 
@@ -39,17 +47,14 @@ class Flag(Generic[_T]):
 
         return self
 
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
+    def __reduce__(self, /) -> tuple[Any, ...]:
         if self.__markers:
             try:
-                return (self.__markers[0],)
+                return (aiologic.Flag, (self.__markers[0],))
             except IndexError:
                 pass
 
-        return ()
-
-    def __getstate__(self, /) -> None:
-        return None
+        return (aiologic.Flag, ())
 
     def __repr__(self, /) -> str:
         cls = self.__class__

@@ -6,8 +6,8 @@
 from collections import deque
 from itertools import count
 
+from ._flag import Flag
 from .lowlevel import (
-    Flag,
     async_checkpoint,
     create_async_event,
     create_green_event,

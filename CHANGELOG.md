@@ -75,6 +75,7 @@ Commit messages are consistent with
 
 ### Changed
 
+- Flags are now a high-level primitive, available as `aiologic.Flag`.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
@@ -224,6 +225,7 @@ Commit messages are consistent with
   creation in favor of `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()`: they will become protocols in the
   future.
+- `aiologic.lowlevel.Flag` in favor of `aiologic.Flag`.
 - `aiologic.lowlevel.checkpoint()` in favor of
   `aiologic.lowlevel.async_checkpoint()` (previously alias): checkpoints are
   now strictly separated into green and async checkpoints.
