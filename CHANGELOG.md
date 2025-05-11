@@ -75,7 +75,8 @@ Commit messages are consistent with
 
 ### Changed
 
-- Flags are now a high-level primitive, available as `aiologic.Flag`.
+- Flags are now a high-level primitive, available as `aiologic.Flag`, with
+  `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).

@@ -13,6 +13,6 @@ _T = TypeVar("_T")
 
 
 class Flag(aiologic.lowlevel.Flag[_T]):
-    __slots__ = ()
+    __slots__ = ("__weakref__",)
 
     __new__ = aiologic.lowlevel.Flag.__new__.__wrapped__

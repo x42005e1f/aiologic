@@ -10,4 +10,4 @@ import aiologic
 _T = TypeVar("_T")
 
 class Flag(aiologic.lowlevel.Flag[_T]):
-    __slots__ = ()
+    __slots__ = ("__weakref__",)
