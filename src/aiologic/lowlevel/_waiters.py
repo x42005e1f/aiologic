@@ -30,6 +30,10 @@ class GreenWaiter(Waiter, Protocol):
 
     def __init__(self, /, *, shield: bool = False) -> None: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
+    @property
+    def shield(self, /) -> bool: ...
+    @shield.setter
+    def shield(self, /, value: bool) -> None: ...
 
 
 class AsyncWaiter(Waiter, Protocol):
@@ -37,6 +41,10 @@ class AsyncWaiter(Waiter, Protocol):
 
     def __init__(self, /, *, shield: bool = False) -> None: ...
     def __await__(self, /) -> Generator[Any, Any, bool]: ...
+    @property
+    def shield(self, /) -> bool: ...
+    @shield.setter
+    def shield(self, /, value: bool) -> None: ...
 
 
 @once
@@ -49,6 +57,8 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
             "__lock",
             "shield",
         )
+
+        shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
             self.__lock = allocate_lock()
@@ -100,6 +110,8 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
             "__hub",
             "shield",
         )
+
+        shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
             self.__greenlet = None
@@ -185,6 +197,8 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
             "__hub",
             "shield",
         )
+
+        shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
             self.__greenlet = None
@@ -274,6 +288,8 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
             "shield",
         )
 
+        shield: bool
+
         def __init__(self, /, shield: bool = False) -> None:
             self.__future = None
             self.__loop = get_running_loop()
@@ -345,6 +361,8 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
             "shield",
         )
 
+        shield: bool
+
         def __init__(self, /, shield: bool = False) -> None:
             self.__future = Future()
 
@@ -406,6 +424,8 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             "__token",
             "shield",
         )
+
+        shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
             self.__task = None
