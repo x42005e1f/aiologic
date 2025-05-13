@@ -16,7 +16,7 @@ else:
     GIL_DISABLED = not _is_gil_enabled()
 
 GH_127266 = GIL_DISABLED
-GH_129107 = GIL_DISABLED and sys.version_info <= (3, 14)
+GH_129107 = GIL_DISABLED and sys.version_info < (3, 14)
 
 
 @pytest.mark.skipif(GH_127266, reason="python/cpython#127266")
