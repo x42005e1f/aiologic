@@ -5,69 +5,19 @@
 
 import sys
 
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, TypeVar
 
-from ._markers import MISSING, MissingType
+import aiologic._flag
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
     from typing_extensions import deprecated
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
-
 _T = TypeVar("_T")
-_D = TypeVar("_D")
 
-class Flag(Generic[_T]):
-    __slots__ = ("__markers",)
+@deprecated("Use aiologic.Flag instead")
+class Flag(aiologic._flag.Flag[_T]):
+    __slots__ = ()
 
-    @deprecated("Use aiologic.Flag instead")
-    def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self: ...
     def __reduce__(self, /) -> tuple[Any, ...]: ...
-    def __bool__(self, /) -> bool: ...
-    @overload
-    def get(
-        self,
-        /,
-        default: _T | MissingType,
-        *,
-        default_factory: MissingType = MISSING,
-    ) -> _T: ...
-    @overload
-    def get(
-        self,
-        /,
-        default: _D,
-        *,
-        default_factory: MissingType = MISSING,
-    ) -> _T | _D: ...
-    @overload
-    def get(
-        self,
-        /,
-        default: MissingType = MISSING,
-        *,
-        default_factory: Callable[[], _T],
-    ) -> _T: ...
-    @overload
-    def get(
-        self,
-        /,
-        default: MissingType = MISSING,
-        *,
-        default_factory: Callable[[], _D],
-    ) -> _T | _D: ...
-    @overload
-    def set(self: Flag[object], /, marker: MissingType = MISSING) -> bool: ...
-    @overload
-    def set(self, /, marker: _T) -> bool: ...
-    def clear(self, /) -> None: ...
