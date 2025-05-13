@@ -26,7 +26,7 @@ else:
 def _test_thread_safety_impl(*functions):
     with ThreadPoolExecutor(len(functions)) as executor:
         barrier = aiologic.Latch(len(functions) + 1)
-        stopped = aiologic.lowlevel.Flag()
+        stopped = aiologic.Flag()
 
         @decorator
         def wrapper(wrapped, instance, args, kwargs):
