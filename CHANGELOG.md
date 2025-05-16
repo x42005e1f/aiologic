@@ -72,9 +72,25 @@ Commit messages are consistent with
   coexist (maybe temporarily, maybe not).
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
+- `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
 
 ### Changed
 
+- In previous versions, `aiologic` implicitly provided a strong fairness
+  guarantee, informally called "perfect fairness". The point of this guarantee
+  is to ensure the fairness of wakeups when they are parallel in nature. This
+  had strong effects such as resuming all threads at once (no one is sleeping)
+  on barrier wakeups and deterministic callback scheduling order in event loops
+  when multiple threads call `release()` at the same time. This behavior is now
+  explicit, optional, and disabled by default. The reason for this change is
+  that the behavior was not efficiently implemented at the Python level via
+  existing atomic operations: `deque.remove()` increases worst-case time
+  complexity from linear to cubic and gives a noticeable overhead that, in
+  particular, makes barriers significantly slower with a huge number of
+  threads in the free-threaded mode. Nevertheless, with implementation flaws,
+  "perfect fairness" can still be useful, so since this version `aiologic`
+  provides the `AIOLOGIC_PERFECT_FAIRNESS` environment variable to explicitly
+  enable it.
 - Flags are now a high-level primitive, available as `aiologic.Flag`, with
   `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should

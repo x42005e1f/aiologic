@@ -3,6 +3,7 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import os
 import platform
 
 from collections import deque
@@ -21,6 +22,8 @@ except ImportError:
     def _is_gil_enabled():
         return True
 
+
+PERFECT_FAIRNESS = bool(os.getenv("AIOLOGIC_PERFECT_FAIRNESS", ""))
 
 PYTHON_IMPLEMENTATION = platform.python_implementation()
 
@@ -204,17 +207,21 @@ class Semaphore:
                         break
 
                 try:
-                    event = waiters[0]
+                    if PERFECT_FAIRNESS:
+                        event = waiters[0]
+                    else:
+                        event = waiters.popleft()
                 except IndexError:
                     pass
                 else:
                     if event.set():
                         count -= 1
 
-                    try:
-                        waiters.remove(event)
-                    except ValueError:
-                        pass
+                    if PERFECT_FAIRNESS:
+                        try:
+                            waiters.remove(event)
+                        except ValueError:
+                            pass
 
                     if count or unlocked:
                         continue

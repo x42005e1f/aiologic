@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import os
+
 from collections import deque
 
 from ._flag import Flag
@@ -12,6 +14,8 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+
+PERFECT_FAIRNESS = bool(os.getenv("AIOLOGIC_PERFECT_FAIRNESS", ""))
 
 
 class BrokenBarrierError(RuntimeError):
@@ -115,16 +119,20 @@ class Latch:
 
         while waiters:
             try:
-                event = waiters[0]
+                if PERFECT_FAIRNESS:
+                    event = waiters[0]
+                else:
+                    event = waiters.popleft()
             except IndexError:
                 break
             else:
                 event.set()
 
-                try:
-                    waiters.remove(event)
-                except ValueError:
-                    pass
+                if PERFECT_FAIRNESS:
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
 
     @property
     def waiting(self, /):
@@ -214,7 +222,10 @@ class Barrier:
     def __wakeup(tokens):
         while tokens:
             try:
-                token = tokens[0]
+                if PERFECT_FAIRNESS:
+                    token = tokens[0]
+                else:
+                    token = tokens.popleft()
             except IndexError:
                 break
             else:
@@ -223,10 +234,11 @@ class Barrier:
                 cancelled.set(False)
                 event.set()
 
-                try:
-                    tokens.remove(token)
-                except ValueError:
-                    pass
+                if PERFECT_FAIRNESS:
+                    try:
+                        tokens.remove(token)
+                    except ValueError:
+                        pass
 
     def __wakeup_as_waiter(self, /):
         waiters = self.__waiters

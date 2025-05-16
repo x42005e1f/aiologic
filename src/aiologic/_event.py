@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import os
+
 from collections import deque
 from itertools import count
 
@@ -13,6 +15,8 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+
+PERFECT_FAIRNESS = bool(os.getenv("AIOLOGIC_PERFECT_FAIRNESS", ""))
 
 
 class Event:
@@ -126,16 +130,20 @@ class Event:
 
         while waiters:
             try:
-                event = waiters[0]
+                if PERFECT_FAIRNESS:
+                    event = waiters[0]
+                else:
+                    event = waiters.popleft()
             except IndexError:
                 break
             else:
                 event.set()
 
-                try:
-                    waiters.remove(event)
-                except ValueError:
-                    pass
+                if PERFECT_FAIRNESS:
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
 
     @property
     def waiting(self, /):
