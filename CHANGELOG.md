@@ -172,6 +172,10 @@ Commit messages are consistent with
   + `aiologic.Semaphore` now disallow passing `max_size` other than `None` from
     subclasses. Previously it was ignored, which could violate user
     expectations intending to get `aiologic.BoundedSemaphore` behavior.
+  + `aiologic.BoundedSemaphore.release()` now disallows `count=0`. Previously,
+    it allowed threads to participate in waking up others during race
+    conditions, but `aiologic.Semaphore.release()` no longer has such
+    semantics.
   + The `value` property now has a setter, making it possible to instantly
     change the state of a semaphore without calling its methods.
 - Condition variables have been rewritten:

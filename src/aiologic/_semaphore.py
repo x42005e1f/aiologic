@@ -464,16 +464,15 @@ class BoundedSemaphore(Semaphore):
         return success
 
     def release(self, /, count: int = 1) -> None:
-        if count < 0 or 1 < count:
-            msg = "count must be 0 or 1"
+        if count != 1:
+            msg = "count must be 1"
             raise ValueError(msg)
 
-        if count == 1:
-            try:
-                self._locked.pop()
-            except IndexError:
-                msg = "semaphore released too many times"
-                raise RuntimeError(msg) from None
+        try:
+            self._locked.pop()
+        except IndexError:
+            msg = "semaphore released too many times"
+            raise RuntimeError(msg) from None
 
         self._release(count)
 
