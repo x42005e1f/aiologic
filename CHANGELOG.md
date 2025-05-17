@@ -21,6 +21,9 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
+  semaphores, i.e. semaphores restricted to the values 0 and 1 and using a more
+  efficient implementation.
 - `aiologic.BLock` as a bounded lock (async-aware alternative to
   `threading.Lock`).
 - `aiologic.lowlevel.create_green_waiter()` and
@@ -172,6 +175,10 @@ Commit messages are consistent with
   + `aiologic.Semaphore` now disallow passing `max_size` other than `None` from
     subclasses. Previously it was ignored, which could violate user
     expectations intending to get `aiologic.BoundedSemaphore` behavior.
+  + `aiologic.BoundedSemaphore` (and consequently `aiologic.Semaphore`) now
+    creates `aiologic.BoundedBinarySemaphore` when `max_size` <= 1. This makes
+    it possible to use an implementation that is more efficient in both time
+    and memory without importing new classes.
   + `aiologic.BoundedSemaphore.release()` now disallows `count=0`. Previously,
     it allowed threads to participate in waking up others during race
     conditions, but `aiologic.Semaphore.release()` no longer has such

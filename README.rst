@@ -129,7 +129,7 @@ Synchronization primitives:
 * Flags
 * Events: one-time, reusable, and countdown
 * Barriers: single-use, and cyclic
-* Semaphores: counting, and bounded
+* Semaphores: counting, bounded, and binary
 * Capacity limiters: borrowable, and reentrant
 * Locks: primitive, bounded, ownable, and reentrant
 * `Readers-writer locks (external) <https://gist.github.com/x42005e1f/

@@ -309,6 +309,7 @@ class Semaphore:
 
     _async_acquire = async_acquire
     _green_acquire = green_acquire
+
     _release = release
 
     @property
@@ -360,6 +361,17 @@ class BoundedSemaphore(Semaphore):
     @overload
     def __new__(cls, /, *, max_value: int) -> Self: ...
     def __new__(cls, /, initial_value=None, max_value=None):
+        if (
+            cls is BoundedSemaphore
+            and (initial_value is None or initial_value <= 1)
+            and (max_value is None or max_value <= 1)
+        ):
+            return BoundedBinarySemaphore.__new__(
+                BoundedBinarySemaphore,
+                initial_value,
+                max_value,
+            )
+
         self = object.__new__(cls)
 
         if initial_value is not None:
@@ -369,15 +381,15 @@ class BoundedSemaphore(Semaphore):
 
             self._initial_value = initial_value
         elif max_value is not None:
-            if max_value < 0:
-                msg = "max_value must be >= 0"
-                raise ValueError(msg)
-
             self._initial_value = max_value
         else:
             self._initial_value = 1
 
         if max_value is not None:
+            if max_value < 0:
+                msg = "max_value must be >= 0"
+                raise ValueError(msg)
+
             if max_value < self._initial_value:
                 msg = "max_value must be >= initial_value"
                 raise ValueError(msg)
@@ -508,3 +520,258 @@ class BoundedSemaphore(Semaphore):
             self._locked[:] = [None] * (self._max_value - value)
 
         self._release(-1)
+
+
+class BinarySemaphore(Semaphore):
+    __slots__ = ()
+
+    @overload
+    def __new__(
+        cls,
+        /,
+        initial_value: int | None = None,
+        max_value: None = None,
+    ) -> Self: ...
+    @overload
+    def __new__(
+        cls,
+        /,
+        initial_value: int | None,
+        max_value: int,
+    ) -> BoundedBinarySemaphore: ...
+    @overload
+    def __new__(cls, /, *, max_value: int) -> BoundedBinarySemaphore: ...
+    def __new__(cls, /, initial_value=None, max_value=None):
+        if max_value is not None:
+            if cls is not BinarySemaphore:
+                msg = (
+                    "max_value must be None for subclasses."
+                    " Did you want to inherit BoundedBinarySemaphore instead?"
+                )
+                raise TypeError(msg)
+
+            return BoundedBinarySemaphore.__new__(
+                BoundedBinarySemaphore,
+                initial_value,
+                max_value,
+            )
+
+        self = object.__new__(cls)
+
+        if initial_value is not None:
+            if initial_value < 0 or 1 < initial_value:
+                msg = "initial_value must be 0 or 1"
+                raise ValueError(msg)
+
+            self._initial_value = initial_value
+        else:
+            self._initial_value = 1
+
+        self._unlocked = [None] * self._initial_value
+
+        self._waiters = deque()
+
+        return self
+
+    def release(self, /, count: int = 1) -> None:
+        if count != 1:
+            msg = "count must be 1"
+            raise ValueError(msg)
+
+        self._release(count)
+
+    async_release = release
+    green_release = release
+
+    def _release(self, /, count: int = 1) -> None:
+        waiters = self._waiters
+
+        while True:
+            while waiters:
+                try:
+                    event = waiters.popleft()
+                except IndexError:
+                    break
+                else:
+                    if event.set():
+                        return
+
+            self._unlocked.append(None)
+
+            if waiters:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    break
+            else:
+                break
+
+    def _wakeup(self, /) -> None:
+        waiters = self._waiters
+
+        while waiters:
+            try:
+                event = waiters.popleft()
+            except IndexError:
+                break
+            else:
+                event.set()
+
+    @property
+    def value(self, /) -> int:
+        return len(self._unlocked)
+
+    @value.setter
+    def value(self, /, value: int) -> None:
+        if value < 0 or 1 < value:
+            msg = "value must be 0 or 1"
+            raise ValueError(msg)
+
+        if _USE_BYTEARRAY:
+            self._unlocked[:] = bytes(value)
+        else:
+            self._unlocked[:] = [None] * value
+
+        self._wakeup()
+
+
+class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
+    __slots__ = ()
+
+    @overload
+    def __new__(
+        cls,
+        /,
+        initial_value: int | None = None,
+        max_value: None = None,
+    ) -> Self: ...
+    @overload
+    def __new__(
+        cls,
+        /,
+        initial_value: int | None,
+        max_value: int,
+    ) -> Self: ...
+    @overload
+    def __new__(cls, /, *, max_value: int) -> Self: ...
+    def __new__(cls, /, initial_value=None, max_value=None):
+        self = object.__new__(cls)
+
+        if initial_value is not None:
+            if initial_value < 0 or 1 < initial_value:
+                msg = "initial_value must be 0 or 1"
+                raise ValueError(msg)
+
+            self._initial_value = initial_value
+        elif max_value is not None:
+            self._initial_value = max_value
+        else:
+            self._initial_value = 1
+
+        if max_value is not None:
+            if max_value < 0 or 1 < max_value:
+                msg = "max_value must be 0 or 1"
+                raise ValueError(msg)
+
+            if max_value < self._initial_value:
+                msg = "max_value must be >= initial_value"
+                raise ValueError(msg)
+
+            self._max_value = max_value
+        else:
+            self._max_value = self._initial_value
+
+        if _USE_DELATTR:
+            if self._max_value > self._initial_value:
+                self._locked = True
+        else:
+            self._locked = [None] * (self._max_value - self._initial_value)
+
+        self._unlocked = [None] * self._initial_value
+
+        self._waiters = deque()
+
+        return self
+
+    __getnewargs__ = BoundedSemaphore.__getnewargs__
+    __getstate__ = BoundedSemaphore.__getstate__
+    __repr__ = BoundedSemaphore.__repr__
+
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        success = await self._async_acquire(blocking=blocking)
+
+        if success:
+            if _USE_DELATTR:
+                self._locked = True
+            else:
+                self._locked.append(None)
+
+        return success
+
+    def green_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
+
+        if success:
+            if _USE_DELATTR:
+                self._locked = True
+            else:
+                self._locked.append(None)
+
+        return success
+
+    def release(self, /, count: int = 1) -> None:
+        if count != 1:
+            msg = "count must be 1"
+            raise ValueError(msg)
+
+        try:
+            if _USE_DELATTR:
+                del self._locked
+            else:
+                self._locked.pop()
+        except (AttributeError, IndexError):
+            msg = "semaphore released too many times"
+            raise RuntimeError(msg) from None
+
+        self._release(count)
+
+    async_release = release
+    green_release = release
+
+    @property
+    def value(self, /) -> int:
+        return len(self._unlocked)
+
+    @value.setter
+    def value(self, /, value: int) -> None:
+        if value < 0 or 1 < value:
+            msg = "value must be 0 or 1"
+            raise ValueError(msg)
+
+        if value > self._max_value:
+            msg = "value must be <= max_value"
+            raise ValueError(msg)
+
+        if _USE_BYTEARRAY:
+            self._unlocked[:] = bytes(value)
+        else:
+            self._unlocked[:] = [None] * value
+
+        if _USE_DELATTR:
+            if self._max_value > value:
+                self._locked = True
+            else:
+                try:
+                    del self._locked
+                except AttributeError:
+                    pass
+        else:
+            self._locked[:] = [None] * (self._max_value - value)
+
+        self._wakeup()

@@ -45,6 +45,8 @@ from ._queue import (
     SimpleQueue as SimpleQueue,
 )
 from ._semaphore import (
+    BinarySemaphore as BinarySemaphore,
+    BoundedBinarySemaphore as BoundedBinarySemaphore,
     BoundedSemaphore as BoundedSemaphore,
     Semaphore as Semaphore,
 )
