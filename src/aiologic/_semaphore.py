@@ -627,10 +627,7 @@ class BinarySemaphore(Semaphore):
             msg = "value must be 0 or 1"
             raise ValueError(msg)
 
-        if _USE_BYTEARRAY:
-            self._unlocked[:] = bytes(value)
-        else:
-            self._unlocked[:] = [None] * value
+        self._unlocked[:] = [None] * value
 
         self._wakeup()
 
@@ -758,10 +755,7 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
             msg = "value must be <= max_value"
             raise ValueError(msg)
 
-        if _USE_BYTEARRAY:
-            self._unlocked[:] = bytes(value)
-        else:
-            self._unlocked[:] = [None] * value
+        self._unlocked[:] = [None] * value
 
         if _USE_DELATTR:
             if self._max_value > value:
