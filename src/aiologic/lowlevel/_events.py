@@ -439,7 +439,7 @@ class _BaseEvent(ABC, Event):
 class _GreenEventImpl(_BaseEvent, GreenEvent):
     __slots__ = ()
 
-    __new__ = object.__new__
+    __new__ = _BaseEvent.__new__
 
     def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
         bcs = _GreenEventImpl
@@ -513,7 +513,7 @@ class _GreenEventImpl(_BaseEvent, GreenEvent):
 class _AsyncEventImpl(_BaseEvent, AsyncEvent):
     __slots__ = ()
 
-    __new__ = object.__new__
+    __new__ = _BaseEvent.__new__
 
     def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
         bcs = _AsyncEventImpl
