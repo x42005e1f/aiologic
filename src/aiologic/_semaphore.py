@@ -503,4 +503,9 @@ class BoundedSemaphore(Semaphore):
         else:
             self._unlocked[:] = [None] * value
 
+        if _USE_BYTEARRAY:
+            self._locked[:] = bytes(self._max_value - value)
+        else:
+            self._locked[:] = [None] * (self._max_value - value)
+
         self._release(-1)
