@@ -168,6 +168,12 @@ Commit messages are consistent with
   + They now return `False` after waiting again if they were previously
     cancelled. Previously `True` was returned, which could be considered
     unexpected behavior.
+- Semaphores have been rewritten:
+  + `aiologic.Semaphore` now disallow passing `max_size` other than `None` from
+    subclasses. Previously it was ignored, which could violate user
+    expectations intending to get `aiologic.BoundedSemaphore` behavior.
+  + The `value` property now has a setter, making it possible to instantly
+    change the state of a semaphore without calling its methods.
 - Condition variables have been rewritten:
   + They now only support passing locks from the `threading` module
     (synchronous mode), locks from the `aiologic` module (mixed mode), and
