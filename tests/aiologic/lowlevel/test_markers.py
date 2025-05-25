@@ -7,16 +7,17 @@ import pickle
 
 import pytest
 
-import aiologic.lowlevel
+import aiologic
 
 
 class _TestMarker:
-    def test_base(self, /):
+    def test_base(self):
         assert type(self.value)() is self.value  # singleton
         assert repr(self.value) == self.name
+        assert str(self.value) == self.name
         assert not self.value
 
-    def test_attrs(self, /):
+    def test_attrs(self):
         with pytest.raises(AttributeError):
             self.value.nonexistent_attribute  # noqa: B018
         with pytest.raises(AttributeError):
@@ -24,10 +25,10 @@ class _TestMarker:
         with pytest.raises(AttributeError):
             del self.value.nonexistent_attribute
 
-    def test_pickling(self, /):
+    def test_pickling(self):
         assert pickle.loads(pickle.dumps(self.value)) is self.value
 
-    def test_inheritance(self, /):
+    def test_inheritance(self):
         with pytest.raises(TypeError):
 
             class MarkerType(type(self.value)):
