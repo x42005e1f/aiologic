@@ -173,20 +173,14 @@ Install from `PyPI <https://pypi.org/project/aiologic/>`_ (recommended):
 
     pip install aiologic
 
-Or from `Anaconda <https://anaconda.org/conda-forge/aiologic>`_ (stable):
-
-.. code:: console
-
-    conda install conda-forge::aiologic
-
-Or from `GitHub <https://github.com/x42005e1f/aiologic>`_ (latest):
+Or from `GitHub <https://github.com/x42005e1f/aiologic>`_ (development):
 
 .. code:: console
 
     pip install git+https://github.com/x42005e1f/aiologic.git
 
-You can also use other package managers, such as `mamba <https://github.com/
-mamba-org/mamba>`_ or `uv <https://github.com/astral-sh/uv>`_.
+You can also use other package managers, such as `uv <https://github.com/
+astral-sh/uv>`_.
 
 .. installation-end-marker
 
