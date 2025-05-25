@@ -23,8 +23,8 @@ for the Raspberry Pi. Installation is similar to that from PyPI, but you will
 need to change your pip configuration or explicitly specify the required index
 according to the `FAQ <https://www.piwheels.org/faq.html>`_.
 
-Anaconda
-^^^^^^^^
+Anaconda.org
+^^^^^^^^^^^^
 
 aiologic is available via the `conda-forge community channel <https://
 anaconda.org/conda-forge/aiologic>`_:
