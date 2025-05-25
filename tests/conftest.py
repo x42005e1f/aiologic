@@ -79,44 +79,57 @@ def spawn(request):
     pytest.importorskip(backend)
     pytest.importorskip(library)
 
-    with ThreadPoolExecutor(1) as executor:
-        queue = aiologic.SimpleQueue()
+    with ThreadPoolExecutor(2) as executor:
+        q1 = aiologic.SimpleQueue()
+        q2 = aiologic.SimpleQueue()
 
-        def _spawn(func, /, *args, **kwargs):
+        def _green_run(future, func, args, kwargs):
+            if future.set_running_or_notify_cancel():
+                try:
+                    future.set_result(func(*args, **kwargs))
+                except BaseException as exc:  # noqa: BLE001
+                    future.set_exception(exc)
+
+        async def _async_run(future, func, args, kwargs):
+            if future.set_running_or_notify_cancel():
+                try:
+                    future.set_result(await func(*args, **kwargs))
+                except BaseException as exc:  # noqa: BLE001
+                    future.set_exception(exc)
+
+        def _spawn(func, /, *args, separate=False, **kwargs):
             future = _AwaitableFuture()
 
-            queue.put((future, func, args, kwargs))
+            if not separate:
+                q1.put((future, func, args, kwargs))
+            else:
+                q2.put((future, func, args, kwargs))
 
             return future
 
         if request.param in GREEN_LIBRARIES:
-
-            def _run(future, func, args, kwargs):
-                if future.set_running_or_notify_cancel():
-                    try:
-                        future.set_result(func(*args, **kwargs))
-                    except BaseException as exc:  # noqa: BLE001
-                        future.set_exception(exc)
-
             if library == "threading":
                 import threading
 
-                def _listen():
+                def _listen(queue):
                     while (item := queue.green_get()) is not None:
-                        threading.Thread(target=_run, args=item).start()
+                        threading.Thread(target=_green_run, args=item).start()
 
-                future = executor.submit(_listen)
+                futures = {
+                    executor.submit(_listen, q1),
+                    executor.submit(_listen, q2),
+                }
             elif library == "eventlet":
                 import eventlet
                 import eventlet.greenpool
                 import eventlet.hubs
 
-                def _listen():
+                def _listen(queue):
                     try:
                         pool = eventlet.greenpool.GreenPool()
 
                         while (item := queue.green_get()) is not None:
-                            pool.spawn(_run, *item)
+                            pool.spawn(_green_run, *item)
 
                         pool.waitall()
                     finally:
@@ -125,17 +138,20 @@ def spawn(request):
                         if hasattr(hub, "destroy"):
                             hub.destroy()
 
-                future = executor.submit(_listen)
+                futures = {
+                    executor.submit(_listen, q1),
+                    executor.submit(_listen, q2),
+                }
             elif library == "gevent":
                 import gevent
                 import gevent.pool
 
-                def _listen():
+                def _listen(queue):
                     try:
                         pool = gevent.pool.Pool()
 
                         while (item := queue.green_get()) is not None:
-                            pool.spawn(_run, *item)
+                            pool.spawn(_green_run, *item)
 
                         pool.join()
                     finally:
@@ -144,57 +160,76 @@ def spawn(request):
                         if hasattr(hub, "destroy"):
                             hub.destroy()
 
-                future = executor.submit(_listen)
+                futures = {
+                    executor.submit(_listen, q1),
+                    executor.submit(_listen, q2),
+                }
         elif request.param in ASYNC_LIBRARIES:
-
-            async def _run(future, func, args, kwargs):
-                if future.set_running_or_notify_cancel():
-                    try:
-                        future.set_result(await func(*args, **kwargs))
-                    except BaseException as exc:  # noqa: BLE001
-                        future.set_exception(exc)
-
             if library == "asyncio":
                 import asyncio
 
-                async def _listen():
+                async def _listen(queue):
                     tasks = set()
 
                     while (item := await queue.async_get()) is not None:
-                        task = asyncio.create_task(_run(*item))
-                        tasks.add(task)
-                        task.add_done_callback(tasks.discard)
+                        if inspect.iscoroutinefunction(item[1]):
+                            task = asyncio.create_task(_async_run(*item))
+                            tasks.add(task)
+                            task.add_done_callback(tasks.discard)
+                        else:
+                            _green_run(*item)
 
                     await asyncio.gather(*tasks)
 
-                future = executor.submit(asyncio.run, _listen())
+                futures = {
+                    executor.submit(asyncio.run, _listen(q1)),
+                    executor.submit(asyncio.run, _listen(q2)),
+                }
             elif library == "curio":
                 import curio
 
-                async def _listen():
+                async def _listen(queue):
                     async with curio.TaskGroup() as g:
                         while (item := await queue.async_get()) is not None:
-                            await g.spawn(_run, *item)
+                            if inspect.iscoroutinefunction(item[1]):
+                                await g.spawn(_async_run, *item)
+                            else:
+                                _green_run(*item)
 
-                future = executor.submit(curio.run, _listen)
+                futures = {
+                    executor.submit(curio.run, _listen, q1),
+                    executor.submit(curio.run, _listen, q2),
+                }
             elif library == "trio":
                 import trio
 
-                async def _listen():
+                async def _listen(queue):
                     async with trio.open_nursery() as nursery:
                         while (item := await queue.async_get()) is not None:
-                            nursery.start_soon(_run, *item)
+                            if inspect.iscoroutinefunction(item[1]):
+                                nursery.start_soon(_async_run, *item)
+                            else:
+                                _green_run(*item)
 
-                future = executor.submit(trio.run, _listen)
+                futures = {
+                    executor.submit(trio.run, _listen, q1),
+                    executor.submit(trio.run, _listen, q2),
+                }
             elif library == "anyio":
                 import anyio
 
-                async def _listen():
+                async def _listen(queue):
                     async with anyio.create_task_group() as tg:
                         while (item := await queue.async_get()) is not None:
-                            tg.start_soon(_run, *item)
+                            if inspect.iscoroutinefunction(item[1]):
+                                tg.start_soon(_async_run, *item)
+                            else:
+                                _green_run(*item)
 
-                future = executor.submit(anyio.run, _listen, backend=backend)
+                futures = {
+                    executor.submit(anyio.run, _listen, q1, backend=backend),
+                    executor.submit(anyio.run, _listen, q2, backend=backend),
+                }
 
         _spawn.backend = backend
         _spawn.library = library
@@ -202,9 +237,11 @@ def spawn(request):
         try:
             yield _spawn
         finally:
-            queue.put(None)
+            q1.put(None)
+            q2.put(None)
 
-            future.result()
+            for future in as_completed(futures):
+                future.result()  # reraise
 
 
 @contextmanager
@@ -350,6 +387,7 @@ def pytest_collection_modifyitems(config, items):
             "test_itertools": defaultdict(list),
             "aiologic.lowlevel.test_markers": defaultdict(list),
             "aiologic.lowlevel.test_libraries": defaultdict(list),
+            "aiologic.lowlevel.test_ident": defaultdict(list),
             "aiologic.test_flags": defaultdict(list),
         },
     )
