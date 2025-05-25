@@ -242,7 +242,8 @@ ignore = [
     "FURB103",  # write-whole-file
     "FURB154",  # repeated-global
     # ruff-specific rules
-    "RUF052",
+    "RUF029",  # unused-async
+    "RUF052",  # used-dummy-variable
 ]
 fixable = [
     "ALL",
