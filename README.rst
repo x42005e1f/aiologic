@@ -167,13 +167,13 @@ Installation
 
 .. installation-start-marker
 
-Install from `PyPI <https://pypi.org/project/aiologic/>`_ (recommended):
+Install from `PyPI <https://pypi.org/project/aiologic/>`_ (stable):
 
 .. code:: console
 
     pip install aiologic
 
-Or from `GitHub <https://github.com/x42005e1f/aiologic>`_ (development):
+Or from `GitHub <https://github.com/x42005e1f/aiologic>`_ (latest):
 
 .. code:: console
 
