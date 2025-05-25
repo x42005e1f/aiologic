@@ -16,18 +16,18 @@ import aiologic
 
 
 class TestFlag:
+    name = "aiologic.Flag"
     factory = aiologic.Flag
 
-    def test_base(self, /):
+    def test_base(self):
         with pytest.raises(LookupError):
             self.factory().get()
         assert self.factory(None).get() is None
         assert self.factory(marker="marker").get() == "marker"
 
-        pkg = "aiologic"
-        assert repr(self.factory()) == f"{pkg}.Flag()"
-        assert repr(self.factory(None)) == f"{pkg}.Flag(None)"
-        assert repr(self.factory(marker="marker")) == f"{pkg}.Flag('marker')"
+        assert repr(self.factory()) == f"{self.name}()"
+        assert repr(self.factory(None)) == f"{self.name}(None)"
+        assert repr(self.factory(marker="marker")) == f"{self.name}('marker')"
 
         assert not self.factory()
         assert self.factory(None)
@@ -37,7 +37,7 @@ class TestFlag:
         assert self.factory(None) != self.factory(None)
         assert self.factory("marker") != self.factory("marker")
 
-    def test_attrs(self, /):
+    def test_attrs(self):
         flag = self.factory()
 
         with pytest.raises(AttributeError):
@@ -47,7 +47,7 @@ class TestFlag:
         with pytest.raises(AttributeError):
             del flag.nonexistent_attribute
 
-    def test_get_and_set(self, /):
+    def test_get_and_set(self):
         flag = self.factory()
 
         with pytest.raises(LookupError):
@@ -63,78 +63,67 @@ class TestFlag:
         assert flag.get(default="marker") is marker
         assert flag.get(default_factory=list) is marker
 
-    def test_set_and_clear(self, /):
+    def test_set_and_clear(self):
         flag = self.factory()
-
         assert not flag
 
         assert flag.set()
         assert not flag.set()
-
         assert flag
 
         flag.clear()
-
         assert not flag
 
         assert flag.set(1)
         assert not flag.set(2)
-
         assert flag.get() == 1
+        assert flag
 
-    def test_double_clear(self, /):
+    def test_double_clear(self):
         flag = self.factory(object())
-
         assert flag
 
         flag.clear()
-        flag.clear()
-
         assert not flag
 
-    def test_pickling(self, /):
+        flag.clear()
+        assert not flag
+
+    def test_pickling(self):
         flag = self.factory()
         copy = pickle.loads(pickle.dumps(flag))
-
         assert not flag
         assert not copy
 
         copy.set()
-
         assert not flag
         assert copy
 
         copy = pickle.loads(pickle.dumps(flag))
-
         assert not flag
         assert not copy
 
         flag.set()
-
         assert flag
         assert not copy
 
         copy = pickle.loads(pickle.dumps(flag))
-
         assert flag
         assert copy
 
         copy.clear()
-
         assert flag
         assert not copy
 
         copy = pickle.loads(pickle.dumps(flag))
-
         assert flag
         assert copy
 
         flag.clear()
-
         assert not flag
         assert copy
 
-    def test_weakrefing(self, /):
+    def test_weakrefing(self):
         flag = self.factory()
         flag_ref = weakref.ref(flag)
 
@@ -186,7 +175,7 @@ class TestFlag:
         flag = self.factory()
 
         def a():
-            flag.set("something")
+            flag.set("marker")
             deepcopy(flag)
 
         def b():
