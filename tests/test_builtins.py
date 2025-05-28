@@ -15,7 +15,7 @@ except ImportError:
 else:
     GIL_DISABLED = not _is_gil_enabled()
 
-GH_127266 = GIL_DISABLED
+GH_127266 = GIL_DISABLED and sys.version_info < (3, 14)
 GH_129107 = GIL_DISABLED and sys.version_info < (3, 14)
 
 

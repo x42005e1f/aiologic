@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import sys
+
 from collections import deque
 
 from .lowlevel import (
@@ -21,7 +23,7 @@ except ImportError:
 else:
     GIL_ENABLED = _is_gil_enabled()
 
-USE_DELATTR = GIL_ENABLED  # see gh-127266
+USE_DELATTR = GIL_ENABLED or sys.version_info >= (3, 14)  # see gh-127266
 
 
 class PLock:
