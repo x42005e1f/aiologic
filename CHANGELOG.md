@@ -24,8 +24,6 @@ Commit messages are consistent with
 - `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
   semaphores, i.e. semaphores restricted to the values 0 and 1 and using a more
   efficient implementation.
-- `aiologic.BLock` as a bounded lock (async-aware alternative to
-  `threading.Lock`).
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
   i.e. new low-level primitives that encapsulate library-specific wait-wake
@@ -185,6 +183,11 @@ Commit messages are consistent with
     semantics.
   + The `value` property now has a setter, making it possible to instantly
     change the state of a semaphore without calling its methods.
+- Locks have been rewritten:
+  + They now set `owner` (and `count`) on release rather than on wakeup. This
+    gives the expected values of these parameters when locks are used
+    cooperatively. Previously, it was not possible to determine the next lock
+    owner after release in the same task (it was `None`).
 - Condition variables have been rewritten:
   + They now only support passing locks from the `threading` module
     (synchronous mode), locks from the `aiologic` module (mixed mode), and
@@ -255,6 +258,8 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `aiologic.PLock` in favor of `aiologic.BinarySemaphore`.
+- `aiologic.RLock.level` in favor of `aiologic.RLock.count`.
 - `aiologic.lowlevel.GreenEvent` and `aiologic.lowlevel.AsyncEvent` direct
   creation in favor of `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()`: they will become protocols in the

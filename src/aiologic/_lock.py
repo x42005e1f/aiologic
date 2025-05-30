@@ -3,10 +3,14 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
 import sys
 
 from collections import deque
+from typing import TYPE_CHECKING
 
+from ._semaphore import BinarySemaphore
 from .lowlevel import (
     async_checkpoint,
     create_async_event,
@@ -16,63 +20,191 @@ from .lowlevel import (
     green_checkpoint,
 )
 
-try:
-    from sys import _is_gil_enabled
-except ImportError:
-    GIL_ENABLED = True
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
 else:
-    GIL_ENABLED = _is_gil_enabled()
+    from typing_extensions import deprecated
 
-USE_DELATTR = GIL_ENABLED or sys.version_info >= (3, 14)  # see gh-127266
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
 
 class PLock:
     __slots__ = (
-        "__unlocked",
-        "__waiters",
         "__weakref__",
+        "_impl",
     )
 
-    def __new__(cls, /):
-        self = super().__new__(cls)
+    @deprecated("Use BinarySemaphore instead")
+    def __new__(cls, /) -> Self:
+        self = object.__new__(cls)
 
-        self.__unlocked = [True]
-        self.__waiters = deque()
+        self._impl = BinarySemaphore()
 
         return self
 
-    def __getstate__(self, /):
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        return f"{cls_repr}()"
+        object_repr = f"{cls_repr}()"
 
-    def __bool__(self, /):
-        return not self.__unlocked
+        if self._impl.value > 0:
+            extra = "unlocked"
+        else:
+            extra = f"locked, waiting={self._impl.waiting}"
 
-    async def __aenter__(self, /):
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
+    def __bool__(self, /) -> bool:
+        return not self._impl.value
+
+    async def __aenter__(self, /) -> Self:
         await self.async_acquire()
 
         return self
 
-    async def __aexit__(self, /, exc_type, exc_value, traceback):
-        self.async_release()
-
-    def __enter__(self, /):
+    def __enter__(self, /) -> Self:
         self.green_acquire()
 
         return self
 
-    def __exit__(self, /, exc_type, exc_value, traceback):
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.async_release()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.green_release()
 
-    def __acquire_nowait(self, /):
-        if self.__unlocked:
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        return await self._impl.async_acquire(blocking=blocking)
+
+    def green_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        return self._impl.green_acquire(blocking=blocking, timeout=timeout)
+
+    def _release(self, /) -> None:
+        return self._impl.release()
+
+    _async_acquire = async_acquire
+    _green_acquire = green_acquire
+
+    async_release = _release
+    green_release = _release
+
+    def locked(self, /) -> bool:
+        return not self._impl.value
+
+    @property
+    def waiting(self, /) -> int:
+        return self._impl.waiting
+
+
+class BLock(PLock):
+    __slots__ = ()
+
+    @deprecated("Use BoundedBinarySemaphore instead")
+    def __new__(cls, /) -> Self:
+        self = object.__new__(cls)
+
+        self._impl = BinarySemaphore(max_value=1)
+
+        return self
+
+
+class Lock(PLock):
+    __slots__ = (
+        # "__weakref__",
+        "_owner",
+        "_unlocked",
+        "_waiters",
+    )
+
+    def __new__(cls, /) -> Self:
+        self = object.__new__(cls)
+
+        self._owner = None
+
+        self._unlocked = [None]
+        self._waiters = deque()
+
+        return self
+
+    def __getstate__(self, /) -> None:
+        return None
+
+    def __repr__(self, /) -> str:
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        object_repr = f"{cls_repr}()"
+
+        if self._unlocked:
+            extra = "unlocked"
+        else:
+            extra = f"locked, waiting={len(self._waiters)}"
+
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
+    def __bool__(self, /) -> bool:
+        return not self._unlocked
+
+    async def __aenter__(self, /) -> Self:
+        await self.async_acquire()
+
+        return self
+
+    def __enter__(self, /) -> Self:
+        self.green_acquire()
+
+        return self
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.async_release()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.green_release()
+
+    def _acquire_nowait(self, /) -> bool:
+        if self._unlocked:
             try:
-                self.__unlocked.pop()
+                self._unlocked.pop()
             except IndexError:
                 return False
             else:
@@ -80,8 +212,20 @@ class PLock:
 
         return False
 
-    async def async_acquire(self, /, *, blocking=True):
-        if self.__acquire_nowait():
+    async def _async_acquire_on_behalf_of(
+        self,
+        /,
+        task: tuple[str, int],
+        *,
+        blocking: bool = True,
+    ) -> bool:
+        if self._owner == task:
+            msg = "the current task is already holding this lock"
+            raise RuntimeError(msg)
+
+        if self._acquire_nowait():
+            self._owner = task
+
             if blocking:
                 try:
                     await async_checkpoint()
@@ -94,10 +238,18 @@ class PLock:
         if not blocking:
             return False
 
-        self.__waiters.append(event := create_async_event())
+        self._waiters.append(
+            token := (
+                event := create_async_event(),
+                task,
+                1,
+            )
+        )
 
-        if self.__acquire_nowait():
-            self.__waiters.remove(event)
+        if self._acquire_nowait():
+            self._owner = task
+
+            self._waiters.remove(token)
 
             event.set()
 
@@ -109,7 +261,7 @@ class PLock:
             if not success:
                 if event.cancelled():
                     try:
-                        self.__waiters.remove(event)
+                        self._waiters.remove(token)
                     except ValueError:
                         pass
                 else:
@@ -117,8 +269,21 @@ class PLock:
 
         return success
 
-    def green_acquire(self, /, *, blocking=True, timeout=None):
-        if self.__acquire_nowait():
+    def _green_acquire_on_behalf_of(
+        self,
+        /,
+        task: tuple[str, int],
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        if self._owner == task:
+            msg = "the current task is already holding this lock"
+            raise RuntimeError(msg)
+
+        if self._acquire_nowait():
+            self._owner = task
+
             if blocking:
                 try:
                     green_checkpoint()
@@ -131,10 +296,18 @@ class PLock:
         if not blocking:
             return False
 
-        self.__waiters.append(event := create_green_event())
+        self._waiters.append(
+            token := (
+                event := create_green_event(),
+                task,
+                1,
+            )
+        )
 
-        if self.__acquire_nowait():
-            self.__waiters.remove(event)
+        if self._acquire_nowait():
+            self._owner = task
+
+            self._waiters.remove(token)
 
             event.set()
 
@@ -146,7 +319,7 @@ class PLock:
             if not success:
                 if event.cancelled():
                     try:
-                        self.__waiters.remove(event)
+                        self._waiters.remove(token)
                     except ValueError:
                         pass
                 else:
@@ -154,389 +327,412 @@ class PLock:
 
         return success
 
-    def _release(self, /):
-        waiters = self.__waiters
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        return await self._async_acquire_on_behalf_of(
+            current_async_task_ident(),
+            blocking=blocking,
+        )
+
+    def green_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        return self._green_acquire_on_behalf_of(
+            current_green_task_ident(),
+            blocking=blocking,
+            timeout=timeout,
+        )
+
+    def _release(self, /) -> None:
+        waiters = self._waiters
 
         while True:
             while waiters:
                 try:
-                    event = waiters.popleft()
+                    event, self._owner, _ = waiters.popleft()
                 except IndexError:
-                    pass
+                    break
                 else:
                     if event.set():
                         return
 
-            self.__unlocked.append(True)
+            self._owner = None
+
+            self._unlocked.append(None)
 
             if waiters:
                 try:
-                    self.__unlocked.pop()
+                    self._unlocked.pop()
                 except IndexError:
                     break
             else:
                 break
 
-    _async_acquire = async_acquire
-    _green_acquire = green_acquire
+    def async_release(self, /) -> None:
+        if self._owner is None:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
 
-    async_release = _release
-    green_release = _release
+        task = current_async_task_ident()
 
-    def locked(self, /):
-        return not self.__unlocked
+        if self._owner != task:
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
+
+        self._release()
+
+    def green_release(self, /) -> None:
+        if self._owner is None:
+            msg = "release unlocked lock"
+            raise RuntimeError(msg)
+
+        task = current_green_task_ident()
+
+        if self._owner != task:
+            msg = "the current task is not holding this lock"
+            raise RuntimeError(msg)
+
+        self._release()
+
+    def async_owned(self, /) -> bool:
+        return self._owner == current_async_task_ident()
+
+    def green_owned(self, /) -> bool:
+        return self._owner == current_green_task_ident()
+
+    def locked(self, /) -> bool:
+        return not self._unlocked
 
     @property
-    def waiting(self, /):
-        return len(self.__waiters)
+    def owner(self, /) -> tuple[str, int] | None:
+        return self._owner
 
-
-class BLock(PLock):
-    __slots__ = ("__locked",)
-
-    if not USE_DELATTR:
-
-        def __new__(cls, /):
-            self = super().__new__(cls)
-
-            self.__locked = []
-
-            return self
-
-    async def async_acquire(self, /, *, blocking=True):
-        success = await self._async_acquire(blocking=blocking)
-
-        if success:
-            if USE_DELATTR:
-                self.__locked = True
-            else:
-                self.__locked.append(True)
-
-        return success
-
-    def green_acquire(self, /, *, blocking=True, timeout=None):
-        success = self._green_acquire(blocking=blocking, timeout=timeout)
-
-        if success:
-            if USE_DELATTR:
-                self.__locked = True
-            else:
-                self.__locked.append(True)
-
-        return success
-
-    def async_release(self, /):
-        try:
-            if USE_DELATTR:
-                del self.__locked
-            else:
-                self.__locked.pop()
-        except (AttributeError, IndexError):
-            msg = "release unlocked lock"
-            raise RuntimeError(msg) from None
-
-        self._release()
-
-    def green_release(self, /):
-        try:
-            if USE_DELATTR:
-                del self.__locked
-            else:
-                self.__locked.pop()
-        except (AttributeError, IndexError):
-            msg = "release unlocked lock"
-            raise RuntimeError(msg) from None
-
-        self._release()
-
-
-class Lock(PLock):
-    __slots__ = ("owner",)
-
-    def __new__(cls, /):
-        self = super().__new__(cls)
-
-        self.owner = None
-
-        return self
-
-    async def async_acquire(self, /, *, blocking=True):
-        task = current_async_task_ident()
-
-        if self.owner == task:
-            msg = "the current task is already holding this lock"
-            raise RuntimeError(msg)
-
-        success = await self._async_acquire(blocking=blocking)
-
-        if success:
-            self.owner = task
-
-        return success
-
-    def green_acquire(self, /, *, blocking=True, timeout=None):
-        task = current_green_task_ident()
-
-        if self.owner == task:
-            msg = "the current task is already holding this lock"
-            raise RuntimeError(msg)
-
-        success = self._green_acquire(blocking=blocking, timeout=timeout)
-
-        if success:
-            self.owner = task
-
-        return success
-
-    def async_release(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
-
-        task = current_async_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        self.owner = None
-
-        self._release()
-
-    def green_release(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
-
-        task = current_green_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        self.owner = None
-
-        self._release()
-
-    def async_owned(self, /):
-        return self.owner == current_async_task_ident()
-
-    def green_owned(self, /):
-        return self.owner == current_green_task_ident()
+    @property
+    def waiting(self, /) -> int:
+        return len(self._waiters)
 
     # Internal methods used by condition variables
 
-    async def _async_acquire_restore(self, /, state):
-        success = await self._async_acquire()
+    async def _async_acquire_restore(
+        self,
+        /,
+        state: tuple[tuple[str, int], int],
+    ) -> bool:
+        return await self._async_acquire_on_behalf_of(state[0])
 
-        if success:
-            self.owner = state
+    def _green_acquire_restore(
+        self,
+        /,
+        state: tuple[tuple[str, int], int],
+    ) -> bool:
+        return self._green_acquire_on_behalf_of(state[0])
 
-        return success
+    def _async_release_save(self, /) -> tuple[tuple[str, int], int]:
+        state = (self._owner, 1)
 
-    def _green_acquire_restore(self, /, state):
-        success = self._green_acquire()
-
-        if success:
-            self.owner = state
-
-        return success
-
-    def _async_release_save(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
-
-        task = current_async_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        state = self.owner
-
-        self.owner = None
-
-        self._release()
+        self.async_release()
 
         return state
 
-    def _green_release_save(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
+    def _green_release_save(self, /) -> tuple[tuple[str, int], int]:
+        state = (self._owner, 1)
 
-        task = current_green_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        state = self.owner
-
-        self.owner = None
-
-        self._release()
+        self.green_release()
 
         return state
 
 
-class RLock(PLock):
-    __slots__ = (
-        "level",
-        "owner",
-    )
+class RLock(Lock):
+    __slots__ = ("_count",)
 
-    def __new__(cls, /):
-        self = super().__new__(cls)
+    def __new__(cls, /) -> Self:
+        self = object.__new__(cls)
 
-        self.level = 0
-        self.owner = None
+        self._count = 0
+        self._owner = None
+
+        self._unlocked = [None]
+        self._waiters = deque()
 
         return self
 
-    async def async_acquire(self, /, count=1, *, blocking=True):
-        task = current_async_task_ident()
+    async def _async_acquire_on_behalf_of(
+        self,
+        /,
+        task: tuple[str, int],
+        count: int = 1,
+        *,
+        blocking: bool = True,
+    ) -> bool:
+        if count < 1:
+            msg = "count must be >= 1"
+            raise ValueError(msg)
 
-        if self.owner == task:
+        if self._owner == task:
             if blocking:
                 await async_checkpoint()
 
-            self.level += count
+            self._count += count
 
             return True
 
-        success = await self._async_acquire(blocking=blocking)
+        if self._acquire_nowait():
+            self._owner = task
+            self._count = count
 
-        if success:
-            self.owner = task
-            self.level = count
+            if blocking:
+                try:
+                    await async_checkpoint()
+                except BaseException:
+                    self._release()
+                    raise
+
+            return True
+
+        if not blocking:
+            return False
+
+        self._waiters.append(
+            token := (
+                event := create_async_event(),
+                task,
+                count,
+            )
+        )
+
+        if self._acquire_nowait():
+            self._owner = task
+            self._count = count
+
+            self._waiters.remove(token)
+
+            event.set()
+
+        success = False
+
+        try:
+            success = await event
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self._release()
 
         return success
 
-    def green_acquire(self, /, count=1, *, blocking=True, timeout=None):
-        task = current_green_task_ident()
+    def _green_acquire_on_behalf_of(
+        self,
+        /,
+        task: tuple[str, int],
+        count: int = 1,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        if count < 1:
+            msg = "count must be >= 1"
+            raise ValueError(msg)
 
-        if self.owner == task:
+        if self._owner == task:
             if blocking:
                 green_checkpoint()
 
-            self.level += count
+            self._count += count
 
             return True
 
-        success = self._green_acquire(blocking=blocking, timeout=timeout)
+        if self._acquire_nowait():
+            self._owner = task
+            self._count = count
 
-        if success:
-            self.owner = task
-            self.level = count
+            if blocking:
+                try:
+                    green_checkpoint()
+                except BaseException:
+                    self._release()
+                    raise
+
+            return True
+
+        if not blocking:
+            return False
+
+        self._waiters.append(
+            token := (
+                event := create_green_event(),
+                task,
+                count,
+            )
+        )
+
+        if self._acquire_nowait():
+            self._owner = task
+            self._count = count
+
+            self._waiters.remove(token)
+
+            event.set()
+
+        success = False
+
+        try:
+            success = event.wait(timeout)
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self._release()
 
         return success
 
-    def async_release(self, /, count=1):
-        if self.owner is None:
+    async def async_acquire(
+        self,
+        /,
+        count: int = 1,
+        *,
+        blocking: bool = True,
+    ) -> bool:
+        return await self._async_acquire_on_behalf_of(
+            current_async_task_ident(),
+            count,
+            blocking=blocking,
+        )
+
+    def green_acquire(
+        self,
+        /,
+        count: int = 1,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        return self._green_acquire_on_behalf_of(
+            current_green_task_ident(),
+            count,
+            blocking=blocking,
+            timeout=timeout,
+        )
+
+    def _release(self, /) -> None:
+        waiters = self._waiters
+
+        while True:
+            while waiters:
+                try:
+                    event, self._owner, self._count = waiters.popleft()
+                except IndexError:
+                    break
+                else:
+                    if event.set():
+                        return
+
+            self._count = 0
+            self._owner = None
+
+            self._unlocked.append(None)
+
+            if waiters:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    break
+            else:
+                break
+
+    def async_release(self, /, count: int = 1) -> None:
+        if count < 1:
+            msg = "count must be >= 1"
+            raise ValueError(msg)
+
+        if self._owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
 
         task = current_async_task_ident()
 
-        if self.owner != task:
+        if self._owner != task:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
-        if self.level < count:
+        if self._count < count:
             msg = "lock released too many times"
             raise RuntimeError(msg)
 
-        self.level -= count
+        self._count -= count
 
-        if not self.level:
-            self.owner = None
-
+        if not self._count:
             self._release()
 
-    def green_release(self, /, count=1):
-        if self.owner is None:
+    def green_release(self, /, count: int = 1) -> None:
+        if count < 1:
+            msg = "count must be >= 1"
+            raise ValueError(msg)
+
+        if self._owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
 
         task = current_green_task_ident()
 
-        if self.owner != task:
+        if self._owner != task:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
-        if self.level < count:
+        if self._count < count:
             msg = "lock released too many times"
             raise RuntimeError(msg)
 
-        self.level -= count
+        self._count -= count
 
-        if not self.level:
-            self.owner = None
-
+        if not self._count:
             self._release()
 
-    def async_owned(self, /):
-        return self.owner == current_async_task_ident()
+    @property
+    def count(self, /) -> int:
+        return self._count
 
-    def green_owned(self, /):
-        return self.owner == current_green_task_ident()
+    @property
+    @deprecated("Use 'count' instead")
+    def level(self, /) -> int:
+        return self._count
 
     # Internal methods used by condition variables
 
-    async def _async_acquire_restore(self, /, state):
-        success = await self._async_acquire()
+    async def _async_acquire_restore(
+        self,
+        /,
+        state: tuple[tuple[str, int], int],
+    ) -> bool:
+        return await self._async_acquire_on_behalf_of(*state)
 
-        if success:
-            self.owner, self.level = state
+    def _green_acquire_restore(
+        self,
+        /,
+        state: tuple[tuple[str, int], int],
+    ) -> bool:
+        return self._green_acquire_on_behalf_of(*state)
 
-        return success
+    def _async_release_save(self, /) -> tuple[tuple[str, int], int]:
+        state = (self._owner, self._count)
 
-    def _green_acquire_restore(self, /, state):
-        success = self._green_acquire()
-
-        if success:
-            self.owner, self.level = state
-
-        return success
-
-    def _async_release_save(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
-
-        task = current_async_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        state = self.owner, self.level
-
-        self.level = 0
-        self.owner = None
-
-        self._release()
+        self.async_release()
 
         return state
 
-    def _green_release_save(self, /):
-        if self.owner is None:
-            msg = "release unlocked lock"
-            raise RuntimeError(msg)
+    def _green_release_save(self, /) -> tuple[tuple[str, int], int]:
+        state = (self._owner, self._count)
 
-        task = current_green_task_ident()
-
-        if self.owner != task:
-            msg = "the current task is not holding this lock"
-            raise RuntimeError(msg)
-
-        state = self.owner, self.level
-
-        self.level = 0
-        self.owner = None
-
-        self._release()
+        self.green_release()
 
         return state
