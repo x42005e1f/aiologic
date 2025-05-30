@@ -140,6 +140,7 @@ class Lock(PLock):
     __slots__ = (
         # "__weakref__",
         "_owner",
+        "_releasing",
         "_unlocked",
         "_waiters",
     )
@@ -149,6 +150,7 @@ class Lock(PLock):
 
         self._owner = None
 
+        self._releasing = False
         self._unlocked = [None]
         self._waiters = deque()
 
@@ -219,7 +221,7 @@ class Lock(PLock):
         *,
         blocking: bool = True,
     ) -> bool:
-        if self._owner == task:
+        if self._owner == task and not self._releasing:
             msg = "the current task is already holding this lock"
             raise RuntimeError(msg)
 
@@ -258,7 +260,9 @@ class Lock(PLock):
         try:
             success = await event
         finally:
-            if not success:
+            if success:
+                self._releasing = False
+            else:
                 if event.cancelled():
                     try:
                         self._waiters.remove(token)
@@ -277,7 +281,7 @@ class Lock(PLock):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        if self._owner == task:
+        if self._owner == task and not self._releasing:
             msg = "the current task is already holding this lock"
             raise RuntimeError(msg)
 
@@ -316,7 +320,9 @@ class Lock(PLock):
         try:
             success = event.wait(timeout)
         finally:
-            if not success:
+            if success:
+                self._releasing = False
+            else:
                 if event.cancelled():
                     try:
                         self._waiters.remove(token)
@@ -350,6 +356,8 @@ class Lock(PLock):
         waiters = self._waiters
 
         while True:
+            self._releasing = True
+
             while waiters:
                 try:
                     event, self._owner, _ = waiters.popleft()
@@ -361,6 +369,7 @@ class Lock(PLock):
 
             self._owner = None
 
+            self._releasing = False
             self._unlocked.append(None)
 
             if waiters:
@@ -378,7 +387,7 @@ class Lock(PLock):
 
         task = current_async_task_ident()
 
-        if self._owner != task:
+        if self._owner != task or self._releasing:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
@@ -391,17 +400,21 @@ class Lock(PLock):
 
         task = current_green_task_ident()
 
-        if self._owner != task:
+        if self._owner != task or self._releasing:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
         self._release()
 
     def async_owned(self, /) -> bool:
-        return self._owner == current_async_task_ident()
+        return (
+            self._owner == current_async_task_ident() and not self._releasing
+        )
 
     def green_owned(self, /) -> bool:
-        return self._owner == current_green_task_ident()
+        return (
+            self._owner == current_green_task_ident() and not self._releasing
+        )
 
     def locked(self, /) -> bool:
         return not self._unlocked
@@ -454,6 +467,7 @@ class RLock(Lock):
         self._count = 0
         self._owner = None
 
+        self._releasing = False
         self._unlocked = [None]
         self._waiters = deque()
 
@@ -471,7 +485,7 @@ class RLock(Lock):
             msg = "count must be >= 1"
             raise ValueError(msg)
 
-        if self._owner == task:
+        if self._owner == task and not self._releasing:
             if blocking:
                 await async_checkpoint()
 
@@ -516,7 +530,9 @@ class RLock(Lock):
         try:
             success = await event
         finally:
-            if not success:
+            if success:
+                self._releasing = False
+            else:
                 if event.cancelled():
                     try:
                         self._waiters.remove(token)
@@ -540,7 +556,7 @@ class RLock(Lock):
             msg = "count must be >= 1"
             raise ValueError(msg)
 
-        if self._owner == task:
+        if self._owner == task and not self._releasing:
             if blocking:
                 green_checkpoint()
 
@@ -585,7 +601,9 @@ class RLock(Lock):
         try:
             success = event.wait(timeout)
         finally:
-            if not success:
+            if success:
+                self._releasing = False
+            else:
                 if event.cancelled():
                     try:
                         self._waiters.remove(token)
@@ -628,6 +646,8 @@ class RLock(Lock):
         waiters = self._waiters
 
         while True:
+            self._releasing = True
+
             while waiters:
                 try:
                     event, self._owner, self._count = waiters.popleft()
@@ -640,6 +660,7 @@ class RLock(Lock):
             self._count = 0
             self._owner = None
 
+            self._releasing = False
             self._unlocked.append(None)
 
             if waiters:
@@ -661,7 +682,7 @@ class RLock(Lock):
 
         task = current_async_task_ident()
 
-        if self._owner != task:
+        if self._owner != task or self._releasing:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 
@@ -685,7 +706,7 @@ class RLock(Lock):
 
         task = current_green_task_ident()
 
-        if self._owner != task:
+        if self._owner != task or self._releasing:
             msg = "the current task is not holding this lock"
             raise RuntimeError(msg)
 

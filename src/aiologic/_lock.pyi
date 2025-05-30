@@ -76,6 +76,7 @@ class Lock(PLock):
     __slots__ = (
         # "__weakref__",
         "_owner",
+        "_releasing",
         "_unlocked",
         "_waiters",
     )
