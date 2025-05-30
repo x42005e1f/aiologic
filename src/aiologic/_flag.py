@@ -5,13 +5,18 @@
 
 from __future__ import annotations
 
+import sys
+
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from .lowlevel._markers import MISSING, MissingType
 
-if TYPE_CHECKING:
-    import sys
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
 
+if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
@@ -22,7 +27,7 @@ if TYPE_CHECKING:
     else:
         from typing import Callable
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", default=object)
 _D = TypeVar("_D")
 
 

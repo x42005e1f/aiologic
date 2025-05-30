@@ -101,7 +101,8 @@ Commit messages are consistent with
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
   + `aiologic.lowlevel.Flag` is now a generic type not only in stubs but also
-    at runtime, making it possible to use subscriptions on Python 3.8.
+    at runtime, making it possible to use subscriptions on Python 3.8. Also,
+    its type parameter is now `object` by default.
   + Calling `flag.set()` without arguments is now only allowed for
     `aiologic.lowlevel.Flag[object]`. Previously it ignored subscriptions.
   + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static

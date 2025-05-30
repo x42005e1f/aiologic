@@ -5,16 +5,17 @@
 
 import sys
 
-from typing import Any, TypeVar
+from typing import Any
 
 import aiologic._flag
 
 if sys.version_info >= (3, 13):
+    from typing import TypeVar
     from warnings import deprecated
 else:
-    from typing_extensions import deprecated
+    from typing_extensions import TypeVar, deprecated
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", default=object)
 
 @deprecated("Use aiologic.Flag instead")
 class Flag(aiologic._flag.Flag[_T]):

@@ -5,9 +5,14 @@
 
 import sys
 
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, Generic, overload
 
 from .lowlevel._markers import MISSING, MissingType
+
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -19,7 +24,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Callable
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", default=object)
 _D = TypeVar("_D")
 
 class Flag(Generic[_T]):
