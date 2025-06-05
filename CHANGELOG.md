@@ -182,8 +182,6 @@ Commit messages are consistent with
     it allowed threads to participate in waking up others during race
     conditions, but `aiologic.Semaphore.release()` no longer has such
     semantics.
-  + The `value` property now has a setter, making it possible to instantly
-    change the state of a semaphore without calling its methods.
 - Locks have been rewritten:
   + They now set `owner` (and `count`) on release rather than on wakeup. This
     gives the expected values of these parameters when locks are used

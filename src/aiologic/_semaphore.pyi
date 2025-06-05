@@ -8,6 +8,11 @@ import sys
 from types import TracebackType
 from typing import Any, Final, overload
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -86,6 +91,7 @@ class Semaphore:
     @property
     def value(self, /) -> int: ...
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None: ...
     @property
     def waiting(self, /) -> int: ...
@@ -130,6 +136,7 @@ class BoundedSemaphore(Semaphore):
     @property
     def value(self, /) -> int: ...
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None: ...
 
 class BinarySemaphore(Semaphore):
@@ -159,6 +166,7 @@ class BinarySemaphore(Semaphore):
     @property
     def value(self, /) -> int: ...
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None: ...
 
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
@@ -196,4 +204,5 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     @property
     def value(self, /) -> int: ...
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None: ...

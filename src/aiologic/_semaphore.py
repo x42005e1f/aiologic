@@ -19,6 +19,11 @@ from .lowlevel import (
     green_checkpoint,
 )
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
+
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -323,6 +328,7 @@ class Semaphore:
         return len(self._unlocked)
 
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None:
         if value < 0:
             msg = "value must be >= 0"
@@ -502,6 +508,7 @@ class BoundedSemaphore(Semaphore):
         return len(self._unlocked)
 
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None:
         if value < 0:
             msg = "value must be >= 0"
@@ -624,6 +631,7 @@ class BinarySemaphore(Semaphore):
         return len(self._unlocked)
 
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None:
         if value < 0 or 1 < value:
             msg = "value must be 0 or 1"
@@ -748,6 +756,7 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         return len(self._unlocked)
 
     @value.setter
+    @deprecated("Will be removed soon due to its ambiguous nature")
     def value(self, /, value: int) -> None:
         if value < 0 or 1 < value:
             msg = "value must be 0 or 1"
