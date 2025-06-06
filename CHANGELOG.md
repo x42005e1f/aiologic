@@ -51,11 +51,15 @@ Commit messages are consistent with
   these methods have a slightly different meaning: they are intended to
   accompany `aiologic.lowlevel.shield()` calls to pre-check for cancellation,
   and do not guarantee actual checking.
-- `green_owned()` and `async_owned()` methods to ownable and reentrant locks.
-  They allow to check if the lock is owned by the current task without
-  importing additional functions.
-- Reentrant locks can now be acquired and released multiple times in a single
-  call.
+- `async_borrowed()` and `green_borrowed()` methods to capacity limiters,
+  `green_owned()` and `async_owned()` methods to locks. They allow to reliably
+  check if the current task is holding the primitive (or any of its tokens)
+  without importing additional functions.
+- `async_count()` and `green_count()` to reentrant capacity limiters for the
+  same purpose, but returning how many releases need to be made before the
+  token is actually released by the current task.
+- Reentrant primitives can now be acquired and released multiple times in a
+  single call.
 - `for_()` method to condition variables as an async analog of `wait_for()`.
 - Conditional variables now support user-defined timers. They can be passed to
   the constructor, called via the `timer` property, and used to pass the
@@ -182,6 +186,14 @@ Commit messages are consistent with
     it allowed threads to participate in waking up others during race
     conditions, but `aiologic.Semaphore.release()` no longer has such
     semantics.
+- Capacity limiters have been rewritten:
+  + `CapacityLimiter.borrowers` is now a read-only property that returns a
+    read-only mapping proxy, which increases safety when working with it.
+  + The `total_tokens` parameter now has a default value of `1`. This allows
+    capacity limiters to be used directly as default factories and makes their
+    interface a bit closer to semaphores.
+  + They can now be used correctly in a Boolean context: `True` if at least one
+    token has been borrowed, `False` otherwise.
 - Locks have been rewritten:
   + They now set `owner` (and `count`) on release rather than on wakeup. This
     gives the expected values of these parameters when locks are used
@@ -270,6 +282,10 @@ Commit messages are consistent with
 
 ### Removed
 
+- `aiologic.CapacityLimiter.*_on_behalf_of()` methods: they did not provide the
+  proper thread-safety level (capacity limiters need to be higher-level
+  primitives for this), but also made the implementation more complex and thus
+  degraded performance.
 - `aiologic.lowlevel.<library>_running()`: these functions have not been used
   and could be misleading.
 - `aiologic.lowlevel.checkpoint_if_cancelled()` and
