@@ -192,6 +192,7 @@ ignore = [
     "ISC002",  # multi-line-implicit-string-concatenation
     # flake8-pyi
     "PYI011",  # typed-argument-default-in-stub
+    "PYI029",  # str-or-repr-defined-in-stub
     "PYI053",  # string-or-bytes-too-long
     "PYI054",  # numeric-literal-too-long
     # flake8-return
