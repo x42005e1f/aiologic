@@ -15,7 +15,19 @@ from .lowlevel import (
     green_checkpoint,
 )
 
-PERFECT_FAIRNESS = bool(os.getenv("AIOLOGIC_PERFECT_FAIRNESS", ""))
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    GIL_ENABLED = True
+else:
+    GIL_ENABLED = _is_gil_enabled()
+
+PERFECT_FAIRNESS = bool(
+    os.getenv(
+        "AIOLOGIC_PERFECT_FAIRNESS",
+        "1" if GIL_ENABLED else "",
+    )
+)
 
 
 class BrokenBarrierError(RuntimeError):

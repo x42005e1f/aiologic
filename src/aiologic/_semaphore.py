@@ -51,7 +51,7 @@ _USE_BYTEARRAY: Final[bool] = __PYTHON_IMPLEMENTATION == "CPython" and (
 _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
     os.getenv(
         "AIOLOGIC_PERFECT_FAIRNESS",
-        "",
+        "1" if __GIL_ENABLED else "",
     )
 )
 
