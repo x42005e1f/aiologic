@@ -230,6 +230,9 @@ Commit messages are consistent with
     variables can now be used to determine the status of an operation (just
     like normal `aiologic` locks) regardless of the lock used. Previously,
     `True` was always returned for both cases.
+- Resource guards have been rewritten:
+  + They are now interpreted in a Boolean context in the same way as locks.
+    Previously, they returned opposite values.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
   private classes). Low-level events now show their status in representation.

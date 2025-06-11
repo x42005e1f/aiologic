@@ -6,18 +6,30 @@
 import sys
 
 from types import TracebackType
+from typing import Any, Final
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
+_USE_DELATTR: Final[bool]
+
 class BusyResourceError(RuntimeError): ...
 
 class ResourceGuard:
+    __slots__ = (
+        "__weakref__",
+        "_action",
+        "_unlocked",
+    )
+
     def __new__(cls, /, action: str = "using") -> Self: ...
+    def __getnewargs__(self, /) -> tuple[Any, ...]: ...
+    def __getstate__(self, /) -> None: ...
+    def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
-    def __enter__(self) -> Self: ...
+    def __enter__(self, /) -> Self: ...
     def __exit__(
         self,
         /,
