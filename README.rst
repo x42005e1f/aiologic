@@ -194,9 +194,12 @@ DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated)
 Communication channels
 ======================
 
-GitHub Discussions: https://github.com/x42005e1f/aiologic/discussions
+GitHub Discussions: https://github.com/x42005e1f/aiologic/discussions (ideas,
+questions)
 
-Feel free to post your questions and ideas here.
+GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
+
+You can also send an email to 0x42005e1f@gmail.com with any feedback.
 
 Support
 =======
