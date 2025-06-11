@@ -19,11 +19,6 @@ from .lowlevel import (
     green_checkpoint,
 )
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
-
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -327,20 +322,6 @@ class Semaphore:
     def value(self, /) -> int:
         return len(self._unlocked)
 
-    @value.setter
-    @deprecated("Will be removed soon due to its ambiguous nature")
-    def value(self, /, value: int) -> None:
-        if value < 0:
-            msg = "value must be >= 0"
-            raise ValueError(msg)
-
-        if _USE_BYTEARRAY:
-            self._unlocked[:] = bytes(value)
-        else:
-            self._unlocked[:] = [None] * value
-
-        self._release(-1)
-
     @property
     def waiting(self, /) -> int:
         return len(self._waiters)
@@ -507,29 +488,6 @@ class BoundedSemaphore(Semaphore):
     def value(self, /) -> int:
         return len(self._unlocked)
 
-    @value.setter
-    @deprecated("Will be removed soon due to its ambiguous nature")
-    def value(self, /, value: int) -> None:
-        if value < 0:
-            msg = "value must be >= 0"
-            raise ValueError(msg)
-
-        if value > self._max_value:
-            msg = "value must be <= max_value"
-            raise ValueError(msg)
-
-        if _USE_BYTEARRAY:
-            self._unlocked[:] = bytes(value)
-        else:
-            self._unlocked[:] = [None] * value
-
-        if _USE_BYTEARRAY:
-            self._locked[:] = bytes(self._max_value - value)
-        else:
-            self._locked[:] = [None] * (self._max_value - value)
-
-        self._release(-1)
-
 
 class BinarySemaphore(Semaphore):
     __slots__ = ()
@@ -615,31 +573,9 @@ class BinarySemaphore(Semaphore):
             else:
                 break
 
-    def _wakeup(self, /) -> None:
-        waiters = self._waiters
-
-        while waiters:
-            try:
-                event = waiters.popleft()
-            except IndexError:
-                break
-            else:
-                event.set()
-
     @property
     def value(self, /) -> int:
         return len(self._unlocked)
-
-    @value.setter
-    @deprecated("Will be removed soon due to its ambiguous nature")
-    def value(self, /, value: int) -> None:
-        if value < 0 or 1 < value:
-            msg = "value must be 0 or 1"
-            raise ValueError(msg)
-
-        self._unlocked[:] = [None] * value
-
-        self._wakeup()
 
 
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
@@ -754,29 +690,3 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     @property
     def value(self, /) -> int:
         return len(self._unlocked)
-
-    @value.setter
-    @deprecated("Will be removed soon due to its ambiguous nature")
-    def value(self, /, value: int) -> None:
-        if value < 0 or 1 < value:
-            msg = "value must be 0 or 1"
-            raise ValueError(msg)
-
-        if value > self._max_value:
-            msg = "value must be <= max_value"
-            raise ValueError(msg)
-
-        self._unlocked[:] = [None] * value
-
-        if _USE_DELATTR:
-            if self._max_value > value:
-                self._locked = True
-            else:
-                try:
-                    del self._locked
-                except AttributeError:
-                    pass
-        else:
-            self._locked[:] = [None] * (self._max_value - value)
-
-        self._wakeup()
