@@ -5,7 +5,10 @@
 
 import sys
 
-from typing import Generic, TypeVar, overload
+from collections import deque
+from typing import Any, Generic, TypeVar, overload
+
+from .lowlevel import MISSING, Event, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -13,9 +16,9 @@ else:
     from typing_extensions import Self
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 else:
-    from typing import Iterable
+    from typing import Callable, Iterable
 
 _T = TypeVar("_T")
 
@@ -23,10 +26,20 @@ class QueueEmpty(Exception): ...
 class QueueFull(Exception): ...
 
 class SimpleQueue(Generic[_T]):
-    @overload
-    def __new__(cls, /) -> Self: ...
-    @overload
-    def __new__(cls, items: Iterable[_T], /) -> Self: ...
+    __slots__ = (
+        "__weakref__",
+        "_data",
+        "_semaphore",
+    )
+
+    def __new__(
+        cls,
+        items: Iterable[_T] | MissingType = MISSING,
+        /,
+    ) -> Self: ...
+    def __getnewargs__(self, /) -> tuple[Any, ...]: ...
+    def __getstate__(self, /) -> None: ...
+    def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
     def __len__(self) -> int: ...
     def put(self, /, item: _T) -> None: ...
@@ -45,12 +58,7 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-    ) -> _T: ...
+    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
     def green_get(
         self,
         /,
@@ -59,24 +67,74 @@ class SimpleQueue(Generic[_T]):
         timeout: float | None = None,
     ) -> _T: ...
     @property
-    def waiting(self, /) -> int: ...
-    @property
     def putting(self, /) -> int: ...
     @property
     def getting(self, /) -> int: ...
+    @property
+    def waiting(self, /) -> int: ...
+
+class SimpleLifoQueue(SimpleQueue[_T]):
+    __slots__ = ()
+
+    def __new__(
+        cls,
+        items: Iterable[_T] | MissingType = MISSING,
+        /,
+    ) -> Self: ...
+    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T: ...
 
 class Queue(Generic[_T]):
+    __slots__ = (
+        "__weakref__",
+        "_data",
+        "_getters",
+        "_maxsize",
+        "_putters",
+        "_putters_and_getters",
+        "_unlocked",
+        "_waiters",
+    )
+
     @overload
     def __new__(cls, /, maxsize: int | None = None) -> Self: ...
     @overload
     def __new__(
         cls,
-        items: Iterable[_T],
+        items: Iterable[_T] | MissingType = MISSING,
         /,
         maxsize: int | None = None,
     ) -> Self: ...
+    def __getnewargs__(self, /) -> tuple[Any, ...]: ...
+    def __getstate__(self, /) -> None: ...
+    def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
     def __len__(self) -> int: ...
+    def _acquire_nowait_on_putting(self, /) -> bool: ...
+    def _acquire_nowait_on_getting(self, /) -> bool: ...
+    async def _async_acquire(
+        self,
+        /,
+        acquire_nowait: Callable[[], bool],
+        waiters: deque[Event],
+        *,
+        blocking: bool = True,
+    ) -> bool: ...
+    def _green_acquire(
+        self,
+        /,
+        acquire_nowait: Callable[[], bool],
+        waiters: deque[Event],
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     async def async_put(
         self,
         /,
@@ -92,12 +150,7 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-    ) -> _T: ...
+    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
     def green_get(
         self,
         /,
@@ -105,14 +158,29 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T: ...
+    def _release(self, /) -> None: ...
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None: ...
+    def _put(self, /, item: _T) -> None: ...
+    def _get(self, /) -> _T: ...
     @property
-    def waiting(self, /) -> int: ...
+    def maxsize(self, /) -> int: ...
     @property
     def putting(self, /) -> int: ...
     @property
     def getting(self, /) -> int: ...
     @property
-    def maxsize(self, /) -> int: ...
+    def waiting(self, /) -> int: ...
 
-class LifoQueue(Queue[_T]): ...
-class PriorityQueue(Queue[_T]): ...
+class LifoQueue(Queue[_T]):
+    __slots__ = ()
+
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None: ...
+    def _put(self, /, item: _T) -> None: ...
+    def _get(self, /) -> _T: ...
+
+class PriorityQueue(Queue[_T]):
+    __slots__ = ()
+
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None: ...
+    def _put(self, /, item: _T) -> None: ...
+    def _get(self, /) -> _T: ...

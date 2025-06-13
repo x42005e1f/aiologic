@@ -3,20 +3,39 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-import types
+from __future__ import annotations
+
+import warnings
 
 from collections import deque
 from heapq import heapify, heappop, heappush
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from ._semaphore import Semaphore
 from .lowlevel import (
     MISSING,
+    Event,
+    MissingType,
     async_checkpoint,
     create_async_event,
     create_green_event,
     green_checkpoint,
 )
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
+    if sys.version_info >= (3, 9):
+        from collections.abc import Callable, Iterable
+    else:
+        from typing import Callable, Iterable
+
+_T = TypeVar("_T")
 
 
 class QueueEmpty(Exception):
@@ -27,71 +46,98 @@ class QueueFull(Exception):
     pass
 
 
-class SimpleQueue:
+class SimpleQueue(Generic[_T]):
     __slots__ = (
-        "__sem",
         "__weakref__",
         "_data",
+        "_semaphore",
     )
 
-    def __new__(cls, items=MISSING, /):
-        self = super().__new__(cls)
+    def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
+        self = object.__new__(cls)
 
         if items is not MISSING:
-            self._data = data = deque(items)
+            self._data = deque(items)
         else:
-            self._data = data = deque()
+            self._data = deque()
 
-        self.__sem = Semaphore(len(data))
+        self._semaphore = Semaphore(len(self._data))
 
         return self
 
-    def __getnewargs__(self, /):
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
         return (list(self._data),)
 
-    def __getstate__(self, /):
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        return f"{cls_repr}({list(self._data)!r})"
+        items = list(self._data)
 
-    def __bool__(self, /):
+        object_repr = f"{cls_repr}({items!r})"
+
+        length = len(items)
+
+        if length > 0:
+            extra = f"length={length}"
+        else:
+            extra = f"length={length}, getting={self._semaphore.waiting}"
+
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
+    def __bool__(self, /) -> bool:
         return bool(self._data)
 
-    def __len__(self, /):
+    def __len__(self) -> int:
         return len(self._data)
 
-    def put(self, /, item):
+    def put(self, /, item: _T) -> None:
         self._data.append(item)
-        self.__sem.release()
+        self._semaphore.release()
 
-    async def async_put(self, /, item, *, blocking=True):
+    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
         if blocking:
             await async_checkpoint()
 
         self._data.append(item)
-        self.__sem.async_release()
+        self._semaphore.async_release()
 
-    def green_put(self, /, item, *, blocking=True, timeout=None):
+    def green_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
         if blocking:
             green_checkpoint()
 
         self._data.append(item)
-        self.__sem.green_release()
+        self._semaphore.green_release()
 
-    async def async_get(self, /, *, blocking=True):
-        success = await self.__sem.async_acquire(blocking=blocking)
+    async def async_get(self, /, *, blocking: bool = True) -> _T:
+        success = await self._semaphore.async_acquire(blocking=blocking)
 
         if not success:
             raise QueueEmpty
 
         return self._data.popleft()
 
-    def green_get(self, /, *, blocking=True, timeout=None):
-        success = self.__sem.green_acquire(blocking=blocking, timeout=timeout)
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
+        success = self._semaphore.green_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
 
         if not success:
             raise QueueEmpty
@@ -99,431 +145,466 @@ class SimpleQueue:
         return self._data.popleft()
 
     @property
-    def waiting(self, /):
-        return self.__sem.waiting
-
-    @property
-    def putting(self, /):
+    def putting(self, /) -> int:
         return 0
 
     @property
-    def getting(self, /):
-        return self.__sem.waiting
+    def getting(self, /) -> int:
+        return self._semaphore.waiting
 
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(types.GenericAlias)
+    @property
+    def waiting(self, /) -> int:
+        return self._semaphore.waiting
 
 
-class Queue:
-    __slots__ = (
-        "__get_waiters",
-        "__put_waiters",
-        "__unlocked",
-        "__waiters",
-        "__weakref__",
-        "_data",
-        "maxsize",
-    )
+class SimpleLifoQueue(SimpleQueue[_T]):
+    __slots__ = ()
 
-    def __new__(cls, items=MISSING, /, maxsize=None):
-        if maxsize is None:
-            if isinstance(items, int):
-                items, maxsize = MISSING, items
-            else:
-                maxsize = 0
+    def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
+        self = object.__new__(cls)
 
-        if items is MISSING:
-            items = ()
+        if items is not MISSING:
+            self._data = list(items)
+        else:
+            self._data = []
 
-        self = super().__new__(cls)
-
-        self._init(items, maxsize)
-
-        self.__waiters = deque()
-        self.__get_waiters = deque()
-        self.__put_waiters = deque()
-        self.__unlocked = [True]
-
-        self.maxsize = maxsize
+        self._semaphore = Semaphore(len(self._data))
 
         return self
 
-    def __getnewargs__(self, /):
-        if (maxsize := self.maxsize) != 0:
-            args = (self._items(), maxsize)
+    async def async_get(self, /, *, blocking: bool = True) -> _T:
+        success = await self._semaphore.async_acquire(blocking=blocking)
+
+        if not success:
+            raise QueueEmpty
+
+        return self._data.pop()
+
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
+        success = self._semaphore.green_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
+
+        if not success:
+            raise QueueEmpty
+
+        return self._data.pop()
+
+
+class Queue(Generic[_T]):
+    __slots__ = (
+        "__weakref__",
+        "_data",
+        "_getters",
+        "_maxsize",
+        "_putters",
+        "_putters_and_getters",
+        "_unlocked",
+        "_waiters",
+    )
+
+    @overload
+    def __new__(cls, /, maxsize: int | None = None) -> Self: ...
+    @overload
+    def __new__(
+        cls,
+        items: Iterable[_T] | MissingType = MISSING,
+        /,
+        maxsize: int | None = None,
+    ) -> Self: ...
+    def __new__(cls, items=MISSING, /, maxsize=None):
+        if maxsize is None and (items is None or isinstance(items, int)):
+            items, maxsize = MISSING, items
+
+        if maxsize is None:
+            maxsize = 0
+        elif maxsize <= 0:
+            warnings.warn("Use maxsize=None instead", DeprecationWarning, 1)
+
+        self = object.__new__(cls)
+
+        if items is not MISSING:
+            self._init(items, maxsize)
         else:
-            args = (self._items(),)
+            self._init((), maxsize)
 
-        return args
+        self._unlocked = [None]
 
-    def __getstate__(self, /):
+        self._putters = deque()
+        self._putters_and_getters = deque()
+        self._getters = deque()
+
+        self._maxsize = maxsize
+
+        return self
+
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        if (maxsize := self._maxsize) != 0:
+            return (tuple(self._data), maxsize)
+
+        return (tuple(self._data),)
+
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        if (maxsize := self.maxsize) != 0:
-            args_repr = f"{self._items()!r}, maxsize={maxsize!r}"
+        items = list(self._data)
+
+        maxsize = self._maxsize
+
+        if maxsize > 0:
+            object_repr = f"{cls_repr}({items!r}, maxsize={maxsize!r})"
         else:
-            args_repr = repr(self._items())
+            object_repr = f"{cls_repr}({items!r})"
 
-        return f"{cls_repr}({args_repr})"
+        length = len(items)
 
-    def __bool__(self, /):
-        return self._qsize() > 0
+        if length >= maxsize > 0:
+            extra = f"length={length}, putting={len(self._putters)}"
+        elif length > 0:
+            extra = f"length={length}"
+        else:
+            extra = f"length={length}, getting={len(self._getters)}"
 
-    def __len__(self, /):
-        return self._qsize()
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    def __acquire_nowait(self, /):
-        if unlocked := self.__unlocked:
+    def __bool__(self, /) -> bool:
+        return bool(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def _acquire_nowait_on_putting(self, /) -> bool:
+        if self._unlocked:
+            if self._maxsize <= 0:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    return False
+                else:
+                    return True
+
+            if len(self._data) < self._maxsize:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    return False
+                else:
+                    if len(self._data) < self._maxsize:
+                        return True
+
+                    self._release()
+
+        return False
+
+    def _acquire_nowait_on_getting(self, /) -> bool:
+        if self._unlocked:
+            if self._data:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    return False
+                else:
+                    if self._data:
+                        return True
+
+                    self._release()
+
+        return False
+
+    async def _async_acquire(
+        self,
+        /,
+        acquire_nowait: Callable[[], bool],
+        waiters: deque[Event],
+        *,
+        blocking: bool = True,
+    ) -> bool:
+        if acquire_nowait():
+            if blocking:
+                try:
+                    await async_checkpoint()
+                except BaseException:
+                    self._release()
+                    raise
+
+            return True
+
+        if not blocking:
+            return False
+
+        waiters.append(event := create_async_event())
+        self._putters_and_getters.append(event)
+
+        if acquire_nowait():
+            length = len(self._data)
+
+            if 0 >= length or length >= self._maxsize > 0:
+                waiters.remove(event)
+            else:
+                self._putters_and_getters.remove(event)
+
+            event.set()
+
+        success = False
+
+        try:
             try:
-                unlocked.pop()
-            except IndexError:
-                success = False
-            else:
-                success = True
-        else:
-            success = False
+                success = await event
+            finally:
+                if success or not event.cancelled():
+                    length = len(self._data)
 
-        return success
-
-    def __acquire_nowait_put(self, /):
-        maxsize = self.maxsize
-
-        if unlocked := self.__unlocked:
-            if maxsize <= 0:
-                try:
-                    unlocked.pop()
-                except IndexError:
-                    success = False
-                else:
-                    success = True
-            elif self._qsize() < maxsize:
-                try:
-                    unlocked.pop()
-                except IndexError:
-                    success = False
-                else:
-                    if self._qsize() < maxsize:
-                        success = True
+                    if 0 >= length or length >= self._maxsize > 0:
+                        self._putters_and_getters.remove(event)
                     else:
-                        self.__release()
+                        waiters.remove(event)
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._putters_and_getters.remove(event)
+                    except ValueError:
+                        pass
 
-                        success = False
-            else:
-                success = False
-        else:
-            success = False
-
-        return success
-
-    def __acquire_nowait_get(self, /):
-        if unlocked := self.__unlocked:
-            if self._qsize() > 0:
-                try:
-                    unlocked.pop()
-                except IndexError:
-                    success = False
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
                 else:
-                    if self._qsize() > 0:
-                        success = True
-                    else:
-                        self.__release()
-
-                        success = False
-            else:
-                success = False
-        else:
-            success = False
+                    self._release()
 
         return success
 
-    def __release(self, /):
-        maxsize = self.maxsize
+    def _green_acquire(
+        self,
+        /,
+        acquire_nowait: Callable[[], bool],
+        waiters: deque[Event],
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        if acquire_nowait():
+            if blocking:
+                try:
+                    green_checkpoint()
+                except BaseException:
+                    self._release()
+                    raise
 
-        unlocked = self.__unlocked
+            return True
 
+        if not blocking:
+            return False
+
+        waiters.append(event := create_green_event())
+        self._putters_and_getters.append(event)
+
+        if acquire_nowait():
+            length = len(self._data)
+
+            if 0 >= length or length >= self._maxsize > 0:
+                waiters.remove(event)
+            else:
+                self._putters_and_getters.remove(event)
+
+            event.set()
+
+        success = False
+
+        try:
+            try:
+                success = event.wait(timeout)
+            finally:
+                if success or not event.cancelled():
+                    length = len(self._data)
+
+                    if 0 >= length or length >= self._maxsize > 0:
+                        self._putters_and_getters.remove(event)
+                    else:
+                        waiters.remove(event)
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._putters_and_getters.remove(event)
+                    except ValueError:
+                        pass
+
+                    try:
+                        waiters.remove(event)
+                    except ValueError:
+                        pass
+                else:
+                    self._release()
+
+        return success
+
+    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+        acquired = await self._async_acquire(
+            self._acquire_nowait_on_putting,
+            self._putters,
+            blocking=blocking,
+        )
+
+        if not acquired:
+            raise QueueFull
+
+        try:
+            self._put(item)
+        finally:
+            self._release()
+
+    def green_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
+        acquired = self._green_acquire(
+            self._acquire_nowait_on_putting,
+            self._putters,
+            blocking=blocking,
+            timeout=timeout,
+        )
+
+        if not acquired:
+            raise QueueFull
+
+        try:
+            self._put(item)
+        finally:
+            self._release()
+
+    async def async_get(self, /, *, blocking: bool = True) -> _T:
+        acquired = await self._async_acquire(
+            self._acquire_nowait_on_getting,
+            self._getters,
+            blocking=blocking,
+        )
+
+        if not acquired:
+            raise QueueEmpty
+
+        try:
+            return self._get()
+        finally:
+            self._release()
+
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
+        acquired = self._green_acquire(
+            self._acquire_nowait_on_getting,
+            self._getters,
+            blocking=blocking,
+            timeout=timeout,
+        )
+
+        if not acquired:
+            raise QueueEmpty
+
+        try:
+            return self._get()
+        finally:
+            self._release()
+
+    def _release(self, /) -> None:
         while True:
-            size = self._qsize()
+            length = len(self._data)
 
-            if not size:
-                actual_waiters = self.__put_waiters
-            elif size >= maxsize > 0:
-                actual_waiters = self.__get_waiters
+            if length >= self._maxsize > 0:
+                waiters = self._getters
+            elif length > 0:
+                waiters = self._putters_and_getters
             else:
-                actual_waiters = self.__waiters
+                waiters = self._putters
 
-            while actual_waiters:
+            while waiters:
                 try:
-                    event = actual_waiters.popleft()
+                    event = waiters.popleft()
                 except IndexError:
                     pass
                 else:
                     if event.set():
-                        break
+                        return
+
+            self._unlocked.append(None)
+
+            if waiters:
+                try:
+                    self._unlocked.pop()
+                except IndexError:
+                    break
             else:
-                unlocked.append(True)
+                break
 
-                if actual_waiters:
-                    if self.__acquire_nowait():
-                        continue
-
-            break
-
-    async def async_put(self, /, item, *, blocking=True):
-        waiters = self.__waiters
-        put_waiters = self.__put_waiters
-
-        success = self.__acquire_nowait_put()
-
-        try:
-            if blocking:
-                rescheduled = False
-
-                if not success:
-                    event = create_async_event()
-
-                    waiters.append(event)
-                    put_waiters.append(event)
-
-                    try:
-                        if self.__acquire_nowait_put():
-                            event.set()
-
-                        success = await event
-                        rescheduled = True
-                    finally:
-                        if not success:
-                            if event.cancelled():
-                                try:
-                                    put_waiters.remove(event)
-                                except ValueError:
-                                    pass
-
-                                try:
-                                    waiters.remove(event)
-                                except ValueError:
-                                    pass
-                            else:
-                                success = True
-
-                if not rescheduled:
-                    await async_checkpoint()
-
-            if not success:
-                raise QueueFull
-
-            self._put(item)
-        finally:
-            if success:
-                self.__release()
-
-    def green_put(self, /, item, *, blocking=True, timeout=None):
-        waiters = self.__waiters
-        put_waiters = self.__put_waiters
-
-        success = self.__acquire_nowait_put()
-
-        try:
-            if blocking:
-                rescheduled = False
-
-                if not success:
-                    event = create_green_event()
-
-                    waiters.append(event)
-                    put_waiters.append(event)
-
-                    try:
-                        if self.__acquire_nowait_put():
-                            event.set()
-
-                        success = event.wait(timeout)
-                        rescheduled = True
-                    finally:
-                        if not success:
-                            if event.cancelled():
-                                try:
-                                    put_waiters.remove(event)
-                                except ValueError:
-                                    pass
-
-                                try:
-                                    waiters.remove(event)
-                                except ValueError:
-                                    pass
-                            else:
-                                success = True
-
-                if not rescheduled:
-                    green_checkpoint()
-
-            if not success:
-                raise QueueFull
-
-            self._put(item)
-        finally:
-            if success:
-                self.__release()
-
-    async def async_get(self, /, *, blocking=True):
-        waiters = self.__waiters
-        get_waiters = self.__get_waiters
-
-        success = self.__acquire_nowait_get()
-
-        try:
-            if blocking:
-                rescheduled = False
-
-                if not success:
-                    event = create_async_event()
-
-                    waiters.append(event)
-                    get_waiters.append(event)
-
-                    try:
-                        if self.__acquire_nowait_get():
-                            event.set()
-
-                        success = await event
-                        rescheduled = True
-                    finally:
-                        if not success:
-                            if event.cancelled():
-                                try:
-                                    get_waiters.remove(event)
-                                except ValueError:
-                                    pass
-
-                                try:
-                                    waiters.remove(event)
-                                except ValueError:
-                                    pass
-                            else:
-                                success = True
-
-                if not rescheduled:
-                    await async_checkpoint()
-
-            if not success:
-                raise QueueEmpty
-
-            item = self._get()
-        finally:
-            if success:
-                self.__release()
-
-        return item
-
-    def green_get(self, /, *, blocking=True, timeout=None):
-        waiters = self.__waiters
-        get_waiters = self.__get_waiters
-
-        success = self.__acquire_nowait_get()
-
-        try:
-            if blocking:
-                rescheduled = False
-
-                if not success:
-                    event = create_green_event()
-
-                    waiters.append(event)
-                    get_waiters.append(event)
-
-                    try:
-                        if self.__acquire_nowait_get():
-                            event.set()
-
-                        success = event.wait(timeout)
-                        rescheduled = True
-                    finally:
-                        if not success:
-                            if event.cancelled():
-                                try:
-                                    get_waiters.remove(event)
-                                except ValueError:
-                                    pass
-
-                                try:
-                                    waiters.remove(event)
-                                except ValueError:
-                                    pass
-                            else:
-                                success = True
-
-                if not rescheduled:
-                    green_checkpoint()
-
-            if not success:
-                raise QueueEmpty
-
-            item = self._get()
-        finally:
-            if success:
-                self.__release()
-
-        return item
-
-    def _init(self, /, items, maxsize):
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
         self._data = deque(items)
 
-    def _qsize(self, /):
-        return len(self._data)
-
-    def _items(self, /):
-        return list(self._data)
-
-    def _put(self, /, item):
+    def _put(self, /, item: _T) -> None:
         self._data.append(item)
 
-    def _get(self, /):
+    def _get(self, /) -> _T:
         return self._data.popleft()
 
     @property
-    def waiting(self, /):
-        return len(self.__waiters)
+    def maxsize(self, /) -> int:
+        return self._maxsize
 
     @property
-    def putting(self, /):
-        return len(self.__put_waiters)
+    def putting(self, /) -> int:
+        return len(self._putters)
 
     @property
-    def getting(self, /):
-        return len(self.__get_waiters)
+    def getting(self, /) -> int:
+        return len(self._getters)
 
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(types.GenericAlias)
+    @property
+    def waiting(self, /) -> int:
+        return len(self._putters_and_getters)
 
 
-class LifoQueue(Queue):
+class LifoQueue(Queue[_T]):
     __slots__ = ()
 
-    def _init(self, /, items, maxsize):
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
         self._data = list(items)
 
-    def _put(self, /, item):
+    def _put(self, /, item: _T) -> None:
         self._data.append(item)
 
-    def _get(self, /):
+    def _get(self, /) -> _T:
         return self._data.pop()
 
 
-class PriorityQueue(Queue):
+class PriorityQueue(Queue[_T]):
     __slots__ = ()
 
-    def _init(self, /, items, maxsize):
-        data = list(items)
+    def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
+        self._data = list(items)
 
-        heapify(data)
+        heapify(self._data)
 
-        self._data = data
-
-    def _put(self, /, item):
+    def _put(self, /, item: _T) -> None:
         heappush(self._data, item)
 
-    def _get(self, /):
+    def _get(self, /) -> _T:
         return heappop(self._data)

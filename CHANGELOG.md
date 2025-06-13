@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.SimpleLifoQueue` as a simplified LIFO queue, i.e. a lightweight
+  alternative to `aiologic.LifoQueue` without `maxsize` support.
 - `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
   semaphores, i.e. semaphores restricted to the values 0 and 1 and using a more
   efficient implementation.
@@ -102,6 +104,8 @@ Commit messages are consistent with
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
 - Interfaces and type hints have been improved:
+  + Queues are now generic types not only in stubs but also at runtime, making
+    it possible to use subscriptions on Python 3.8.
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
   + `aiologic.lowlevel.Flag` is now a generic type not only in stubs but also
@@ -233,6 +237,14 @@ Commit messages are consistent with
 - Resource guards have been rewritten:
   + They are now interpreted in a Boolean context in the same way as locks.
     Previously, they returned opposite values.
+- Queues have been rewritten:
+  + They no longer support the `_qsize()` (returns queue size) and `_items()`
+    (returns a list of queue items) overrides, and they have been removed
+    accordingly. Unlike the other overridden methods, they required
+    thread-safety on the user side, which could cause additional difficulties.
+    It is now recommended to use queues from
+    [culsans](https://github.com/x42005e1f/culsans), a derivative of
+    `aiologic`, to create full-featured custom queues.
 - The representation of primitives has been changed. All instances now include
   the module name and use the correct class name in subclasses (except for
   private classes). Low-level events now show their status in representation.
@@ -272,6 +284,9 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `maxsize<=0` in complex queue constructors in favor of `maxsize=None`:
+  support for `maxsize<0` is not pythonic, goes against common style, and
+  `maxsize=0` may in the future be used to create special empty queues.
 - `aiologic.PLock` in favor of `aiologic.BinarySemaphore`.
 - `aiologic.RLock.level` in favor of `aiologic.RLock.count`.
 - `aiologic.lowlevel.GreenEvent` and `aiologic.lowlevel.AsyncEvent` direct
@@ -336,6 +351,9 @@ Commit messages are consistent with
   thread-safety after cancellation. Now the handling is changed to match that
   of locks and semaphores, which additionally speeds up methods by reducing
   operations.
+- Complex queues did not remove the event from the secondary internal queue on
+  unsuccessful cancellation, which could lead to memory leaks in some
+  situations.
 - In very rare cases, `curio` events would set the future attribute after the
   `set()` method was completed and thus cause a hang.
 - In very rare cases, lock acquiring methods did not notify newcomers due to
