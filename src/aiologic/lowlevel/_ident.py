@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from ._greenlets import _current_greenlet
 from ._libraries import current_async_library, current_green_library
-from ._threads import current_thread, current_thread_ident
+from ._threads import _current_thread_or_main_greenlet, current_thread_ident
 from ._utils import _replaces as replaces
 
 
@@ -63,7 +63,7 @@ def current_green_token() -> object:
     library = current_green_library()
 
     if library == "threading":
-        return current_thread()
+        return _current_thread_or_main_greenlet()
 
     if library == "eventlet":
         return _current_eventlet_token()
@@ -174,7 +174,7 @@ def current_green_task() -> object:
     library = current_green_library()
 
     if library == "threading":
-        return current_thread()
+        return _current_thread_or_main_greenlet()
 
     if library == "eventlet":
         return _current_greenlet()

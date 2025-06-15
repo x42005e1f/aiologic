@@ -253,6 +253,11 @@ Commit messages are consistent with
   ID for `threading`. This makes these functions more meaningful, and leads to
   the expected behavior in group-level locks. Previously, constant values were
   returned for `threading`.
+- `aiologic.lowlevel.current_green_token()` and
+  `aiologic.lowlevel.current_green_task()` now return main greenlet objects for
+  `gevent`'s pool of native worker threads (and for any dummy threads when
+  `greenlet` is imported). This allows these functions to be used with `gevent`
+  without additional handlers.
 - The first `aiologic.lowlevel.current_thread()` call no longer patches the
   `threading` module for PyPy (to fix the race in `Thread.join()`). This is
   done to eliminate side effects and possible conflicts with debuggers. Use
