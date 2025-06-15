@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: 0BSD
 
+import weakref
+
 import aiologic
 
 
@@ -31,6 +33,38 @@ async def test_current_async_token(spawn):
     assert token1 is token2
     assert token1 is not token3
     assert token2 is not token3
+
+
+def test_current_green_token_keying(spawn):
+    token1 = aiologic.lowlevel.current_green_token()
+    future = spawn(aiologic.lowlevel.current_green_token)
+    token2 = future.wait()
+    future = spawn(aiologic.lowlevel.current_green_token, separate=True)
+    token3 = future.wait()
+
+    assert len({token1, token2, token3}) > 1
+
+
+async def test_current_async_token_keying(spawn):
+    token1 = aiologic.lowlevel.current_async_token()
+    future = spawn(aiologic.lowlevel.current_async_token)
+    token2 = await future
+    future = spawn(aiologic.lowlevel.current_async_token, separate=True)
+    token3 = await future
+
+    assert len({token1, token2, token3}) > 1
+
+
+def test_current_green_token_weakrefing(spawn):
+    token = aiologic.lowlevel.current_green_token()
+
+    assert weakref.ref(token)() is token
+
+
+async def test_current_async_token_weakrefing(spawn):
+    token = aiologic.lowlevel.current_async_token()
+
+    assert weakref.ref(token)() is token
 
 
 def test_current_green_token_ident(spawn):
@@ -82,6 +116,38 @@ async def test_current_async_task(spawn):
     assert task1 is not task2
     assert task1 is not task3
     assert task2 is not task3
+
+
+def test_current_green_task_keying(spawn):
+    task1 = aiologic.lowlevel.current_green_task()
+    future = spawn(aiologic.lowlevel.current_green_task)
+    task2 = future.wait()
+    future = spawn(aiologic.lowlevel.current_green_task, separate=True)
+    task3 = future.wait()
+
+    assert len({task1, task2, task3}) > 1
+
+
+async def test_current_async_task_keying(spawn):
+    task1 = aiologic.lowlevel.current_async_task()
+    future = spawn(aiologic.lowlevel.current_async_task)
+    task2 = await future
+    future = spawn(aiologic.lowlevel.current_async_task, separate=True)
+    task3 = await future
+
+    assert len({task1, task2, task3}) > 1
+
+
+def test_current_green_task_weakrefing(spawn):
+    task = aiologic.lowlevel.current_green_task()
+
+    assert weakref.ref(task)() is task
+
+
+async def test_current_async_task_weakrefing(spawn):
+    task = aiologic.lowlevel.current_async_task()
+
+    assert weakref.ref(task)() is task
 
 
 def test_current_green_task_ident(spawn):
