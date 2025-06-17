@@ -208,8 +208,8 @@ You can also send an email to 0x42005e1f@gmail.com with any feedback.
 Support
 =======
 
-If you like aiologic and want to support its development, star `its repository
-on GitHub <https://github.com/x42005e1f/aiologic>`_.
+If you like aiologic and want to support its development, please star `its
+repository on GitHub <https://github.com/x42005e1f/aiologic>`_.
 
 .. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
   :target: https://starchart.cc/x42005e1f/aiologic
