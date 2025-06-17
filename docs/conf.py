@@ -16,15 +16,17 @@ version = v.base_version
 release = v.public
 
 extensions = [
+    "myst_parser",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx_rtd_theme",
-    "myst_parser",
 ]
 
 intersphinx_mapping = {
+    "aiohttp": ("https://docs.aiohttp.org/en/stable/", None),
     "python": ("https://docs.python.org/3", None),
+    "twisted": ("https://docs.twisted.org/en/stable/api/", None),
 }
 
 html_theme = "sphinx_rtd_theme"

@@ -38,6 +38,13 @@ Features
   overview
 
 .. toctree::
+  :caption: Advanced topics
+  :maxdepth: 2
+  :hidden:
+
+  libraries
+
+.. toctree::
   :caption: Meta
   :maxdepth: 1
   :hidden:

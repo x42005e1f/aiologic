@@ -2,16 +2,9 @@
   SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
   SPDX-License-Identifier: CC-BY-4.0
 
-.. role:: mod(literal)
-.. role:: func(literal)
-.. role:: data(literal)
-.. role:: const(literal)
 .. role:: class(literal)
-.. role:: meth(literal)
-.. role:: attr(literal)
-.. role:: type(literal)
 .. role:: exc(literal)
-.. role:: obj(literal)
+.. role:: mod(literal)
 
 ========
 aiologic
@@ -146,13 +139,21 @@ Non-blocking primitives:
 
 Supported concurrency libraries:
 
-* `asyncio <https://docs.python.org/3/library/asyncio.html>`_, `curio <https://
-  curio.readthedocs.io>`_, `trio <https://trio.readthedocs.io>`_, and `anyio
-  <https://anyio.readthedocs.io>`_ (coroutine-based)
-* `eventlet <https://eventlet.readthedocs.io>`_, and `gevent <https://
-  www.gevent.org/>`_ (greenlet-based)
-* `threading <https://docs.python.org/3/library/threading.html>`_
-  (thread-based)
+.. libraries-start-marker
+
+* `asyncio`_, `curio`_, `trio`_, and `anyio`_ (coroutine-based)
+* `eventlet`_, and `gevent`_ (greenlet-based)
+* `threading`_ (thread-based)
+
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _curio: https://curio.readthedocs.io
+.. _trio: https://trio.readthedocs.io
+.. _anyio: https://anyio.readthedocs.io
+.. _eventlet: https://eventlet.readthedocs.io
+.. _gevent: https://www.gevent.org/
+.. _threading: https://docs.python.org/3/library/threading.html
+
+.. libraries-end-marker
 
 All synchronization, communication, and non-blocking primitives are implemented
 entirely on effectively atomic operations, which gives `an incredible speedup
@@ -221,15 +222,16 @@ License
 The aiologic library is `REUSE-compliant <https://api.reuse.software/info/
 github.com/x42005e1f/aiologic>`_ and is offered under multiple licenses:
 
-* All original source code is licensed under `ISC <https://choosealicense.com/
-  licenses/isc/>`_.
-* All original test code is licensed under `0BSD <https://choosealicense.com/
-  licenses/0bsd/>`_.
-* All documentation is licensed under `CC-BY-4.0 <https://choosealicense.com/
-  licenses/cc-by-4.0/>`_.
-* All configuration is licensed under `CC0-1.0 <https://choosealicense.com/
-  licenses/cc0-1.0/>`_.
+* All original source code is licensed under `ISC`_.
+* All original test code is licensed under `0BSD`_.
+* All documentation is licensed under `CC-BY-4.0`_.
+* All configuration is licensed under `CC0-1.0`_.
 
 For more accurate information, check the individual files.
+
+.. _ISC: https://choosealicense.com/licenses/isc/
+.. _0BSD: https://choosealicense.com/licenses/0bsd/
+.. _CC-BY-4.0: https://choosealicense.com/licenses/cc-by-4.0/
+.. _CC0-1.0: https://choosealicense.com/licenses/cc0-1.0/
 
 .. license-end-marker
