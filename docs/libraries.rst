@@ -51,13 +51,17 @@ signatures.
 Why is AnyIO mentioned?
 +++++++++++++++++++++++
 
-While anyio runs on top of either asyncio or trio, it implements trio-like
-`structured concurrency <https://en.wikipedia.org/wiki/
+While `anyio`_ runs on top of either `asyncio`_ or `trio`_, it implements
+trio-like `structured concurrency <https://en.wikipedia.org/wiki/
 Structured_concurrency>`_ with `a different cancellation semantics <https://
 anyio.readthedocs.io/en/stable/cancellation.html
 #differences-between-asyncio-and-anyio-cancellation-semantics>`_ than
 asyncio. Therefore, aiologic has to support both semantics for asyncio at the
 same time by using anyio features when they are available.
+
+.. _anyio: https://anyio.readthedocs.io
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _trio: https://trio.readthedocs.io
 
 Why is Twisted not supported?
 +++++++++++++++++++++++++++++
@@ -87,7 +91,7 @@ Why is multiprocessing not supported?
 
 Unlike threads, which share common memory, each process manages its own memory.
 This is a different situation than the one in which aiologic primitives
-operate. In order to support multiprocessing, new approaches are needed.
+operate. In order to support `multiprocessing`_, new approaches are needed.
 
 There are several ways to enable interactions between processes, such as:
 
@@ -103,3 +107,6 @@ separate research.
 Thus, there is no way to easily implement multiprocessing support that would
 not conflict with aiologic's ideas. Nevertheless, it is still an open question,
 and the situation may change in the future.
+
+
+.. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
