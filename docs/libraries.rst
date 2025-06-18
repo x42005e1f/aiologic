@@ -32,7 +32,7 @@ of concurrency libraries to cover the maximum number of possible combinations.
 Which libraries does aiologic support?
 --------------------------------------
 
-Currently aiologic supports the following libraries:
+Currently, aiologic supports the following concurrency libraries:
 
 .. include:: ../README.rst
   :start-after: .. libraries-start-marker
