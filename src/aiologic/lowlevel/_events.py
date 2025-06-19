@@ -28,9 +28,9 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
-        from typing import Never, Self
+        from typing import Self
     else:
-        from typing_extensions import Never, Self
+        from typing_extensions import Self
 
     if sys.version_info >= (3, 9):
         from collections.abc import Generator
@@ -215,7 +215,7 @@ class SetEvent(GreenEvent, AsyncEvent):
         return False
 
     @shield.setter
-    def shield(self, /, value: Never) -> NoReturn:
+    def shield(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -227,7 +227,7 @@ class SetEvent(GreenEvent, AsyncEvent):
         return False
 
     @force.setter
-    def force(self, /, value: Never) -> NoReturn:
+    def force(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -282,7 +282,7 @@ class DummyEvent(GreenEvent, AsyncEvent):
         return False
 
     @shield.setter
-    def shield(self, /, value: Never) -> NoReturn:
+    def shield(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -294,7 +294,7 @@ class DummyEvent(GreenEvent, AsyncEvent):
         return False
 
     @force.setter
-    def force(self, /, value: Never) -> NoReturn:
+    def force(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -349,7 +349,7 @@ class CancelledEvent(GreenEvent, AsyncEvent):
         return False
 
     @shield.setter
-    def shield(self, /, value: Never) -> NoReturn:
+    def shield(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -361,7 +361,7 @@ class CancelledEvent(GreenEvent, AsyncEvent):
         return False
 
     @force.setter
-    def force(self, /, value: Never) -> NoReturn:
+    def force(self, /, value: bool) -> NoReturn:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
