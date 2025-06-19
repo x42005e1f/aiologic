@@ -3,9 +3,14 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: CC0-1.0
 
+import os
+import sys
+
 from importlib.metadata import version as get_version
 
 from packaging.version import parse as parse_version
+
+os.environ["SPHINX_AUTODOC_RELOAD_MODULES"] = "1"
 
 project = "aiologic"
 author = "Ilya Egorov"
@@ -17,11 +22,22 @@ release = v.public
 
 extensions = [
     "myst_parser",
+    "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx_rtd_theme",
 ]
+
+if sys.version_info >= (3, 11):
+    extensions.append("sphinxcontrib.autodoc_inherit_overload")
+
+autodoc_class_signature = "separated"
+autodoc_inherit_docstrings = False
+autodoc_default_options = {
+    "member-order": "bysource",
+    "show-inheritance": True,
+}
 
 intersphinx_mapping = {
     "aiohttp": ("https://docs.aiohttp.org/en/stable/", None),

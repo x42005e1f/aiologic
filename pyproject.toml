@@ -11,6 +11,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-inline-tabs",
     "sphinx-rtd-theme",
+    "sphinxcontrib.autodoc-inherit-overload; python_version>='3.11'",
 ]
 
 [project]

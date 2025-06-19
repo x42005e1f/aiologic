@@ -10,3 +10,22 @@
     display: inline-block;
     font-family: FontAwesome;
 }
+
+dl.py:has(dt.py.sig + dt.py.sig) {
+    display: inline-grid !important;
+}
+
+dl.py:has(dt.py.sig + dt.py.sig) > :last-child {
+    margin-bottom: 0 !important;
+}
+
+dl.py > dt.py.sig:not(:last-of-type) {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+dl.py > dt.py.sig:not(:first-of-type) {
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
