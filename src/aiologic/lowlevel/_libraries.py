@@ -14,7 +14,7 @@ from sniffio import (
 from wrapt import when_imported
 
 from ._threads import _local
-from ._utils import _replaces as replaces
+from ._utils import _external as external, _replaces as replaces
 
 if TYPE_CHECKING:
     from sniffio._impl import _ThreadLocal
@@ -114,8 +114,10 @@ def _(_):
 
 
 @overload
+@external
 def current_green_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
+@external
 def current_green_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_green_library(*, failsafe=False):
     if (name := current_green_library_tlocal.name) is not None:
@@ -131,8 +133,10 @@ def current_green_library(*, failsafe=False):
 
 
 @overload
+@external
 def current_async_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
+@external
 def current_async_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_async_library(*, failsafe=False):
     if (name := current_async_library_tlocal.name) is not None:

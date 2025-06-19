@@ -15,14 +15,21 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import ParamSpec
 
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+else:
+    from typing import Callable
 
+_F = TypeVar("_F", bound=Callable[..., Any])
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+
+def _external(func: _F, /) -> _F:
+    if not TYPE_CHECKING:
+        func.__module__ = func.__module__.rpartition(".")[0]
+
+    return func
 
 
 @overload

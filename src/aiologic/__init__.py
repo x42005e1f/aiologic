@@ -53,11 +53,12 @@ from ._semaphore import (
 )
 
 # modify __module__ for shorter repr() and better pickle support
-for __value in list(globals().values()):
-    if getattr(__value, "__module__", "").startswith(f"{__name__}."):
-        try:
-            __value.__module__ = __name__
-        except AttributeError:
-            pass
+if not __import__("typing").TYPE_CHECKING:
+    for __value in list(globals().values()):
+        if getattr(__value, "__module__", "").startswith(f"{__name__}."):
+            try:
+                __value.__module__ = __name__
+            except AttributeError:
+                pass
 
-    del __value
+        del __value
