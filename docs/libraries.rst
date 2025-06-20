@@ -108,5 +108,50 @@ Thus, there is no way to easily implement multiprocessing support that would
 not conflict with aiologic's ideas. Nevertheless, it is still an open question,
 and the situation may change in the future.
 
-
 .. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
+
+Why are the APIs separated?
++++++++++++++++++++++++++++
+
+Different approaches to providing both synchronous and asynchronous APIs
+coexist in the wild. In contrast to API separation, which implies using
+different functions for different types of libraries, there is an approach of
+providing functionality for different worlds via the same functions behaving
+differently in different contexts (returning awaitable objects in an
+asynchronous context and plain values in others). This improves both
+compatibility and usability, but has some non-trivial drawbacks:
+
+1. Such dual nature is bad for static type checking. Let's imagine a function,
+   such as ``acquire()``, that returns :class:`bool` in a synchronous context.
+   If it were to return :class:`Awaitable[bool] <collections.abc.Awaitable>` in
+   an asynchronous context, its actual return type would be a union of both
+   types. This raises a question about whether to allow the :keyword:`await`
+   expression for objects of that type. If allowed, a type checker might miss a
+   situation where an object is not actually an awaitable object, resulting in
+   a type error. If disallowed, the :keyword:`await` expression can be used
+   only after runtime type checking (or after type casting), which is
+   inconvenient for the user.
+2. One of the simplest ways to implement such behavior is to check that there
+   is a running event loop of an asynchronous library in the current thread.
+   This makes the behavior runtime dependent, which in turn can lead to
+   undefined behavior. Suppose it is implemented by some library that is used
+   by some other, non-asynchronous library that does not inherit this behavior.
+   Then accidental use of the second library in an asynchronous context will
+   activate the asynchronous API that is not expected by the library, and this
+   in turn will lead to errors, perhaps even hard-to-detect ones (e.g. in case
+   of ``wait()``-like methods).
+3. A more correct way is to check that functions are used from a coroutine,
+   which is particularly `implemented by curio <https://curio.readthedocs.io/
+   en/stable/reference.html#asynchronous-metaprogramming>`_. This makes the
+   behavior less runtime dependent, but still has some nuances. First, it
+   prevents calling the asynchronous version of a function from synchronous
+   functions, making it incompatible with wrappers (such as
+   :func:`functools.partial`, but in pure Python for curio implementation due
+   to `special handling of list comprehensions and generator expressions
+   <https://github.com/dabeaz/curio/blob/
+   98550b94055ccd98406105dd999973a2f2462ea4/curio/meta.py#L65-L75>`_). Second,
+   this check negatively affects performance, especially on PyPy, where the
+   difference can be a hundredfold or more.
+
+The API separation has drawbacks too, but they are `related to the development
+process <https://discuss.python.org/t/15014>`_ rather than runtime specifics.
