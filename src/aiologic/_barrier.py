@@ -369,7 +369,10 @@ class Barrier:
         index = token[2]
 
         if index >= 0:
-            self._wakeup_on_draining(token[1])
+            if _PERFECT_FAIRNESS_ENABLED:
+                self._wakeup_on_draining_pf(token[1])
+            else:
+                self._wakeup_on_draining(token[1])
         else:
             self._wakeup_on_breaking()
 
@@ -413,7 +416,10 @@ class Barrier:
         index = token[2]
 
         if index >= 0:
-            self._wakeup_on_draining(token[1])
+            if _PERFECT_FAIRNESS_ENABLED:
+                self._wakeup_on_draining_pf(token[1])
+            else:
+                self._wakeup_on_draining(token[1])
         else:
             self._wakeup_on_breaking()
 
@@ -480,17 +486,31 @@ class Barrier:
         if not self._unbroken:
             return False
 
-        tokens_marker = object()
+        if _PERFECT_FAIRNESS_ENABLED:
+            tokens_marker = object()
 
-        for i, token in enumerate(tokens):
-            token[1] = tokens_marker
-            token[2] = i
+            for i, token in enumerate(tokens):
+                token[1] = tokens_marker
+                token[2] = i
 
-        self._wakeup_on_draining(tokens_marker)
+            self._wakeup_on_draining_pf(tokens_marker)
+        else:
+            tokens.reverse()
+
+            for i, token in enumerate(tokens[::-1]):
+                token[1] = tokens
+                token[2] = i
+
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass
+
+            self._wakeup_on_draining(tokens)
 
         return True
 
-    def _wakeup_on_draining(self, /, tokens_marker: object) -> None:
+    def _wakeup_on_draining_pf(self, /, tokens_marker: object) -> None:
         waiters = self._waiters
 
         while waiters:
@@ -510,6 +530,15 @@ class Barrier:
                     waiters.remove(token)
                 except ValueError:
                     pass
+
+    def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
+        while tokens:
+            try:
+                event, _, _ = tokens.pop()
+            except IndexError:
+                break
+            else:
+                event.set()
 
     def _wakeup_on_breaking(self, /) -> None:
         waiters = self._waiters
@@ -638,7 +667,10 @@ class RBarrier(Barrier):
         index = token[4]
 
         if index >= 0:
-            self._wakeup_on_draining(token[1])
+            if _PERFECT_FAIRNESS_ENABLED:
+                self._wakeup_on_draining_pf(token[1])
+            else:
+                self._wakeup_on_draining(token[1])
         else:
             self._wakeup_on_breaking(token[3])
 
@@ -684,7 +716,10 @@ class RBarrier(Barrier):
         index = token[4]
 
         if index >= 0:
-            self._wakeup_on_draining(token[1])
+            if _PERFECT_FAIRNESS_ENABLED:
+                self._wakeup_on_draining_pf(token[1])
+            else:
+                self._wakeup_on_draining(token[1])
         else:
             self._wakeup_on_breaking(token[3])
 
@@ -738,17 +773,31 @@ class RBarrier(Barrier):
         if self._unbroken.get(None) is not marker:
             return False
 
-        tokens_marker = object()
+        if _PERFECT_FAIRNESS_ENABLED:
+            tokens_marker = object()
 
-        for i, token in enumerate(tokens):
-            token[1] = tokens_marker
-            token[4] = i
+            for i, token in enumerate(tokens):
+                token[1] = tokens_marker
+                token[4] = i
 
-        self._wakeup_on_draining(tokens_marker)
+            self._wakeup_on_draining_pf(tokens_marker)
+        else:
+            tokens.reverse()
+
+            for i, token in enumerate(tokens[::-1]):
+                token[1] = tokens
+                token[4] = i
+
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass
+
+            self._wakeup_on_draining(tokens)
 
         return True
 
-    def _wakeup_on_draining(self, /, tokens_marker: object) -> None:
+    def _wakeup_on_draining_pf(self, /, tokens_marker: object) -> None:
         waiters = self._waiters
 
         while waiters:
@@ -768,6 +817,15 @@ class RBarrier(Barrier):
                     waiters.remove(token)
                 except ValueError:
                     pass
+
+    def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
+        while tokens:
+            try:
+                event, _, _, _, _ = tokens.pop()
+            except IndexError:
+                break
+            else:
+                event.set()
 
     def _wakeup_on_breaking(self, /, deadline: float | None = None) -> None:
         waiters = self._waiters
