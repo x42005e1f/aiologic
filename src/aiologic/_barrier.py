@@ -3,9 +3,13 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
 import os
 
 from collections import deque
+from itertools import count, islice
+from typing import TYPE_CHECKING, Any, Final
 
 from ._flag import Flag
 from .lowlevel import (
@@ -15,17 +19,32 @@ from .lowlevel import (
     green_checkpoint,
 )
 
+if TYPE_CHECKING:
+    import sys
+
+    from types import TracebackType
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
+    if sys.version_info >= (3, 9):
+        from collections.abc import Generator
+    else:
+        from typing import Generator
+
 try:
     from sys import _is_gil_enabled
 except ImportError:
-    GIL_ENABLED = True
+    __GIL_ENABLED: Final[bool] = True
 else:
-    GIL_ENABLED = _is_gil_enabled()
+    __GIL_ENABLED: Final[bool] = _is_gil_enabled()
 
-PERFECT_FAIRNESS = bool(
+_PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
     os.getenv(
         "AIOLOGIC_PERFECT_FAIRNESS",
-        "1" if GIL_ENABLED else "",
+        "1" if __GIL_ENABLED else "",
     )
 )
 
@@ -36,373 +55,745 @@ class BrokenBarrierError(RuntimeError):
 
 class Latch:
     __slots__ = (
-        "__reached",
-        "__waiters",
         "__weakref__",
-        "parties",
+        "_filling",
+        "_parties",
+        "_unbroken",
+        "_waiters",
     )
 
-    def __new__(cls, /, parties):
-        self = super().__new__(cls)
-
-        if parties < 1:
-            msg = "parties must be >= 1"
+    def __new__(cls, /, parties: int | None = None) -> Self:
+        if parties is None:
+            parties = 1
+        elif parties < 0:
+            msg = "parties must be >= 0"
             raise ValueError(msg)
 
-        self.__waiters = deque()
-        self.__reached = Flag()
+        self = object.__new__(cls)
 
-        self.parties = parties
+        self._parties = parties
+
+        self._filling = [None]
+        self._unbroken = True
+
+        self._waiters = deque()
 
         return self
 
-    def __getnewargs__(self, /):
-        return (self.parties,)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        return (self._parties,)
 
-    def __getstate__(self, /):
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        return f"{cls_repr}({self.parties!r})"
+        object_repr = f"{cls_repr}({self._parties!r})"
 
-    def __await__(self, /):
-        reached = self.__reached
-        rescheduled = False
-        force_checkpoint = False
+        waiting = len(self._waiters)
 
-        try:
-            if not reached:
-                self.__waiters.append(event := create_async_event())
+        if self._filling:
+            extra = f"filling, waiting={waiting}"
+        elif self._unbroken:
+            extra = "draining"
+        else:
+            extra = "broken"
 
-                if not reached:
-                    if len(self.__waiters) < self.parties:
-                        try:
-                            rescheduled = yield from event.__await__()
-                        finally:
-                            if not rescheduled:
-                                reached.set(False)
-                    else:
-                        force_checkpoint = reached.set(True)
-        finally:
-            self.__wakeup()
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-        if not reached.get(False):
+    def __bool__(self, /) -> bool:
+        return not self._filling
+
+    def __await__(self, /) -> Generator[Any, Any, None]:
+        if not self._filling:
+            unbroken = self._unbroken
+
+            yield from async_checkpoint().__await__()
+
+            self._wakeup(unbroken)
+
+            if unbroken:
+                return
+
             raise BrokenBarrierError
 
-        if not rescheduled or force_checkpoint:
-            yield from async_checkpoint(force=force_checkpoint).__await__()
+        self._waiters.append(
+            token := [
+                event := create_async_event(),
+                self._unbroken,
+            ]
+        )
 
-    def wait(self, /, timeout=None):
-        reached = self.__reached
-        rescheduled = False
-        force_checkpoint = False
+        if not self._filling:
+            if event.set():
+                try:
+                    self._waiters.remove(event)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
 
         try:
-            if not reached:
-                self.__waiters.append(event := create_green_event())
-
-                if not reached:
-                    if len(self.__waiters) < self.parties:
-                        try:
-                            rescheduled = event.wait(timeout)
-                        finally:
-                            if not rescheduled:
-                                reached.set(False)
-                    else:
-                        force_checkpoint = reached.set(True)
+            success = yield from event.__await__()
         finally:
-            self.__wakeup()
+            if not success:
+                self.abort()
 
-        if not reached.get(False):
+        unbroken = token[1]
+
+        if not unbroken:
             raise BrokenBarrierError
 
-        if not rescheduled or force_checkpoint:
-            green_checkpoint(force=force_checkpoint)
+        self._wakeup(unbroken)
 
-    def abort(self, /):
-        self.__reached.set(False)
-        self.__wakeup()
+    def wait(self, /, timeout: float | None = None) -> None:
+        if not self._filling:
+            unbroken = self._unbroken
 
-    def __wakeup(self, /):
-        waiters = self.__waiters
+            green_checkpoint()
+
+            self._wakeup(unbroken)
+
+            if unbroken:
+                return
+
+            raise BrokenBarrierError
+
+        self._waiters.append(
+            token := [
+                event := create_green_event(),
+                self._unbroken,
+            ]
+        )
+
+        if not self._filling:
+            if event.set():
+                try:
+                    self._waiters.remove(event)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
+
+        try:
+            success = event.wait(timeout)
+        finally:
+            if not success:
+                self.abort()
+
+        unbroken = token[1]
+
+        if not unbroken:
+            raise BrokenBarrierError
+
+        self._wakeup(unbroken)
+
+    def abort(self, /) -> None:
+        self._unbroken = False
+
+        if self._filling:
+            try:
+                self._filling.pop()
+            except IndexError:
+                pass
+
+        self._wakeup(False)
+
+    def _wakeup_if_reached(self, /) -> bool:
+        if self._filling:
+            if len(self._waiters) >= self._parties > 0:
+                try:
+                    self._filling.pop()
+                except IndexError:
+                    return False
+                else:
+                    if len(self._waiters) >= self._parties > 0:
+                        self._wakeup(True)
+
+                    return True
+
+        return False
+
+    def _wakeup(self, /, unbroken: bool) -> None:
+        waiters = self._waiters
 
         while waiters:
             try:
-                if PERFECT_FAIRNESS:
-                    event = waiters[0]
+                if _PERFECT_FAIRNESS_ENABLED:
+                    token = waiters[0]
                 else:
-                    event = waiters.popleft()
+                    token = waiters.popleft()
             except IndexError:
                 break
             else:
+                event, _ = token
+
+                token[1] = unbroken
+
                 event.set()
 
-                if PERFECT_FAIRNESS:
+                if _PERFECT_FAIRNESS_ENABLED:
                     try:
-                        waiters.remove(event)
+                        waiters.remove(token)
                     except ValueError:
                         pass
 
     @property
-    def waiting(self, /):
-        return len(self.__waiters)
+    def parties(self, /) -> int:
+        return self._parties
 
     @property
-    def broken(self, /):
-        return not self.__reached.get(True)
+    def broken(self, /) -> bool:
+        return not self._unbroken
+
+    @property
+    def waiting(self, /) -> int:
+        return len(self._waiters)
 
 
 class Barrier:
     __slots__ = (
-        "__is_broken",
-        "__unlocked",
-        "__waiters",
         "__weakref__",
-        "parties",
+        "_parties",
+        "_unbroken",
+        "_unlocked",
+        "_waiters",
     )
 
-    def __new__(cls, /, parties):
-        self = super().__new__(cls)
-
-        if parties < 1:
-            msg = "parties must be >= 1"
+    def __new__(cls, /, parties: int | None = None) -> Self:
+        if parties is None:
+            parties = 1
+        elif parties < 0:
+            msg = "parties must be >= 0"
             raise ValueError(msg)
 
-        self.__waiters = deque()
-        self.__unlocked = [True]
+        self = object.__new__(cls)
 
-        self.__is_broken = False
+        self._parties = parties
 
-        self.parties = parties
+        self._unbroken = True
+        self._unlocked = [None]
+
+        self._waiters = deque()
 
         return self
 
-    def __getnewargs__(self, /):
-        return (self.parties,)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        return (self._parties,)
 
-    def __getstate__(self, /):
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        return f"{cls_repr}({self.parties!r})"
+        object_repr = f"{cls_repr}({self._parties!r})"
 
-    def __acquire_nowait(self, /):
-        if unlocked := self.__unlocked:
-            try:
-                unlocked.pop()
-            except IndexError:
-                success = False
-            else:
-                success = True
+        waiting = len(self._waiters)
+
+        if not self._unbroken:
+            extra = "broken"
+        elif waiting >= self._parties:
+            extra = "draining"
         else:
-            success = False
+            extra = f"filling, waiting={waiting}"
 
-        return success
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    def __acquire_nowait_as_waiter(self, /, token):
-        waiters = self.__waiters
-        parties = self.parties
+    async def __aenter__(self, /) -> int:
+        return await self
+
+    def __enter__(self, /) -> int:
+        return self.wait()
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if exc_value is not None:
+            self.abort()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if exc_value is not None:
+            self.abort()
+
+    def __await__(self, /) -> Generator[Any, Any, int]:
+        if not self._unbroken:
+            yield from async_checkpoint().__await__()
+
+            self._wakeup_on_breaking()
+
+            raise BrokenBarrierError
+
+        self._waiters.append(
+            token := [
+                event := create_async_event(),
+                None,
+                -1,
+            ]
+        )
+
+        if not self._unbroken:
+            if event.set():
+                try:
+                    self._waiters.remove(token)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
 
         try:
-            if (
-                len(waiters) >= parties
-                and waiters[parties - 1] is token
-                and (unlocked := self.__unlocked)
-                and waiters[parties - 1] is token
-                and not self.__is_broken
-            ):
+            success = yield from event.__await__()
+        finally:
+            if not success:
+                self.abort()
+
+        index = token[2]
+
+        if index >= 0:
+            self._wakeup_on_draining(token[1])
+        else:
+            self._wakeup_on_breaking()
+
+            raise BrokenBarrierError
+
+        return index
+
+    def wait(self, /, timeout: float | None = None) -> int:
+        if not self._unbroken:
+            green_checkpoint()
+
+            self._wakeup_on_breaking()
+
+            raise BrokenBarrierError
+
+        self._waiters.append(
+            token := [
+                event := create_green_event(),
+                None,
+                -1,
+            ]
+        )
+
+        if not self._unbroken:
+            if event.set():
                 try:
-                    unlocked.pop()
+                    self._waiters.remove(token)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
+
+        try:
+            success = event.wait(timeout)
+        finally:
+            if not success:
+                self.abort()
+
+        index = token[2]
+
+        if index >= 0:
+            self._wakeup_on_draining(token[1])
+        else:
+            self._wakeup_on_breaking()
+
+            raise BrokenBarrierError
+
+        return index
+
+    def abort(self, /) -> None:
+        self._unbroken = False
+
+        self._wakeup_on_breaking()
+
+    def _acquire_nowait_if_reached(self, /) -> bool:
+        while self._unlocked:
+            if self._unbroken and len(self._waiters) >= self._parties > 0:
+                try:
+                    self._unlocked.pop()
                 except IndexError:
-                    success = False
+                    return False
                 else:
-                    success = True
+                    if self._unbroken and (
+                        len(self._waiters) >= self._parties > 0
+                    ):
+                        return True
+
+                    self._unlocked.append(None)
             else:
-                success = False
-        except IndexError:
-            success = False
+                return False
 
-        return success
+        return False
 
-    @staticmethod
-    def __wakeup(tokens):
-        while tokens:
+    def _wakeup_if_reached(self, /) -> bool:
+        if self._acquire_nowait_if_reached():
             try:
-                if PERFECT_FAIRNESS:
-                    token = tokens[0]
+                return self._wakeup()
+            finally:
+                self._release()
+
+        return False
+
+    def _wakeup(self, /) -> bool:
+        parties = self._parties
+        waiters = self._waiters
+
+        if not self._unbroken:
+            return False
+
+        try:
+            tokens = list(islice(waiters, parties))
+        except RuntimeError:  # deque mutated during iteration
+            tokens = [None] * parties
+
+            for i in range(parties):
+                try:
+                    token = waiters[i]
+                except IndexError:
+                    return False
                 else:
-                    token = tokens.popleft()
+                    tokens[i] = token
+
+        if len(tokens) < parties:
+            return False
+
+        if not self._unbroken:
+            return False
+
+        tokens_marker = object()
+
+        for i, token in enumerate(tokens):
+            token[1] = tokens_marker
+            token[2] = i
+
+        self._wakeup_on_draining(tokens_marker)
+
+        return True
+
+    def _wakeup_on_draining(self, /, tokens_marker: object) -> None:
+        waiters = self._waiters
+
+        while waiters:
+            try:
+                token = waiters[0]
             except IndexError:
                 break
             else:
-                event, cancelled, _, _, _ = token
+                event, marker, _ = token
 
-                cancelled.set(False)
+                if marker is not tokens_marker:
+                    break
+
                 event.set()
 
-                if PERFECT_FAIRNESS:
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass
+
+    def _wakeup_on_breaking(self, /) -> None:
+        waiters = self._waiters
+
+        while waiters:
+            try:
+                if _PERFECT_FAIRNESS_ENABLED:
+                    token = waiters[0]
+                else:
+                    token = waiters.popleft()
+            except IndexError:
+                break
+            else:
+                event, _, _ = token
+
+                event.set()
+
+                if _PERFECT_FAIRNESS_ENABLED:
                     try:
-                        tokens.remove(token)
+                        waiters.remove(token)
                     except ValueError:
                         pass
 
-    def __wakeup_as_waiter(self, /):
-        waiters = self.__waiters
-        parties = self.parties
+    def _release(self, /) -> None:
+        while True:
+            self._unlocked.append(None)
 
-        tokens = deque()
-
-        for _ in range(parties):
-            token = waiters.popleft()
-
-            token[2] = len(tokens)
-            token[3] = tokens
-            token[4] = False
-
-            tokens.append(token)
-
-        self.__wakeup(tokens)
-
-        return not token[1].get()
-
-    def __release(self, /):
-        waiters = self.__waiters
-        parties = self.parties
-
-        unlocked = self.__unlocked
-
-        while not self.__is_broken:
-            if len(waiters) >= parties:
-                if self.__wakeup_as_waiter():
-                    break
-                else:
-                    continue
-
-            unlocked.append(True)
-
-            if len(waiters) >= parties:
-                if self.__acquire_nowait():
-                    continue
-                else:
-                    break
+            if self._acquire_nowait_if_reached():
+                self._wakeup()
             else:
                 break
+
+    @property
+    def parties(self, /) -> int:
+        return self._parties
+
+    @property
+    def broken(self, /) -> bool:
+        return not self._unbroken
+
+    @property
+    def waiting(self, /) -> int:
+        return len(self._waiters)
+
+
+class RBarrier(Barrier):
+    __slots__ = (
+        "_resetting",
+        "_timer",
+    )
+
+    def __new__(cls, /, parties: int | None = None) -> Self:
+        if parties is None:
+            parties = 1
+        elif parties < 0:
+            msg = "parties must be >= 0"
+            raise ValueError(msg)
+
+        self = object.__new__(cls)
+
+        self._parties = parties
+
+        self._resetting = []
+        self._timer = count().__next__
+        self._unbroken = Flag(object())
+        self._unlocked = [None]
+
+        self._waiters = deque()
+
+        return self
+
+    def __repr__(self, /) -> str:
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        object_repr = f"{cls_repr}({self._parties!r})"
+
+        waiting = len(self._waiters)
+
+        if self._resetting:
+            extra = "resetting"
+        elif not self._unbroken:
+            extra = "broken"
+        elif waiting >= self._parties:
+            extra = "draining"
         else:
-            self.__wakeup(waiters)
+            extra = f"filling, waiting={waiting}"
 
-        if self.__is_broken and self.__acquire_nowait():
-            self.__wakeup(waiters)
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    def __await__(self, /):
-        waiters = self.__waiters
-        parties = self.parties
-
-        is_broken = False
-        rescheduled = False
-
-        if not (is_broken := self.__is_broken):
-            waiters.append(
-                token := [
-                    event := create_async_event(),
-                    Flag(),
-                    -1,
-                    None,
-                    True,
-                ]
-            )
-
-            if not (is_broken := self.__is_broken):
-                try:
-                    if self.__acquire_nowait_as_waiter(token):
-                        self.__wakeup_as_waiter()
-
-                        yield from async_checkpoint(force=True).__await__()
-
-                        rescheduled = True
-                    else:
-                        rescheduled = yield from event.__await__()
-                finally:
-                    if rescheduled or not token[1].set(True):
-                        _, _, index, _, is_broken = token
-
-                        if not is_broken and index + 1 == parties:
-                            self.__release()
-                    else:
-                        self.abort()
-
-        if is_broken:
-            self.__wakeup(waiters)
-
-            raise BrokenBarrierError
-
-        if not rescheduled:
+    def __await__(self, /) -> Generator[Any, Any, int]:
+        if not self._unbroken:
             yield from async_checkpoint().__await__()
 
-        return index
-
-    def wait(self, /, timeout=None):
-        waiters = self.__waiters
-        parties = self.parties
-
-        is_broken = False
-        rescheduled = False
-
-        if not (is_broken := self.__is_broken):
-            waiters.append(
-                token := [
-                    event := create_green_event(),
-                    Flag(),
-                    -1,
-                    None,
-                    True,
-                ]
-            )
-
-            if not (is_broken := self.__is_broken):
-                try:
-                    if self.__acquire_nowait_as_waiter(token):
-                        self.__wakeup_as_waiter()
-
-                        green_checkpoint(force=True)
-
-                        rescheduled = True
-                    else:
-                        rescheduled = event.wait(timeout)
-                finally:
-                    if rescheduled or not token[1].set(True):
-                        _, _, index, _, is_broken = token
-
-                        if not is_broken and index + 1 == parties:
-                            self.__release()
-                    else:
-                        self.abort()
-
-        if is_broken:
-            self.__wakeup(waiters)
+            self._wakeup_on_breaking()
 
             raise BrokenBarrierError
 
-        if not rescheduled:
-            green_checkpoint()
+        self._waiters.append(
+            token := [
+                event := create_async_event(),
+                marker := self._unbroken.get(default_factory=object),
+                self._timer(),
+                None,
+                -1,
+            ]
+        )
+
+        if self._unbroken.get(None) is not marker:
+            if event.set():
+                try:
+                    self._waiters.remove(token)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
+
+        try:
+            success = yield from event.__await__()
+        finally:
+            if not success:
+                self.abort()
+
+        index = token[4]
+
+        if index >= 0:
+            self._wakeup_on_draining(token[1])
+        else:
+            self._wakeup_on_breaking(token[3])
+
+            raise BrokenBarrierError
 
         return index
 
-    def abort(self, /):
-        self.__is_broken = True
+    def wait(self, /, timeout: float | None = None) -> int:
+        if not self._unbroken:
+            green_checkpoint()
 
-        if self.__acquire_nowait():
-            self.__wakeup(self.__waiters)
+            self._wakeup_on_breaking()
 
-    @property
-    def waiting(self, /):
-        return len(self.__waiters)
+            raise BrokenBarrierError
 
-    @property
-    def broken(self, /):
-        return self.__is_broken
+        self._waiters.append(
+            token := [
+                event := create_green_event(),
+                marker := self._unbroken.get(default_factory=object),
+                self._timer(),
+                None,
+                -1,
+            ]
+        )
+
+        if self._unbroken.get(None) is not marker:
+            if event.set():
+                try:
+                    self._waiters.remove(token)
+                except ValueError:
+                    pass
+
+        event.force = self._wakeup_if_reached()
+
+        success = False
+
+        try:
+            success = event.wait(timeout)
+        finally:
+            if not success:
+                self.abort()
+
+        index = token[4]
+
+        if index >= 0:
+            self._wakeup_on_draining(token[1])
+        else:
+            self._wakeup_on_breaking(token[3])
+
+            raise BrokenBarrierError
+
+        return index
+
+    def reset(self, /) -> None:
+        self._resetting.append(None)
+
+        try:
+            self._unbroken.clear()
+            self._unbroken.set()
+
+            self._wakeup_on_breaking()
+        finally:
+            self._resetting.pop()
+
+        self._wakeup_if_reached()
+
+    def abort(self, /) -> None:
+        self._unbroken.clear()
+
+        self._wakeup_on_breaking()
+
+    def _wakeup(self, /) -> bool:
+        parties = self._parties
+        waiters = self._waiters
+
+        try:
+            marker = self._unbroken.get()
+        except LookupError:
+            return False
+
+        try:
+            tokens = list(islice(waiters, parties))
+        except RuntimeError:  # deque mutated during iteration
+            tokens = [None] * parties
+
+            for i in range(parties):
+                try:
+                    token = waiters[i]
+                except IndexError:
+                    return False
+                else:
+                    tokens[i] = token
+
+        if len(tokens) < parties:
+            return False
+
+        if self._unbroken.get(None) is not marker:
+            return False
+
+        tokens_marker = object()
+
+        for i, token in enumerate(tokens):
+            token[1] = tokens_marker
+            token[4] = i
+
+        self._wakeup_on_draining(tokens_marker)
+
+        return True
+
+    def _wakeup_on_draining(self, /, tokens_marker: object) -> None:
+        waiters = self._waiters
+
+        while waiters:
+            try:
+                token = waiters[0]
+            except IndexError:
+                break
+            else:
+                event, marker, _, _, _ = token
+
+                if marker is not tokens_marker:
+                    break
+
+                event.set()
+
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass
+
+    def _wakeup_on_breaking(self, /, deadline: float | None = None) -> None:
+        waiters = self._waiters
+
+        while waiters:
+            try:
+                token = waiters[0]
+            except IndexError:
+                break
+            else:
+                event, marker, time, _, _ = token
+
+                if deadline is None:
+                    deadline = self._timer()
+
+                if time > deadline:
+                    break
+
+                if self._unbroken.get(None) is marker:
+                    break
+
+                token[3] = deadline
+
+                event.set()
+
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass

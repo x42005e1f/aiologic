@@ -26,6 +26,8 @@ Commit messages are consistent with
 - `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
   semaphores, i.e. semaphores restricted to the values 0 and 1 and using a more
   efficient implementation.
+- `aiologic.RBarrier` as a reusable barrier, i.e. a barrier that can be reset
+  to its initial state (async-aware alternative to `threading.Barrier`).
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
   i.e. new low-level primitives that encapsulate library-specific wait-wake
@@ -62,6 +64,8 @@ Commit messages are consistent with
   token is actually released by the current task.
 - Reentrant primitives can now be acquired and released multiple times in a
   single call.
+- Multi-use barriers (cyclic and reusable) can now be used as context managers,
+  which simplifies error handling.
 - `for_()` method to condition variables as an async analog of `wait_for()`.
 - Conditional variables now support user-defined timers. They can be passed to
   the constructor, called via the `timer` property, and used to pass the
@@ -178,6 +182,20 @@ Commit messages are consistent with
   + They now return `False` after waiting again if they were previously
     cancelled. Previously `True` was returned, which could be considered
     unexpected behavior.
+- Barriers have been rewritten:
+  + The `parties` parameter now has a default value of `1`. This allows
+    barriers to be used directly as default factories.
+  + They now allow passing `parties` equal to `0`, with which they ignore the
+    waiting queue length (they only wake up tasks when `abort()` is called
+    directly or indirectly, e.g. on cancellation or timeout).
+  + Single-use barriers can now be used correctly in a Boolean context: `True`
+    if the current state is not filling, `False` otherwise.
+  + They now do not prevent concurrent `abort()` calls from affecting
+    successful task wakeup. This change is due to the fact that they cannot
+    suppress cancellation in principle, making the prevention of
+    `BrokenBarrierError` on successful wakeup meaningless. As a consequence,
+    single-use barriers can now be broken after use (e.g. via an `abort()`
+    call).
 - Semaphores have been rewritten:
   + `aiologic.Semaphore` now disallow passing `max_size` other than `None` from
     subclasses. Previously it was ignored, which could violate user
@@ -560,7 +578,7 @@ Commit messages are consistent with
 ### Added
 
 - `aiologic.Barrier` as a cyclic barrier, i.e. a barrier that tasks can pass
-  through repeatedly (thread-aware alternative to `asyncio.Barrier`).
+  through repeatedly.
 - `aiologic.SimpleQueue` as a simplified queue without `maxsize` support.
 - `aiologic.PriorityQueue` as a priority queue, i.e. a queue that returns its
   smallest element (using the `heapq` module).

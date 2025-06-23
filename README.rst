@@ -120,7 +120,7 @@ Features
 Synchronization primitives:
 
 * Events: one-time, reusable, and countdown
-* Barriers: single-use, and cyclic
+* Barriers: single-use, cyclic, and reusable
 * Semaphores: counting, bounded, and binary
 * Capacity limiters: borrowable, and reentrant
 * Locks: ownable, and reentrant

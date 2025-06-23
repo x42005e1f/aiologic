@@ -10,6 +10,7 @@ from ._barrier import (
     Barrier as Barrier,
     BrokenBarrierError as BrokenBarrierError,
     Latch as Latch,
+    RBarrier as RBarrier,
 )
 from ._condition import (
     Condition as Condition,
