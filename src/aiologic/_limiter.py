@@ -238,7 +238,7 @@ class RCapacityLimiter(CapacityLimiter):
         success = await self._semaphore.async_acquire(blocking=blocking)
 
         if success:
-            self._borrowers[task] = 1
+            self._borrowers[task] = count
 
         return success
 
@@ -274,7 +274,7 @@ class RCapacityLimiter(CapacityLimiter):
         )
 
         if success:
-            self._borrowers[task] = 1
+            self._borrowers[task] = count
 
         return success
 
