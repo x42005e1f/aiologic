@@ -470,18 +470,21 @@ class Barrier:
         try:
             tokens = list(islice(waiters, parties))
         except RuntimeError:  # deque mutated during iteration
+            if not self._unbroken:
+                return False
+
             tokens = [None] * parties
 
-            for i in range(parties):
+            for i in range(parties - 1, -1, -1):
                 try:
                     token = waiters[i]
                 except IndexError:
                     return False
                 else:
                     tokens[i] = token
-
-        if len(tokens) < parties:
-            return False
+        else:
+            if len(tokens) < parties:
+                return False
 
         if not self._unbroken:
             return False
@@ -757,9 +760,12 @@ class RBarrier(Barrier):
         try:
             tokens = list(islice(waiters, parties))
         except RuntimeError:  # deque mutated during iteration
+            if self._unbroken.get(None) is not marker:
+                return False
+
             tokens = [None] * parties
 
-            for i in range(parties):
+            for i in range(parties - 1, -1, -1):
                 try:
                     token = waiters[i]
                 except IndexError:
@@ -767,10 +773,26 @@ class RBarrier(Barrier):
                 else:
                     tokens[i] = token
 
-        if len(tokens) < parties:
-            return False
+            if len({token[0] for token in tokens}) < parties:
+                return False
+        else:
+            if len(tokens) < parties:
+                return False
 
         if self._unbroken.get(None) is not marker:
+            return False
+
+        if invalid_tokens := [
+            token for token in tokens if token[1] is not marker
+        ]:
+            for token in invalid_tokens:
+                token[0].set()
+
+                try:
+                    waiters.remove(token)
+                except ValueError:
+                    pass
+
             return False
 
         if _PERFECT_FAIRNESS_ENABLED:
