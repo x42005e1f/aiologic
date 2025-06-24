@@ -735,13 +735,12 @@ class RBarrier(Barrier):
 
         try:
             self._unbroken.clear()
-            self._unbroken.set()
 
             self._wakeup_on_breaking()
+
+            self._unbroken.set()
         finally:
             self._resetting.pop()
-
-        self._wakeup_if_reached()
 
     def abort(self, /) -> None:
         self._unbroken.clear()
