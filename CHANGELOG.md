@@ -289,6 +289,10 @@ Commit messages are consistent with
   `schedule_call_threadsafe()` since
   [eventlet/eventlet#1023](https://github.com/eventlet/eventlet/issues/1023) is
   still unresolved.
+- `curio` events now use lockless futures instead of
+  `concurrent.futures.Future`. This makes the implementation of `curio` support
+  completely non-blocking (like the rest of the concurrency libraries), which
+  has a positive impact on performance.
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.

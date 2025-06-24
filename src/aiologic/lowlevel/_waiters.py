@@ -14,9 +14,9 @@ if TYPE_CHECKING:
     import sys
 
     if sys.version_info >= (3, 9):
-        from collections.abc import Generator
+        from collections.abc import Callable, Generator
     else:
-        from typing import Generator
+        from typing import Callable, Generator
 
 
 class Waiter(Protocol):
@@ -347,12 +347,153 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
 
 @once
 def _get_curio_waiter_class() -> type[AsyncWaiter]:
-    from concurrent.futures import Future, InvalidStateError
+    import sys
+
+    from concurrent.futures import CancelledError, InvalidStateError
+    from logging import getLogger
 
     from curio import check_cancellation
     from curio.traps import _future_wait
 
     from . import _tasks
+
+    if sys.version_info >= (3, 11):
+        WaitTimeout = TimeoutError
+    else:
+        from concurrent.futures import TimeoutError as WaitTimeout
+
+    _LOGGER = getLogger("concurrent.futures")
+
+    class _CurioFuture:
+        def __init__(self, /) -> None:
+            self._cancelled = True
+            self._done_callbacks = []
+            self._pending = [None]
+
+        def cancel(self) -> bool:
+            if self._pending:
+                try:
+                    self._pending.pop()
+                except IndexError:
+                    pass
+                else:
+                    self._cancelled = True
+
+                    self._invoke_callbacks()
+
+            return self._cancelled
+
+        def cancelled(self) -> bool:
+            return self._cancelled
+
+        def running(self) -> bool:
+            return False
+
+        def done(self) -> bool:
+            return not self._pending
+
+        def result(self, timeout: float | None = None) -> bool:
+            if not self._pending:
+                if not self._cancelled:
+                    try:
+                        return self._result
+                    except AttributeError:
+                        pass
+
+                raise CancelledError
+
+            if timeout is not None and timeout <= 0:
+                raise WaitTimeout
+
+            raise NotImplementedError
+
+        def exception(
+            self,
+            timeout: float | None = None,
+        ) -> BaseException | None:
+            if not self._pending:
+                if not self._cancelled:
+                    try:
+                        return self._exception
+                    except AttributeError:
+                        pass
+
+                raise CancelledError
+
+            if timeout is not None and timeout <= 0:
+                raise WaitTimeout
+
+            raise NotImplementedError
+
+        def add_done_callback(
+            self,
+            fn: Callable[[_CurioFuture], object],
+        ) -> None:
+            if not self._pending:
+                try:
+                    fn(self)
+                except Exception:
+                    _LOGGER.exception(
+                        "exception calling callback for %r",
+                        self,
+                    )
+
+                return
+
+            self._done_callbacks.append(fn)
+
+            if not self._pending:
+                try:
+                    self._done_callbacks.remove(fn)
+                except ValueError:
+                    pass
+                else:
+                    try:
+                        fn(self)
+                    except Exception:
+                        _LOGGER.exception(
+                            "exception calling callback for %r",
+                            self,
+                        )
+
+        def set_running_or_notify_cancel(self) -> bool:
+            raise NotImplementedError
+
+        def set_result(self, result: bool) -> None:
+            self._exception = None
+            self._result = result
+
+            if self._pending:
+                try:
+                    self._pending.pop()
+                except IndexError:
+                    pass
+                else:
+                    self._invoke_callbacks()
+                    return
+
+            raise InvalidStateError
+
+        def set_exception(self, exception: BaseException | None) -> None:
+            raise NotImplementedError
+
+        def _invoke_callbacks(self) -> None:
+            callbacks = self._done_callbacks
+            callbacks.reverse()
+
+            while callbacks:
+                try:
+                    callback = callbacks.pop()
+                except IndexError:
+                    break
+                else:
+                    try:
+                        callback(self)
+                    except Exception:
+                        _LOGGER.exception(
+                            "exception calling callback for %r",
+                            self,
+                        )
 
     @final
     class _CurioWaiter(AsyncWaiter):
@@ -364,7 +505,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
         shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
-            self.__future = Future()
+            self.__future = _CurioFuture()
 
             self.shield = shield
 
