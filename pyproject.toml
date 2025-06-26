@@ -237,6 +237,7 @@ ignore = [
     # tryceratops
     "TRY003",  # raise-vanilla-args
     "TRY301",  # raise-within-try
+    "TRY400",  # error-instead-of-exception
     # perflint
     "PERF203",  # try-except-in-loop
     # refurb

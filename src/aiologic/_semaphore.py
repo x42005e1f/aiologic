@@ -13,6 +13,7 @@ from collections import deque
 from typing import TYPE_CHECKING, Any, Final, overload
 
 from .lowlevel import (
+    Event,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -173,7 +174,13 @@ class Semaphore:
 
         return False
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool:
         if self._acquire_nowait():
             if blocking:
                 try:
@@ -187,7 +194,7 @@ class Semaphore:
         if not blocking:
             return False
 
-        self._waiters.append(event := create_async_event())
+        self._waiters.append(event := create_async_event(shield=_shield))
 
         if self._acquire_nowait():
             if event.set():
@@ -220,6 +227,7 @@ class Semaphore:
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool:
         if self._acquire_nowait():
             if blocking:
@@ -234,7 +242,7 @@ class Semaphore:
         if not blocking:
             return False
 
-        self._waiters.append(event := create_green_event())
+        self._waiters.append(event := create_green_event(shield=_shield))
 
         if self._acquire_nowait():
             if event.set():
@@ -436,8 +444,14 @@ class BoundedSemaphore(Semaphore):
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
-        success = await self._async_acquire(blocking=blocking)
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool:
+        success = await self._async_acquire(blocking=blocking, _shield=_shield)
 
         if success:
             if _USE_BYTEARRAY:
@@ -453,8 +467,13 @@ class BoundedSemaphore(Semaphore):
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool:
-        success = self._green_acquire(blocking=blocking, timeout=timeout)
+        success = self._green_acquire(
+            blocking=blocking,
+            timeout=timeout,
+            _shield=_shield,
+        )
 
         if success:
             if _USE_BYTEARRAY:
@@ -577,6 +596,37 @@ class BinarySemaphore(Semaphore):
     def value(self, /) -> int:
         return len(self._unlocked)
 
+    # Internal methods used by condition variables
+
+    def _park(self, /, token: list[Any]) -> bool:
+        event = token[0]
+
+        if event.cancelled():
+            return False
+
+        self._waiters.append(event)
+
+        token[5] = True  # reparked
+
+        if event.cancelled():
+            try:
+                self._waiters.remove(event)
+            except ValueError:
+                pass
+
+            return False
+
+        return True
+
+    def _unpark(self, /, event: Event) -> None:
+        try:
+            self._waiters.remove(event)
+        except ValueError:
+            pass
+
+    def _after_park(self, /) -> None:
+        pass
+
 
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     __slots__ = ()
@@ -640,8 +690,14 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     __getstate__ = BoundedSemaphore.__getstate__
     __repr__ = BoundedSemaphore.__repr__
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
-        success = await self._async_acquire(blocking=blocking)
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool:
+        success = await self._async_acquire(blocking=blocking, _shield=_shield)
 
         if success:
             if _USE_DELATTR:
@@ -657,8 +713,13 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool:
-        success = self._green_acquire(blocking=blocking, timeout=timeout)
+        success = self._green_acquire(
+            blocking=blocking,
+            timeout=timeout,
+            _shield=_shield,
+        )
 
         if success:
             if _USE_DELATTR:
@@ -690,3 +751,11 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     @property
     def value(self, /) -> int:
         return len(self._unlocked)
+
+    # Internal methods used by condition variables
+
+    def _after_park(self, /) -> None:
+        if _USE_DELATTR:
+            self._locked = True
+        else:
+            self._locked.append(None)

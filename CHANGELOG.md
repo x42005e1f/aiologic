@@ -108,13 +108,12 @@ Commit messages are consistent with
   make their behavior more predictable. Previously, checkpoints were not called
   if a primitive had already been acquired (for performance reasons).
 - Interfaces and type hints have been improved:
-  + Queues are now generic types not only in stubs but also at runtime, making
-    it possible to use subscriptions on Python 3.8.
+  + Queues, capacity limiters, and flags are now generic types not only in
+    stubs but also at runtime, making it possible to use subscriptions on
+    Python 3.8. Also, capacity limiters' and flags' type parameters now have
+    default values.
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
-  + `aiologic.lowlevel.Flag` is now a generic type not only in stubs but also
-    at runtime, making it possible to use subscriptions on Python 3.8. Also,
-    its type parameter is now `object` by default.
   + Calling `flag.set()` without arguments is now only allowed for
     `aiologic.lowlevel.Flag[object]`. Previously it ignored subscriptions.
   + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static
@@ -128,7 +127,7 @@ Commit messages are consistent with
     `aiologic.lowlevel.current_async_library_tlocal` are now exactly the same
     as `sniffio.AsyncLibraryNotFoundError` and `sniffio.thread_local`. This
     allows them to be used interchangeably.
-  + In some modules, type information is now also inline. This allows such
+  + In all modules, type information is now also inline. This allows such
     information to be used in cases where stubs are not supported. In
     particular, for `sphinx.ext.autodoc`. Stubs are still preserved to reduce
     issues with type checkers.
@@ -223,16 +222,25 @@ Commit messages are consistent with
     owner after release in the same task (it was `None`).
 - Condition variables have been rewritten:
   + They now only support passing locks from the `threading` module
-    (synchronous mode), locks from the `aiologic` module (mixed mode), and
-    `None` (lockless mode). This change was made to simplify their
-    implementation. For special cases it is recommended to use low-level events
-    directly.
+    (synchronous mode), binary semaphores and locks from the `aiologic` module
+    (mixed mode), and `None` (lockless mode). This change was made to simplify
+    their implementation. For special cases it is recommended to use low-level
+    events directly.
+  + Waiting for a predicate now supports delegating its checking to notifiers
+    and is the default (`delegate=True`). This reduces the number of context
+    switches to the minimum necessary.
+  + For `aiologic` primitives, all waits are now truly fair and always run with
+    exactly one checkpoint (exactly two in case of cancel), just like all other
+    `aiologic` functions. This works by using a new reparking mechanism and
+    solves the well-known [resource starvation
+    issue](https://github.com/python/cpython/issues/90968).
   + They now count the number of lock acquires to avoid redundant `release()`
     calls when used as context managers. Because of this, they will now never
     throw a `RuntimeError` when a `wait()` call fails (e.g. due to a
-    `KeyboardInterrupt` while trying to reacquire `threading.Lock`). This makes
-    it safe (with some caveats) to use condition variables even when shielding
-    from external cancellation is not guaranteed.
+    `KeyboardInterrupt` while trying to reacquire `threading.Lock`) except in
+    the case of concurrent `notify()` calls. This makes it safe (with some
+    caveats) to use condition variables even when shielding from external
+    cancellation is not guaranteed.
   + They now shield lock state restoring not only in async methods, but also in
     green methods. It is still not guaranteed that a `wait()` call cannot be
     cancelled in any unpredictable way (e.g. when a greenlet is killed by an
@@ -242,6 +250,14 @@ Commit messages are consistent with
     starting the wait. This corresponds to the behavior of the standard
     condition variables, and allows exceptions to be raised with more
     meaningful messages.
+  + They now check that the current task is the owner of the lock before
+    starting notification for predicates for all variations, and in general for
+    any calls for `aiologic` primitives. While this change reduces the number
+    of scenarios in which condition variables can be used, it provides the
+    thread-safety needed for the new features to work.
+  + They now always yield themselves when used as context managers. This
+    diverges from the standard condition variables, but makes the interface
+    more consistent.
   + They now return the original value of the predicate, allowing the
     `wait_for()` and `for_()` methods to be used in more scenarios. Previously,
     a value of type `bool` was returned.
@@ -264,8 +280,8 @@ Commit messages are consistent with
     [culsans](https://github.com/x42005e1f/culsans), a derivative of
     `aiologic`, to create full-featured custom queues.
 - The representation of primitives has been changed. All instances now include
-  the module name and use the correct class name in subclasses (except for
-  private classes). Low-level events now show their status in representation.
+  the module name, use the correct class name in subclasses (except for
+  private classes) and show their status in representation.
 - `aiologic.lowlevel.current_green_token()` now returns the current thread, and
   `aiologic.lowlevel.current_green_token_ident()` now uses the current thread
   ID for `threading`. This makes these functions more meaningful, and leads to

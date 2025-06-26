@@ -8,6 +8,8 @@ import sys
 from types import TracebackType
 from typing import Any, Final, overload
 
+from .lowlevel import Event
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -62,14 +64,27 @@ class Semaphore:
         traceback: TracebackType | None,
     ) -> None: ...
     def _acquire_nowait(self, /) -> bool: ...
-    async def _async_acquire(self, /, *, blocking: bool = True) -> bool: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def _async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool: ...
     def _green_acquire(
         self,
         /,
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     def green_acquire(
         self,
@@ -77,6 +92,7 @@ class Semaphore:
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     def _release(self, /, count: int = 1) -> None: ...
     def async_release(self, /, count: int = 1) -> None: ...
@@ -114,13 +130,20 @@ class BoundedSemaphore(Semaphore):
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
     def __repr__(self, /) -> str: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     def async_release(self, /, count: int = 1) -> None: ...
     def green_release(self, /, count: int = 1) -> None: ...
@@ -156,6 +179,12 @@ class BinarySemaphore(Semaphore):
     @property
     def value(self, /) -> int: ...
 
+    # Internal methods used by condition variables
+
+    def _park(self, /, token: list[Any]) -> bool: ...
+    def _unpark(self, /, event: Event) -> None: ...
+    def _after_park(self, /) -> None: ...
+
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     __slots__ = ()
 
@@ -178,16 +207,27 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
     def __repr__(self, /) -> str: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        _shield: bool = False,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     def async_release(self, /, count: int = 1) -> None: ...
     def green_release(self, /, count: int = 1) -> None: ...
     def release(self, /, count: int = 1) -> None: ...
     @property
     def value(self, /) -> int: ...
+
+    # Internal methods used by condition variables
+
+    def _after_park(self, /) -> None: ...

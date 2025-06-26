@@ -8,10 +8,11 @@ from __future__ import annotations
 import sys
 
 from collections import deque
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ._semaphore import BinarySemaphore
 from .lowlevel import (
+    Event,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -123,6 +124,17 @@ class PLock:
     def waiting(self, /) -> int:
         return self._impl.waiting
 
+    # Internal methods used by condition variables
+
+    def _park(self, /, token: list[Any]) -> bool:
+        return self._impl._park(token)
+
+    def _unpark(self, /, event: Event) -> None:
+        return self._impl._unpark(event)
+
+    def _after_park(self, /) -> None:
+        return self._impl._after_park()
+
 
 class BLock(PLock):
     __slots__ = ()
@@ -218,8 +230,10 @@ class Lock(PLock):
         self,
         /,
         task: tuple[str, int],
+        count: int = 1,
         *,
         blocking: bool = True,
+        _shield: bool = False,
     ) -> bool:
         if self._owner == task and not self._releasing:
             msg = "the current task is already holding this lock"
@@ -242,9 +256,9 @@ class Lock(PLock):
 
         self._waiters.append(
             token := (
-                event := create_async_event(),
+                event := create_async_event(shield=_shield),
                 task,
-                1,
+                count,
             )
         )
 
@@ -277,9 +291,11 @@ class Lock(PLock):
         self,
         /,
         task: tuple[str, int],
+        count: int = 1,
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool:
         if self._owner == task and not self._releasing:
             msg = "the current task is already holding this lock"
@@ -302,9 +318,9 @@ class Lock(PLock):
 
         self._waiters.append(
             token := (
-                event := create_green_event(),
+                event := create_green_event(shield=_shield),
                 task,
-                1,
+                count,
             )
         )
 
@@ -429,33 +445,41 @@ class Lock(PLock):
 
     # Internal methods used by condition variables
 
-    async def _async_acquire_restore(
+    def _park(self, /, token: list[Any]) -> bool:
+        event = token[0]
+        state = token[6]
+
+        if event.cancelled():
+            return False
+
+        self._waiters.append(lock_token := (event, *state))
+
+        token[5] = True  # reparked
+
+        if event.cancelled():
+            try:
+                self._waiters.remove(lock_token)
+            except ValueError:
+                pass
+
+            return False
+
+        return True
+
+    def _unpark(
         self,
         /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool:
-        return await self._async_acquire_on_behalf_of(state[0])
+        event: Event,
+        state: tuple[tuple[str, int], int] | None = None,
+    ) -> None:
+        if state is not None:
+            try:
+                self._waiters.remove((event, *state))
+            except ValueError:
+                pass
 
-    def _green_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool:
-        return self._green_acquire_on_behalf_of(state[0])
-
-    def _async_release_save(self, /) -> tuple[tuple[str, int], int]:
-        state = (self._owner, 1)
-
-        self.async_release()
-
-        return state
-
-    def _green_release_save(self, /) -> tuple[tuple[str, int], int]:
-        state = (self._owner, 1)
-
-        self.green_release()
-
-        return state
+    def _after_park(self, /) -> None:
+        self._releasing = False
 
 
 class RLock(Lock):
@@ -480,6 +504,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        _shield: bool = False,
     ) -> bool:
         if count < 1:
             msg = "count must be >= 1"
@@ -511,7 +536,7 @@ class RLock(Lock):
 
         self._waiters.append(
             token := (
-                event := create_async_event(),
+                event := create_async_event(shield=_shield),
                 task,
                 count,
             )
@@ -551,6 +576,7 @@ class RLock(Lock):
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool:
         if count < 1:
             msg = "count must be >= 1"
@@ -582,7 +608,7 @@ class RLock(Lock):
 
         self._waiters.append(
             token := (
-                event := create_green_event(),
+                event := create_green_event(shield=_shield),
                 task,
                 count,
             )
@@ -727,33 +753,3 @@ class RLock(Lock):
     @deprecated("Use 'count' instead")
     def level(self, /) -> int:
         return self._count
-
-    # Internal methods used by condition variables
-
-    async def _async_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool:
-        return await self._async_acquire_on_behalf_of(*state)
-
-    def _green_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool:
-        return self._green_acquire_on_behalf_of(*state)
-
-    def _async_release_save(self, /) -> tuple[tuple[str, int], int]:
-        state = (self._owner, self._count)
-
-        self.async_release()
-
-        return state
-
-    def _green_release_save(self, /) -> tuple[tuple[str, int], int]:
-        state = (self._owner, self._count)
-
-        self.green_release()
-
-        return state

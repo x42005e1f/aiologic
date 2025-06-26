@@ -3,30 +3,105 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
 import sys
+import threading
 import time
-import types
 
 from collections import defaultdict, deque
 from itertools import count
+from logging import Logger, getLogger
+from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
 
-from ._lock import RLock
+from ._guard import ResourceGuard
+from ._lock import Lock, PLock, RLock
+from ._semaphore import BinarySemaphore
 from .lowlevel import (
     MISSING,
+    MissingType,
+    _thread,
+    async_checkpoint,
     create_async_event,
     create_green_event,
     current_async_task_ident,
     current_green_task_ident,
-    shield,
+    green_checkpoint,
+)
+
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable, Generator
+else:
+    from typing import Callable, Generator
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
+LOGGER: Final[Logger] = getLogger(__name__)
+
+_T = TypeVar("_T")
+_T_co = TypeVar(
+    "_T_co",
+    bound=Union[
+        Lock,
+        PLock,
+        BinarySemaphore,
+        threading.RLock,
+        threading.Lock,
+        _thread.LockType,
+        None,
+    ],
+    default=RLock,
+    covariant=True,
+)
+_S_co = TypeVar(
+    "_S_co",
+    bound=Callable[[], float],
+    default=Callable[[], float],
+    covariant=True,
 )
 
 
-class Condition:
+class Condition(Generic[_T_co, _S_co]):
     __slots__ = (
-        "__impl",
         "__weakref__",
+        "_impl",
     )
 
+    @overload
+    def __new__(
+        cls,
+        /,
+        lock: MissingType = MISSING,
+        timer: MissingType = MISSING,
+    ) -> Condition[RLock, Callable[[], float]]: ...
+    @overload
+    def __new__(
+        cls,
+        /,
+        lock: MissingType = MISSING,
+        *,
+        timer: _S_co,
+    ) -> Condition[RLock, _S_co]: ...
+    @overload
+    def __new__(
+        cls,
+        /,
+        lock: _T_co,
+        timer: MissingType = MISSING,
+    ) -> Condition[_T_co, Callable[[], float]]: ...
+    @overload
+    def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
     def __new__(cls, /, lock=MISSING, timer=MISSING):
         if lock is MISSING:
             lock = RLock()
@@ -35,76 +110,277 @@ class Condition:
             timer = count().__next__
 
         if lock is None:
+            # lockless
             imp = _BaseCondition
-        elif hasattr(lock, "_async_acquire_restore"):
+        elif isinstance(lock, Lock):
+            # aiologic.RLock | aiologic.Lock
             imp = _RMixedCondition
-        elif hasattr(lock, "async_acquire"):
+        elif isinstance(lock, PLock):
+            # aiologic.BLock | aiologic.PLock
+            imp = _DMixedCondition
+        elif isinstance(lock, BinarySemaphore):
+            # aiologic.BoundedBinarySemaphore | aiologic.BinarySemaphore
             imp = _MixedCondition
         elif hasattr(lock, "_is_owned"):
+            # threading.RLock
             imp = _RSyncCondition
         else:
+            # threading.Lock | _thread.LockType
             imp = _SyncCondition
 
         if cls is Condition:
             return imp.__new__(imp, lock, timer)
 
-        self = super().__new__(cls)
+        self = object.__new__(cls)
 
-        self.__impl = imp(lock, timer)
+        self._impl = imp(lock, timer)
 
         return self
 
-    def __getnewargs__(self, /):
-        return (self.lock,)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
 
-    def __getstate__(self, /):
+        if timer_is_count:
+            return (self.lock,)
+
+        return (self.lock, self.timer)
+
+    def __getstate__(self, /) -> None:
         return None
 
-    def __repr__(self, /):
+    def __repr__(self, /) -> str:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        return f"{cls_repr}({self.lock!r})"
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
 
-    def __bool__(self, /):
-        return bool(self.__impl)
+        if timer_is_count:
+            object_repr = f"{cls_repr}({self.lock!r})"
+        else:
+            object_repr = f"{cls_repr}({self.lock!r}, timer={self.timer!r})"
 
-    async def __aenter__(self, /):
-        return await self.__impl.__aenter__()
+        extra = f"waiting={self.waiting}"
 
-    def __enter__(self, /):
-        return self.__impl.__enter__()
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    async def __aexit__(self, /, exc_type, exc_value, traceback):
-        return await self.__impl.__aexit__(exc_type, exc_value, traceback)
+    def __bool__(self, /) -> bool:
+        return bool(self._impl)
 
-    def __exit__(self, /, exc_type, exc_value, traceback):
-        return self.__impl.__exit__(exc_type, exc_value, traceback)
+    async def __aenter__(self, /) -> Self:
+        return await self._impl.__aenter__()
 
-    def __await__(self, /):
-        return (yield from self.__impl.__await__())
+    def __enter__(self, /) -> Self:
+        return self._impl.__enter__()
 
-    def wait(self, /, timeout=None):
-        return self.__impl.wait(timeout)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        return await self._impl.__aexit__(exc_type, exc_value, traceback)
 
-    async def for_(self, /, predicate):
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        return self._impl.__exit__(exc_type, exc_value, traceback)
+
+    def __await__(self, /) -> Generator[Any, Any, bool]:
+        return (yield from self._impl.__await__())
+
+    def wait(self, /, timeout: float | None = None) -> bool:
+        return self._impl.wait(timeout)
+
+    async def for_(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        return await self._impl.for_(predicate, delegate=delegate)
+
+    def wait_for(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None = None,
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        return self._impl.wait_for(predicate, timeout, delegate=delegate)
+
+    def notify(
+        self,
+        /,
+        count: int = 1,
+        *,
+        deadline: float | None = None,
+    ) -> int:
+        return self._impl.notify(count, deadline=deadline)
+
+    def notify_all(self, /, *, deadline: float | None = None) -> int:
+        return self._impl.notify_all(deadline=deadline)
+
+    @property
+    def lock(self, /) -> _T_co:
+        return self._impl.lock
+
+    @property
+    def timer(self, /) -> _S_co:
+        return self._impl.timer
+
+    @property
+    def waiting(self, /) -> int:
+        return self._impl.waiting
+
+
+class _BaseCondition(Condition[_T_co, _S_co]):
+    __slots__ = (
+        "_lock",
+        "_notifying",
+        "_timer",
+        "_waiters",
+    )
+
+    def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self:
+        self = object.__new__(cls)
+
+        self._lock = lock
+        self._timer = timer
+
+        self._waiters = deque()
+
+        self._notifying = ResourceGuard("notifying")
+
+        return self
+
+    def __reduce__(self, /) -> tuple[Any, ...]:
+        try:
+            timer_is_count = self._timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            return (Condition, (self._lock,))
+
+        return (Condition, (self._lock, self._timer))
+
+    def __repr__(self, /) -> str:
+        cls = Condition
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        try:
+            timer_is_count = self._timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            object_repr = f"{cls_repr}({self._lock!r})"
+        else:
+            object_repr = f"{cls_repr}({self._lock!r}, timer={self._timer!r})"
+
+        extra = f"waiting={len(self._waiters)}"
+
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
+    def __bool__(self, /) -> bool:
+        return False
+
+    async def __aenter__(self, /) -> Self:
+        return self
+
+    def __enter__(self, /) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        return None
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        return None
+
+    def __await__(self, /) -> Generator[Any, Any, bool]:
+        if not self._async_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
+
+        return (yield from self._async_wait(None).__await__())
+
+    def wait(self, /, timeout: float | None = None) -> bool:
+        if not self._green_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
+
+        return self._green_wait(None, timeout)
+
+    async def for_(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        if not self._async_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
+
+        if result := predicate():
+            await async_checkpoint()
+
+            return result
+
         while True:
-            result = predicate()
+            if delegate:
+                await self._async_wait(predicate)
+            else:
+                await self._async_wait(None)
 
-            if result:
+            if result := predicate():
                 return result
 
-            await self
+    def wait_for(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None = None,
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        if not self._green_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
 
-    def wait_for(self, /, predicate, timeout=None):
+        if result := predicate():
+            green_checkpoint()
+
+            return result
+
         deadline = None
 
         while True:
-            result = predicate()
-
-            if result:
-                return result
-
             if timeout is not None:
                 if deadline is None:
                     deadline = time.monotonic() + timeout
@@ -114,122 +390,21 @@ class Condition:
                     if timeout < 0:
                         return result
 
-            self.wait(timeout)
+            if delegate:
+                self._green_wait(predicate, timeout)
+            else:
+                self._green_wait(None, timeout)
 
-    def notify(self, /, count=1, *, deadline=None):
-        return self.__impl.notify(count, deadline=deadline)
+            if result := predicate():
+                return result
 
-    def notify_all(self, /, *, deadline=None):
-        return self.__impl.notify_all(deadline=deadline)
-
-    @property
-    def waiting(self, /):
-        return self.__impl.waiting
-
-    if sys.version_info >= (3, 9):
-        __class_getitem__ = classmethod(types.GenericAlias)
-
-
-class _BaseCondition(Condition):
-    __slots__ = (
-        "_waiters",
-        "lock",
-        "timer",
-    )
-
-    def __new__(cls, /, lock, timer):
-        self = object.__new__(cls)
-
-        self._waiters = deque()
-
-        self.lock = lock
-        self.timer = timer
-
-        return self
-
-    def __init_subclass__(cls, /, **kwargs):
-        if cls.__module__ != __name__:
-            bcs = _BaseCondition
-            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
-
-            msg = f"type '{bcs_repr}' is not an acceptable base type"
-            raise TypeError(msg)
-
-        super().__init_subclass__(**kwargs)
-
-    def __reduce__(self, /):
-        return (Condition, (self.lock,))
-
-    def __repr__(self, /):
-        cls = Condition
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
-
-        return f"{cls_repr}({self.lock!r})"
-
-    def __bool__(self, /):
-        return False
-
-    async def __aenter__(self, /):
-        return None
-
-    def __enter__(self, /):
-        return None
-
-    async def __aexit__(self, /, exc_type, exc_value, traceback):
-        return None
-
-    def __exit__(self, /, exc_type, exc_value, traceback):
-        return None
-
-    def __await__(self, /):
-        self._waiters.append(
-            token := (
-                event := create_async_event(),
-                self.timer(),
-            )
-        )
-
-        success = False
-
-        try:
-            success = yield from event.__await__()
-        finally:
-            if not success:
-                if event.cancelled():
-                    try:
-                        self._waiters.remove(token)
-                    except ValueError:
-                        pass
-                else:
-                    self.notify()
-
-        return success
-
-    def wait(self, /, timeout=None):
-        self._waiters.append(
-            token := (
-                event := create_green_event(),
-                self.timer(),
-            )
-        )
-
-        success = False
-
-        try:
-            success = event.wait(timeout)
-        finally:
-            if not success:
-                if event.cancelled():
-                    try:
-                        self._waiters.remove(token)
-                    except ValueError:
-                        pass
-                else:
-                    self.notify()
-
-        return success
-
-    def notify(self, /, count=1, *, deadline=None):
+    def notify(
+        self,
+        /,
+        count: int = 1,
+        *,
+        deadline: float | None = None,
+    ) -> int:
         waiters = self._waiters
 
         notified = 0
@@ -240,152 +415,103 @@ class _BaseCondition(Condition):
             except IndexError:
                 break
             else:
-                event, time = token
+                event, predicate, time, *_ = token
 
                 if deadline is None:
-                    deadline = self.timer()
+                    deadline = self._timer()
 
                 if time > deadline:
                     break
 
-                if event.set():
-                    notified += 1
+                rotate = False
+
+                if predicate is not None:
+                    if not self:
+                        msg = "cannot notify on un-acquired lock"
+                        raise RuntimeError(msg)
+
+                    with self._notifying:
+                        try:
+                            result = predicate()
+                        except Exception as exc:
+                            token[4] = exc
+
+                            if event.set():
+                                notified += 1
+                            else:
+                                LOGGER.exception(
+                                    "exception calling predicate for %r",
+                                    self,
+                                )
+                        else:
+                            if result:
+                                token[3] = result
+                            else:
+                                token[2] = self._timer()
+
+                                rotate = True
+
+                if not rotate:
+                    if event.set():
+                        notified += 1
 
                 try:
                     waiters.remove(token)
                 except ValueError:
                     pass
+                else:
+                    if rotate:
+                        waiters.append(token)
+
+                        if event.is_set() or event.cancelled():
+                            try:
+                                waiters.remove(token)
+                            except ValueError:
+                                pass
 
         return notified
 
-    def notify_all(self, /, *, deadline=None):
-        waiters = self._waiters
+    def notify_all(self, /, *, deadline: float | None = None) -> int:
+        return self.notify(-1, deadline=deadline)
 
-        notified = 0
-
-        while waiters:
-            try:
-                token = waiters[0]
-            except IndexError:
-                break
-            else:
-                event, time = token
-
-                if deadline is None:
-                    deadline = self.timer()
-
-                if time > deadline:
-                    break
-
-                if event.set():
-                    notified += 1
-
-                try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
-
-        return notified
-
-    @property
-    def waiting(self, /):
-        return len(self._waiters)
-
-
-class _MixedCondition(_BaseCondition):
-    __slots__ = ("__counts",)
-
-    def __new__(cls, /, lock, timer):
-        self = super().__new__(cls, lock, timer)
-
-        self.__counts = defaultdict(int)
-
-        return self
-
-    def __init_subclass__(cls, /, **kwargs):
-        if cls.__module__ != __name__:
-            bcs = _MixedCondition
-            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
-
-            msg = f"type '{bcs_repr}' is not an acceptable base type"
-            raise TypeError(msg)
-
-        super().__init_subclass__(**kwargs)
-
-    def __bool__(self, /):
-        return self.lock.locked()
-
-    async def __aenter__(self, /):
-        result = await self._async_enter()
-
-        self.__counts[current_async_task_ident()] += 1
-
-        return result
-
-    def __enter__(self, /):
-        result = self._green_enter()
-
-        self.__counts[current_green_task_ident()] += 1
-
-        return result
-
-    async def __aexit__(self, /, exc_type, exc_value, traceback):
-        task = current_async_task_ident()
-
-        count = self.__counts.pop(task, 0)
-
-        if count < 1:
-            return None
-
-        if count > 1:
-            self.__counts[task] = count - 1
-
-        return await self._async_exit(exc_type, exc_value, traceback)
-
-    def __exit__(self, /, exc_type, exc_value, traceback):
-        task = current_green_task_ident()
-
-        count = self.__counts.pop(task, 0)
-
-        if count < 1:
-            return None
-
-        if count > 1:
-            self.__counts[task] = count - 1
-
-        return self._green_exit(exc_type, exc_value, traceback)
-
-    def __await__(self, /):
-        if not self._async_owned():
-            msg = "cannot wait on un-acquired lock"
-            raise RuntimeError(msg)
-
-        self._waiters.append(
-            token := (
-                event := create_async_event(),
-                self.timer(),
+    @overload
+    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    @overload
+    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(self, /, predicate):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_async_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
             )
-        )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_async_event(),
+                    None,
+                    self._timer(),
+                )
+            )
 
         success = False
 
         try:
-            state = self._async_release_save()
+            success = await event
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
 
-            if self.__counts:
-                task = current_async_task_ident()
-
-                count = self.__counts.pop(task, 0)
-            else:
-                count = 0
-
-            try:
-                success = yield from event.__await__()
-            finally:
-                yield from self._async_acquire_restore(state).__await__()
-
-                if count:
-                    self.__counts[task] = count
+            raise
         finally:
             if not success:
                 if event.cancelled():
@@ -396,39 +522,327 @@ class _MixedCondition(_BaseCondition):
                 else:
                     self.notify()
 
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
         return success
 
-    def wait(self, /, timeout=None):
-        if not self._green_owned():
-            msg = "cannot wait on un-acquired lock"
-            raise RuntimeError(msg)
-
-        self._waiters.append(
-            token := (
-                event := create_green_event(),
-                self.timer(),
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    def _green_wait(self, /, predicate, timeout):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_green_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
             )
-        )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_green_event(),
+                    None,
+                    self._timer(),
+                )
+            )
 
         success = False
 
         try:
-            state = self._green_release_save()
+            success = event.wait(timeout)
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
 
-            if self.__counts:
-                task = current_green_task_ident()
+            raise
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
 
-                count = self.__counts.pop(task, 0)
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    def _async_owned(self, /) -> bool:
+        return True
+
+    def _green_owned(self, /) -> bool:
+        return True
+
+    @property
+    def lock(self, /) -> _T_co:
+        return self._lock
+
+    @property
+    def timer(self, /) -> _S_co:
+        return self._timer
+
+    @property
+    def waiting(self, /) -> int:
+        return len(self._waiters)
+
+
+class _SyncCondition(_BaseCondition[_T_co, _S_co]):
+    __slots__ = ("_counts",)
+
+    def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self:
+        self = object.__new__(cls)
+
+        self._counts = defaultdict(int)
+
+        self._lock = lock
+        self._timer = timer
+
+        self._waiters = deque()
+
+        self._notifying = ResourceGuard("notifying")
+
+        return self
+
+    def __bool__(self, /) -> bool:
+        return self._lock.locked()
+
+    async def __aenter__(self, /) -> Self:
+        if self._lock.acquire():
+            self._counts[current_async_task_ident()] += 1
+
+        return self
+
+    def __enter__(self, /) -> Self:
+        if self._lock.acquire():
+            self._counts[current_green_task_ident()] += 1
+
+        return self
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._counts:
+            task = current_async_task_ident()
+
+            count = self._counts.pop(task, 0)
+        else:
+            count = 0
+
+        if count < 1:
+            return
+
+        if count > 1:
+            self._counts[task] = count - 1
+
+        self._lock.release()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._counts:
+            task = current_green_task_ident()
+
+            count = self._counts.pop(task, 0)
+        else:
+            count = 0
+
+        if count < 1:
+            return
+
+        if count > 1:
+            self._counts[task] = count - 1
+
+        self._lock.release()
+
+    @overload
+    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    @overload
+    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(self, /, predicate):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_async_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
+            )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_async_event(),
+                    None,
+                    self._timer(),
+                )
+            )
+
+        success = False
+
+        try:
+            if self._counts:
+                task = current_async_task_ident()
+
+                count = self._counts.pop(task, 0)
             else:
                 count = 0
+
+            self._lock.release()
+
+            try:
+                success = await event
+            finally:
+                self._lock.acquire()
+
+                if count:
+                    self._counts[task] = count
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    def _green_wait(self, /, predicate, timeout):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_green_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
+            )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_green_event(),
+                    None,
+                    self._timer(),
+                )
+            )
+
+        success = False
+
+        try:
+            if self._counts:
+                task = current_green_task_ident()
+
+                count = self._counts.pop(task, 0)
+            else:
+                count = 0
+
+            self._lock.release()
 
             try:
                 success = event.wait(timeout)
             finally:
-                self._green_acquire_restore(state)
+                self._lock.acquire()
 
                 if count:
-                    self.__counts[task] = count
+                    self._counts[task] = count
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
+
+            raise
         finally:
             if not success:
                 if event.cancelled():
@@ -439,169 +853,803 @@ class _MixedCondition(_BaseCondition):
                 else:
                     self.notify()
 
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
         return success
 
-    # Internal methods used for overriding
+    def _async_owned(self, /) -> bool:
+        return self._lock.locked()
 
-    async def _async_enter(self, /):
-        return await self.lock.__aenter__()
-
-    def _green_enter(self, /):
-        return self.lock.__enter__()
-
-    async def _async_exit(self, /, exc_type, exc_value, traceback):
-        return await self.lock.__aexit__(exc_type, exc_value, traceback)
-
-    def _green_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
-
-    def _async_owned(self, /):
-        return self.lock.locked()
-
-    def _green_owned(self, /):
-        return self.lock.locked()
-
-    @shield
-    async def _async_acquire_restore(self, /, state):
-        await self.lock.async_acquire()
-
-    @shield
-    def _green_acquire_restore(self, /, state):
-        self.lock.green_acquire()
-
-    def _async_release_save(self, /):
-        return self.lock.async_release()
-
-    def _green_release_save(self, /):
-        return self.lock.green_release()
+    def _green_owned(self, /) -> bool:
+        return self._lock.locked()
 
 
-class _RMixedCondition(_MixedCondition):
+class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
     __slots__ = ()
 
-    def __init_subclass__(cls, /, **kwargs):
-        bcs = _RMixedCondition
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+    def __bool__(self, /) -> bool:
+        if self._lock._is_owned():
+            return True
 
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
-        raise TypeError(msg)
+        if self._lock.acquire(False):
+            self._lock.release()
 
-    # Internal methods used for overriding
+            return False
 
-    async def _async_enter(self, /):
-        return await self.lock.__aenter__()
+        return True
 
-    def _green_enter(self, /):
-        return self.lock.__enter__()
+    async def __aenter__(self, /) -> Self:
+        self._lock.acquire()
 
-    async def _async_exit(self, /, exc_type, exc_value, traceback):
-        return await self.lock.__aexit__(exc_type, exc_value, traceback)
+        return self
 
-    def _green_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
+    def __enter__(self, /) -> Self:
+        self._lock.acquire()
 
-    def _async_owned(self, /):
-        return self.lock.async_owned()
+        return self
 
-    def _green_owned(self, /):
-        return self.lock.green_owned()
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._lock._is_owned():
+            self._lock.release()
 
-    @shield
-    async def _async_acquire_restore(self, /, state):
-        await self.lock._async_acquire_restore(state)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._lock._is_owned():
+            self._lock.release()
 
-    @shield
-    def _green_acquire_restore(self, /, state):
-        self.lock._green_acquire_restore(state)
+    @overload
+    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    @overload
+    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(self, /, predicate):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_async_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
+            )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_async_event(),
+                    None,
+                    self._timer(),
+                )
+            )
 
-    def _async_release_save(self, /):
-        return self.lock._async_release_save()
+        success = False
 
-    def _green_release_save(self, /):
-        return self.lock._green_release_save()
+        try:
+            state = self._lock._release_save()
+
+            try:
+                success = await event
+            finally:
+                self._lock._acquire_restore(state)
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    def _green_wait(self, /, predicate, timeout):
+        if predicate is not None:
+            self._waiters.append(
+                token := [
+                    event := create_green_event(),
+                    predicate,
+                    self._timer(),
+                    MISSING,  # predicate result
+                    MISSING,  # predicate exception
+                ]
+            )
+        else:
+            self._waiters.append(
+                token := (
+                    event := create_green_event(),
+                    None,
+                    self._timer(),
+                )
+            )
+
+        success = False
+
+        try:
+            state = self._lock._release_save()
+
+            try:
+                success = event.wait(timeout)
+            finally:
+                self._lock._acquire_restore(state)
+        except BaseException:
+            if predicate is not None:
+                if token[4] is not MISSING:
+                    LOGGER.error(
+                        "exception calling predicate for %r",
+                        self,
+                        exc_info=token[4],
+                    )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled():
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    def _async_owned(self, /) -> bool:
+        return self._lock._is_owned()
+
+    def _green_owned(self, /) -> bool:
+        return self._lock._is_owned()
 
 
-class _SyncCondition(_MixedCondition):
+class _MixedCondition(_BaseCondition[_T_co, _S_co]):
+    __slots__ = ("_counts",)
+
+    def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self:
+        self = object.__new__(cls)
+
+        self._counts = defaultdict(int)
+
+        self._lock = lock
+        self._timer = timer
+
+        self._waiters = deque()
+
+        self._notifying = ResourceGuard("notifying")
+
+        return self
+
+    def __bool__(self, /) -> bool:
+        return not self._lock.value
+
+    async def __aenter__(self, /) -> Self:
+        if await self._lock.async_acquire():
+            self._counts[current_async_task_ident()] += 1
+
+        return self
+
+    def __enter__(self, /) -> Self:
+        if self._lock.green_acquire():
+            self._counts[current_green_task_ident()] += 1
+
+        return self
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._counts:
+            task = current_async_task_ident()
+
+            count = self._counts.pop(task, 0)
+        else:
+            count = 0
+
+        if count < 1:
+            return
+
+        if count > 1:
+            self._counts[task] = count - 1
+
+        self._lock.async_release()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._counts:
+            task = current_green_task_ident()
+
+            count = self._counts.pop(task, 0)
+        else:
+            count = 0
+
+        if count < 1:
+            return
+
+        if count > 1:
+            self._counts[task] = count - 1
+
+        self._lock.green_release()
+
+    async def for_(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        if not self._async_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
+
+        if result := predicate():
+            await async_checkpoint()
+
+            return result
+
+        if not delegate:
+            while True:
+                await self._async_wait(None)
+
+                if result := predicate():
+                    return result
+
+        return await self._async_wait(predicate)
+
+    def wait_for(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None = None,
+        *,
+        delegate: bool = True,
+    ) -> _T:
+        if not self._green_owned():
+            msg = "cannot wait on un-acquired lock"
+            raise RuntimeError(msg)
+
+        if result := predicate():
+            green_checkpoint()
+
+            return result
+
+        if not delegate:
+            deadline = None
+
+            while True:
+                if timeout is not None:
+                    if deadline is None:
+                        deadline = time.monotonic() + timeout
+                    else:
+                        timeout = deadline - time.monotonic()
+
+                        if timeout < 0:
+                            return result
+
+                self._green_wait(None, timeout)
+
+                if result := predicate():
+                    return result
+
+        return self._green_wait(predicate, timeout)
+
+    def notify(
+        self,
+        /,
+        count: int = 1,
+        *,
+        deadline: float | None = None,
+    ) -> int:
+        if not self:
+            msg = "cannot notify on un-acquired lock"
+            raise RuntimeError(msg)
+
+        with self._notifying:
+            waiters = self._waiters
+
+            notified = 0
+
+            while waiters and notified != count:
+                try:
+                    token = waiters[0]
+                except IndexError:
+                    break
+                else:
+                    event, predicate, time, *_ = token
+
+                    if deadline is None:
+                        deadline = self._timer()
+
+                    if time > deadline:
+                        break
+
+                    rotate = False
+
+                    if predicate is not None:
+                        try:
+                            result = predicate()
+                        except Exception as exc:
+                            token[4] = exc
+
+                            if self._lock._park(token):
+                                notified += 1
+                            else:
+                                LOGGER.exception(
+                                    "exception calling predicate for %r",
+                                    self,
+                                )
+                        else:
+                            if result:
+                                token[3] = result
+                            else:
+                                token[2] = self._timer()
+
+                                rotate = True
+
+                    if not rotate:
+                        if self._lock._park(token):
+                            notified += 1
+
+                    try:
+                        waiters.remove(token)
+                    except ValueError:
+                        pass
+                    else:
+                        if rotate:
+                            waiters.append(token)
+
+                            if event.is_set() or event.cancelled():
+                                try:
+                                    waiters.remove(token)
+                                except ValueError:
+                                    pass
+
+            return notified
+
+    @overload
+    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    @overload
+    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(self, /, predicate):
+        self._waiters.append(
+            token := [
+                event := create_async_event(),
+                predicate,
+                self._timer(),
+                MISSING,  # predicate result
+                MISSING,  # predicate exception
+                False,  # reparked
+            ]
+        )
+
+        success = False
+
+        try:
+            if self._counts:
+                task = current_green_task_ident()
+
+                count = self._counts.pop(task, 0)
+            else:
+                count = 0
+
+            self._lock.green_release()
+
+            try:
+                success = await event
+            finally:
+                if event.cancelled():
+                    if token[5]:
+                        self._lock._unpark(event)
+
+                    self._lock.green_acquire(_shield=True)
+                else:
+                    self._lock._after_park()
+
+                if count:
+                    self._counts[task] = count
+        except BaseException:
+            if token[4] is not MISSING:
+                LOGGER.error(
+                    "exception calling predicate for %r",
+                    self,
+                    exc_info=token[4],
+                )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled() and not token[5]:
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    def _green_wait(self, /, predicate, timeout):
+        self._waiters.append(
+            token := [
+                event := create_green_event(),
+                predicate,
+                self._timer(),
+                MISSING,  # predicate result
+                MISSING,  # predicate exception
+                False,  # reparked
+            ]
+        )
+
+        success = False
+
+        try:
+            if self._counts:
+                task = current_green_task_ident()
+
+                count = self._counts.pop(task, 0)
+            else:
+                count = 0
+
+            self._lock.green_release()
+
+            try:
+                success = event.wait(timeout)
+            finally:
+                if event.cancelled():
+                    if token[5]:
+                        self._lock._unpark(event)
+
+                    self._lock.green_acquire(_shield=True)
+                else:
+                    self._lock._after_park()
+
+                if count:
+                    self._counts[task] = count
+        except BaseException:
+            if token[4] is not MISSING:
+                LOGGER.error(
+                    "exception calling predicate for %r",
+                    self,
+                    exc_info=token[4],
+                )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled() and not token[5]:
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    def _async_owned(self, /) -> bool:
+        return not self._lock.value
+
+    def _green_owned(self, /) -> bool:
+        return not self._lock.value
+
+
+class _DMixedCondition(_MixedCondition[_T_co, _S_co]):
     __slots__ = ()
 
-    def __init_subclass__(cls, /, **kwargs):
-        bcs = _SyncCondition
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+    def __bool__(self, /) -> bool:
+        return self._lock.locked()
 
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
-        raise TypeError(msg)
+    def _async_owned(self, /) -> bool:
+        return self._lock.locked()
 
-    # Internal methods used for overriding
-
-    async def _async_enter(self, /):
-        return self.lock.__enter__()
-
-    def _green_enter(self, /):
-        return self.lock.__enter__()
-
-    async def _async_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
-
-    def _green_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
-
-    def _async_owned(self, /):
-        return self.lock.locked()
-
-    def _green_owned(self, /):
-        return self.lock.locked()
-
-    async def _async_acquire_restore(self, /, state):
-        self.lock.acquire()
-
-    def _green_acquire_restore(self, /, state):
-        self.lock.acquire()
-
-    def _async_release_save(self, /):
-        return self.lock.release()
-
-    def _green_release_save(self, /):
-        return self.lock.release()
+    def _green_owned(self, /) -> bool:
+        return self._lock.locked()
 
 
-class _RSyncCondition(_MixedCondition):
+class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     __slots__ = ()
 
-    def __init_subclass__(cls, /, **kwargs):
-        bcs = _RSyncCondition
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+    def __bool__(self, /) -> bool:
+        return self._lock.locked()
 
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
-        raise TypeError(msg)
+    async def __aenter__(self, /) -> Self:
+        await self._lock.async_acquire()
 
-    # Internal methods used for overriding
+        return self
 
-    async def _async_enter(self, /):
-        return self.lock.__enter__()
+    def __enter__(self, /) -> Self:
+        self._lock.green_acquire()
 
-    def _green_enter(self, /):
-        return self.lock.__enter__()
+        return self
 
-    async def _async_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._lock.async_owned():
+            self._lock.async_release()
 
-    def _green_exit(self, /, exc_type, exc_value, traceback):
-        return self.lock.__exit__(exc_type, exc_value, traceback)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._lock.green_owned():
+            self._lock.green_release()
 
-    def _async_owned(self, /):
-        return self.lock._is_owned()
+    notify = _MixedCondition.notify
 
-    def _green_owned(self, /):
-        return self.lock._is_owned()
+    @overload
+    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    @overload
+    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(self, /, predicate):
+        self._waiters.append(
+            token := [
+                event := create_async_event(),
+                predicate,
+                self._timer(),
+                MISSING,  # predicate result
+                MISSING,  # predicate exception
+                False,  # reparked
+                state := (self._lock.owner, getattr(self._lock, "count", 1)),
+            ]
+        )
 
-    async def _async_acquire_restore(self, /, state):
-        self.lock._acquire_restore(state)
+        success = False
 
-    def _green_acquire_restore(self, /, state):
-        self.lock._acquire_restore(state)
+        try:
+            if (count := state[1]) > 1:
+                self._lock.async_release(count)
+            else:
+                self._lock.async_release()
 
-    def _async_release_save(self, /):
-        return self.lock._release_save()
+            try:
+                success = await event
+            finally:
+                if event.cancelled():
+                    if token[5]:
+                        self._lock._unpark(event, state)
 
-    def _green_release_save(self, /):
-        return self.lock._release_save()
+                    await self._lock._async_acquire_on_behalf_of(
+                        *state,
+                        _shield=True,
+                    )
+                else:
+                    self._lock._after_park()
+        except BaseException:
+            if token[4] is not MISSING:
+                LOGGER.error(
+                    "exception calling predicate for %r",
+                    self,
+                    exc_info=token[4],
+                )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled() and not token[5]:
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
+    @overload
+    def _green_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    def _green_wait(self, /, predicate, timeout):
+        self._waiters.append(
+            token := [
+                event := create_green_event(),
+                predicate,
+                self._timer(),
+                MISSING,  # predicate result
+                MISSING,  # predicate exception
+                False,  # reparked
+                state := (self._lock.owner, getattr(self._lock, "count", 1)),
+            ]
+        )
+
+        success = False
+
+        try:
+            if (count := state[1]) > 1:
+                self._lock.green_release(count)
+            else:
+                self._lock.green_release()
+
+            try:
+                success = event.wait(timeout)
+            finally:
+                if event.cancelled():
+                    if token[5]:
+                        self._lock._unpark(event, state)
+
+                    self._lock._green_acquire_on_behalf_of(
+                        *state,
+                        _shield=True,
+                    )
+                else:
+                    self._lock._after_park()
+        except BaseException:
+            if token[4] is not MISSING:
+                LOGGER.error(
+                    "exception calling predicate for %r",
+                    self,
+                    exc_info=token[4],
+                )
+
+            raise
+        finally:
+            if not success:
+                if event.cancelled() and not token[5]:
+                    try:
+                        self._waiters.remove(token)
+                    except ValueError:
+                        pass
+                else:
+                    self.notify()
+
+        if predicate is not None:
+            if token[3] is not MISSING:
+                return token[3]
+
+            if token[4] is not MISSING:
+                try:
+                    raise token[4]
+                finally:
+                    token[4] = MISSING
+
+            return predicate()
+
+        return success
+
+    def _async_owned(self, /) -> bool:
+        return self._lock.async_owned()
+
+    def _green_owned(self, /) -> bool:
+        return self._lock.green_owned()

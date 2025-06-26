@@ -6,6 +6,9 @@
 import sys
 
 from types import TracebackType
+from typing import Any
+
+from .lowlevel import Event
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -67,6 +70,12 @@ class PLock:
     @property
     def waiting(self, /) -> int: ...
 
+    # Internal methods used by condition variables
+
+    def _park(self, /, token: list[Any]) -> bool: ...
+    def _unpark(self, /, event: Event) -> None: ...
+    def _after_park(self, /) -> None: ...
+
 class BLock(PLock):
     __slots__ = ()
 
@@ -107,16 +116,20 @@ class Lock(PLock):
         self,
         /,
         task: tuple[str, int],
+        count: int = 1,
         *,
         blocking: bool = True,
+        _shield: bool = False,
     ) -> bool: ...
     def _green_acquire_on_behalf_of(
         self,
         /,
         task: tuple[str, int],
+        count: int = 1,
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
     def green_acquire(
@@ -139,18 +152,14 @@ class Lock(PLock):
 
     # Internal methods used by condition variables
 
-    async def _async_acquire_restore(
+    def _park(self, /, token: list[Any]) -> bool: ...
+    def _unpark(
         self,
         /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool: ...
-    def _green_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool: ...
-    def _async_release_save(self, /) -> tuple[tuple[str, int], int]: ...
-    def _green_release_save(self, /) -> tuple[tuple[str, int], int]: ...
+        event: Event,
+        state: tuple[tuple[str, int], int] | None = None,
+    ) -> None: ...
+    def _after_park(self, /) -> None: ...
 
 class RLock(Lock):
     __slots__ = ("_count",)
@@ -163,6 +172,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        _shield: bool = False,
     ) -> bool: ...
     def _green_acquire_on_behalf_of(
         self,
@@ -172,6 +182,7 @@ class RLock(Lock):
         *,
         blocking: bool = True,
         timeout: float | None = None,
+        _shield: bool = False,
     ) -> bool: ...
     async def async_acquire(
         self,
@@ -196,18 +207,3 @@ class RLock(Lock):
     @property
     @deprecated("Use 'count' instead")
     def level(self, /) -> int: ...
-
-    # Internal methods used by condition variables
-
-    async def _async_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool: ...
-    def _green_acquire_restore(
-        self,
-        /,
-        state: tuple[tuple[str, int], int],
-    ) -> bool: ...
-    def _async_release_save(self, /) -> tuple[tuple[str, int], int]: ...
-    def _green_release_save(self, /) -> tuple[tuple[str, int], int]: ...
