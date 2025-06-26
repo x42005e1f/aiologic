@@ -877,16 +877,23 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
 class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
     __slots__ = ()
 
-    def __bool__(self, /) -> bool:
-        if self._lock._is_owned():
+    if sys.version_info >= (3, 14):
+
+        def __bool__(self, /) -> bool:
+            return self._lock.locked()
+
+    else:
+
+        def __bool__(self, /) -> bool:
+            if self._lock._is_owned():
+                return True
+
+            if self._lock.acquire(False):
+                self._lock.release()
+
+                return False
+
             return True
-
-        if self._lock.acquire(False):
-            self._lock.release()
-
-            return False
-
-        return True
 
     async def __aenter__(self, /) -> Self:
         self._lock.acquire()
