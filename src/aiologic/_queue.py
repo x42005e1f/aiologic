@@ -226,7 +226,11 @@ class Queue(Generic[_T]):
         if maxsize is None:
             maxsize = 0
         elif maxsize <= 0:
-            warnings.warn("Use maxsize=None instead", DeprecationWarning, 1)
+            warnings.warn(
+                "Use maxsize=None instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         self = object.__new__(cls)
 

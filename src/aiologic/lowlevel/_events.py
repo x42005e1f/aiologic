@@ -69,7 +69,7 @@ class GreenEvent(ABC, Event):
         warnings.warn(
             "Use create_green_event() instead",
             DeprecationWarning,
-            1,
+            stacklevel=2,
         )
 
         if cls is GreenEvent:
@@ -125,7 +125,7 @@ class AsyncEvent(ABC, Event):
         warnings.warn(
             "Use create_async_event() instead",
             DeprecationWarning,
-            1,
+            stacklevel=2,
         )
 
         if cls is AsyncEvent:

@@ -39,7 +39,11 @@ class PLock:
     )
 
     def __new__(cls, /) -> Self:
-        warnings.warn("Use BinarySemaphore instead", DeprecationWarning, 1)
+        warnings.warn(
+            "Use BinarySemaphore instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         self = object.__new__(cls)
 
@@ -49,7 +53,11 @@ class PLock:
 
     def __init_subclass__(cls, /, **kwargs: Any) -> None:
         if cls.__module__ != __name__:
-            warnings.warn("Use BinarySemaphore instead", DeprecationWarning, 1)
+            warnings.warn(
+                "Use BinarySemaphore instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         super().__init_subclass__(**kwargs)
 
@@ -147,7 +155,7 @@ class BLock(PLock):
         warnings.warn(
             "Use BoundedBinarySemaphore instead",
             DeprecationWarning,
-            1,
+            stacklevel=2,
         )
 
         self = object.__new__(cls)
@@ -160,7 +168,7 @@ class BLock(PLock):
         warnings.warn(
             "Use BoundedBinarySemaphore instead",
             DeprecationWarning,
-            1,
+            stacklevel=2,
         )
 
         super().__init_subclass__(**kwargs)
@@ -769,6 +777,6 @@ class RLock(Lock):
 
     @property
     def level(self, /) -> int:
-        warnings.warn("Use 'count' instead", DeprecationWarning, 1)
+        warnings.warn("Use 'count' instead", DeprecationWarning, stacklevel=2)
 
         return self._count

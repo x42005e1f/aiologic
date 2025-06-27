@@ -32,7 +32,11 @@ class Flag(aiologic._flag.Flag[_T]):
     __slots__ = ()
 
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
-        warnings.warn("Use aiologic.Flag instead", DeprecationWarning, 1)
+        warnings.warn(
+            "Use aiologic.Flag instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         self = object.__new__(cls)
 
@@ -44,7 +48,11 @@ class Flag(aiologic._flag.Flag[_T]):
         return self
 
     def __init_subclass__(cls, /, **kwargs: Any) -> None:
-        warnings.warn("Use aiologic.Flag instead", DeprecationWarning, 1)
+        warnings.warn(
+            "Use aiologic.Flag instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         super().__init_subclass__(**kwargs)
 

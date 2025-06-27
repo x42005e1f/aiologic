@@ -538,7 +538,11 @@ def green_checkpoint(*, force: bool = False) -> None:
 
 
 async def checkpoint(*, force: bool = False) -> None:
-    warnings.warn("Use async_checkpoint() instead", DeprecationWarning, 1)
+    warnings.warn(
+        "Use async_checkpoint() instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if _async_checkpoints_enabled or force:
         library = current_async_library(failsafe=True)
