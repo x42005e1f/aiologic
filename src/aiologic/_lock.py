@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-import sys
+import warnings
 
 from collections import deque
 from typing import TYPE_CHECKING, Any
@@ -21,12 +21,9 @@ from .lowlevel import (
     green_checkpoint,
 )
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
-
 if TYPE_CHECKING:
+    import sys
+
     from types import TracebackType
 
     if sys.version_info >= (3, 11):
@@ -41,13 +38,20 @@ class PLock:
         "_impl",
     )
 
-    @deprecated("Use BinarySemaphore instead")
     def __new__(cls, /) -> Self:
+        warnings.warn("Use BinarySemaphore instead", DeprecationWarning, 1)
+
         self = object.__new__(cls)
 
         self._impl = BinarySemaphore()
 
         return self
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> None:
+        if cls.__module__ != __name__:
+            warnings.warn("Use BinarySemaphore instead", DeprecationWarning, 1)
+
+        super().__init_subclass__(**kwargs)
 
     def __getstate__(self, /) -> None:
         return None
@@ -139,13 +143,27 @@ class PLock:
 class BLock(PLock):
     __slots__ = ()
 
-    @deprecated("Use BoundedBinarySemaphore instead")
     def __new__(cls, /) -> Self:
+        warnings.warn(
+            "Use BoundedBinarySemaphore instead",
+            DeprecationWarning,
+            1,
+        )
+
         self = object.__new__(cls)
 
         self._impl = BinarySemaphore(max_value=1)
 
         return self
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> None:
+        warnings.warn(
+            "Use BoundedBinarySemaphore instead",
+            DeprecationWarning,
+            1,
+        )
+
+        super().__init_subclass__(**kwargs)
 
 
 class Lock(PLock):
@@ -750,6 +768,7 @@ class RLock(Lock):
         return self._count
 
     @property
-    @deprecated("Use 'count' instead")
     def level(self, /) -> int:
+        warnings.warn("Use 'count' instead", DeprecationWarning, 1)
+
         return self._count

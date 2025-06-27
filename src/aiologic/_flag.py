@@ -38,7 +38,7 @@ class Flag(Generic[_T]):
     )
 
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
-        self = super().__new__(cls)
+        self = object.__new__(cls)
 
         if marker is not MISSING:
             self._markers = [marker]

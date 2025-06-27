@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
@@ -19,11 +20,6 @@ from ._libraries import current_async_library, current_green_library
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
 from ._utils import _external as external, _replaces as replaces
-
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -541,8 +537,9 @@ def green_checkpoint(*, force: bool = False) -> None:
                 _time._gevent_sleep()
 
 
-@deprecated("Use async_checkpoint() instead")
 async def checkpoint(*, force: bool = False) -> None:
+    warnings.warn("Use async_checkpoint() instead", DeprecationWarning, 1)
+
     if _async_checkpoints_enabled or force:
         library = current_async_library(failsafe=True)
 

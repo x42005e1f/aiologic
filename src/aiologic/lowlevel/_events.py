@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 
 from abc import ABC, abstractmethod
 from typing import (
@@ -20,11 +21,6 @@ from typing import (
 
 from ._checkpoints import async_checkpoint, green_checkpoint
 from ._waiters import create_async_waiter, create_green_waiter
-
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
@@ -69,12 +65,17 @@ class Event(Protocol):
 class GreenEvent(ABC, Event):
     __slots__ = ()
 
-    @deprecated("Use create_green_event() instead")
     def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
+        warnings.warn(
+            "Use create_green_event() instead",
+            DeprecationWarning,
+            1,
+        )
+
         if cls is GreenEvent:
             return _GreenEventImpl.__new__(_GreenEventImpl)
 
-        return super().__new__(cls)
+        return object.__new__(cls)
 
     @abstractmethod
     def wait(self, /, timeout: float | None = None) -> bool:
@@ -120,12 +121,17 @@ class GreenEvent(ABC, Event):
 class AsyncEvent(ABC, Event):
     __slots__ = ()
 
-    @deprecated("Use create_async_event() instead")
     def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
+        warnings.warn(
+            "Use create_async_event() instead",
+            DeprecationWarning,
+            1,
+        )
+
         if cls is AsyncEvent:
             return _AsyncEventImpl.__new__(_AsyncEventImpl)
 
-        return super().__new__(cls)
+        return object.__new__(cls)
 
     @abstractmethod
     def __await__(self, /) -> Generator[Any, Any, bool]:
