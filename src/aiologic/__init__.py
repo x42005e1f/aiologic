@@ -15,6 +15,9 @@ from ._barrier import (
 from ._condition import (
     Condition as Condition,
 )
+from ._decorator import (
+    synchronized as synchronized,
+)
 from ._event import (
     CountdownEvent as CountdownEvent,
     Event as Event,

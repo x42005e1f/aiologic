@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.synchronized()` as an async-aware alternative to
+  `wrapt.synchronized()`.
 - `aiologic.SimpleLifoQueue` as a simplified LIFO queue, i.e. a lightweight
   alternative to `aiologic.LifoQueue` without `maxsize` support.
 - `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
