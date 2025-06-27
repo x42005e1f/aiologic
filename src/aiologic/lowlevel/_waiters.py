@@ -365,6 +365,15 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
     _LOGGER = getLogger("concurrent.futures")
 
     class _CurioFuture:
+        __slots__ = (
+            "__weakref__",
+            "_cancelled",
+            "_done_callbacks",
+            "_exception",
+            "_pending",
+            "_result",
+        )
+
         def __init__(self, /) -> None:
             self._cancelled = True
             self._done_callbacks = []
