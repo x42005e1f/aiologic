@@ -83,6 +83,13 @@ Commit messages are consistent with
   event respectively. In fact, `aiologic.lowlevel.SET_EVENT` is just a copy of
   `aiologic.lowlevel.DUMMY_EVENT`, but to avoid confusion both variants will
   coexist (maybe temporarily, maybe not).
+- `aiologic.testing` subpackage for testing purposes. It is intended to isolate
+  complex `aiologic` testing logic (such as running tests on all supported
+  libraries), but can also be used by users to create their own tests.
+- `aiologic.testing.create_executor()` function to create an executor object
+  that executes tasks of the chosen library in a separate thread.
+- `aiologic.testing.current_executor()` function to get the executor object
+  that executes the current task.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
