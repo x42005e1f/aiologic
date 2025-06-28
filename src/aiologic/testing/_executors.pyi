@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: ISC
 
 import sys
+import threading
 
 from concurrent.futures import Executor, Future
 from contextvars import ContextVar
@@ -83,6 +84,10 @@ class _TaskExecutor(Executor):
     @property
     def library(self, /) -> str: ...
 
+class _ExecutorLocal(threading.local):
+    executor: _TaskExecutor | None = None
+
+_executor_tlocal: _ExecutorLocal
 _executor_cvar: ContextVar[_TaskExecutor | None]
 
 def _get_threading_executor_class() -> type[_TaskExecutor]: ...

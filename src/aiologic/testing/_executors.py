@@ -178,6 +178,11 @@ class _TaskExecutor(Executor):
         return self._library
 
 
+class _ExecutorLocal(threading.local):
+    executor: _TaskExecutor | None = None
+
+
+_executor_tlocal: _ExecutorLocal = _ExecutorLocal()
 _executor_cvar: ContextVar[_TaskExecutor | None] = ContextVar(
     "_executor_cvar",
     default=None,
@@ -190,6 +195,8 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -221,6 +228,8 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
             finally:
                 _executor_cvar.reset(token)
 
+                del _executor_tlocal.executor
+
     return _ThreadingExecutor
 
 
@@ -234,6 +243,8 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -257,6 +268,8 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
             finally:
                 _executor_cvar.reset(token)
 
+                del _executor_tlocal.executor
+
     return _EventletExecutor
 
 
@@ -269,6 +282,8 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -292,6 +307,8 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
             finally:
                 _executor_cvar.reset(token)
 
+                del _executor_tlocal.executor
+
     return _GeventExecutor
 
 
@@ -306,6 +323,8 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
             asyncio.run(self._listen())
 
         async def _listen(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -328,6 +347,8 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
             finally:
                 _executor_cvar.reset(token)
 
+                del _executor_tlocal.executor
+
     return _AsyncioExecutor
 
 
@@ -343,6 +364,8 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
             curio.run(self._listen, taskcls=curio.task.ContextTask)
 
         async def _listen(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -360,6 +383,8 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
             finally:
                 _executor_cvar.reset(token)
 
+                del _executor_tlocal.executor
+
     return _CurioExecutor
 
 
@@ -374,6 +399,8 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
             trio.run(self._listen)
 
         async def _listen(self, /) -> None:
+            _executor_tlocal.executor = self
+
             token = _executor_cvar.set(self)
 
             try:
@@ -390,6 +417,8 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
                             work_item.green_run()
             finally:
                 _executor_cvar.reset(token)
+
+                del _executor_tlocal.executor
 
     return _TrioExecutor
 
@@ -493,10 +522,11 @@ def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
 
 
 def current_executor() -> _TaskExecutor:
-    executor = _executor_cvar.get()
+    if (executor := _executor_tlocal.executor) is not None:
+        return executor
 
-    if executor is None:
-        msg = "no current executor"
-        raise RuntimeError(msg)
+    if (executor := _executor_cvar.get()) is not None:
+        return executor
 
-    return executor
+    msg = "no current executor"
+    raise RuntimeError(msg)
