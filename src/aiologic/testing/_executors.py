@@ -10,6 +10,7 @@ import threading
 
 from concurrent.futures import Executor, Future
 from contextvars import ContextVar, copy_context
+from functools import partial
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypeVar
 
@@ -214,7 +215,7 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
                     )
                     threads.add(thread)
                     work_item.add_done_callback(
-                        lambda thread=thread: threads.discard(thread)
+                        partial(threads.discard, thread)
                     )
                     thread.start()
 
