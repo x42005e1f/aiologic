@@ -214,7 +214,7 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
                     )
                     threads.add(thread)
                     work_item.add_done_callback(
-                        lambda _, thread=thread: threads.discard(thread)
+                        lambda thread=thread: threads.discard(thread)
                     )
                     thread.start()
 
