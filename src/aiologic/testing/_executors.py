@@ -463,49 +463,35 @@ def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
         else:
             backend = library
 
-    if backend == "threading":
-        if library != "threading":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
+    if library == "threading":
+        if backend == "threading":
+            return _create_threading_executor(library, backend)
+    elif library == "eventlet":
+        if backend == "eventlet":
+            return _create_eventlet_executor(library, backend)
+    elif library == "gevent":
+        if backend == "gevent":
+            return _create_gevent_executor(library, backend)
+    elif library == "asyncio":
+        if backend == "asyncio":
+            return _create_asyncio_executor(library, backend)
+    elif library == "curio":
+        if backend == "curio":
+            return _create_curio_executor(library, backend)
+    elif library == "trio":
+        if backend == "trio":
+            return _create_trio_executor(library, backend)
+    elif library == "anyio":
+        if backend == "asyncio":
+            return _create_asyncio_executor(library, backend)
 
-        return _create_threading_executor(library, backend)
+        if backend == "trio":
+            return _create_trio_executor(library, backend)
+    else:
+        msg = f"unsupported library {library!r}"
+        raise ValueError(msg)
 
-    if backend == "eventlet":
-        if library != "eventlet":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
-
-        return _create_eventlet_executor(library, backend)
-
-    if backend == "gevent":
-        if library != "gevent":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
-
-        return _create_gevent_executor(library, backend)
-
-    if backend == "asyncio":
-        if library != "asyncio" and library != "anyio":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
-
-        return _create_asyncio_executor(library, backend)
-
-    if backend == "curio":
-        if library != "curio":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
-
-        return _create_curio_executor(library, backend)
-
-    if backend == "trio":
-        if library != "trio" and library != "anyio":
-            msg = f"unsupported library {library!r}"
-            raise ValueError(msg)
-
-        return _create_trio_executor(library, backend)
-
-    msg = f"unsupported backend {backend!r}"
+    msg = f"unsupported backend {backend!r} for library {library!r}"
     raise ValueError(msg)
 
 
