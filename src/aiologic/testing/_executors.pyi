@@ -8,7 +8,7 @@ import threading
 
 from concurrent.futures import Executor, Future
 from contextvars import ContextVar
-from typing import TypeVar
+from typing import TypeVar, overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -16,9 +16,9 @@ else:
     from typing_extensions import ParamSpec
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 else:
-    from typing import Callable
+    from typing import Awaitable, Callable
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -57,6 +57,15 @@ class _TaskExecutor(Executor):
 
     def __init__(self, /, library: str, backend: str) -> None: ...
     if sys.version_info >= (3, 9):
+        @overload
+        def submit(
+            self,
+            fn: Callable[_P, Awaitable[_T]],
+            /,
+            *args: _P.args,
+            **kwargs: _P.kwargs,
+        ) -> Future[_T]: ...
+        @overload
         def submit(
             self,
             fn: Callable[_P, _T],
@@ -66,6 +75,14 @@ class _TaskExecutor(Executor):
         ) -> Future[_T]: ...
 
     else:
+        @overload
+        def submit(
+            self,
+            fn: Callable[_P, Awaitable[_T]],
+            *args: _P.args,
+            **kwargs: _P.kwargs,
+        ) -> Future[_T]: ...
+        @overload
         def submit(
             self,
             fn: Callable[_P, _T],

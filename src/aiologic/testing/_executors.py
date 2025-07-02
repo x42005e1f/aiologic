@@ -12,7 +12,7 @@ from concurrent.futures import Executor, Future
 from contextvars import ContextVar, copy_context
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import aiologic
 
@@ -25,9 +25,9 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable
+        from collections.abc import Awaitable, Callable
     else:
-        from typing import Callable
+        from typing import Awaitable, Callable
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -109,13 +109,23 @@ class _TaskExecutor(Executor):
         self._work_queue = aiologic.SimpleQueue()
         self._work_thread = None
 
+    @overload
+    def submit(
+        self,
+        fn: Callable[_P, Awaitable[_T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    @overload
     def submit(
         self,
         fn: Callable[_P, _T],
         /,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Future[_T]:
+    ) -> Future[_T]: ...
+    def submit(self, fn, /, *args, **kwargs):
         with self._shutdown_lock:
             if self._shutdown:
                 msg = "cannot schedule new futures after shutdown"
@@ -134,12 +144,21 @@ class _TaskExecutor(Executor):
     if sys.version_info < (3, 9):
         _submit = submit
 
+        @overload
+        def submit(
+            self,
+            fn: Callable[_P, Awaitable[_T]],
+            *args: _P.args,
+            **kwargs: _P.kwargs,
+        ) -> Future[_T]: ...
+        @overload
         def submit(
             self,
             fn: Callable[_P, _T],
             *args: _P.args,
             **kwargs: _P.kwargs,
-        ) -> Future[_T]:
+        ) -> Future[_T]: ...
+        def submit(self, fn, *args, **kwargs):
             return self._submit(fn, *args, **kwargs)
 
     def shutdown(
