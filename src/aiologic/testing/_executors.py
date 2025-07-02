@@ -488,7 +488,10 @@ def _create_trio_executor(library: str, backend: str) -> _TaskExecutor:
 
 def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
     if backend is None:
-        backend = library
+        if library == "anyio":
+            backend = "asyncio"
+        else:
+            backend = library
 
     if backend == "threading":
         if library != "threading":
