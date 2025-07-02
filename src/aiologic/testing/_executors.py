@@ -8,7 +8,12 @@ from __future__ import annotations
 import sys
 import threading
 
-from concurrent.futures import Executor, Future
+from concurrent.futures import (
+    BrokenExecutor,
+    Executor,
+    Future,
+    InvalidStateError,
+)
 from functools import partial
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar, overload
@@ -70,11 +75,21 @@ class _WorkItem:
 
             if iscoroutinefunction(self._func):
                 result = await result
-        except BaseException as exc:  # noqa: BLE001
-            self._future.set_exception(exc)
-            self = None  # noqa: PLW0642
+        except BaseException as exc:
+            try:
+                self._future.set_exception(exc)
+            except InvalidStateError:
+                pass
+            else:
+                self = None  # noqa: PLW0642
+                return
+
+            raise
         else:
-            self._future.set_result(result)
+            try:
+                self._future.set_result(result)
+            except InvalidStateError:
+                pass
 
     def green_run(self, /, executor: _TaskExecutor | None = None) -> None:
         if not self._future.set_running_or_notify_cancel():
@@ -89,11 +104,21 @@ class _WorkItem:
             if iscoroutinefunction(self._func):
                 msg = f"a green function was expected, got {self._func!r}"
                 raise TypeError(msg)
-        except BaseException as exc:  # noqa: BLE001
-            self._future.set_exception(exc)
-            self = None  # noqa: PLW0642
+        except BaseException as exc:
+            try:
+                self._future.set_exception(exc)
+            except InvalidStateError:
+                pass
+            else:
+                self = None  # noqa: PLW0642
+                return
+
+            raise
         else:
-            self._future.set_result(result)
+            try:
+                self._future.set_result(result)
+            except InvalidStateError:
+                pass
         finally:
             if executor is not None:
                 del _executor_tlocal.executor
@@ -104,14 +129,25 @@ class _WorkItem:
     def cancel(self, /) -> None:
         self._future.cancel()
 
+    def abort(self, /, cause: BaseException) -> None:
+        exc = BrokenExecutor()
+        exc.__cause__ = cause
+
+        try:
+            self._future.set_exception(exc)
+        except InvalidStateError:
+            pass
+
 
 class _TaskExecutor(Executor):
     __slots__ = (
         "_backend",
         "_backend_options",
+        "_broken_by",
         "_library",
         "_shutdown",
         "_shutdown_lock",
+        "_work_items",
         "_work_queue",
         "_work_thread",
     )
@@ -130,8 +166,11 @@ class _TaskExecutor(Executor):
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
 
+        self._work_items = set()
         self._work_queue = aiologic.SimpleQueue()
         self._work_thread = None
+
+        self._broken_by = None
 
     @overload
     def submit(
@@ -151,6 +190,9 @@ class _TaskExecutor(Executor):
     ) -> Future[_T]: ...
     def submit(self, fn, /, *args, **kwargs):
         with self._shutdown_lock:
+            if self._broken_by is not None:
+                raise BrokenExecutor from self._broken_by
+
             if self._shutdown:
                 msg = "cannot schedule new futures after shutdown"
                 raise RuntimeError(msg)
@@ -161,7 +203,16 @@ class _TaskExecutor(Executor):
 
             future = Future()
 
-            self._work_queue.put(_WorkItem(future, fn, *args, **kwargs))
+            work_item = _WorkItem(future, fn, *args, **kwargs)
+            self._work_items.add(work_item)
+            work_item.add_done_callback(
+                partial(
+                    self._work_items.discard,
+                    work_item,
+                )
+            )
+
+            self._work_queue.put(work_item)
 
             return future
 
@@ -195,13 +246,21 @@ class _TaskExecutor(Executor):
             self._shutdown = True
 
             if cancel_futures:
-                while True:
+                work_items = self._work_items
+                work_queue = self._work_queue
+
+                while work_queue:
                     try:
-                        work_item = self._work_queue.green_get(blocking=False)
+                        work_queue.green_get(blocking=False)
                     except aiologic.QueueEmpty:
                         break
 
-                    if work_item is not None:
+                while work_items:
+                    try:
+                        work_item = work_items.pop()
+                    except IndexError:
+                        break
+                    else:
                         work_item.cancel()
 
             self._work_queue.put(None)
@@ -209,6 +268,27 @@ class _TaskExecutor(Executor):
         if wait:
             if self._work_thread is not None:
                 self._work_thread.join()
+
+    def _abort(self, /, cause: BaseException) -> None:
+        with self._shutdown_lock:
+            self._broken_by = cause
+
+            work_items = self._work_items
+            work_queue = self._work_queue
+
+            while work_queue:
+                try:
+                    work_queue.green_get(blocking=False)
+                except aiologic.QueueEmpty:
+                    break
+
+            while work_items:
+                try:
+                    work_item = work_items.pop()
+                except IndexError:
+                    break
+                else:
+                    work_item.abort(cause)
 
     def _run(self, /) -> None:
         raise NotImplementedError
@@ -228,36 +308,55 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            self._apply_backend_options(**self._backend_options)
-            self._listen()
+            try:
+                self._apply_backend_options(**self._backend_options)
+                self._listen()
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         def _apply_backend_options(self, /) -> None:
             pass
 
         def _listen(self, /) -> None:
-            threads = set()
+            _executor_tlocal.executor = self
 
-            while True:
-                work_item = self._work_queue.green_get()
+            try:
+                threads = set()
 
-                if work_item is None:
-                    break
+                while True:
+                    work_item = self._work_queue.green_get()
 
-                thread = threading.Thread(
-                    target=work_item.green_run,
-                    args=[self],
-                )
-                threads.add(thread)
-                work_item.add_done_callback(partial(threads.discard, thread))
-                thread.start()
+                    if work_item is None:
+                        break
 
-            while threads:
+                    thread = threading.Thread(
+                        target=work_item.green_run,
+                        args=[self],
+                    )
+                    threads.add(thread)
+                    work_item.add_done_callback(
+                        partial(
+                            threads.discard,
+                            thread,
+                        )
+                    )
+                    thread.start()
+
+                while threads:
+                    try:
+                        thread = threads.pop()
+                    except KeyError:
+                        break
+                    else:
+                        thread.join()
+            finally:
                 try:
-                    thread = threads.pop()
-                except KeyError:
-                    break
-                else:
-                    thread.join()
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _ThreadingExecutor
 
@@ -272,8 +371,12 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            self._apply_backend_options(**self._backend_options)
-            self._listen()
+            try:
+                self._apply_backend_options(**self._backend_options)
+                self._listen()
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -300,7 +403,12 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
                     if hasattr(hub, "destroy"):
                         hub.destroy()
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _EventletExecutor
 
@@ -314,8 +422,12 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            self._apply_backend_options(**self._backend_options)
-            self._listen()
+            try:
+                self._apply_backend_options(**self._backend_options)
+                self._listen()
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -342,7 +454,12 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
                     if hasattr(hub, "destroy"):
                         hub.destroy()
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _GeventExecutor
 
@@ -355,7 +472,11 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            asyncio.run(self._listen(), **self._backend_options)
+            try:
+                asyncio.run(self._listen(), **self._backend_options)
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -375,7 +496,12 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
 
                 await asyncio.gather(*tasks)
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _AsyncioExecutor
 
@@ -389,7 +515,11 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            curio.run(self._listen, **self._backend_options)
+            try:
+                curio.run(self._listen, **self._backend_options)
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -404,7 +534,12 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
 
                         await g.spawn(work_item.async_run)
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _CurioExecutor
 
@@ -417,7 +552,11 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            trio.run(self._listen, **self._backend_options)
+            try:
+                trio.run(self._listen, **self._backend_options)
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -432,7 +571,12 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
 
                         nursery.start_soon(work_item.async_run)
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _TrioExecutor
 
@@ -445,11 +589,15 @@ def _get_anyio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            anyio.run(
-                self._listen,
-                backend=self._backend,
-                backend_options=self._backend_options,
-            )
+            try:
+                anyio.run(
+                    self._listen,
+                    backend=self._backend,
+                    backend_options=self._backend_options,
+                )
+            except BaseException as exc:  # noqa: BLE001
+                self._abort(exc)
+                self = None  # noqa: PLW0642
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -464,7 +612,12 @@ def _get_anyio_executor_class() -> type[_TaskExecutor]:
 
                         tg.start_soon(work_item.async_run)
             finally:
-                del _executor_tlocal.executor
+                try:
+                    del _executor_tlocal.executor
+                except AttributeError:
+                    pass
+
+                self = None  # noqa: PLW0642
 
     return _AnyioExecutor
 
