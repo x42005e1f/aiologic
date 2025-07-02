@@ -11,7 +11,7 @@ import threading
 from concurrent.futures import Executor, Future
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import aiologic
 
@@ -108,6 +108,7 @@ class _WorkItem:
 class _TaskExecutor(Executor):
     __slots__ = (
         "_backend",
+        "_backend_options",
         "_library",
         "_shutdown",
         "_shutdown_lock",
@@ -115,8 +116,15 @@ class _TaskExecutor(Executor):
         "_work_thread",
     )
 
-    def __init__(self, /, library: str, backend: str) -> None:
+    def __init__(
+        self,
+        /,
+        library: str,
+        backend: str,
+        backend_options: dict[str, Any],
+    ) -> None:
         self._backend = backend
+        self._backend_options = backend_options
         self._library = library
 
         self._shutdown = False
@@ -220,6 +228,13 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            self._apply_backend_options(**self._backend_options)
+            self._listen()
+
+        def _apply_backend_options(self, /) -> None:
+            pass
+
+        def _listen(self, /) -> None:
             threads = set()
 
             while True:
@@ -257,6 +272,13 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            self._apply_backend_options(**self._backend_options)
+            self._listen()
+
+        def _apply_backend_options(self, /) -> None:
+            pass
+
+        def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
@@ -292,6 +314,13 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
+            self._apply_backend_options(**self._backend_options)
+            self._listen()
+
+        def _apply_backend_options(self, /) -> None:
+            pass
+
+        def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
@@ -326,7 +355,7 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            asyncio.run(self._listen())
+            asyncio.run(self._listen(), **self._backend_options)
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -360,7 +389,7 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            curio.run(self._listen, taskcls=curio.task.ContextTask)
+            curio.run(self._listen, **self._backend_options)
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -388,7 +417,7 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            trio.run(self._listen)
+            trio.run(self._listen, **self._backend_options)
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -416,7 +445,11 @@ def _get_anyio_executor_class() -> type[_TaskExecutor]:
         __slots__ = ()
 
         def _run(self, /) -> None:
-            anyio.run(self._listen, backend=self._backend)
+            anyio.run(
+                self._listen,
+                backend=self._backend,
+                backend_options=self._backend_options,
+            )
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -436,96 +469,136 @@ def _get_anyio_executor_class() -> type[_TaskExecutor]:
     return _AnyioExecutor
 
 
-def _create_threading_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_threading_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_threading_executor
 
     _create_threading_executor = _get_threading_executor_class()
 
-    return _create_threading_executor(library, backend)
+    return _create_threading_executor(library, backend, backend_options)
 
 
-def _create_eventlet_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_eventlet_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_eventlet_executor
 
     _create_eventlet_executor = _get_eventlet_executor_class()
 
-    return _create_eventlet_executor(library, backend)
+    return _create_eventlet_executor(library, backend, backend_options)
 
 
-def _create_gevent_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_gevent_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_gevent_executor
 
     _create_gevent_executor = _get_gevent_executor_class()
 
-    return _create_gevent_executor(library, backend)
+    return _create_gevent_executor(library, backend, backend_options)
 
 
-def _create_asyncio_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_asyncio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_asyncio_executor
 
     _create_asyncio_executor = _get_asyncio_executor_class()
 
-    return _create_asyncio_executor(library, backend)
+    return _create_asyncio_executor(library, backend, backend_options)
 
 
-def _create_curio_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_curio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_curio_executor
 
     _create_curio_executor = _get_curio_executor_class()
 
-    return _create_curio_executor(library, backend)
+    return _create_curio_executor(library, backend, backend_options)
 
 
-def _create_trio_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_trio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_trio_executor
 
     _create_trio_executor = _get_trio_executor_class()
 
-    return _create_trio_executor(library, backend)
+    return _create_trio_executor(library, backend, backend_options)
 
 
-def _create_anyio_executor(library: str, backend: str) -> _TaskExecutor:
+def _create_anyio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor:
     global _create_anyio_executor
 
     _create_anyio_executor = _get_anyio_executor_class()
 
-    return _create_anyio_executor(library, backend)
+    return _create_anyio_executor(library, backend, backend_options)
 
 
-def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
+def create_executor(
+    library: str,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _TaskExecutor:
     if backend is None:
         if library == "anyio":
             backend = "asyncio"
         else:
             backend = library
 
+    if backend_options is None:
+        backend_options = {}
+
+    impl = None
+
     if library == "threading":
         if backend == "threading":
-            return _create_threading_executor(library, backend)
+            impl = _create_threading_executor
     elif library == "eventlet":
         if backend == "eventlet":
-            return _create_eventlet_executor(library, backend)
+            impl = _create_eventlet_executor
     elif library == "gevent":
         if backend == "gevent":
-            return _create_gevent_executor(library, backend)
+            impl = _create_gevent_executor
     elif library == "asyncio":
         if backend == "asyncio":
-            return _create_asyncio_executor(library, backend)
+            impl = _create_asyncio_executor
     elif library == "curio":
         if backend == "curio":
-            return _create_curio_executor(library, backend)
+            impl = _create_curio_executor
     elif library == "trio":
         if backend == "trio":
-            return _create_trio_executor(library, backend)
+            impl = _create_trio_executor
     elif library == "anyio":
         if backend == "asyncio" or backend == "trio":
-            return _create_anyio_executor(library, backend)
+            impl = _create_anyio_executor
     else:
         msg = f"unsupported library {library!r}"
         raise ValueError(msg)
 
-    msg = f"unsupported backend {backend!r} for library {library!r}"
-    raise ValueError(msg)
+    if impl is None:
+        msg = f"unsupported backend {backend!r} for library {library!r}"
+        raise ValueError(msg)
+
+    return impl(library, backend, backend_options)
 
 
 def current_executor() -> _TaskExecutor:

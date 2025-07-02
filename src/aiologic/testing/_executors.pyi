@@ -7,7 +7,7 @@ import sys
 import threading
 
 from concurrent.futures import Executor, Future
-from typing import TypeVar, overload
+from typing import Any, TypeVar, overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -51,6 +51,7 @@ class _WorkItem:
 class _TaskExecutor(Executor):
     __slots__ = (
         "_backend",
+        "_backend_options",
         "_library",
         "_shutdown",
         "_shutdown_lock",
@@ -58,7 +59,13 @@ class _TaskExecutor(Executor):
         "_work_thread",
     )
 
-    def __init__(self, /, library: str, backend: str) -> None: ...
+    def __init__(
+        self,
+        /,
+        library: str,
+        backend: str,
+        backend_options: dict[str, Any],
+    ) -> None: ...
     if sys.version_info >= (3, 9):
         @overload
         def submit(
@@ -114,15 +121,41 @@ def _get_anyio_executor_class() -> type[_TaskExecutor]: ...
 def _create_threading_executor(
     library: str,
     backend: str,
+    backend_options: dict[str, Any],
 ) -> _TaskExecutor: ...
-def _create_eventlet_executor(library: str, backend: str) -> _TaskExecutor: ...
-def _create_gevent_executor(library: str, backend: str) -> _TaskExecutor: ...
-def _create_asyncio_executor(library: str, backend: str) -> _TaskExecutor: ...
-def _create_curio_executor(library: str, backend: str) -> _TaskExecutor: ...
-def _create_trio_executor(library: str, backend: str) -> _TaskExecutor: ...
-def _create_anyio_executor(library: str, backend: str) -> _TaskExecutor: ...
+def _create_eventlet_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
+def _create_gevent_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
+def _create_asyncio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
+def _create_curio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
+def _create_trio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
+def _create_anyio_executor(
+    library: str,
+    backend: str,
+    backend_options: dict[str, Any],
+) -> _TaskExecutor: ...
 def create_executor(
     library: str,
     backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
 ) -> _TaskExecutor: ...
 def current_executor() -> _TaskExecutor: ...
