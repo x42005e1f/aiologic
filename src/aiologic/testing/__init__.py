@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: ISC
 
 from ._executors import (
+    TaskExecutor as TaskExecutor,
     create_executor as create_executor,
     current_executor as current_executor,
 )

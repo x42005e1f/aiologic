@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 import threading
 
+from abc import ABC, abstractmethod
 from concurrent.futures import (
     BrokenExecutor,
     Executor,
@@ -38,7 +39,7 @@ _P = ParamSpec("_P")
 
 
 class _ExecutorLocal(threading.local):
-    executor: _TaskExecutor | None = None
+    executor: TaskExecutor | None = None
 
 
 _executor_tlocal: _ExecutorLocal = _ExecutorLocal()
@@ -91,7 +92,7 @@ class _WorkItem:
             except InvalidStateError:
                 pass
 
-    def green_run(self, /, executor: _TaskExecutor | None = None) -> None:
+    def green_run(self, /, executor: TaskExecutor | None = None) -> None:
         if not self._future.set_running_or_notify_cancel():
             return
 
@@ -139,7 +140,7 @@ class _WorkItem:
             pass
 
 
-class _TaskExecutor(Executor):
+class TaskExecutor(Executor, ABC):
     __slots__ = (
         "_backend",
         "_backend_options",
@@ -290,6 +291,7 @@ class _TaskExecutor(Executor):
                 else:
                     work_item.abort(cause)
 
+    @abstractmethod
     def _run(self, /) -> None:
         raise NotImplementedError
 
@@ -303,8 +305,8 @@ class _TaskExecutor(Executor):
 
 
 @once
-def _get_threading_executor_class() -> type[_TaskExecutor]:
-    class _ThreadingExecutor(_TaskExecutor):
+def _get_threading_executor_class() -> type[TaskExecutor]:
+    class _ThreadingExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -362,12 +364,12 @@ def _get_threading_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_eventlet_executor_class() -> type[_TaskExecutor]:
+def _get_eventlet_executor_class() -> type[TaskExecutor]:
     import eventlet
     import eventlet.greenpool
     import eventlet.hubs
 
-    class _EventletExecutor(_TaskExecutor):
+    class _EventletExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -414,11 +416,11 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_gevent_executor_class() -> type[_TaskExecutor]:
+def _get_gevent_executor_class() -> type[TaskExecutor]:
     import gevent
     import gevent.pool
 
-    class _GeventExecutor(_TaskExecutor):
+    class _GeventExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -465,10 +467,10 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_asyncio_executor_class() -> type[_TaskExecutor]:
+def _get_asyncio_executor_class() -> type[TaskExecutor]:
     import asyncio
 
-    class _AsyncioExecutor(_TaskExecutor):
+    class _AsyncioExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -507,11 +509,11 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_curio_executor_class() -> type[_TaskExecutor]:
+def _get_curio_executor_class() -> type[TaskExecutor]:
     import curio
     import curio.task
 
-    class _CurioExecutor(_TaskExecutor):
+    class _CurioExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -545,10 +547,10 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_trio_executor_class() -> type[_TaskExecutor]:
+def _get_trio_executor_class() -> type[TaskExecutor]:
     import trio
 
-    class _TrioExecutor(_TaskExecutor):
+    class _TrioExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -582,10 +584,10 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
 
 
 @once
-def _get_anyio_executor_class() -> type[_TaskExecutor]:
+def _get_anyio_executor_class() -> type[TaskExecutor]:
     import anyio
 
-    class _AnyioExecutor(_TaskExecutor):
+    class _AnyioExecutor(TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
@@ -626,7 +628,7 @@ def _create_threading_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_threading_executor
 
     _create_threading_executor = _get_threading_executor_class()
@@ -638,7 +640,7 @@ def _create_eventlet_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_eventlet_executor
 
     _create_eventlet_executor = _get_eventlet_executor_class()
@@ -650,7 +652,7 @@ def _create_gevent_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_gevent_executor
 
     _create_gevent_executor = _get_gevent_executor_class()
@@ -662,7 +664,7 @@ def _create_asyncio_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_asyncio_executor
 
     _create_asyncio_executor = _get_asyncio_executor_class()
@@ -674,7 +676,7 @@ def _create_curio_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_curio_executor
 
     _create_curio_executor = _get_curio_executor_class()
@@ -686,7 +688,7 @@ def _create_trio_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_trio_executor
 
     _create_trio_executor = _get_trio_executor_class()
@@ -698,7 +700,7 @@ def _create_anyio_executor(
     library: str,
     backend: str,
     backend_options: dict[str, Any],
-) -> _TaskExecutor:
+) -> TaskExecutor:
     global _create_anyio_executor
 
     _create_anyio_executor = _get_anyio_executor_class()
@@ -710,7 +712,7 @@ def create_executor(
     library: str,
     backend: str | None = None,
     backend_options: dict[str, Any] | None = None,
-) -> _TaskExecutor:
+) -> TaskExecutor:
     if backend is None:
         if library == "anyio":
             backend = "asyncio"
@@ -754,7 +756,7 @@ def create_executor(
     return impl(library, backend, backend_options)
 
 
-def current_executor() -> _TaskExecutor:
+def current_executor() -> TaskExecutor:
     executor = _executor_tlocal.executor
 
     if executor is None:

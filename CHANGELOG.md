@@ -86,6 +86,7 @@ Commit messages are consistent with
 - `aiologic.testing` subpackage for testing purposes. It is intended to isolate
   complex `aiologic` testing logic (such as running tests on all supported
   libraries), but can also be used by users to create their own tests.
+- `aiologic.testing.TaskExecutor` abstract class (for typing purposes).
 - `aiologic.testing.create_executor()` function to create an executor object
   that executes tasks of the chosen library in a separate thread.
 - `aiologic.testing.current_executor()` function to get the executor object
