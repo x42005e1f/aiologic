@@ -55,15 +55,15 @@ class _WorkItem:
         self._args = args
         self._kwargs = kwargs
 
-    def is_async(self, /) -> bool:
-        return iscoroutinefunction(self._func)
-
     async def async_run(self, /) -> None:
         if not self._future.set_running_or_notify_cancel():
             return
 
         try:
-            result = await self._func(*self._args, **self._kwargs)
+            result = self._func(*self._args, **self._kwargs)
+
+            if iscoroutinefunction(self._func):
+                result = await result
         except BaseException as exc:  # noqa: BLE001
             self._future.set_exception(exc)
             self = None  # noqa: PLW0642
@@ -76,6 +76,10 @@ class _WorkItem:
 
         try:
             result = self._func(*self._args, **self._kwargs)
+
+            if iscoroutinefunction(self._func):
+                msg = f"a green function was expected, got {self._func!r}"
+                raise TypeError(msg)
         except BaseException as exc:  # noqa: BLE001
             self._future.set_exception(exc)
             self = None  # noqa: PLW0642
@@ -356,12 +360,9 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
                     if work_item is None:
                         break
 
-                    if work_item.is_async():
-                        task = asyncio.create_task(work_item.async_run())
-                        tasks.add(task)
-                        task.add_done_callback(tasks.discard)
-                    else:
-                        work_item.green_run()
+                    task = asyncio.create_task(work_item.async_run())
+                    tasks.add(task)
+                    task.add_done_callback(tasks.discard)
 
                 await asyncio.gather(*tasks)
             finally:
@@ -396,10 +397,7 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
                         if work_item is None:
                             break
 
-                        if work_item.is_async():
-                            await g.spawn(work_item.async_run)
-                        else:
-                            work_item.green_run()
+                        await g.spawn(work_item.async_run)
             finally:
                 _executor_cvar.reset(token)
 
@@ -431,10 +429,7 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
                         if work_item is None:
                             break
 
-                        if work_item.is_async():
-                            nursery.start_soon(work_item.async_run)
-                        else:
-                            work_item.green_run()
+                        nursery.start_soon(work_item.async_run)
             finally:
                 _executor_cvar.reset(token)
 
