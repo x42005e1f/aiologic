@@ -91,6 +91,9 @@ Commit messages are consistent with
   that executes tasks of the chosen library in a separate thread.
 - `aiologic.testing.current_executor()` function to get the executor object
   that executes the current task.
+- `aiologic.testing.run()` function as shorthand for
+  `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
+  result in place.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.

@@ -10,6 +10,11 @@ from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
 from typing import Any, TypeVar, overload
 
+if sys.version_info >= (3, 11):
+    from typing import TypeVarTuple, Unpack
+else:
+    from typing_extensions import TypeVarTuple, Unpack
+
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
 else:
@@ -21,6 +26,7 @@ else:
     from typing import Awaitable, Callable
 
 _T = TypeVar("_T")
+_Ts = TypeVarTuple("_Ts")
 _P = ParamSpec("_P")
 
 class _ExecutorLocal(threading.local):
@@ -165,3 +171,21 @@ def create_executor(
     backend_options: dict[str, Any] | None = None,
 ) -> TaskExecutor: ...
 def current_executor() -> TaskExecutor: ...
+@overload
+def run(
+    func: Callable[[Unpack[_Ts]], Awaitable[_T]],
+    /,
+    *args: Unpack[_Ts],
+    library: str | None = None,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _T: ...
+@overload
+def run(
+    func: Callable[[Unpack[_Ts]], _T],
+    /,
+    *args: Unpack[_Ts],
+    library: str | None = None,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _T: ...

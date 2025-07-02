@@ -22,6 +22,12 @@ from typing import TYPE_CHECKING, Any, TypeVar, overload
 import aiologic
 
 from aiologic.lowlevel._threads import _once as once
+from aiologic.lowlevel._utils import _external as external
+
+if sys.version_info >= (3, 11):
+    from typing import TypeVarTuple, Unpack
+else:
+    from typing_extensions import TypeVarTuple, Unpack
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -35,6 +41,7 @@ if TYPE_CHECKING:
         from typing import Awaitable, Callable
 
 _T = TypeVar("_T")
+_Ts = TypeVarTuple("_Ts")
 _P = ParamSpec("_P")
 
 
@@ -764,3 +771,34 @@ def current_executor() -> TaskExecutor:
         raise RuntimeError(msg)
 
     return executor
+
+
+@overload
+@external
+def run(
+    func: Callable[[Unpack[_Ts]], Awaitable[_T]],
+    /,
+    *args: Unpack[_Ts],
+    library: str | None = None,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _T: ...
+@overload
+@external
+def run(
+    func: Callable[[Unpack[_Ts]], _T],
+    /,
+    *args: Unpack[_Ts],
+    library: str | None = None,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _T: ...
+def run(func, /, *args, library=None, backend=None, backend_options=None):
+    if library is None:
+        if backend is None:
+            library = backend = "asyncio"
+        else:
+            library = backend
+
+    with create_executor(library, backend, backend_options) as executor:
+        return executor.submit(func, *args).result()
