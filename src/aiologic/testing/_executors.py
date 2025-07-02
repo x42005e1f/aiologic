@@ -408,6 +408,34 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
     return _TrioExecutor
 
 
+@once
+def _get_anyio_executor_class() -> type[_TaskExecutor]:
+    import anyio
+
+    class _AnyioExecutor(_TaskExecutor):
+        __slots__ = ()
+
+        def _run(self, /) -> None:
+            anyio.run(self._listen, backend=self._backend)
+
+        async def _listen(self, /) -> None:
+            _executor_tlocal.executor = self
+
+            try:
+                async with anyio.create_task_group() as tg:
+                    while True:
+                        work_item = await self._work_queue.async_get()
+
+                        if work_item is None:
+                            break
+
+                        tg.start_soon(work_item.async_run)
+            finally:
+                del _executor_tlocal.executor
+
+    return _AnyioExecutor
+
+
 def _create_threading_executor(library: str, backend: str) -> _TaskExecutor:
     global _create_threading_executor
 
@@ -456,6 +484,14 @@ def _create_trio_executor(library: str, backend: str) -> _TaskExecutor:
     return _create_trio_executor(library, backend)
 
 
+def _create_anyio_executor(library: str, backend: str) -> _TaskExecutor:
+    global _create_anyio_executor
+
+    _create_anyio_executor = _get_anyio_executor_class()
+
+    return _create_anyio_executor(library, backend)
+
+
 def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
     if backend is None:
         if library == "anyio":
@@ -482,11 +518,8 @@ def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
         if backend == "trio":
             return _create_trio_executor(library, backend)
     elif library == "anyio":
-        if backend == "asyncio":
-            return _create_asyncio_executor(library, backend)
-
-        if backend == "trio":
-            return _create_trio_executor(library, backend)
+        if backend == "asyncio" or backend == "trio":
+            return _create_anyio_executor(library, backend)
     else:
         msg = f"unsupported library {library!r}"
         raise ValueError(msg)
