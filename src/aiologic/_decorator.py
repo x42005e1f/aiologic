@@ -22,6 +22,7 @@ from wrapt import FunctionWrapper, decorator
 
 from ._lock import RLock
 from ._semaphore import BinarySemaphore
+from .lowlevel._utils import _external as external
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -466,23 +467,38 @@ def __green_synchronized_wrapper(wrapped, instance, args, kwargs, /):
 
 
 @overload
+@external
 def synchronized(  # type: ignore[overload-overlap]
     wrapped: _AALock,
     /,
 ) -> _AASynchronizer: ...
 @overload
-def synchronized(wrapped: _ASLock, /) -> _ASSynchronizer: ...
+@external
+def synchronized(  # type: ignore[overload-overlap]
+    wrapped: _ASLock,
+    /,
+) -> _ASSynchronizer: ...
 @overload
+@external
 def synchronized(wrapped: _SSLock, /) -> _SSSynchronizer: ...
 @overload
+@external
 def synchronized(wrapped: _MMLock, /) -> _MMSynchronizer: ...
 @overload
+@external
 def synchronized(
     wrapped: _SynchronizedType[_LockT],
     /,
 ) -> _SynchronizedDecorator: ...
 @overload
-def synchronized(wrapped: _CallableT, /) -> _CallableT: ...
+@external
+def synchronized(  # type: ignore[overload-overlap]
+    wrapped: _CallableT,
+    /,
+) -> _CallableT: ...
+@overload
+@external
+def synchronized(wrapped: object, /) -> _SynchronizedDecorator: ...
 def synchronized(wrapped, /):
     if hasattr(wrapped, "acquire") and hasattr(wrapped, "release"):
         if iscoroutinefunction(wrapped.acquire):
