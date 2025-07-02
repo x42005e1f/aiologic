@@ -7,7 +7,6 @@ import sys
 import threading
 
 from concurrent.futures import Executor, Future
-from contextvars import ContextVar
 from typing import TypeVar, overload
 
 if sys.version_info >= (3, 10):
@@ -22,6 +21,11 @@ else:
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+class _ExecutorLocal(threading.local):
+    executor: _TaskExecutor | None = None
+
+_executor_tlocal: _ExecutorLocal
 
 class _WorkItem:
     __slots__ = (
@@ -40,7 +44,7 @@ class _WorkItem:
         **kwargs: _P.kwargs,
     ) -> None: ...
     async def async_run(self, /) -> None: ...
-    def green_run(self, /) -> None: ...
+    def green_run(self, /, executor: _TaskExecutor | None = None) -> None: ...
     def add_done_callback(self, func: Callable[[], object], /) -> None: ...
     def cancel(self, /) -> None: ...
 
@@ -99,12 +103,6 @@ class _TaskExecutor(Executor):
     def backend(self, /) -> str: ...
     @property
     def library(self, /) -> str: ...
-
-class _ExecutorLocal(threading.local):
-    executor: _TaskExecutor | None = None
-
-_executor_tlocal: _ExecutorLocal
-_executor_cvar: ContextVar[_TaskExecutor | None]
 
 def _get_threading_executor_class() -> type[_TaskExecutor]: ...
 def _get_eventlet_executor_class() -> type[_TaskExecutor]: ...

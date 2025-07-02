@@ -9,7 +9,6 @@ import sys
 import threading
 
 from concurrent.futures import Executor, Future
-from contextvars import ContextVar, copy_context
 from functools import partial
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypeVar, overload
@@ -31,6 +30,13 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+
+class _ExecutorLocal(threading.local):
+    executor: _TaskExecutor | None = None
+
+
+_executor_tlocal: _ExecutorLocal = _ExecutorLocal()
 
 
 class _WorkItem:
@@ -70,9 +76,12 @@ class _WorkItem:
         else:
             self._future.set_result(result)
 
-    def green_run(self, /) -> None:
+    def green_run(self, /, executor: _TaskExecutor | None = None) -> None:
         if not self._future.set_running_or_notify_cancel():
             return
+
+        if executor is not None:
+            _executor_tlocal.executor = executor
 
         try:
             result = self._func(*self._args, **self._kwargs)
@@ -85,6 +94,9 @@ class _WorkItem:
             self = None  # noqa: PLW0642
         else:
             self._future.set_result(result)
+        finally:
+            if executor is not None:
+                del _executor_tlocal.executor
 
     def add_done_callback(self, func: Callable[[], object], /) -> None:
         self._future.add_done_callback(lambda _: func())
@@ -202,57 +214,35 @@ class _TaskExecutor(Executor):
         return self._library
 
 
-class _ExecutorLocal(threading.local):
-    executor: _TaskExecutor | None = None
-
-
-_executor_tlocal: _ExecutorLocal = _ExecutorLocal()
-_executor_cvar: ContextVar[_TaskExecutor | None] = ContextVar(
-    "_executor_cvar",
-    default=None,
-)
-
-
 @once
 def _get_threading_executor_class() -> type[_TaskExecutor]:
     class _ThreadingExecutor(_TaskExecutor):
         __slots__ = ()
 
         def _run(self, /) -> None:
-            _executor_tlocal.executor = self
+            threads = set()
 
-            token = _executor_cvar.set(self)
+            while True:
+                work_item = self._work_queue.green_get()
 
-            try:
-                threads = set()
+                if work_item is None:
+                    break
 
-                while True:
-                    work_item = self._work_queue.green_get()
+                thread = threading.Thread(
+                    target=work_item.green_run,
+                    args=[self],
+                )
+                threads.add(thread)
+                work_item.add_done_callback(partial(threads.discard, thread))
+                thread.start()
 
-                    if work_item is None:
-                        break
-
-                    thread = threading.Thread(
-                        target=copy_context().run,
-                        args=[work_item.green_run],
-                    )
-                    threads.add(thread)
-                    work_item.add_done_callback(
-                        partial(threads.discard, thread)
-                    )
-                    thread.start()
-
-                while threads:
-                    try:
-                        thread = threads.pop()
-                    except KeyError:
-                        break
-                    else:
-                        thread.join()
-            finally:
-                _executor_cvar.reset(token)
-
-                del _executor_tlocal.executor
+            while threads:
+                try:
+                    thread = threads.pop()
+                except KeyError:
+                    break
+                else:
+                    thread.join()
 
     return _ThreadingExecutor
 
@@ -269,8 +259,6 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
         def _run(self, /) -> None:
             _executor_tlocal.executor = self
 
-            token = _executor_cvar.set(self)
-
             try:
                 try:
                     pool = eventlet.greenpool.GreenPool()
@@ -281,7 +269,7 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
                         if work_item is None:
                             break
 
-                        pool.spawn(copy_context().run, work_item.green_run)
+                        pool.spawn(work_item.green_run)
 
                     pool.waitall()
                 finally:
@@ -290,8 +278,6 @@ def _get_eventlet_executor_class() -> type[_TaskExecutor]:
                     if hasattr(hub, "destroy"):
                         hub.destroy()
             finally:
-                _executor_cvar.reset(token)
-
                 del _executor_tlocal.executor
 
     return _EventletExecutor
@@ -308,8 +294,6 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
         def _run(self, /) -> None:
             _executor_tlocal.executor = self
 
-            token = _executor_cvar.set(self)
-
             try:
                 try:
                     pool = gevent.pool.Pool()
@@ -320,7 +304,7 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
                         if work_item is None:
                             break
 
-                        pool.spawn(copy_context().run, work_item.green_run)
+                        pool.spawn(work_item.green_run)
 
                     pool.join()
                 finally:
@@ -329,8 +313,6 @@ def _get_gevent_executor_class() -> type[_TaskExecutor]:
                     if hasattr(hub, "destroy"):
                         hub.destroy()
             finally:
-                _executor_cvar.reset(token)
-
                 del _executor_tlocal.executor
 
     return _GeventExecutor
@@ -349,8 +331,6 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
-            token = _executor_cvar.set(self)
-
             try:
                 tasks = set()
 
@@ -366,8 +346,6 @@ def _get_asyncio_executor_class() -> type[_TaskExecutor]:
 
                 await asyncio.gather(*tasks)
             finally:
-                _executor_cvar.reset(token)
-
                 del _executor_tlocal.executor
 
     return _AsyncioExecutor
@@ -387,8 +365,6 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
-            token = _executor_cvar.set(self)
-
             try:
                 async with curio.TaskGroup() as g:
                     while True:
@@ -399,8 +375,6 @@ def _get_curio_executor_class() -> type[_TaskExecutor]:
 
                         await g.spawn(work_item.async_run)
             finally:
-                _executor_cvar.reset(token)
-
                 del _executor_tlocal.executor
 
     return _CurioExecutor
@@ -419,8 +393,6 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
-            token = _executor_cvar.set(self)
-
             try:
                 async with trio.open_nursery() as nursery:
                     while True:
@@ -431,8 +403,6 @@ def _get_trio_executor_class() -> type[_TaskExecutor]:
 
                         nursery.start_soon(work_item.async_run)
             finally:
-                _executor_cvar.reset(token)
-
                 del _executor_tlocal.executor
 
     return _TrioExecutor
@@ -540,11 +510,10 @@ def create_executor(library: str, backend: str | None = None) -> _TaskExecutor:
 
 
 def current_executor() -> _TaskExecutor:
-    if (executor := _executor_tlocal.executor) is not None:
-        return executor
+    executor = _executor_tlocal.executor
 
-    if (executor := _executor_cvar.get()) is not None:
-        return executor
+    if executor is None:
+        msg = "no current executor"
+        raise RuntimeError(msg)
 
-    msg = "no current executor"
-    raise RuntimeError(msg)
+    return executor
