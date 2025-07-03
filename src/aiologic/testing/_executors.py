@@ -17,7 +17,7 @@ from concurrent.futures import (
 )
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
 import aiologic
 
@@ -52,6 +52,7 @@ class _ExecutorLocal(threading.local):
 _executor_tlocal: _ExecutorLocal = _ExecutorLocal()
 
 
+@final
 class _WorkItem:
     __slots__ = (
         "_args",
@@ -73,6 +74,17 @@ class _WorkItem:
         self._func = func
         self._args = args
         self._kwargs = kwargs
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+        bcs = _WorkItem
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> NoReturn:
+        msg = f"cannot reduce {self!r}"
+        raise TypeError(msg)
 
     async def async_run(self, /) -> None:
         if not self._future.set_running_or_notify_cancel():
@@ -180,6 +192,30 @@ class TaskExecutor(Executor, ABC):
 
         self._broken_by = None
 
+    def __repr__(self, /) -> str:
+        cls = self.__class__
+        if cls.__module__ == __name__:
+            cls = TaskExecutor
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        args = [repr(self._library), repr(self._backend)]
+
+        if self._backend_options:
+            args.append(f"backend_options={self._backend_options!r}")
+
+        object_repr = f"{cls_repr}({', '.join(args)})"
+
+        if self._broken_by is not None:
+            extra = "broken"
+        elif self._shutdown:
+            extra = "shutdown"
+        elif self._work_thread is not None:
+            extra = f"running, tasks={len(self._work_items)}"
+        else:
+            extra = "pending"
+
+        return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
     @overload
     def submit(
         self,
@@ -254,22 +290,16 @@ class TaskExecutor(Executor, ABC):
             self._shutdown = True
 
             if cancel_futures:
-                work_items = self._work_items
                 work_queue = self._work_queue
 
                 while work_queue:
                     try:
-                        work_queue.green_get(blocking=False)
+                        work_item = work_queue.green_get(blocking=False)
                     except aiologic.QueueEmpty:
                         break
-
-                while work_items:
-                    try:
-                        work_item = work_items.pop()
-                    except IndexError:
-                        break
                     else:
-                        work_item.cancel()
+                        if work_item is not None:
+                            work_item.cancel()
 
             self._work_queue.put(None)
 
@@ -313,8 +343,20 @@ class TaskExecutor(Executor, ABC):
 
 @once
 def _get_threading_executor_class() -> type[TaskExecutor]:
+    @final
     class _ThreadingExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _ThreadingExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -376,8 +418,20 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
     import eventlet.greenpool
     import eventlet.hubs
 
+    @final
     class _EventletExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _EventletExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -427,8 +481,20 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
     import gevent
     import gevent.pool
 
+    @final
     class _GeventExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _GeventExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -477,8 +543,20 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
 def _get_asyncio_executor_class() -> type[TaskExecutor]:
     import asyncio
 
+    @final
     class _AsyncioExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _AsyncioExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -520,8 +598,20 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
     import curio
     import curio.task
 
+    @final
     class _CurioExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _CurioExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -557,8 +647,20 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
 def _get_trio_executor_class() -> type[TaskExecutor]:
     import trio
 
+    @final
     class _TrioExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _TrioExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:
@@ -594,8 +696,20 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
 def _get_anyio_executor_class() -> type[TaskExecutor]:
     import anyio
 
+    @final
     class _AnyioExecutor(TaskExecutor):
         __slots__ = ()
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = _AnyioExecutor
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
 
         def _run(self, /) -> None:
             try:

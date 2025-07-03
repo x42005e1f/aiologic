@@ -8,7 +8,7 @@ import threading
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
-from typing import Any, TypeVar, overload
+from typing import Any, NoReturn, TypeVar, final, overload
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
@@ -34,6 +34,7 @@ class _ExecutorLocal(threading.local):
 
 _executor_tlocal: _ExecutorLocal
 
+@final
 class _WorkItem:
     __slots__ = (
         "_args",
@@ -50,6 +51,8 @@ class _WorkItem:
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> None: ...
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
+    def __reduce__(self, /) -> NoReturn: ...
     async def async_run(self, /) -> None: ...
     def green_run(self, /, executor: TaskExecutor | None = None) -> None: ...
     def add_done_callback(self, func: Callable[[], object], /) -> None: ...
@@ -76,6 +79,7 @@ class TaskExecutor(Executor, ABC):
         backend: str,
         backend_options: dict[str, Any],
     ) -> None: ...
+    def __repr__(self, /) -> str: ...
     if sys.version_info >= (3, 9):
         @overload
         def submit(
