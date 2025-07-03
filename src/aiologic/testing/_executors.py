@@ -373,10 +373,13 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
+                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                 threads = set()
 
                 while True:
-                    work_item = self._work_queue.green_get()
+                    with no_checkpoints:
+                        work_item = self._work_queue.green_get()
 
                     if work_item is None:
                         break
@@ -449,10 +452,13 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
 
             try:
                 try:
+                    no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                     pool = eventlet.greenpool.GreenPool()
 
                     while True:
-                        work_item = self._work_queue.green_get()
+                        with no_checkpoints:
+                            work_item = self._work_queue.green_get()
 
                         if work_item is None:
                             break
@@ -512,10 +518,13 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
 
             try:
                 try:
+                    no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                     pool = gevent.pool.Pool()
 
                     while True:
-                        work_item = self._work_queue.green_get()
+                        with no_checkpoints:
+                            work_item = self._work_queue.green_get()
 
                         if work_item is None:
                             break
@@ -569,10 +578,13 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
+                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                 tasks = set()
 
                 while True:
-                    work_item = await self._work_queue.async_get()
+                    async with no_checkpoints:
+                        work_item = await self._work_queue.async_get()
 
                     if work_item is None:
                         break
@@ -624,9 +636,12 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
+                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                 async with curio.TaskGroup() as g:
                     while True:
-                        work_item = await self._work_queue.async_get()
+                        async with no_checkpoints:
+                            work_item = await self._work_queue.async_get()
 
                         if work_item is None:
                             break
@@ -673,9 +688,12 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
+                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                 async with trio.open_nursery() as nursery:
                     while True:
-                        work_item = await self._work_queue.async_get()
+                        async with no_checkpoints:
+                            work_item = await self._work_queue.async_get()
 
                         if work_item is None:
                             break
@@ -726,9 +744,12 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
+                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+
                 async with anyio.create_task_group() as tg:
                     while True:
-                        work_item = await self._work_queue.async_get()
+                        async with no_checkpoints:
+                            work_item = await self._work_queue.async_get()
 
                         if work_item is None:
                             break
