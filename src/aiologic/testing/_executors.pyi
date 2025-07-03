@@ -60,6 +60,10 @@ class _WorkItem(Generic[_T]):
     def abort(self, /, cause: BaseException) -> None: ...
     @property
     def future(self, /) -> Future[_T]: ...
+    @property
+    def new_task(self, /) -> bool: ...
+    @new_task.setter
+    def new_task(self, /, value: bool) -> None: ...
 
 class TaskExecutor(Executor, ABC):
     __slots__ = (
@@ -98,6 +102,23 @@ class TaskExecutor(Executor, ABC):
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> _WorkItem[_T]: ...
+    def _create_task(self, /, work_item: _WorkItem[Any]) -> None: ...
+    @overload
+    def schedule(
+        self,
+        fn: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    @overload
+    def schedule(
+        self,
+        fn: Callable[_P, _T],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
     if sys.version_info >= (3, 9):
         @overload
         def submit(

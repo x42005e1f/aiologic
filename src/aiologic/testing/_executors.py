@@ -67,6 +67,7 @@ class _WorkItem(Generic[_T]):
         "_func",
         "_future",
         "_kwargs",
+        "_new_task",
     )
 
     def __init__(
@@ -82,6 +83,8 @@ class _WorkItem(Generic[_T]):
         self._func = func
         self._args = args
         self._kwargs = kwargs
+
+        self._new_task = False
 
     def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
         bcs = _WorkItem
@@ -169,6 +172,14 @@ class _WorkItem(Generic[_T]):
     @property
     def future(self, /) -> Future[_T]:
         return self._future
+
+    @property
+    def new_task(self, /) -> bool:
+        return self._new_task
+
+    @new_task.setter
+    def new_task(self, /, value: bool) -> None:
+        self._new_task = value
 
 
 class TaskExecutor(Executor, ABC):
@@ -274,6 +285,30 @@ class TaskExecutor(Executor, ABC):
         self._work_queue.put(work_item)
 
     @overload
+    def schedule(
+        self,
+        fn: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    @overload
+    def schedule(
+        self,
+        fn: Callable[_P, _T],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    def schedule(self, fn, /, *args, **kwargs):
+        with self._shutdown_lock:
+            work_item = self._create_work_item(fn, *args, **kwargs)
+
+            self._work_queue.put(work_item)
+
+            return work_item.future
+
+    @overload
     def submit(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -292,6 +327,7 @@ class TaskExecutor(Executor, ABC):
     def submit(self, fn, /, *args, **kwargs):
         with self._shutdown_lock:
             work_item = self._create_work_item(fn, *args, **kwargs)
+            work_item.new_task = True
 
             if current_executor(failsafe=True) is self:
                 self._create_task(work_item)
@@ -424,18 +460,21 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
                     if work_item is None:
                         break
 
-                    thread = threading.Thread(
-                        target=work_item.green_run,
-                        args=[self],
-                    )
-                    threads.add(thread)
-                    work_item.add_done_callback(
-                        partial(
-                            threads.discard,
-                            thread,
+                    if work_item.new_task:
+                        thread = threading.Thread(
+                            target=work_item.green_run,
+                            args=[self],
                         )
-                    )
-                    thread.start()
+                        threads.add(thread)
+                        work_item.add_done_callback(
+                            partial(
+                                threads.discard,
+                                thread,
+                            )
+                        )
+                        thread.start()
+                    else:
+                        work_item.green_run()
 
                 while threads:
                     try:
@@ -506,7 +545,10 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        self._create_task(work_item)
+                        if work_item.new_task:
+                            self._create_task(work_item)
+                        else:
+                            work_item.green_run()
 
                     self._work_pool.waitall()
                 finally:
@@ -575,7 +617,10 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        self._create_task(work_item)
+                        if work_item.new_task:
+                            self._create_task(work_item)
+                        else:
+                            work_item.green_run()
 
                     self._work_pool.join()
                 finally:
@@ -640,7 +685,10 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
                     if work_item is None:
                         break
 
-                    self._create_task(work_item)
+                    if work_item.new_task:
+                        self._create_task(work_item)
+                    else:
+                        await work_item.async_run()
 
                 await asyncio.gather(*self._work_tasks)
             finally:
@@ -695,7 +743,10 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        await g.spawn(work_item.async_run)
+                        if work_item.new_task:
+                            await g.spawn(work_item.async_run)
+                        else:
+                            await work_item.async_run()
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -752,7 +803,10 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        self._create_task(work_item)
+                        if work_item.new_task:
+                            self._create_task(work_item)
+                        else:
+                            await work_item.async_run()
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -813,7 +867,10 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        self._create_task(work_item)
+                        if work_item.new_task:
+                            self._create_task(work_item)
+                        else:
+                            await work_item.async_run()
             finally:
                 try:
                     del _executor_tlocal.executor
