@@ -160,10 +160,16 @@ class Condition(Generic[_T_co, _S_co]):
         except AttributeError:
             timer_is_count = False
 
-        if timer_is_count:
-            object_repr = f"{cls_repr}({self.lock!r})"
+        if self.lock is None:
+            lock_repr = repr(None)
         else:
-            object_repr = f"{cls_repr}({self.lock!r}, timer={self.timer!r})"
+            lock_cls = self.lock.__class__
+            lock_repr = f"<{lock_cls.__module__}.{lock_cls.__qualname__}>"
+
+        if timer_is_count:
+            object_repr = f"{cls_repr}({lock_repr})"
+        else:
+            object_repr = f"{cls_repr}({lock_repr}, timer={self.timer!r})"
 
         extra = f"waiting={self.waiting}"
 
@@ -286,10 +292,16 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         except AttributeError:
             timer_is_count = False
 
-        if timer_is_count:
-            object_repr = f"{cls_repr}({self._lock!r})"
+        if self._lock is None:
+            lock_repr = repr(None)
         else:
-            object_repr = f"{cls_repr}({self._lock!r}, timer={self._timer!r})"
+            lock_cls = self._lock.__class__
+            lock_repr = f"<{lock_cls.__module__}.{lock_cls.__qualname__}>"
+
+        if timer_is_count:
+            object_repr = f"{cls_repr}({lock_repr})"
+        else:
+            object_repr = f"{cls_repr}({lock_repr}, timer={self._timer!r})"
 
         extra = f"waiting={len(self._waiters)}"
 
