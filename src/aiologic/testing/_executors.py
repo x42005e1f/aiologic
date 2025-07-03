@@ -36,9 +36,9 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable, Callable
+        from collections.abc import Callable, Coroutine
     else:
-        from typing import Awaitable, Callable
+        from typing import Callable, Coroutine
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
@@ -183,7 +183,7 @@ class TaskExecutor(Executor, ABC):
     @overload
     def submit(
         self,
-        fn: Callable[_P, Awaitable[_T]],
+        fn: Callable[_P, Coroutine[Any, Any, _T]],
         /,
         *args: _P.args,
         **kwargs: _P.kwargs,
@@ -230,7 +230,7 @@ class TaskExecutor(Executor, ABC):
         @overload
         def submit(
             self,
-            fn: Callable[_P, Awaitable[_T]],
+            fn: Callable[_P, Coroutine[Any, Any, _T]],
             *args: _P.args,
             **kwargs: _P.kwargs,
         ) -> Future[_T]: ...
@@ -776,7 +776,7 @@ def current_executor() -> TaskExecutor:
 @overload
 @external
 def run(
-    func: Callable[[Unpack[_Ts]], Awaitable[_T]],
+    func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
     library: str | None = None,
