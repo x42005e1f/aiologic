@@ -8,7 +8,7 @@ import threading
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
-from typing import Any, NoReturn, TypeVar, final, overload
+from typing import Any, Generic, NoReturn, TypeVar, final, overload
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
@@ -35,7 +35,7 @@ class _ExecutorLocal(threading.local):
 _executor_tlocal: _ExecutorLocal
 
 @final
-class _WorkItem:
+class _WorkItem(Generic[_T]):
     __slots__ = (
         "_args",
         "_func",
@@ -58,6 +58,8 @@ class _WorkItem:
     def add_done_callback(self, func: Callable[[], object], /) -> None: ...
     def cancel(self, /) -> None: ...
     def abort(self, /, cause: BaseException) -> None: ...
+    @property
+    def future(self, /) -> Future[_T]: ...
 
 class TaskExecutor(Executor, ABC):
     __slots__ = (
@@ -80,6 +82,22 @@ class TaskExecutor(Executor, ABC):
         backend_options: dict[str, Any],
     ) -> None: ...
     def __repr__(self, /) -> str: ...
+    @overload
+    def _create_work_item(
+        self,
+        fn: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> _WorkItem[_T]: ...
+    @overload
+    def _create_work_item(
+        self,
+        fn: Callable[_P, _T],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> _WorkItem[_T]: ...
     if sys.version_info >= (3, 9):
         @overload
         def submit(
@@ -174,7 +192,7 @@ def create_executor(
     backend: str | None = None,
     backend_options: dict[str, Any] | None = None,
 ) -> TaskExecutor: ...
-def current_executor() -> TaskExecutor: ...
+def current_executor(*, failsafe: bool = False) -> TaskExecutor: ...
 @overload
 def run(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],

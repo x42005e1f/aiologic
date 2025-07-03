@@ -17,7 +17,15 @@ from concurrent.futures import (
 )
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    NoReturn,
+    TypeVar,
+    final,
+    overload,
+)
 
 import aiologic
 
@@ -53,7 +61,7 @@ _executor_tlocal: _ExecutorLocal = _ExecutorLocal()
 
 
 @final
-class _WorkItem:
+class _WorkItem(Generic[_T]):
     __slots__ = (
         "_args",
         "_func",
@@ -158,6 +166,10 @@ class _WorkItem:
         except InvalidStateError:
             pass
 
+    @property
+    def future(self, /) -> Future[_T]:
+        return self._future
+
 
 class TaskExecutor(Executor, ABC):
     __slots__ = (
@@ -184,7 +196,7 @@ class TaskExecutor(Executor, ABC):
         self._library = library
 
         self._shutdown = False
-        self._shutdown_lock = threading.Lock()
+        self._shutdown_lock = threading.RLock()
 
         self._work_items = set()
         self._work_queue = aiologic.SimpleQueue()
@@ -217,22 +229,22 @@ class TaskExecutor(Executor, ABC):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     @overload
-    def submit(
+    def _create_work_item(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
         /,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Future[_T]: ...
+    ) -> _WorkItem[_T]: ...
     @overload
-    def submit(
+    def _create_work_item(
         self,
         fn: Callable[_P, _T],
         /,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Future[_T]: ...
-    def submit(self, fn, /, *args, **kwargs):
+    ) -> _WorkItem[_T]: ...
+    def _create_work_item(self, fn, /, *args, **kwargs):
         with self._shutdown_lock:
             if self._broken_by is not None:
                 raise BrokenExecutor from self._broken_by
@@ -256,9 +268,37 @@ class TaskExecutor(Executor, ABC):
                 )
             )
 
-            self._work_queue.put(work_item)
+            return work_item
 
-            return future
+    def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+        self._work_queue.put(work_item)
+
+    @overload
+    def submit(
+        self,
+        fn: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    @overload
+    def submit(
+        self,
+        fn: Callable[_P, _T],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Future[_T]: ...
+    def submit(self, fn, /, *args, **kwargs):
+        with self._shutdown_lock:
+            work_item = self._create_work_item(fn, *args, **kwargs)
+
+            if current_executor(failsafe=True) is self:
+                self._create_task(work_item)
+            else:
+                self._work_queue.put(work_item)
+
+            return work_item.future
 
     if sys.version_info < (3, 9):
         _submit = submit
@@ -423,7 +463,7 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
 
     @final
     class _EventletExecutor(TaskExecutor):
-        __slots__ = ()
+        __slots__ = ("_work_pool",)
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _EventletExecutor
@@ -447,6 +487,9 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
         def _apply_backend_options(self, /) -> None:
             pass
 
+        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+            self._work_pool.spawn(work_item.green_run)
+
         def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
@@ -454,7 +497,7 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
                 try:
                     no_checkpoints = aiologic.lowlevel.disable_checkpoints()
 
-                    pool = eventlet.greenpool.GreenPool()
+                    self._work_pool = eventlet.greenpool.GreenPool()
 
                     while True:
                         with no_checkpoints:
@@ -463,9 +506,9 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        pool.spawn(work_item.green_run)
+                        self._create_task(work_item)
 
-                    pool.waitall()
+                    self._work_pool.waitall()
                 finally:
                     hub = eventlet.hubs.get_hub()
 
@@ -489,7 +532,7 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
 
     @final
     class _GeventExecutor(TaskExecutor):
-        __slots__ = ()
+        __slots__ = ("_work_pool",)
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _GeventExecutor
@@ -513,6 +556,9 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
         def _apply_backend_options(self, /) -> None:
             pass
 
+        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+            self._work_pool.spawn(work_item.green_run)
+
         def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
@@ -520,7 +566,7 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
                 try:
                     no_checkpoints = aiologic.lowlevel.disable_checkpoints()
 
-                    pool = gevent.pool.Pool()
+                    self._work_pool = gevent.pool.Pool()
 
                     while True:
                         with no_checkpoints:
@@ -529,9 +575,9 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        pool.spawn(work_item.green_run)
+                        self._create_task(work_item)
 
-                    pool.join()
+                    self._work_pool.join()
                 finally:
                     hub = gevent.get_hub()
 
@@ -554,7 +600,7 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _AsyncioExecutor(TaskExecutor):
-        __slots__ = ()
+        __slots__ = ("_work_tasks",)
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _AsyncioExecutor
@@ -574,13 +620,18 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
 
+        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+            task = asyncio.create_task(work_item.async_run())
+            self._work_tasks.add(task)
+            task.add_done_callback(self._work_tasks.discard)
+
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
                 no_checkpoints = aiologic.lowlevel.disable_checkpoints()
 
-                tasks = set()
+                self._work_tasks = set()
 
                 while True:
                     async with no_checkpoints:
@@ -589,11 +640,9 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
                     if work_item is None:
                         break
 
-                    task = asyncio.create_task(work_item.async_run())
-                    tasks.add(task)
-                    task.add_done_callback(tasks.discard)
+                    self._create_task(work_item)
 
-                await asyncio.gather(*tasks)
+                await asyncio.gather(*self._work_tasks)
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -664,7 +713,7 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _TrioExecutor(TaskExecutor):
-        __slots__ = ()
+        __slots__ = ("_work_nursery",)
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _TrioExecutor
@@ -684,6 +733,9 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
 
+        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+            self._work_nursery.start_soon(work_item.async_run)
+
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
@@ -691,6 +743,8 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                 no_checkpoints = aiologic.lowlevel.disable_checkpoints()
 
                 async with trio.open_nursery() as nursery:
+                    self._work_nursery = nursery
+
                     while True:
                         async with no_checkpoints:
                             work_item = await self._work_queue.async_get()
@@ -698,7 +752,7 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        nursery.start_soon(work_item.async_run)
+                        self._create_task(work_item)
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -716,7 +770,7 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _AnyioExecutor(TaskExecutor):
-        __slots__ = ()
+        __slots__ = ("_work_task_group",)
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _AnyioExecutor
@@ -740,6 +794,9 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
 
+        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+            self._work_task_group.start_soon(work_item.async_run)
+
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
@@ -747,6 +804,8 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                 no_checkpoints = aiologic.lowlevel.disable_checkpoints()
 
                 async with anyio.create_task_group() as tg:
+                    self._work_task_group = tg
+
                     while True:
                         async with no_checkpoints:
                             work_item = await self._work_queue.async_get()
@@ -754,7 +813,7 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                         if work_item is None:
                             break
 
-                        tg.start_soon(work_item.async_run)
+                        self._create_task(work_item)
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -898,10 +957,10 @@ def create_executor(
     return impl(library, backend, backend_options)
 
 
-def current_executor() -> TaskExecutor:
+def current_executor(*, failsafe: bool = False) -> TaskExecutor:
     executor = _executor_tlocal.executor
 
-    if executor is None:
+    if executor is None and not failsafe:
         msg = "no current executor"
         raise RuntimeError(msg)
 
