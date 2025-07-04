@@ -265,7 +265,10 @@ class TaskExecutor(Executor, ABC):
                 raise RuntimeError(msg)
 
             if self._work_thread is None:
-                self._work_thread = threading.Thread(target=self._run)
+                self._work_thread = threading.Thread(
+                    target=self._run,
+                    daemon=True,  # avoid getting stuck on eventlet
+                )
                 self._work_thread.start()
 
             future = Future()
