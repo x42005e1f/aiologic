@@ -41,6 +41,7 @@ class _WorkItem(Generic[_T]):
         "_func",
         "_future",
         "_kwargs",
+        "_new_task",
     )
 
     def __init__(
