@@ -86,11 +86,20 @@ Commit messages are consistent with
 - `aiologic.testing` subpackage for testing purposes. It is intended to isolate
   complex `aiologic` testing logic (such as running tests on all supported
   libraries), but can also be used by users to create their own tests.
+- `aiologic.testing.Result` as a wrapper to `concurrent.futures.Future`,
+  allowing to wait for its result asynchronously.
+- `aiologic.testing.Task` abstract class (for typing purposes).
 - `aiologic.testing.TaskExecutor` abstract class (for typing purposes).
 - `aiologic.testing.create_executor()` function to create an executor object
   that executes tasks of the chosen library in a separate thread.
 - `aiologic.testing.current_executor()` function to get the executor object
   that executes the current task.
+- `aiologic.testing.get_cancelled_exc_class()` function to get the current
+  cancelled exception class (for the current or passed executor).
+- `aiologic.testing.get_timeout_exc_class()` function to get the current
+  timeout exception class (for the current or passed executor).
+- `aiologic.testing.create_task()` function to create a thread-aware task in
+  the current or passed executor. Useful for cancellation tests.
 - `aiologic.testing.run()` function as shorthand for
   `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
   result in place.

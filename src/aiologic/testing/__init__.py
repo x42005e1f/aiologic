@@ -9,6 +9,13 @@ from ._executors import (
     current_executor as current_executor,
     run as run,
 )
+from ._tasks import (
+    Result as Result,
+    Task as Task,
+    create_task as create_task,
+    get_cancelled_exc_class as get_cancelled_exc_class,
+    get_timeout_exc_class as get_timeout_exc_class,
+)
 
 # modify __module__ for shorter repr()
 if not __import__("typing").TYPE_CHECKING:
