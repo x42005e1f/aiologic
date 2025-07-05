@@ -86,6 +86,10 @@ Commit messages are consistent with
 - `aiologic.testing` subpackage for testing purposes. It is intended to isolate
   complex `aiologic` testing logic (such as running tests on all supported
   libraries), but can also be used by users to create their own tests.
+- `aiologic.testing.GREEN_PAIRS`, which represents a tuple of pairs - supported
+  green libraries and their backends.
+- `aiologic.testing.ASYNC_PAIRS`, which represents a tuple of pairs - supported
+  async libraries and their backends.
 - `aiologic.testing.Result` as a wrapper to `concurrent.futures.Future`,
   allowing to wait for its result asynchronously.
 - `aiologic.testing.Task` abstract class (for typing purposes).

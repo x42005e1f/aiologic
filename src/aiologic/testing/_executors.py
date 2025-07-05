@@ -20,6 +20,7 @@ from inspect import iscoroutinefunction
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Generic,
     NoReturn,
     TypeVar,
@@ -51,6 +52,19 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
 _P = ParamSpec("_P")
+
+GREEN_PAIRS: Final[tuple[tuple[str, str], ...]] = (
+    ("threading", "threading"),
+    ("eventlet", "eventlet"),
+    ("gevent", "gevent"),
+)
+ASYNC_PAIRS: Final[tuple[tuple[str, str], ...]] = (
+    ("asyncio", "asyncio"),
+    ("curio", "curio"),
+    ("trio", "trio"),
+    ("anyio", "asyncio"),
+    ("anyio", "trio"),
+)
 
 
 class _ExecutorLocal(threading.local):

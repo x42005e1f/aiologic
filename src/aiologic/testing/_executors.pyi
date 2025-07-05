@@ -8,7 +8,7 @@ import threading
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
-from typing import Any, Generic, NoReturn, TypeVar, final, overload
+from typing import Any, Final, Generic, NoReturn, TypeVar, final, overload
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
@@ -28,6 +28,9 @@ else:
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
 _P = ParamSpec("_P")
+
+GREEN_PAIRS: Final[tuple[tuple[str, str], ...]]
+ASYNC_PAIRS: Final[tuple[tuple[str, str], ...]]
 
 class _ExecutorLocal(threading.local):
     executor: TaskExecutor | None = None
