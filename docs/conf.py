@@ -41,6 +41,7 @@ autodoc_default_options = {
 
 intersphinx_mapping = {
     "aiohttp": ("https://docs.aiohttp.org/en/stable/", None),
+    "eventlet": ("https://eventlet.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "twisted": ("https://docs.twisted.org/en/stable/api/", None),
 }

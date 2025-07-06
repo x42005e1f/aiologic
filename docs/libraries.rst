@@ -155,3 +155,43 @@ compatibility and usability, but has some non-trivial drawbacks:
 
 The API separation has drawbacks too, but they are `related to the development
 process <https://discuss.python.org/t/15014>`_ rather than runtime specifics.
+
+Why are the release methods not asynchronous?
++++++++++++++++++++++++++++++++++++++++++++++
+
+Once we have dealt with the previous question, we are bound to come to the
+next, equally difficult question in software design: should we represent the
+entire asynchronous API as coroutine functions? It refers to one of the most
+important ideas from software architecture, called "`separation of concerns
+<https://en.wikipedia.org/wiki/Separation_of_concerns>`_", and is a strict form
+of API separation. It is the curio way, and it directly affects release
+methods, such as ``release()``.
+
+Let's assume that we decided to make release methods as coroutine functions.
+Then we will be able to use any asynchronous API in such methods to create any
+complex logic, which opens the way to implementing primitives like
+:class:`eventlet.semaphore.CappedSemaphore`, whose release methods can be
+blocking. This is a strong advantage, but let's move on to the disadvantages:
+
+1. More complex cancellation handling. Because release methods are used after
+   acquire methods, they must always be fully executed, which would require
+   shielding release method calls from cancellation. Otherwise, cancelling a
+   release method call (e.g. due to its blocking nature or a checkpoint) will
+   result in the primitive no longer being able to be acquired.
+2. A cascade effect. Coroutine functions can only be used from coroutines - the
+   async/await syntax says so. As a consequence, in addition to splitting
+   ``event.set()`` into ``event.green_set()`` and ``event.async_set()``, any
+   code that used ``event.set()`` in an asynchronous environment must also
+   become asynchronous. This problem has long been `a source of friction in
+   anyio <https://github.com/agronholm/anyio/issues/179>`_, resulting in its
+   `dropping curio support <https://github.com/agronholm/anyio/pull/182>`_.
+3. Just lower performance. With checkpoints enabled, any code that uses several
+   primitives in a row will switch context several times in a row even if there
+   is no workload between context switches. For example, if ``acquire()`` comes
+   right after ``release()``.
+
+Due to these disadvantages, aiologic does not use async/await syntax where it
+can be done without it, which is the same approach as asyncio, trio, and other
+libraries other than curio. However, while aiologic does not not follow the
+curio way, it fully supports curio, although not with interfaces native to its
+architectural model.
