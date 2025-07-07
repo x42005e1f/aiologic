@@ -111,7 +111,7 @@ and the situation may change in the future.
 .. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
 
 Why are the APIs separated?
-+++++++++++++++++++++++++++
+---------------------------
 
 Different approaches to providing both synchronous and asynchronous APIs
 coexist in the wild. In contrast to API separation, which implies using

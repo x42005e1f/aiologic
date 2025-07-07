@@ -14,15 +14,6 @@ Third-party distributions
 
 Various third-parties provide aiologic for their environments.
 
-piwheels
-^^^^^^^^
-
-aiologic is available via the `piwheels <https://www.piwheels.org/project/
-aiologic/>`_, a Python package repository which provides pre-compiled packages
-for the Raspberry Pi. Installation is similar to that from PyPI, but you will
-need to change your pip configuration or explicitly specify the required index
-according to the `FAQ <https://www.piwheels.org/faq.html>`_.
-
 Anaconda.org
 ^^^^^^^^^^^^
 
@@ -35,3 +26,12 @@ anaconda.org/conda-forge/aiologic>`_:
 
 You can also use the `mamba <https://github.com/mamba-org/mamba>`_ package
 manager instead of conda.
+
+piwheels
+^^^^^^^^
+
+aiologic is also available via the `piwheels <https://www.piwheels.org/project/
+aiologic/>`_, a Python package repository which provides pre-compiled packages
+for the Raspberry Pi. Installation is similar to that from PyPI, but you will
+need to change your pip configuration or explicitly specify the required index
+according to the `FAQ <https://www.piwheels.org/faq.html>`_.
