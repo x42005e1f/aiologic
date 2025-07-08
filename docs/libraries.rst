@@ -195,3 +195,128 @@ can be done without it, which is the same approach as asyncio, trio, and other
 libraries other than curio. However, while aiologic does not not follow the
 curio way, it fully supports curio, although not with interfaces native to its
 architectural model.
+
+How does aiologic import libraries?
+-----------------------------------
+
+aiologic is strong in that it efficiently supports the wide variety of
+concurrency libraries without depending on any of them. The techniques it uses
+for this purpose resemble `lazy imports <https://peps.python.org/pep-0690/>`_
+in action, but differ from them in flexibility and higher efficiency.
+
+The first of them may have different names, but let us call it "global
+rebinding". When you call an aiologic function that needs to access a
+third-party library's API, on the first call it does all the necessary imports
+and replaces itself at the module level with the actual implementation. This
+eliminates the need to import optional libraries that are not currently
+required.
+
+Here is how, for example, a function to check that there is a running
+`twisted`_ reactor in the current thread can be implemented:
+
+.. code:: python
+
+    def _twisted_running() -> bool:
+        global _twisted_running
+
+        from twisted.python.threadable import isInIOThread
+
+        _twisted_running = isInIOThread  # global rebinding
+
+        return _twisted_running()
+
+One serious disadvantage of this example is that if you do not use twisted, you
+have to install it anyway, because otherwise :exc:`ImportError` will be raised.
+Well, there are several ways to solve this problem.
+
+The naive one is to suppress the exception and return a default value instead.
+Despite its simplicity, it is very, very slow because each time it is called,
+it runs the complex `import system <https://docs.python.org/3/reference/
+import.html>`_ that can make a lot of file system calls.
+
+.. code:: python
+
+    def _twisted_running() -> bool:
+        global _twisted_running
+
+        try:
+            import twisted.internet
+        except ImportError:  # reactor is not in use
+            return False
+
+        from twisted.python.threadable import isInIOThread
+
+        _twisted_running = isInIOThread  # global rebinding
+
+        return _twisted_running()
+
+The other is to check :data:`sys.modules` for the imported module. It is much
+better than the naive way and gives performance almost comparable to a direct
+return of a default value, but only almost, which may matter when calling
+several functions at a time.
+
+.. code:: python
+
+    def _twisted_running() -> bool:
+        global _twisted_running
+
+        if "twisted.internet" not in sys.modules:  # reactor is not in use
+            return False
+
+        from twisted.python.threadable import isInIOThread
+
+        _twisted_running = isInIOThread  # global rebinding
+
+        return _twisted_running()
+
+Thus, we come to the second technique. That is post import hooks (:pep:`369`)
+by `wrapt`_. These allow to use a very fast dummy function before importing a
+third-party library on the side, and then replace it with a function that does
+the imports on the first call according to the first technique. This
+combination of techniques bypasses the need to import when it is known that the
+library has not yet started to be used, and also preserves proper exception
+propagation.
+
+With the second technique, the example can be improved as follows:
+
+.. code:: python
+
+    from wrapt import when_imported
+
+    def _twisted_running() -> bool:
+        return False
+
+    @when_imported("twisted.internet")
+    def _(_):  # post import hook
+        global _twisted_running
+
+        def _twisted_running():  # global rebinding
+            global _twisted_running
+
+            from twisted.python.threadable import isInIOThread
+
+            _twisted_running = isInIOThread  # global rebinding
+
+            return _twisted_running()
+
+The result is the following semantics: libraries are imported when functions
+are called, and only when the libraries are actually required. Combined with
+aiologic's architecture, this gives us one interesting effect: primitives can
+work without needing to import any optional libraries at all. For example, if a
+lock is only used in one task at a time, that is, non-blocking.
+
+In addition to these techniques, aiologic also uses
+:func:`functools.update_wrapper` to copy original function information, such as
+annotations and docstrings, into replacement functions, but removes the
+``__wrapped__`` attribute to eliminate memory leaks when a function is called
+by many threads at a time.
+
+.. note::
+
+    As a careful reader may notice, functions built on any of the techniques
+    cannot be imported directly, since they are only replaced at the level of
+    their module. In fact, aiologic uses such functions indirectly, to build
+    more general abstractions based on them.
+
+.. _twisted: https://twisted.org/
+.. _wrapt: https://wrapt.readthedocs.io/en/master/
