@@ -29,3 +29,7 @@ dl.py > dt.py.sig:not(:first-of-type) {
     padding-top: 0 !important;
     margin-top: 0 !important;
 }
+
+dl.py.data dl.py.attribute span.sig-prename {
+    display: none !important;
+}

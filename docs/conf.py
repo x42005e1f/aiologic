@@ -24,6 +24,7 @@ extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx_rtd_theme",
@@ -31,6 +32,8 @@ extensions = [
 
 if sys.version_info >= (3, 11):
     extensions.append("sphinxcontrib.autodoc_inherit_overload")
+
+toc_object_entries = False
 
 autodoc_class_signature = "separated"
 autodoc_inherit_docstrings = False
@@ -41,8 +44,13 @@ autodoc_default_options = {
 
 intersphinx_mapping = {
     "aiohttp": ("https://docs.aiohttp.org/en/stable/", None),
+    "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
+    "curio": ("https://curio.readthedocs.io/en/stable/", None),
     "eventlet": ("https://eventlet.readthedocs.io/en/stable/", None),
+    "gevent": ("https://www.gevent.org/", None),
     "python": ("https://docs.python.org/3", None),
+    "sniffio": ("https://sniffio.readthedocs.io/en/stable/", None),
+    "trio": ("https://trio.readthedocs.io/en/stable/", None),
     "twisted": ("https://docs.twisted.org/en/stable/api/", None),
 }
 

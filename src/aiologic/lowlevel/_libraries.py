@@ -52,6 +52,10 @@ def _curio_running() -> bool:
 def _(_):
     @replaces(globals())
     def _eventlet_running():
+        # eventlet does not provide a public function to get the current hub
+        # without creating a new one when there is none, so we use its private
+        # API.
+
         from eventlet.hubs import _threadlocal
 
         @replaces(globals())
@@ -65,6 +69,10 @@ def _(_):
 def _(_):
     @replaces(globals())
     def _gevent_running():
+        # gevent does not provide a public function to get the current hub
+        # without creating a new one when there is none, so we use its private
+        # API.
+
         from gevent._hub_local import get_hub_if_exists
 
         @replaces(globals())
@@ -78,10 +86,22 @@ def _(_):
 def _(_):
     @replaces(globals())
     def _asyncio_running():
+        # While asyncio.get_running_loop() will work to get the current event
+        # loop, it will also raise a RuntimeError if there is none, which can
+        # be relatively slow to handle on CPython. So instead we use
+        # asyncio._get_running_loop(), which returns None in that case.
+
         from asyncio import _get_running_loop
         from sys import version_info
 
         is_builtin = _get_running_loop.__module__ == "_asyncio"
+
+        # Since Python 3.12, the built-in (C-level) asyncio._get_running_loop()
+        # bypasses the slow os.getpid() call and thus runs fast, so we rely on
+        # it in this case. But in the other case, we try
+        # sniffio.current_async_library_cvar.get() before
+        # asyncio._get_running_loop() to improve performance at least for calls
+        # in an active anyio run.
 
         if version_info >= (3, 12) and is_builtin:
 
@@ -120,6 +140,39 @@ def current_green_library(*, failsafe: Literal[False] = False) -> str: ...
 @external
 def current_green_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_green_library(*, failsafe=False):
+    """
+    Detect which green library is currently running.
+
+    Args:
+      failsafe:
+        Unless set to :data:`True`, the function will raise an exception when
+        there is no current green library. Otherwise the function returns
+        :type:`None` in that case.
+
+    Returns:
+      A string like ``"gevent"`` or :data:`None`.
+
+    Raises:
+      GreenLibraryNotFoundError:
+        if the current green library was not recognized.
+
+    Example:
+
+      .. code:: python
+
+        def green_sleep(seconds: float) -> None:
+            match library := aiologic.lowlevel.current_green_library():
+                case "threading":
+                    time.sleep(seconds)
+                case "eventlet":
+                    eventlet.sleep(seconds)
+                case "gevent":
+                    gevent.sleep(seconds)
+                case _:
+                    msg = f"unsupported green library {library!r}"
+                    raise RuntimeError(msg)
+    """
+
     if (name := current_green_library_tlocal.name) is not None:
         return name
 
@@ -139,8 +192,43 @@ def current_async_library(*, failsafe: Literal[False] = False) -> str: ...
 @external
 def current_async_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_async_library(*, failsafe=False):
+    """
+    Detect which async library is currently running.
+
+    Args:
+      failsafe:
+        Unless set to :data:`True`, the function will raise an exception when
+        there is no current async library. Otherwise the function returns
+        :type:`None` in that case.
+
+    Returns:
+      A string like ``"trio"`` or :data:`None`.
+
+    Raises:
+      AsyncLibraryNotFoundError:
+        if the current async library was not recognized.
+
+    Example:
+
+      .. code:: python
+
+        async def async_sleep(seconds: float) -> None:
+            match library := aiologic.lowlevel.current_async_library():
+                case "asyncio":
+                    await asyncio.sleep(seconds)
+                case "curio":
+                    await curio.sleep(seconds)
+                case "trio":
+                    await trio.sleep(seconds)
+                case _:
+                    msg = f"unsupported async library {library!r}"
+                    raise RuntimeError(msg)
+    """
+
     if (name := current_async_library_tlocal.name) is not None:
         return name
+
+    # trio is detected via current_async_library_tlocal.name
 
     if _curio_running():
         return "curio"

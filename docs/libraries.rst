@@ -320,3 +320,171 @@ by many threads at a time.
 
 .. _twisted: https://twisted.org/
 .. _wrapt: https://wrapt.readthedocs.io/en/master/
+
+How does aiologic detect libraries?
+-----------------------------------
+
+The example given during the previous question showed one of the cases of
+checking that a library is "running", and it is for a reason. Using similar
+functions, aiologic implements detection of the currently running library - the
+one whose API should be used to create a waiter or get the current task.
+
+.. autofunction:: aiologic.lowlevel.current_green_library
+.. autofunction:: aiologic.lowlevel.current_async_library
+
+.. py:exception:: aiologic.lowlevel.GreenLibraryNotFoundError
+
+  Bases: :exc:`RuntimeError`
+
+  Exception raised by the :func:`aiologic.lowlevel.current_green_library`
+  function if the current green library was not recognized.
+.. py:exception:: aiologic.lowlevel.AsyncLibraryNotFoundError
+
+  Bases: :exc:`RuntimeError`
+
+  Exception raised by the :func:`aiologic.lowlevel.current_async_library`
+  function if the current async library was not recognized.
+
+When are libraries counted as running?
+++++++++++++++++++++++++++++++++++++++
+
+Libraries are counted as "currently running" in the current thread by the
+following semantics:
+
+* threading: always running
+* eventlet: running if there is a hub
+* gevent: running if there is a hub
+* asyncio: running if :func:`asyncio.get_running_loop` returns a
+  non-:data:`None` object
+* curio: running if :func:`curio.meta.curio_running` returns :data:`True`
+* trio: running if :func:`trio.lowlevel.in_trio_run` returns :data:`True`
+
+It is much clearer in action. The green libraries except threading are counted
+as currently running if at least one of their functions that touches the
+current hub has been called, such as :func:`eventlet.sleep` or
+:func:`gevent.spawn`.
+
+.. code:: python
+
+    >>> aiologic.lowlevel.current_green_library()
+    'threading'
+    >>> eventlet.spawn(eventlet.sleep)
+    <GreenThread object at 0x7ff1db690200 (otid=0x(nil)) pending>
+    >>> aiologic.lowlevel.current_green_library()
+    'eventlet'
+    >>> gevent.spawn(gevent.sleep)
+    <Greenlet at 0x7ff1db5191c0: sleep>
+    >>> aiologic.lowlevel.current_green_library()
+    'gevent'
+
+The async libraries are counted as currently running if the function was called
+in an active library run (:func:`asyncio.run` / :func:`curio.run` /
+:func:`trio.run` / :func:`anyio.run`).
+
+.. code:: python
+
+    >>> async def test() -> str:
+    ...     return aiologic.lowlevel.current_async_library()
+    ...
+    >>> asyncio.run(test())
+    'asyncio'
+    >>> curio.run(test)
+    'curio'
+    >>> trio.run(test)
+    'trio'
+    >>> anyio.run(test, backend="asyncio")
+    'asyncio'
+    >>> anyio.run(test, backend="trio")
+    'trio'
+
+In case there are several running libraries, priority is given to the one that
+is lower in the list (newer). This was already shown in the green libraries
+example, where both eventlet and gevent hubs coexisted at the same time. A
+similar situation for async libraries is nested ``run()`` calls.
+
+.. note::
+
+    Due to the fact that threading is always counted as running,
+    :func:`~aiologic.lowlevel.current_green_library` will always be able to
+    recognize the current green library. As a consequence, the ``failsafe``
+    parameter has no effect, and
+    :exc:`~aiologic.lowlevel.GreenLibraryNotFoundError` is actually useless.
+    Nevertheless, they are still present for consistency.
+
+How to manually specify a library as running?
++++++++++++++++++++++++++++++++++++++++++++++
+
+There are situations where you need to explicitly specify the currently running
+library. For example, if you are migrating from eventlet to gevent, so you have
+eventlet and gevent hubs coexisting in the same thread, and you want to switch
+between them. For these situations, aiologic provides thread-local objects with
+which you can explicitly set the name of any supported library for the current
+thread.
+
+.. py:data:: aiologic.lowlevel.current_green_library_tlocal
+  :type: threading.local
+
+  Thread-local data to control the return value of
+  :func:`aiologic.lowlevel.current_green_library`.
+
+  .. py:attribute:: aiologic.lowlevel.current_green_library_tlocal.name
+    :type: str | None
+    :value: None
+
+    Unless set to a non-:data:`None` object, the function detects the current
+    green library with its own algorithms. Otherwise the function returns
+    exactly the set object.
+
+  .. rubric:: Example
+
+  .. code:: python
+
+    library = aiologic.lowlevel.current_green_library_tlocal.name
+
+    aiologic.lowlevel.current_green_library_tlocal.name = "somelet"
+
+    try:
+        ...  # aiologic.lowlevel.current_green_library() == "somelet"
+    finally:
+        aiologic.lowlevel.current_green_library_tlocal.name = library
+
+.. py:data:: aiologic.lowlevel.current_async_library_tlocal
+  :type: threading.local
+
+  Thread-local data to control the return value of
+  :func:`aiologic.lowlevel.current_async_library`.
+
+  .. py:attribute:: aiologic.lowlevel.current_async_library_tlocal.name
+    :type: str | None
+    :value: None
+
+    Unless set to a non-:data:`None` object, the function detects the current
+    async library with its own algorithms. Otherwise the function returns
+    exactly the set object.
+
+  .. rubric:: Example
+
+  .. code:: python
+
+    library = aiologic.lowlevel.current_async_library_tlocal.name
+
+    aiologic.lowlevel.current_async_library_tlocal.name = "someio"
+
+    try:
+        ...  # aiologic.lowlevel.current_async_library() == "someio"
+    finally:
+        aiologic.lowlevel.current_async_library_tlocal.name = library
+
+It is worth noting that
+:data:`aiologic.lowlevel.current_async_library_tlocal.name` is the same as
+:data:`sniffio.thread_local.name`. So you can specify the current async library
+via either aiologic or sniffio. This is how trio and `trio-asyncio`_ detection
+is implemented.
+
+.. tip::
+
+    If the performance of library detection is critical for you, you could
+    manually specify a library even when it can be recognized automatically.
+    This way the function will not use its own, slower, detection algorithms.
+
+.. _trio-asyncio: https://trio-asyncio.readthedocs.io/en/stable/
