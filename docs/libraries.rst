@@ -192,8 +192,8 @@ blocking. This is a strong advantage, but let's move on to the disadvantages:
 
 Due to these disadvantages, aiologic does not use async/await syntax where it
 can be done without it, which is the same approach as asyncio, trio, and other
-libraries other than curio. However, while aiologic does not not follow the
-curio way, it fully supports curio, although not with interfaces native to its
+libraries other than curio. However, while aiologic does not follow the curio
+way, it fully supports curio, although not with interfaces native to its
 architectural model.
 
 How does aiologic import libraries?
