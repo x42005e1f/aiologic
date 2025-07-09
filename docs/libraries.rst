@@ -318,6 +318,11 @@ by many threads at a time.
     their module. In fact, aiologic uses such functions indirectly, to build
     more general abstractions based on them.
 
+.. hint::
+
+    One consequence is that the fewer libraries you import, the faster aiologic
+    runs.
+
 .. _twisted: https://twisted.org/
 .. _wrapt: https://wrapt.readthedocs.io/en/master/
 
