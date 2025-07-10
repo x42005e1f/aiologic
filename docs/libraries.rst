@@ -524,5 +524,14 @@ and its optional dependencies both before and after importing, and even in
 parallel during use, which is achieved by using `the techniques described above
 <#how-does-aiologic-import-libraries>`_.
 
+.. note::
+
+    Of course, this is not the main reason why aiologic does not use the
+    module-level approach. If it tried to import all supported optional
+    dependencies at initialization time, this could lead to either conflicts
+    (such as `between eventlet and trio <https://github.com/python-trio/trio/
+    issues/3015>`_) or incompatibility with their unsupported versions, even if
+    they are not needed by the user.
+
 .. _httpx: https://www.python-httpx.org/
 .. _zstandard: https://python-zstandard.readthedocs.io/en/stable/
