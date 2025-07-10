@@ -493,3 +493,36 @@ is implemented.
     This way the function will not use its own, slower, detection algorithms.
 
 .. _trio-asyncio: https://trio-asyncio.readthedocs.io/en/stable/
+
+Is runtime installation supported?
+----------------------------------
+
+When it comes to user scripts, there are different approaches to dependency
+management. One of them is to install missing dependencies `straight within a
+script <https://stackoverflow.com/q/12332975>`_. But its ambiguous weakness is
+that it requires a special approach to optional dependency management on the
+side of the packages being installed, depending on where it is applied.
+
+A good example would be the `httpx`_ package. It optionally supports decoding
+for "zstd" compressed responses via the `zstandard`_ package, `using the
+following module-level code <https://github.com/encode/httpx/blob/
+47f4a96ffaaaa07dca1614409549b5d7a6e7af49/httpx/_decoders.py#L29-L33>`_:
+
+.. code:: python
+
+    # Zstandard support is optional
+    try:
+        import zstandard
+    except ImportError:  # pragma: no cover
+        zstandard = None  # type: ignore
+
+If a user script installs zstandard after importing httpx, the support will not
+be enabled.
+
+The problem is taken into account in the aiologic design. You can install it
+and its optional dependencies both before and after importing, and even in
+parallel during use, which is achieved by using `the techniques described above
+<#how-does-aiologic-import-libraries>`_.
+
+.. _httpx: https://www.python-httpx.org/
+.. _zstandard: https://python-zstandard.readthedocs.io/en/stable/
