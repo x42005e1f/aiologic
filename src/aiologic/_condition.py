@@ -439,7 +439,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
                 if predicate is not None:
                     if not self:
-                        msg = "cannot notify on un-acquired lock"
+                        msg = "cannot notify for predicate on un-acquired lock"
                         raise RuntimeError(msg)
 
                     with self._notifying:
