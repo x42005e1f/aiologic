@@ -10,25 +10,20 @@ import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import BrokenExecutor, Future
 from inspect import iscoroutinefunction
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    NoReturn,
-    TypeVar,
-    final,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
-import aiologic
-
+from aiologic.lowlevel import create_async_event, create_green_event
 from aiologic.lowlevel._threads import _once as once
-from aiologic.lowlevel._utils import (
-    _external as external,
-    _replaces as replaces,
-)
+from aiologic.lowlevel._utils import _external as external
 
+from ._exceptions import (
+    _CancelledError,
+    _TimeoutError,
+    get_cancelled_exc_class,
+    get_timeout_exc_class,
+)
 from ._executors import TaskExecutor, current_executor
+from ._results import Result
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
@@ -43,283 +38,6 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
-
-
-def _get_threading_cancelled_exc_class() -> type[BaseException]:
-    from concurrent.futures import CancelledError
-
-    @replaces(globals())
-    def _get_threading_cancelled_exc_class():
-        return CancelledError
-
-    return _get_threading_cancelled_exc_class()
-
-
-def _get_eventlet_cancelled_exc_class() -> type[BaseException]:
-    from greenlet import GreenletExit
-
-    @replaces(globals())
-    def _get_eventlet_cancelled_exc_class():
-        return GreenletExit
-
-    return _get_eventlet_cancelled_exc_class()
-
-
-def _get_gevent_cancelled_exc_class() -> type[BaseException]:
-    from greenlet import GreenletExit
-
-    @replaces(globals())
-    def _get_gevent_cancelled_exc_class():
-        return GreenletExit
-
-    return _get_gevent_cancelled_exc_class()
-
-
-def _get_asyncio_cancelled_exc_class() -> type[BaseException]:
-    from asyncio import CancelledError
-
-    @replaces(globals())
-    def _get_asyncio_cancelled_exc_class():
-        return CancelledError
-
-    return _get_asyncio_cancelled_exc_class()
-
-
-def _get_curio_cancelled_exc_class() -> type[BaseException]:
-    from curio import TaskCancelled
-
-    @replaces(globals())
-    def _get_curio_cancelled_exc_class():
-        return TaskCancelled
-
-    return _get_curio_cancelled_exc_class()
-
-
-def _get_trio_cancelled_exc_class() -> type[BaseException]:
-    from trio import Cancelled
-
-    @replaces(globals())
-    def _get_trio_cancelled_exc_class():
-        return Cancelled
-
-    return _get_trio_cancelled_exc_class()
-
-
-def get_cancelled_exc_class(
-    *,
-    executor: TaskExecutor | None = None,
-    failback: type[BaseException] | None = None,
-) -> type[BaseException]:
-    if executor is None:
-        if failback is None:
-            executor = current_executor()
-        else:
-            executor = current_executor(failsafe=True)
-
-            if executor is None:
-                return failback
-
-    backend = executor.backend
-
-    if backend == "threading":
-        return _get_threading_cancelled_exc_class()
-
-    if backend == "eventlet":
-        return _get_eventlet_cancelled_exc_class()
-
-    if backend == "gevent":
-        return _get_gevent_cancelled_exc_class()
-
-    if backend == "asyncio":
-        return _get_asyncio_cancelled_exc_class()
-
-    if backend == "curio":
-        return _get_curio_cancelled_exc_class()
-
-    if backend == "trio":
-        return _get_trio_cancelled_exc_class()
-
-    msg = f"unsupported backend {backend!r}"
-    raise RuntimeError(msg)
-
-
-def _get_threading_timeout_exc_class() -> type[BaseException]:
-    if sys.version_info >= (3, 11):
-        WaitTimeout = TimeoutError
-    else:
-        from concurrent.futures import TimeoutError as WaitTimeout
-
-    @replaces(globals())
-    def _get_threading_timeout_exc_class():
-        return WaitTimeout
-
-    return _get_threading_timeout_exc_class()
-
-
-def _get_eventlet_timeout_exc_class() -> type[BaseException]:
-    from eventlet import Timeout
-
-    @replaces(globals())
-    def _get_eventlet_timeout_exc_class():
-        return Timeout
-
-    return _get_eventlet_timeout_exc_class()
-
-
-def _get_gevent_timeout_exc_class() -> type[BaseException]:
-    from gevent import Timeout
-
-    @replaces(globals())
-    def _get_gevent_timeout_exc_class():
-        return Timeout
-
-    return _get_gevent_timeout_exc_class()
-
-
-def _get_asyncio_timeout_exc_class() -> type[BaseException]:
-    if sys.version_info >= (3, 11):
-        WaitTimeout = TimeoutError
-    else:
-        from asyncio import TimeoutError as WaitTimeout
-
-    @replaces(globals())
-    def _get_asyncio_timeout_exc_class():
-        return WaitTimeout
-
-    return _get_asyncio_timeout_exc_class()
-
-
-def _get_curio_timeout_exc_class() -> type[BaseException]:
-    from curio import TaskTimeout
-
-    @replaces(globals())
-    def _get_curio_timeout_exc_class():
-        return TaskTimeout
-
-    return _get_curio_timeout_exc_class()
-
-
-def _get_trio_timeout_exc_class() -> type[BaseException]:
-    from trio import TooSlowError
-
-    @replaces(globals())
-    def _get_trio_timeout_exc_class():
-        return TooSlowError
-
-    return _get_trio_timeout_exc_class()
-
-
-def get_timeout_exc_class(
-    *,
-    executor: TaskExecutor | None = None,
-    failback: type[BaseException] | None = None,
-) -> type[BaseException]:
-    if executor is None:
-        if failback is None:
-            executor = current_executor()
-        else:
-            executor = current_executor(failsafe=True)
-
-            if executor is None:
-                return failback
-
-    backend = executor.backend
-
-    if backend == "threading":
-        return _get_threading_timeout_exc_class()
-
-    if backend == "eventlet":
-        return _get_eventlet_timeout_exc_class()
-
-    if backend == "gevent":
-        return _get_gevent_timeout_exc_class()
-
-    if backend == "asyncio":
-        return _get_asyncio_timeout_exc_class()
-
-    if backend == "curio":
-        return _get_curio_timeout_exc_class()
-
-    if backend == "trio":
-        return _get_trio_timeout_exc_class()
-
-    msg = f"unsupported backend {backend!r}"
-    raise RuntimeError(msg)
-
-
-_CancelledError: type[BaseException] = _get_threading_cancelled_exc_class()
-_TimeoutError: type[BaseException] = _get_threading_timeout_exc_class()
-
-
-class Result(Generic[_T]):
-    __slots__ = ("_future",)
-
-    def __init__(self, /, future: Future[_T]) -> None:
-        self._future = future
-
-    def __repr__(self, /) -> str:
-        cls = self.__class__
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
-
-        object_repr = f"{cls_repr}(<Future>)"
-
-        if self._future.running():
-            extra = "running"
-        elif self._future.done():
-            if self._future.cancelled():
-                extra = "cancelled and notified"
-            elif isinstance(self._future.exception(), _CancelledError):
-                extra = "cancelled and notified"
-            elif isinstance(self._future.exception(), BrokenExecutor):
-                extra = "aborted"
-            else:
-                extra = "finished"
-        elif self._future.cancelled():
-            extra = "cancelled"
-        else:
-            extra = "pending"
-
-        return f"<{object_repr} at {id(self):#x} [{extra}]>"
-
-    def __bool__(self, /) -> bool:
-        if not self._future.done():
-            return False
-
-        if self._future.cancelled():
-            return False
-
-        if self._future.exception() is not None:
-            return False
-
-        return bool(self._future.result())
-
-    def __await__(self) -> Generator[Any, Any, _T]:
-        if not self._future.done():
-            event = aiologic.lowlevel.create_async_event()
-            self._future.add_done_callback(lambda _: event.set())
-
-            success = yield from event.__await__()
-
-            if not success:
-                raise get_timeout_exc_class(failback=_TimeoutError)
-
-        return self._future.result()
-
-    def wait(self, timeout: float | None = None) -> _T:
-        if not self._future.done():
-            event = aiologic.lowlevel.create_green_event()
-            self._future.add_done_callback(lambda _: event.set())
-
-            success = event.wait(timeout)
-
-            if not success:
-                raise get_timeout_exc_class(failback=_TimeoutError)
-
-        return self._future.result()
-
-    @property
-    def future(self, /) -> Future[_T]:
-        return self._future
 
 
 class Task(Result[_T], ABC):
@@ -402,14 +120,14 @@ class Task(Result[_T], ABC):
 
     def __await__(self) -> Generator[Any, Any, _T]:
         if not self._future.done():
-            event = aiologic.lowlevel.create_async_event()
+            event = create_async_event()
             self._future.add_done_callback(lambda _: event.set())
 
             try:
                 success = yield from event.__await__()
             finally:
                 if event.cancelled():
-                    event = aiologic.lowlevel.create_async_event(shield=True)
+                    event = create_async_event(shield=True)
 
                     if not self._future.done():
                         self.cancel()
@@ -428,14 +146,14 @@ class Task(Result[_T], ABC):
 
     def wait(self, timeout: float | None = None) -> _T:
         if not self._future.done():
-            event = aiologic.lowlevel.create_green_event()
+            event = create_green_event()
             self._future.add_done_callback(lambda _: event.set())
 
             try:
                 success = event.wait(timeout)
             finally:
                 if event.cancelled():
-                    event = aiologic.lowlevel.create_green_event(shield=True)
+                    event = create_green_event(shield=True)
 
                     if not self._future.done():
                         self.cancel()

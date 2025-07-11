@@ -8,12 +8,7 @@ import threading
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
-from typing import Any, Final, Generic, NoReturn, TypeVar, final, overload
-
-if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
-else:
-    from typing_extensions import TypeVarTuple, Unpack
+from typing import Any, Generic, NoReturn, TypeVar, final, overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -26,11 +21,7 @@ else:
     from typing import Callable, Coroutine
 
 _T = TypeVar("_T")
-_Ts = TypeVarTuple("_Ts")
 _P = ParamSpec("_P")
-
-GREEN_PAIRS: Final[tuple[tuple[str, str], ...]]
-ASYNC_PAIRS: Final[tuple[tuple[str, str], ...]]
 
 class _ExecutorLocal(threading.local):
     executor: TaskExecutor | None = None
@@ -218,21 +209,3 @@ def create_executor(
     backend_options: dict[str, Any] | None = None,
 ) -> TaskExecutor: ...
 def current_executor(*, failsafe: bool = False) -> TaskExecutor: ...
-@overload
-def run(
-    func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
-    /,
-    *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
-    backend_options: dict[str, Any] | None = None,
-) -> _T: ...
-@overload
-def run(
-    func: Callable[[Unpack[_Ts]], _T],
-    /,
-    *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
-    backend_options: dict[str, Any] | None = None,
-) -> _T: ...
