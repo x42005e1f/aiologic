@@ -3,6 +3,10 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from ._checkpoints import (
+    assert_checkpoints as assert_checkpoints,
+    assert_no_checkpoints as assert_no_checkpoints,
+)
 from ._constants import (
     ASYNC_PAIRS as ASYNC_PAIRS,
     GREEN_PAIRS as GREEN_PAIRS,
