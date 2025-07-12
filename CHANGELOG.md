@@ -102,8 +102,10 @@ Commit messages are consistent with
   cancelled exception class (for the current or passed executor).
 - `aiologic.testing.get_timeout_exc_class()` function to get the current
   timeout exception class (for the current or passed executor).
+- `aiologic.testing.timeout_after()` function to wait with a timeout. Useful
+  for cancellation tests.
 - `aiologic.testing.create_task()` function to create a thread-aware task in
-  the current or passed executor. Useful for cancellation tests.
+  the current or passed executor.
 - `aiologic.testing.run()` function as shorthand for
   `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
   result in place.

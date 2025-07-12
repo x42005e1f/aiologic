@@ -26,6 +26,9 @@ from ._tasks import (
     Task as Task,
     create_task as create_task,
 )
+from ._timeouts import (
+    timeout_after as timeout_after,
+)
 
 # modify __module__ for shorter repr()
 if not __import__("typing").TYPE_CHECKING:
