@@ -15,6 +15,7 @@ from concurrent.futures import (
     Future,
     InvalidStateError,
 )
+from contextvars import Context, copy_context
 from functools import partial
 from inspect import iscoroutinefunction
 from typing import (
@@ -57,6 +58,7 @@ _executor_tlocal: _ExecutorLocal = _ExecutorLocal()
 class _WorkItem(Generic[_T]):
     __slots__ = (
         "_args",
+        "_context",
         "_func",
         "_future",
         "_kwargs",
@@ -77,6 +79,7 @@ class _WorkItem(Generic[_T]):
         self._args = args
         self._kwargs = kwargs
 
+        self._context = None
         self._new_task = False
 
     def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
@@ -165,6 +168,14 @@ class _WorkItem(Generic[_T]):
     @property
     def future(self, /) -> Future[_T]:
         return self._future
+
+    @property
+    def context(self, /) -> Context:
+        return self._context
+
+    @context.setter
+    def context(self, /, value: Context) -> None:
+        self._context = value
 
     @property
     def new_task(self, /) -> bool:
@@ -352,6 +363,33 @@ class TaskExecutor(Executor, ABC):
         def submit(self, fn, *args, **kwargs):
             return self._submit(fn, *args, **kwargs)
 
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Callable[[], Coroutine[Any, Any, _T]],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Callable[[], _T],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
+    def _submit_with_context(self, fn, /, context):
+        with self._shutdown_lock:
+            work_item = self._create_work_item(fn)
+            work_item.context = context
+            work_item.new_task = True
+
+            if current_executor(failsafe=True) is self:
+                self._create_task(work_item)
+            else:
+                self._work_queue.put(work_item)
+
+            return work_item.future
+
     def shutdown(
         self,
         wait: bool = True,
@@ -445,36 +483,38 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
-                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
+                work_context = copy_context()
+                work_threads = set()
 
-                threads = set()
-
-                while True:
-                    with no_checkpoints:
+                with aiologic.lowlevel.disable_checkpoints():
+                    while True:
                         work_item = self._work_queue.green_get()
 
-                    if work_item is None:
-                        break
+                        if work_item is None:
+                            break
 
-                    if work_item.new_task:
-                        thread = threading.Thread(
-                            target=work_item.green_run,
-                            args=[self],
-                        )
-                        threads.add(thread)
-                        work_item.add_done_callback(
-                            partial(
-                                threads.discard,
-                                thread,
+                        if work_item.new_task:
+                            if work_item.context is None:
+                                work_item.context = work_context.copy()
+
+                            thread = threading.Thread(
+                                target=work_item.context.run,
+                                args=[work_item.green_run, self],
                             )
-                        )
-                        thread.start()
-                    else:
-                        work_item.green_run()
+                            work_threads.add(thread)
+                            work_item.add_done_callback(
+                                partial(
+                                    work_threads.discard,
+                                    thread,
+                                )
+                            )
+                            thread.start()
+                        else:
+                            work_item.green_run()
 
-                while threads:
+                while work_threads:
                     try:
-                        thread = threads.pop()
+                        thread = work_threads.pop()
                     except KeyError:
                         break
                     else:
@@ -498,7 +538,10 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
 
     @final
     class _EventletExecutor(TaskExecutor):
-        __slots__ = ("_work_pool",)
+        __slots__ = (
+            "_work_context",
+            "_work_pool",
+        )
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _EventletExecutor
@@ -523,28 +566,30 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
             pass
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
-            self._work_pool.spawn(work_item.green_run)
+            if work_item.context is None:
+                work_item.context = self._work_context.copy()
+
+            self._work_pool.spawn(work_item.context.run, work_item.green_run)
 
         def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
                 try:
-                    no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
+                    self._work_context = copy_context()
                     self._work_pool = eventlet.greenpool.GreenPool()
 
-                    while True:
-                        with no_checkpoints:
+                    with aiologic.lowlevel.disable_checkpoints():
+                        while True:
                             work_item = self._work_queue.green_get()
 
-                        if work_item is None:
-                            break
+                            if work_item is None:
+                                break
 
-                        if work_item.new_task:
-                            self._create_task(work_item)
-                        else:
-                            work_item.green_run()
+                            if work_item.new_task:
+                                self._create_task(work_item)
+                            else:
+                                work_item.green_run()
 
                     self._work_pool.waitall()
                 finally:
@@ -570,7 +615,10 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
 
     @final
     class _GeventExecutor(TaskExecutor):
-        __slots__ = ("_work_pool",)
+        __slots__ = (
+            "_work_context",
+            "_work_pool",
+        )
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _GeventExecutor
@@ -595,28 +643,30 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
             pass
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
-            self._work_pool.spawn(work_item.green_run)
+            if work_item.context is None:
+                work_item.context = self._work_context.copy()
+
+            self._work_pool.spawn(work_item.context.run, work_item.green_run)
 
         def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
                 try:
-                    no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
+                    self._work_context = copy_context()
                     self._work_pool = gevent.pool.Pool()
 
-                    while True:
-                        with no_checkpoints:
+                    with aiologic.lowlevel.disable_checkpoints():
+                        while True:
                             work_item = self._work_queue.green_get()
 
-                        if work_item is None:
-                            break
+                            if work_item is None:
+                                break
 
-                        if work_item.new_task:
-                            self._create_task(work_item)
-                        else:
-                            work_item.green_run()
+                            if work_item.new_task:
+                                self._create_task(work_item)
+                            else:
+                                work_item.green_run()
 
                     self._work_pool.join()
                 finally:
@@ -641,7 +691,10 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _AsyncioExecutor(TaskExecutor):
-        __slots__ = ("_work_tasks",)
+        __slots__ = (
+            "_work_context",
+            "_work_tasks",
+        )
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _AsyncioExecutor
@@ -661,30 +714,50 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
 
-        def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
-            task = asyncio.create_task(work_item.async_run())
-            self._work_tasks.add(task)
-            task.add_done_callback(self._work_tasks.discard)
+        if sys.version_info >= (3, 11):
+
+            def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+                if work_item.context is None:
+                    work_item.context = self._work_context.copy()
+
+                task = asyncio.create_task(
+                    work_item.async_run(),
+                    context=work_item.context,
+                )
+                self._work_tasks.add(task)
+                task.add_done_callback(self._work_tasks.discard)
+
+        else:
+
+            def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
+                if work_item.context is None:
+                    work_item.context = self._work_context.copy()
+
+                task = work_item.context.run(
+                    asyncio.create_task,
+                    work_item.async_run(),
+                )
+                self._work_tasks.add(task)
+                task.add_done_callback(self._work_tasks.discard)
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
-                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
+                self._work_context = copy_context()
                 self._work_tasks = set()
 
-                while True:
-                    async with no_checkpoints:
+                async with aiologic.lowlevel.disable_checkpoints():
+                    while True:
                         work_item = await self._work_queue.async_get()
 
-                    if work_item is None:
-                        break
+                        if work_item is None:
+                            break
 
-                    if work_item.new_task:
-                        self._create_task(work_item)
-                    else:
-                        await work_item.async_run()
+                        if work_item.new_task:
+                            self._create_task(work_item)
+                        else:
+                            await work_item.async_run()
 
                 await asyncio.gather(*self._work_tasks)
             finally:
@@ -719,6 +792,8 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            self._backend_options.setdefault("taskcls", curio.task.ContextTask)
+
             try:
                 curio.run(self._listen, **self._backend_options)
             except BaseException as exc:  # noqa: BLE001
@@ -729,20 +804,38 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
             _executor_tlocal.executor = self
 
             try:
-                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
                 async with curio.TaskGroup() as g:
-                    while True:
-                        async with no_checkpoints:
-                            work_item = await self._work_queue.async_get()
+                    work_task = await curio.current_task()
+                    work_context = copy_context()
 
-                        if work_item is None:
-                            break
+                    try:
+                        async with aiologic.lowlevel.disable_checkpoints():
+                            while True:
+                                work_item = await self._work_queue.async_get()
 
-                        if work_item.new_task:
-                            await g.spawn(work_item.async_run)
-                        else:
-                            await work_item.async_run()
+                                if work_item is None:
+                                    break
+
+                                if work_item.new_task:
+                                    if work_item.context is None:
+                                        work_item.context = work_context.copy()
+
+                                    work_task_context = getattr(
+                                        work_task,
+                                        "_context",
+                                        work_context,
+                                    )
+                                    work_task._context = work_item.context
+
+                                    try:
+                                        await g.spawn(work_item.async_run)
+                                    finally:
+                                        work_task._context = work_task_context
+                                        del work_task_context
+                                else:
+                                    await work_item.async_run()
+                    finally:
+                        del work_task
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -760,7 +853,10 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _TrioExecutor(TaskExecutor):
-        __slots__ = ("_work_nursery",)
+        __slots__ = (
+            "_work_context",
+            "_work_nursery",
+        )
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _TrioExecutor
@@ -781,28 +877,33 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                 self = None  # noqa: PLW0642
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
-            self._work_nursery.start_soon(work_item.async_run)
+            if work_item.context is None:
+                work_item.context = self._work_context.copy()
+
+            work_item.context.run(
+                self._work_nursery.start_soon,
+                work_item.async_run,
+            )
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
-                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
                 async with trio.open_nursery() as nursery:
+                    self._work_context = copy_context()
                     self._work_nursery = nursery
 
-                    while True:
-                        async with no_checkpoints:
+                    async with aiologic.lowlevel.disable_checkpoints():
+                        while True:
                             work_item = await self._work_queue.async_get()
 
-                        if work_item is None:
-                            break
+                            if work_item is None:
+                                break
 
-                        if work_item.new_task:
-                            self._create_task(work_item)
-                        else:
-                            await work_item.async_run()
+                            if work_item.new_task:
+                                self._create_task(work_item)
+                            else:
+                                await work_item.async_run()
             finally:
                 try:
                     del _executor_tlocal.executor
@@ -820,7 +921,10 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
 
     @final
     class _AnyioExecutor(TaskExecutor):
-        __slots__ = ("_work_task_group",)
+        __slots__ = (
+            "_work_context",
+            "_work_task_group",
+        )
 
         def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
             bcs = _AnyioExecutor
@@ -845,28 +949,33 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                 self = None  # noqa: PLW0642
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
-            self._work_task_group.start_soon(work_item.async_run)
+            if work_item.context is None:
+                work_item.context = self._work_context.copy()
+
+            work_item.context.run(
+                self._work_task_group.start_soon,
+                work_item.async_run,
+            )
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
 
             try:
-                no_checkpoints = aiologic.lowlevel.disable_checkpoints()
-
                 async with anyio.create_task_group() as tg:
+                    self._work_context = copy_context()
                     self._work_task_group = tg
 
-                    while True:
-                        async with no_checkpoints:
+                    async with aiologic.lowlevel.disable_checkpoints():
+                        while True:
                             work_item = await self._work_queue.async_get()
 
-                        if work_item is None:
-                            break
+                            if work_item is None:
+                                break
 
-                        if work_item.new_task:
-                            self._create_task(work_item)
-                        else:
-                            await work_item.async_run()
+                            if work_item.new_task:
+                                self._create_task(work_item)
+                            else:
+                                await work_item.async_run()
             finally:
                 try:
                     del _executor_tlocal.executor

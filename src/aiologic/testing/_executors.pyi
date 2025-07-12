@@ -8,6 +8,7 @@ import threading
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
+from contextvars import Context
 from typing import Any, Generic, NoReturn, TypeVar, final, overload
 
 if sys.version_info >= (3, 10):
@@ -32,6 +33,7 @@ _executor_tlocal: _ExecutorLocal
 class _WorkItem(Generic[_T]):
     __slots__ = (
         "_args",
+        "_context",
         "_func",
         "_future",
         "_kwargs",
@@ -55,6 +57,10 @@ class _WorkItem(Generic[_T]):
     def abort(self, /, cause: BaseException) -> None: ...
     @property
     def future(self, /) -> Future[_T]: ...
+    @property
+    def context(self, /) -> Context: ...
+    @context.setter
+    def context(self, /, value: Context) -> None: ...
     @property
     def new_task(self, /) -> bool: ...
     @new_task.setter
@@ -147,6 +153,20 @@ class TaskExecutor(Executor, ABC):
             *args: _P.args,
             **kwargs: _P.kwargs,
         ) -> Future[_T]: ...
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Callable[[], Coroutine[Any, Any, _T]],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Callable[[], _T],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
     def shutdown(
         self,
         wait: bool = True,

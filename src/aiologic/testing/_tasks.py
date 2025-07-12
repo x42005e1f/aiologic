@@ -9,6 +9,7 @@ import sys
 
 from abc import ABC, abstractmethod
 from concurrent.futures import BrokenExecutor, Future
+from contextvars import copy_context
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
@@ -77,7 +78,7 @@ class Task(Result[_T], ABC):
             if not self._started.future.done():
                 self._started.future.set_result(False)
 
-        future = self._executor.submit(self._run)
+        future = self._executor._submit_with_context(self._run, copy_context())
         future.add_done_callback(callback)
 
         super().__init__(future)
