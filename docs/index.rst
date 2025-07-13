@@ -43,6 +43,7 @@ Features
   :hidden:
 
   advanced-topics/libraries
+  advanced-topics/execution-units
 
 .. toctree::
   :caption: Meta
