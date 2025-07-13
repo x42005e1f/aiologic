@@ -42,7 +42,7 @@ Features
   :maxdepth: 2
   :hidden:
 
-  libraries
+  advanced-topics/libraries
 
 .. toctree::
   :caption: Meta
