@@ -11,15 +11,7 @@ from abc import ABC, abstractmethod
 from concurrent.futures import BrokenExecutor, Future
 from contextvars import copy_context
 from inspect import iscoroutinefunction
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    NoReturn,
-    TypeVar,
-    final,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
 from aiologic.lowlevel import create_async_event, create_green_event
 from aiologic.lowlevel._threads import _once as once
@@ -32,7 +24,7 @@ from ._exceptions import (
     get_timeout_exc_class,
 )
 from ._executors import TaskExecutor, current_executor
-from ._results import Result
+from ._results import FALSE_RESULT, TRUE_RESULT, Result
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
@@ -47,11 +39,6 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
-
-_FalseResult: Result[Literal[False]] = Result(Future())
-_FalseResult.future.set_result(False)
-_TrueResult: Result[Literal[True]] = Result(Future())
-_TrueResult.future.set_result(True)
 
 
 class Task(Result[_T], ABC):
@@ -186,28 +173,28 @@ class Task(Result[_T], ABC):
 
     def cancel(self, /) -> Result[bool]:
         if self._future.cancel():
-            return _TrueResult
+            return TRUE_RESULT
 
         if self._future.done():
             if self._cancelled:
-                return _TrueResult
+                return TRUE_RESULT
             else:
-                return _FalseResult
+                return FALSE_RESULT
 
         try:
             return Result(self._executor.schedule(self._cancel))
         except RuntimeError:  # executor is shutdown or broken
             if self._cancelled:
-                return _TrueResult
+                return TRUE_RESULT
             else:
-                return _FalseResult
+                return FALSE_RESULT
 
     def cancelled(self, /) -> Result[bool]:
         if self._future.done():
             if self._cancelled or self._future.cancelled():
-                return _TrueResult
+                return TRUE_RESULT
             else:
-                return _FalseResult
+                return FALSE_RESULT
 
         future = Future()
 
@@ -222,16 +209,16 @@ class Task(Result[_T], ABC):
 
     def running(self, /) -> Result[bool]:
         if self._future.running():
-            return _TrueResult
+            return TRUE_RESULT
 
         if self._future.done():
-            return _FalseResult
+            return FALSE_RESULT
 
         return self._started
 
     def done(self, /) -> Result[bool]:
         if self._future.done():
-            return _TrueResult
+            return TRUE_RESULT
 
         future = Future()
 

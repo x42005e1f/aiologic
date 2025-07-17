@@ -6,9 +6,23 @@
 from __future__ import annotations
 
 from concurrent.futures import BrokenExecutor, Future
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    Literal,
+    NoReturn,
+    TypeVar,
+    final,
+)
 
-from aiologic.lowlevel import create_async_event, create_green_event
+from aiologic.lowlevel import (
+    async_checkpoint,
+    create_async_event,
+    create_green_event,
+    green_checkpoint,
+)
 
 from ._exceptions import _CancelledError, _TimeoutError, get_timeout_exc_class
 
@@ -92,3 +106,89 @@ class Result(Generic[_T]):
     @property
     def future(self, /) -> Future[_T]:
         return self._future
+
+
+@final
+class FalseResult(Result[Literal[False]]):
+    __slots__ = ()
+
+    def __new__(cls, /) -> FalseResult:
+        return FALSE_RESULT
+
+    def __init__(self, /) -> None:
+        future = Future()
+        future.set_result(False)
+
+        super().__init__(future)
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+        bcs = FalseResult
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> str:
+        return "FALSE_RESULT"
+
+    def __repr__(self, /) -> str:
+        return f"{self.__class__.__module__}.FALSE_RESULT"
+
+    def __bool__(self, /) -> bool:
+        return False
+
+    def __await__(self) -> Generator[Any, Any, Literal[False]]:
+        yield from async_checkpoint().__await__()
+
+        return False
+
+    def wait(self, timeout: float | None = None) -> Literal[False]:
+        green_checkpoint()
+
+        return False
+
+
+@final
+class TrueResult(Result[Literal[True]]):
+    __slots__ = ()
+
+    def __new__(cls, /) -> TrueResult:
+        return TRUE_RESULT
+
+    def __init__(self, /) -> None:
+        future = Future()
+        future.set_result(True)
+
+        super().__init__(future)
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+        bcs = TrueResult
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> str:
+        return "TRUE_RESULT"
+
+    def __repr__(self, /) -> str:
+        return f"{self.__class__.__module__}.TRUE_RESULT"
+
+    def __bool__(self, /) -> bool:
+        return True
+
+    def __await__(self) -> Generator[Any, Any, Literal[True]]:
+        yield from async_checkpoint().__await__()
+
+        return True
+
+    def wait(self, timeout: float | None = None) -> Literal[True]:
+        green_checkpoint()
+
+        return True
+
+
+FALSE_RESULT: Final[FalseResult] = object.__new__(FalseResult)
+FALSE_RESULT.__init__()
+TRUE_RESULT: Final[TrueResult] = object.__new__(TrueResult)
+TRUE_RESULT.__init__()

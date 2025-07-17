@@ -6,7 +6,7 @@
 import sys
 
 from abc import ABC, abstractmethod
-from typing import Any, Literal, TypeVar, overload
+from typing import Any, TypeVar, overload
 
 from ._executors import TaskExecutor
 from ._results import Result
@@ -23,9 +23,6 @@ else:
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
-
-_FalseResult: Result[Literal[False]]
-_TrueResult: Result[Literal[True]]
 
 class Task(Result[_T], ABC):
     __slots__ = (

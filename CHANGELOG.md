@@ -94,6 +94,8 @@ Commit messages are consistent with
   which represents a tuple of strings - supported backends.
 - `aiologic.testing.Result` as a wrapper to `concurrent.futures.Future`,
   allowing to wait for its result asynchronously.
+- `aiologic.testing.FALSE_RESULT` and `aiologic.testing.TRUE_RESULT` as
+  predefined results.
 - `aiologic.testing.Task` abstract class (for typing purposes).
 - `aiologic.testing.TaskExecutor` abstract class (for typing purposes).
 - `aiologic.testing.create_executor()` function to create an executor object

@@ -25,7 +25,11 @@ from ._executors import (
     current_executor as current_executor,
 )
 from ._results import (
+    FALSE_RESULT as FALSE_RESULT,
+    TRUE_RESULT as TRUE_RESULT,
+    FalseResult as FalseResult,
     Result as Result,
+    TrueResult as TrueResult,
 )
 from ._runners import (
     run as run,
@@ -38,7 +42,7 @@ from ._timeouts import (
     timeout_after as timeout_after,
 )
 
-# modify __module__ for shorter repr()
+# modify __module__ for shorter repr() and better pickle support
 if not __import__("typing").TYPE_CHECKING:
     for __value in list(globals().values()):
         if getattr(__value, "__module__", "").startswith(f"{__name__}."):
