@@ -8,6 +8,7 @@ from __future__ import annotations
 import warnings
 
 from collections import deque
+from copy import copy
 from heapq import heapify, heappop, heappush
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
@@ -66,7 +67,7 @@ class SimpleQueue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        return (list(self._data),)
+        return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
         return None
@@ -75,7 +76,7 @@ class SimpleQueue(Generic[_T]):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        items = list(self._data)
+        items = list(copy(self._data))
 
         object_repr = f"{cls_repr}({items!r})"
 
@@ -251,9 +252,9 @@ class Queue(Generic[_T]):
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
         if (maxsize := self._maxsize) != 0:
-            return (tuple(self._data), maxsize)
+            return (tuple(copy(self._data)), maxsize)
 
-        return (tuple(self._data),)
+        return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
         return None
@@ -262,7 +263,7 @@ class Queue(Generic[_T]):
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        items = list(self._data)
+        items = list(copy(self._data))
 
         maxsize = self._maxsize
 
