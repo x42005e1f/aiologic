@@ -176,6 +176,10 @@ def _get_trio_timeout_exc_class() -> type[BaseException]:
     return _get_trio_timeout_exc_class()
 
 
+def _get_anyio_timeout_exc_class() -> type[BaseException]:
+    return TimeoutError
+
+
 def get_timeout_exc_class(
     *,
     executor: TaskExecutor | None = None,
@@ -190,27 +194,30 @@ def get_timeout_exc_class(
             if executor is None:
                 return failback
 
-    backend = executor.backend
+    library = executor.library
 
-    if backend == "threading":
+    if library == "threading":
         return _get_threading_timeout_exc_class()
 
-    if backend == "eventlet":
+    if library == "eventlet":
         return _get_eventlet_timeout_exc_class()
 
-    if backend == "gevent":
+    if library == "gevent":
         return _get_gevent_timeout_exc_class()
 
-    if backend == "asyncio":
+    if library == "asyncio":
         return _get_asyncio_timeout_exc_class()
 
-    if backend == "curio":
+    if library == "curio":
         return _get_curio_timeout_exc_class()
 
-    if backend == "trio":
+    if library == "trio":
         return _get_trio_timeout_exc_class()
 
-    msg = f"unsupported backend {backend!r}"
+    if library == "anyio":
+        return _get_anyio_timeout_exc_class()
+
+    msg = f"unsupported library {library!r}"
     raise RuntimeError(msg)
 
 

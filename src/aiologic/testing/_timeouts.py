@@ -321,11 +321,8 @@ def _anyio_timeout_after(seconds, maybe_func, /, *args):
         maybe_func: Awaitable[_T],
         /,
     ) -> _T:
-        try:
-            with fail_after(max(0, seconds)):
-                return await maybe_func
-        except TimeoutError as exc:
-            raise get_timeout_exc_class() from exc
+        with fail_after(max(0, seconds)):
+            return await maybe_func
 
     async def _anyio_timeout_after_for_coroutine_function(
         seconds: float,
@@ -333,11 +330,8 @@ def _anyio_timeout_after(seconds, maybe_func, /, *args):
         /,
         *args: Unpack[_Ts],
     ) -> _T:
-        try:
-            with fail_after(max(0, seconds)):
-                return await maybe_func(*args)
-        except TimeoutError as exc:
-            raise get_timeout_exc_class() from exc
+        with fail_after(max(0, seconds)):
+            return await maybe_func(*args)
 
     @replaces(globals())
     def _anyio_timeout_after(seconds, maybe_func, /, *args):
