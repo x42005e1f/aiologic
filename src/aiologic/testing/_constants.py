@@ -19,3 +19,15 @@ ASYNC_PAIRS: Final[tuple[tuple[str, str], ...]] = (
     ("anyio", "asyncio"),
     ("anyio", "trio"),
 )
+GREEN_LIBRARIES: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(library for library, backend in GREEN_PAIRS)
+)
+ASYNC_LIBRARIES: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(library for library, backend in ASYNC_PAIRS)
+)
+GREEN_BACKENDS: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(backend for library, backend in GREEN_PAIRS)
+)
+ASYNC_BACKENDS: Final[tuple[str, ...]] = tuple(
+    dict.fromkeys(backend for library, backend in ASYNC_PAIRS)
+)
