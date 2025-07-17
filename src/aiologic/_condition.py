@@ -84,7 +84,7 @@ class Condition(Generic[_T_co, _S_co]):
         /,
         lock: MissingType = MISSING,
         timer: MissingType = MISSING,
-    ) -> Condition[RLock, Callable[[], float]]: ...
+    ) -> Condition[RLock, Callable[[], int]]: ...
     @overload
     def __new__(
         cls,
@@ -99,7 +99,7 @@ class Condition(Generic[_T_co, _S_co]):
         /,
         lock: _T_co,
         timer: MissingType = MISSING,
-    ) -> Condition[_T_co, Callable[[], float]]: ...
+    ) -> Condition[_T_co, Callable[[], int]]: ...
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
     def __new__(cls, /, lock=MISSING, timer=MISSING):
