@@ -151,6 +151,8 @@ class Task(Result[_T], ABC):
             cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
 
             raise cancelled_class from exc.__cause__
+        finally:
+            self = None  # noqa: PLW0642
 
     def wait(self, timeout: float | None = None) -> _T:
         if not self._future.done():
@@ -179,6 +181,8 @@ class Task(Result[_T], ABC):
             cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
 
             raise cancelled_class from exc.__cause__
+        finally:
+            self = None  # noqa: PLW0642
 
     def cancel(self, /) -> Result[bool]:
         if self._future.cancel():

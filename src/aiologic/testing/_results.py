@@ -91,7 +91,11 @@ class Result(Generic[_T]):
         else:
             yield from async_checkpoint().__await__()
 
-        return self._future.result()
+        try:
+            return self._future.result()
+        except BaseException:
+            self = None  # noqa: PLW0642
+            raise
 
     def wait(self, timeout: float | None = None) -> _T:
         if not self._future.done():
@@ -105,7 +109,11 @@ class Result(Generic[_T]):
         else:
             green_checkpoint()
 
-        return self._future.result()
+        try:
+            return self._future.result()
+        except BaseException:
+            self = None  # noqa: PLW0642
+            raise
 
     @property
     def future(self, /) -> Future[_T]:

@@ -352,7 +352,11 @@ class __ShieldedAwaitable(ObjectProxy):
             msg = f"unsupported async library {library!r}"
             raise RuntimeError(msg)
 
-        return (yield from coro.__await__())
+        try:
+            return (yield from coro.__await__())
+        except BaseException:
+            self = None  # noqa: PLW0642
+            raise
 
 
 @overload
