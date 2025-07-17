@@ -88,6 +88,8 @@ class Result(Generic[_T]):
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
+        else:
+            yield from async_checkpoint().__await__()
 
         return self._future.result()
 
@@ -100,6 +102,8 @@ class Result(Generic[_T]):
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
+        else:
+            green_checkpoint()
 
         return self._future.result()
 

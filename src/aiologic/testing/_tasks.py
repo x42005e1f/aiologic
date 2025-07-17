@@ -13,7 +13,12 @@ from contextvars import copy_context
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
-from aiologic.lowlevel import create_async_event, create_green_event
+from aiologic.lowlevel import (
+    async_checkpoint,
+    create_async_event,
+    create_green_event,
+    green_checkpoint,
+)
 from aiologic.lowlevel._threads import _once as once
 from aiologic.lowlevel._utils import _external as external
 
@@ -137,6 +142,8 @@ class Task(Result[_T], ABC):
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
+        else:
+            yield from async_checkpoint().__await__()
 
         try:
             return self._future.result()
@@ -163,6 +170,8 @@ class Task(Result[_T], ABC):
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
+        else:
+            green_checkpoint()
 
         try:
             return self._future.result()
