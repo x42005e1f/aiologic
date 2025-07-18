@@ -38,6 +38,13 @@ else:
     from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
     if sys.version_info >= (3, 9):
         from collections.abc import Callable, Coroutine
     else:
@@ -193,6 +200,7 @@ class TaskExecutor(Executor, ABC):
         "_broken_by",
         "_library",
         "_shutdown",
+        "_shutdown_event",
         "_shutdown_lock",
         "_work_items",
         "_work_queue",
@@ -211,6 +219,7 @@ class TaskExecutor(Executor, ABC):
         self._library = library
 
         self._shutdown = False
+        self._shutdown_event = aiologic.Event()
         self._shutdown_lock = threading.RLock()
 
         self._work_items = set()
@@ -242,6 +251,38 @@ class TaskExecutor(Executor, ABC):
             extra = "pending"
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
+
+    async def __aenter__(self, /) -> Self:
+        return self
+
+    def __enter__(self, /) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.shutdown(wait=False)
+
+        if self._work_thread is not None:
+            await self._shutdown_event
+            self._work_thread.join()
+
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.shutdown(wait=False)
+
+        if self._work_thread is not None:
+            self._shutdown_event.wait()
+            self._work_thread.join()
 
     @overload
     def _create_work_item(
@@ -475,6 +516,8 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -561,6 +604,8 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -638,6 +683,8 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -713,6 +760,8 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         if sys.version_info >= (3, 11):
 
@@ -799,6 +848,8 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -875,6 +926,8 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
             if work_item.context is None:
@@ -947,6 +1000,8 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
+            finally:
+                self._shutdown_event.set()
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
             if work_item.context is None:

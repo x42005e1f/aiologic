@@ -9,7 +9,13 @@ import threading
 from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
 from contextvars import Context
+from types import TracebackType
 from typing import Any, Generic, NoReturn, TypeVar, final, overload
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -73,6 +79,7 @@ class TaskExecutor(Executor, ABC):
         "_broken_by",
         "_library",
         "_shutdown",
+        "_shutdown_event",
         "_shutdown_lock",
         "_work_items",
         "_work_queue",
@@ -87,6 +94,22 @@ class TaskExecutor(Executor, ABC):
         backend_options: dict[str, Any],
     ) -> None: ...
     def __repr__(self, /) -> str: ...
+    async def __aenter__(self, /) -> Self: ...
+    def __enter__(self, /) -> Self: ...
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
     @overload
     def _create_work_item(
         self,
