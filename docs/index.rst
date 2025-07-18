@@ -36,6 +36,7 @@ Features
 
   installation
   overview
+  cheatsheet
 
 .. toctree::
   :caption: Advanced topics
