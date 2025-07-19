@@ -207,3 +207,57 @@ has four key advantages:
 Thus, countdown events are a convenient way to implement joining. But their
 disadvantage is that they require :math:`O(n)` memory, where :math:`n` is their
 current counter.
+
+Special behavior
+^^^^^^^^^^^^^^^^
+
+The use of atomic operations as well as the lock-free implementation style
+gives aiologic primitives a special behavior. And first of all it concerns
+atomicity of primitives' methods, such as ``event.set()``.
+
+When you call :meth:`threading.Event.set`, it works in mutual exclusion mode -
+in fact, :class:`threading.Event` is built on top of
+:class:`threading.Condition` (see source code). But :meth:`aiologic.Event.set`
+has a different situation - it allows its parallel execution in different
+threads, which affects the wakeup order and when the method completes its
+execution. So all aiologic primitives have to use some tricks to provide
+predictable behavior and emulate atomicity (within some limits).
+
+The events implement the following special behavior:
+
+1. The wakeup order is exactly FIFO for all events except
+   :class:`aiologic.Event` without GIL (free threading, perfect fairness
+   disabled). The latter allows racing between threads, which makes the order
+   non-deterministic - your async tasks may wake up in a different order than
+   when they called ``await event``. If you need determinism in free threading,
+   you can enable perfect fairness via the ``AIOLOGIC_PERFECT_FAIRNESS``
+   environment variable, but this will cost you some (noticeable) performance
+   degradation with a huge number of threads.
+2. All tasks wake up at the same time (or in several scheduler passes, usually
+   one or two, if perfect fairness is disabled), which gives :math:`O(n)` time
+   complexity of a full wakeup. That is, both when returning from the
+   ``event.set()`` method and when returning from the ``event.wait()`` method,
+   you can expect that all tasks are already scheduled for execution, which is
+   especially useful for benchmarks. This is different from the threading
+   events, which due to mutual exclusion give :math:`O(n^2)` time complexity of
+   a full wakeup.
+3. The ``event.set()`` call wakes up only those tasks that were waiting until
+   the nearest reset and until the first task wakes up, for which markers and
+   timestamps are used. At the same time, the woken task inherits the deadline
+   (current timestamp) of the one that woke it up to wake up its neighbors.
+   This ensures that the ``event.clear()`` + ``event.wait()`` combination is
+   processed correctly after wakeup (otherwise ``event.wait()`` could return
+   immediately), and that the wakeup is done in a finite amount of time, which
+   eliminates possible resource starvation.
+4. When no wakeup/waiting is required, the event methods work as truly
+   non-blocking, which gives good scalability. In particular, the
+   ``event.up()`` method always runs for :math:`O(1)`, and the ``event.down()``
+   method runs for :math:`O(1)` until the counter goes to zero. This is
+   different from the threading events, which, for example, may take
+   :math:`O(n)` time for repeated ``event.set()`` calls due to mutual
+   exclusion.
+
+You can read about the origins of time complexity in mutual exclusion in `the
+one issue comment <https://github.com/apache/airflow/issues/50185
+#issuecomment-2928285691>`_. While the example of waking up all threads is
+considered there, the same inferences can be applied to waking up on a mutex.
