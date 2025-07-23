@@ -96,8 +96,8 @@ Commit messages are consistent with
   allowing to wait for its result asynchronously.
 - `aiologic.testing.FALSE_RESULT` and `aiologic.testing.TRUE_RESULT` as
   predefined results.
-- `aiologic.testing.Task` abstract class (for typing purposes).
-- `aiologic.testing.TaskExecutor` abstract class (for typing purposes).
+- `aiologic.testing.Task`, `aiologic.testing.TaskExecutor`, and
+  `aiologic.testing.TaskGroup` abstract classes (for typing purposes).
 - `aiologic.testing.create_executor()` function to create an executor object
   that executes tasks of the chosen library in a separate thread.
 - `aiologic.testing.current_executor()` function to get the executor object
@@ -113,6 +113,8 @@ Commit messages are consistent with
   for cancellation tests.
 - `aiologic.testing.create_task()` function to create a thread-aware task in
   the current or passed executor.
+- `aiologic.testing.create_task_group()` function to create a thread-aware task
+  group that correctly handles cancellation and exceptions.
 - `aiologic.testing.run()` function as shorthand for
   `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
   result in place.
@@ -344,6 +346,9 @@ Commit messages are consistent with
   `concurrent.futures.Future`. This makes the implementation of `curio` support
   completely non-blocking (like the rest of the concurrency libraries), which
   has a positive impact on performance.
+- `exceptiongroup` is now a required dependency on Python < 3.11. It is used by
+  `aiologic.testing.TaskGroup` to raise exceptions of all failed tasks at the
+  same time (a backport of `BaseExceptionGroup`).
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.

@@ -12,6 +12,7 @@ resolution-markers = [
 name = "aiologic"
 source = { editable = "." }
 dependencies = [
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "sniffio" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
     { name = "wrapt" },
@@ -62,6 +63,7 @@ requires-dist = [
     { name = "anyio", marker = "extra == 'anyio'", specifier = ">=3.0.0" },
     { name = "curio", marker = "extra == 'curio'", specifier = ">=1.4" },
     { name = "eventlet", marker = "extra == 'eventlet'", specifier = ">=0.17.0" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'", specifier = ">=1.0.2" },
     { name = "gevent", marker = "extra == 'gevent'", specifier = ">=21.1.0" },
     { name = "sniffio", specifier = ">=1.3.0" },
     { name = "trio", marker = "extra == 'trio'", specifier = ">=0.23.0" },

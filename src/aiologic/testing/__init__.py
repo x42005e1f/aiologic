@@ -24,6 +24,10 @@ from ._executors import (
     create_executor as create_executor,
     current_executor as current_executor,
 )
+from ._groups import (
+    TaskGroup as TaskGroup,
+    create_task_group as create_task_group,
+)
 from ._results import (
     FALSE_RESULT as FALSE_RESULT,
     TRUE_RESULT as TRUE_RESULT,

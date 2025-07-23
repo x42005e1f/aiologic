@@ -150,7 +150,17 @@ class Task(Result[_T], ABC):
         except _CancelledError as exc:
             cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
 
-            raise cancelled_class from exc.__cause__
+            if hasattr(cancelled_class, "_create"):  # trio.Cancelled
+                cancelled_exc = cancelled_class._create()
+            else:
+                cancelled_exc = cancelled_class()
+
+            cancelled_exc._aiologic_testing_task = self
+
+            try:
+                raise cancelled_exc from exc.__cause__
+            finally:
+                del cancelled_exc
         finally:
             self = None  # noqa: PLW0642
 
@@ -180,7 +190,17 @@ class Task(Result[_T], ABC):
         except _CancelledError as exc:
             cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
 
-            raise cancelled_class from exc.__cause__
+            if hasattr(cancelled_class, "_create"):  # trio.Cancelled
+                cancelled_exc = cancelled_class._create()
+            else:
+                cancelled_exc = cancelled_class()
+
+            cancelled_exc._aiologic_testing_task = self
+
+            try:
+                raise cancelled_exc from exc.__cause__
+            finally:
+                del cancelled_exc
         finally:
             self = None  # noqa: PLW0642
 
