@@ -40,6 +40,7 @@ from ._runners import (
 )
 from ._tasks import (
     Task as Task,
+    TaskCancelled as TaskCancelled,
     create_task as create_task,
 )
 from ._timeouts import (

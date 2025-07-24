@@ -46,6 +46,17 @@ _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
 
 
+class TaskCancelled(BaseException):
+    def __init__(self, /, task: Task[object]) -> None:
+        super().__init__()
+
+        self._task = task
+
+    @property
+    def task(self, /) -> Task[object]:
+        return self._task
+
+
 class Task(Result[_T], ABC):
     __slots__ = (
         "_args",
@@ -151,19 +162,7 @@ class Task(Result[_T], ABC):
         try:
             return self._future.result()
         except _CancelledError as exc:
-            cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
-
-            if hasattr(cancelled_class, "_create"):  # trio.Cancelled
-                cancelled_exc = cancelled_class._create()
-            else:
-                cancelled_exc = cancelled_class()
-
-            cancelled_exc._aiologic_testing_task = self
-
-            try:
-                raise cancelled_exc from exc.__cause__
-            finally:
-                del cancelled_exc
+            raise TaskCancelled(self) from exc.__cause__
         finally:
             self = None  # noqa: PLW0642
 
@@ -191,19 +190,7 @@ class Task(Result[_T], ABC):
         try:
             return self._future.result()
         except _CancelledError as exc:
-            cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
-
-            if hasattr(cancelled_class, "_create"):  # trio.Cancelled
-                cancelled_exc = cancelled_class._create()
-            else:
-                cancelled_exc = cancelled_class()
-
-            cancelled_exc._aiologic_testing_task = self
-
-            try:
-                raise cancelled_exc from exc.__cause__
-            finally:
-                del cancelled_exc
+            raise TaskCancelled(self) from exc.__cause__
         finally:
             self = None  # noqa: PLW0642
 

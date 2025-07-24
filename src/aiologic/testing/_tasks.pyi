@@ -24,6 +24,11 @@ else:
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
 
+class TaskCancelled(BaseException):
+    def __init__(self, /, task: Task[object]) -> None: ...
+    @property
+    def task(self, /) -> Task[object]: ...
+
 class Task(Result[_T], ABC):
     __slots__ = (
         "_args",

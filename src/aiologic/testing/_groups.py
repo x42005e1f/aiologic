@@ -17,9 +17,8 @@ from aiologic.lowlevel import (
     create_green_event,
 )
 
-from ._exceptions import _CancelledError, get_cancelled_exc_class
 from ._executors import TaskExecutor, current_executor
-from ._tasks import Task, create_task as _create_task
+from ._tasks import Task, TaskCancelled, create_task as _create_task
 
 if sys.version_info >= (3, 11):
     from typing import Self, TypeVarTuple, Unpack
@@ -118,12 +117,10 @@ class TaskGroup(ABC):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool:
-        cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
         suppress = (
             exc_value is not None
-            and isinstance(exc_value, cancelled_class)
-            and hasattr(exc_value, "_aiologic_testing_task")
-            and exc_value._aiologic_testing_task in self._tasks
+            and isinstance(exc_value, TaskCancelled)
+            and exc_value.task in self._tasks
         )
 
         active_lock = self._active_lock
@@ -197,12 +194,10 @@ class TaskGroup(ABC):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool:
-        cancelled_class = get_cancelled_exc_class(failback=_CancelledError)
         suppress = (
             exc_value is not None
-            and isinstance(exc_value, cancelled_class)
-            and hasattr(exc_value, "_aiologic_testing_task")
-            and exc_value._aiologic_testing_task in self._tasks
+            and isinstance(exc_value, TaskCancelled)
+            and exc_value.task in self._tasks
         )
 
         active_lock = self._active_lock
