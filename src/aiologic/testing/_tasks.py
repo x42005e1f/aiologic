@@ -124,6 +124,9 @@ class Task(Result[_T], ABC):
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
+    def __bool__(self, /) -> bool:
+        return self._future.running()
+
     def __await__(self) -> Generator[Any, Any, _T]:
         if not self._future.done():
             event = create_async_event()
