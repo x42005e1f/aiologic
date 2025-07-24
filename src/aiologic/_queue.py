@@ -64,12 +64,12 @@ class QueueFull(Exception):
     pass
 
 
+class QueueShutdown(Exception):
+    pass
+
+
 class SimpleQueue(Generic[_T]):
-    __slots__ = (
-        "__weakref__",
-        "_data",
-        "_semaphore",
-    )
+    __slots__ = ("__weakref__", "_data", "_semaphore", "_shutdown")
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
         self = object.__new__(cls)
@@ -80,7 +80,7 @@ class SimpleQueue(Generic[_T]):
             self._data = deque()
 
         self._semaphore = Semaphore(len(self._data))
-
+        self._shutdown = False
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
@@ -140,6 +140,9 @@ class SimpleQueue(Generic[_T]):
     async def async_get(self, /, *, blocking: bool = True) -> _T:
         success = await self._semaphore.async_acquire(blocking=blocking)
 
+        if self._shutdown:
+            raise QueueShutdown
+
         if not success:
             raise QueueEmpty
 
@@ -157,6 +160,11 @@ class SimpleQueue(Generic[_T]):
             timeout=timeout,
         )
 
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
+
         if not success:
             raise QueueEmpty
 
@@ -173,6 +181,10 @@ class SimpleQueue(Generic[_T]):
     @property
     def waiting(self, /) -> int:
         return self._semaphore.waiting
+
+    def shutdown(self) -> None:
+        self._shutdown = True
+        self._semaphore.release(self._semaphore.waiting)
 
 
 class SimpleLifoQueue(SimpleQueue[_T]):
@@ -193,6 +205,11 @@ class SimpleLifoQueue(SimpleQueue[_T]):
     async def async_get(self, /, *, blocking: bool = True) -> _T:
         success = await self._semaphore.async_acquire(blocking=blocking)
 
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
+
         if not success:
             raise QueueEmpty
 
@@ -209,6 +226,11 @@ class SimpleLifoQueue(SimpleQueue[_T]):
             blocking=blocking,
             timeout=timeout,
         )
+
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
 
         if not success:
             raise QueueEmpty

@@ -38,13 +38,10 @@ _RichComparableT = TypeVar("_RichComparableT", bound=_RichComparable[Any])
 
 class QueueEmpty(Exception): ...
 class QueueFull(Exception): ...
+class QueueShutdown(Exception): ...
 
 class SimpleQueue(Generic[_T]):
-    __slots__ = (
-        "__weakref__",
-        "_data",
-        "_semaphore",
-    )
+    __slots__ = ("__weakref__", "_data", "_semaphore", "_shutdown")
 
     def __new__(
         cls,
@@ -86,6 +83,7 @@ class SimpleQueue(Generic[_T]):
     def getting(self, /) -> int: ...
     @property
     def waiting(self, /) -> int: ...
+    def shutdown(self) -> None: ...
 
 class SimpleLifoQueue(SimpleQueue[_T]):
     __slots__ = ()
