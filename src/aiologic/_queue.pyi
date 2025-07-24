@@ -6,7 +6,7 @@
 import sys
 
 from collections import deque
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, Generic, Protocol, TypeVar, overload
 
 from .lowlevel import MISSING, Event, MissingType
 
@@ -21,6 +21,20 @@ else:
     from typing import Callable, Iterable
 
 _T = TypeVar("_T")
+_T_contra = TypeVar("_T_contra", contravariant=True)
+
+class _SupportsBool(Protocol):
+    __slots__ = ()
+
+    def __bool__(self, /) -> bool: ...
+
+class _RichComparable(Protocol[_T_contra]):
+    __slots__ = ()
+
+    def __lt__(self, other: _T_contra, /) -> _SupportsBool: ...
+    def __gt__(self, other: _T_contra, /) -> _SupportsBool: ...
+
+_RichComparableT = TypeVar("_RichComparableT", bound=_RichComparable[Any])
 
 class QueueEmpty(Exception): ...
 class QueueFull(Exception): ...
@@ -178,9 +192,14 @@ class LifoQueue(Queue[_T]):
     def _put(self, /, item: _T) -> None: ...
     def _get(self, /) -> _T: ...
 
-class PriorityQueue(Queue[_T]):
+class PriorityQueue(Queue[_RichComparableT]):
     __slots__ = ()
 
-    def _init(self, /, items: Iterable[_T], maxsize: int) -> None: ...
-    def _put(self, /, item: _T) -> None: ...
-    def _get(self, /) -> _T: ...
+    def _init(
+        self,
+        /,
+        items: Iterable[_RichComparableT],
+        maxsize: int,
+    ) -> None: ...
+    def _put(self, /, item: _RichComparableT) -> None: ...
+    def _get(self, /) -> _RichComparableT: ...

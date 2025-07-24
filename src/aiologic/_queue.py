@@ -10,7 +10,7 @@ import warnings
 from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, overload
 
 from ._semaphore import Semaphore
 from .lowlevel import (
@@ -37,6 +37,23 @@ if TYPE_CHECKING:
         from typing import Callable, Iterable
 
 _T = TypeVar("_T")
+_T_contra = TypeVar("_T_contra", contravariant=True)
+
+
+class _SupportsBool(Protocol):
+    __slots__ = ()
+
+    def __bool__(self, /) -> bool: ...
+
+
+class _RichComparable(Protocol[_T_contra]):
+    __slots__ = ()
+
+    def __lt__(self, other: _T_contra, /) -> _SupportsBool: ...
+    def __gt__(self, other: _T_contra, /) -> _SupportsBool: ...
+
+
+_RichComparableT = TypeVar("_RichComparableT", bound=_RichComparable[Any])
 
 
 class QueueEmpty(Exception):
@@ -600,16 +617,21 @@ class LifoQueue(Queue[_T]):
         return self._data.pop()
 
 
-class PriorityQueue(Queue[_T]):
+class PriorityQueue(Queue[_RichComparableT]):
     __slots__ = ()
 
-    def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
+    def _init(
+        self,
+        /,
+        items: Iterable[_RichComparableT],
+        maxsize: int,
+    ) -> None:
         self._data = list(items)
 
         heapify(self._data)
 
-    def _put(self, /, item: _T) -> None:
+    def _put(self, /, item: _RichComparableT) -> None:
         heappush(self._data, item)
 
-    def _get(self, /) -> _T:
+    def _get(self, /) -> _RichComparableT:
         return heappop(self._data)
