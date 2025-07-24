@@ -246,6 +246,7 @@ class Queue(Generic[_T]):
         "_maxsize",
         "_putters",
         "_putters_and_getters",
+        "_shutdown",
         "_unlocked",
         "_waiters",
     )
@@ -286,7 +287,7 @@ class Queue(Generic[_T]):
         self._getters = deque()
 
         self._maxsize = maxsize
-
+        self._shutdown = False
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
@@ -501,6 +502,12 @@ class Queue(Generic[_T]):
             self._putters,
             blocking=blocking,
         )
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueFull
 
         if not acquired:
             raise QueueFull
@@ -525,6 +532,13 @@ class Queue(Generic[_T]):
             timeout=timeout,
         )
 
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueFull
+
         if not acquired:
             raise QueueFull
 
@@ -539,6 +553,13 @@ class Queue(Generic[_T]):
             self._getters,
             blocking=blocking,
         )
+
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueFull
 
         if not acquired:
             raise QueueEmpty
@@ -561,6 +582,13 @@ class Queue(Generic[_T]):
             blocking=blocking,
             timeout=timeout,
         )
+
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueFull
 
         if not acquired:
             raise QueueEmpty
@@ -624,6 +652,10 @@ class Queue(Generic[_T]):
     @property
     def waiting(self, /) -> int:
         return len(self._putters_and_getters)
+
+    def shutdown(self) -> None:
+        self._shutdown = True
+        self._release()
 
 
 class LifoQueue(Queue[_T]):
