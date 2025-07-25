@@ -61,6 +61,8 @@ class Task(Result[_T], ABC):
     __slots__ = (
         "_args",
         "_cancelled",
+        "_cancelled_after_start",
+        "_done",
         "_executor",
         "_func",
         "_started",
@@ -87,15 +89,13 @@ class Task(Result[_T], ABC):
         self._args = args
         self._executor = executor
 
-        self._cancelled = False
+        self._done = Result(Future())
+        self._cancelled = Result(Future())
+        self._cancelled_after_start = False
         self._started = Result(Future())
 
-        def callback(future) -> None:
-            if not self._started.future.done():
-                self._started.future.set_result(False)
-
         future = self._executor._submit_with_context(self._run, copy_context())
-        future.add_done_callback(callback)
+        future.add_done_callback(self._callback)
 
         super().__init__(future)
 
@@ -199,7 +199,7 @@ class Task(Result[_T], ABC):
             return TRUE_RESULT
 
         if self._future.done():
-            if self._cancelled:
+            if self._cancelled_after_start:
                 return TRUE_RESULT
             else:
                 return FALSE_RESULT
@@ -207,28 +207,16 @@ class Task(Result[_T], ABC):
         try:
             return Result(self._executor.schedule(self._cancel))
         except RuntimeError:  # executor is shutdown or broken
-            if self._cancelled:
-                return TRUE_RESULT
-            else:
-                return FALSE_RESULT
+            return self._cancelled
 
     def cancelled(self, /) -> Result[bool]:
         if self._future.done():
-            if self._cancelled or self._future.cancelled():
+            if self._cancelled_after_start or self._future.cancelled():
                 return TRUE_RESULT
             else:
                 return FALSE_RESULT
 
-        future = Future()
-
-        self._future.add_done_callback(
-            lambda self_future: future.set_result(
-                self_future.cancelled()
-                or isinstance(self_future.exception(), _CancelledError)
-            )
-        )
-
-        return Result(future)
+        return self._cancelled
 
     def running(self, /) -> Result[bool]:
         if self._future.running():
@@ -243,11 +231,16 @@ class Task(Result[_T], ABC):
         if self._future.done():
             return TRUE_RESULT
 
-        future = Future()
+        return self._done
 
-        self._future.add_done_callback(lambda _: future.set_result(True))
+    def _callback(self, /, future: Future[_T]) -> None:
+        if not self._started.future.done():
+            self._started.future.set_result(False)
 
-        return Result(future)
+        self._cancelled.future.set_result(
+            self._cancelled_after_start or future.cancelled()
+        )
+        self._done.future.set_result(True)
 
     @abstractmethod
     def _run(self, /) -> Coroutine[Any, Any, _T] | _T:
@@ -336,7 +329,7 @@ def _get_eventlet_task_class() -> type[Task[_T]]:
                     msg = f"a green function was expected, got {self._func!r}"
                     raise TypeError(msg)
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -358,7 +351,7 @@ def _get_eventlet_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _EventletTask
 
@@ -394,7 +387,7 @@ def _get_gevent_task_class() -> type[Task[_T]]:
                     msg = f"a green function was expected, got {self._func!r}"
                     raise TypeError(msg)
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -416,7 +409,7 @@ def _get_gevent_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _GeventTask
 
@@ -451,7 +444,7 @@ def _get_asyncio_task_class() -> type[Task[_T]]:
                 if iscoroutinefunction(self._func):
                     result = await result
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -473,7 +466,7 @@ def _get_asyncio_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _AsyncioTask
 
@@ -508,7 +501,7 @@ def _get_curio_task_class() -> type[Task[_T]]:
                 if iscoroutinefunction(self._func):
                     result = await result
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -530,7 +523,7 @@ def _get_curio_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _CurioTask
 
@@ -565,7 +558,7 @@ def _get_trio_task_class() -> type[Task[_T]]:
                 if iscoroutinefunction(self._func):
                     result = await result
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -588,7 +581,7 @@ def _get_trio_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _TrioTask
 
@@ -623,7 +616,7 @@ def _get_anyio_task_class() -> type[Task[_T]]:
                 if iscoroutinefunction(self._func):
                     result = await result
             except get_cancelled_exc_class() as exc:
-                self._cancelled = True
+                self._cancelled_after_start = True
 
                 raise _CancelledError from exc
             except _CancelledError as exc:
@@ -646,7 +639,7 @@ def _get_anyio_task_class() -> type[Task[_T]]:
 
                 return True
 
-            return self._cancelled
+            return self._cancelled_after_start
 
     return _AnyioTask
 

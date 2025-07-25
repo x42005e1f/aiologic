@@ -6,6 +6,7 @@
 import sys
 
 from abc import ABC, abstractmethod
+from concurrent.futures import Future
 from typing import Any, TypeVar, overload
 
 from ._executors import TaskExecutor
@@ -33,6 +34,8 @@ class Task(Result[_T], ABC):
     __slots__ = (
         "_args",
         "_cancelled",
+        "_cancelled_after_start",
+        "_done",
         "_executor",
         "_func",
         "_started",
@@ -62,6 +65,7 @@ class Task(Result[_T], ABC):
     def cancelled(self, /) -> Result[bool]: ...
     def running(self, /) -> Result[bool]: ...
     def done(self, /) -> Result[bool]: ...
+    def _callback(self, /, future: Future[_T]) -> None: ...
     @abstractmethod
     def _run(self, /) -> Coroutine[Any, Any, _T] | _T: ...
     @abstractmethod
