@@ -10,7 +10,7 @@ import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import BrokenExecutor, Future
 from contextvars import copy_context
-from inspect import iscoroutinefunction
+from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
 from aiologic.lowlevel import (
@@ -38,9 +38,9 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Coroutine, Generator
+        from collections.abc import Awaitable, Callable, Coroutine, Generator
     else:
-        from typing import Callable, Coroutine, Generator
+        from typing import Awaitable, Callable, Coroutine, Generator
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
@@ -68,6 +68,14 @@ class Task(Result[_T], ABC):
         "_started",
     )
 
+    @overload
+    def __init__(
+        self,
+        func: Awaitable[_T],
+        /,
+        *,
+        executor: TaskExecutor,
+    ) -> None: ...
     @overload
     def __init__(
         self,
@@ -105,8 +113,11 @@ class Task(Result[_T], ABC):
             cls = Task
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        args = [self._func.__name__]
-        args.extend(map(repr, self._args))
+        if isawaitable(self._func):
+            args = [repr(self._func)]
+        else:
+            args = [self._func.__name__]
+            args.extend(map(repr, self._args))
 
         executor = self._executor
 
@@ -274,11 +285,11 @@ def _get_threading_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
-
-                if iscoroutinefunction(self._func):
+                if isawaitable(self._func) or iscoroutinefunction(self._func):
                     msg = f"a green function was expected, got {self._func!r}"
                     raise TypeError(msg)
+
+                result = self._func(*self._args)
             except _CancelledError as exc:
                 exc_cls = exc.__class__
                 exc_cls_repr = f"{exc_cls.__module__}.{exc_cls.__qualname__}"
@@ -321,11 +332,11 @@ def _get_eventlet_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
-
-                if iscoroutinefunction(self._func):
+                if isawaitable(self._func) or iscoroutinefunction(self._func):
                     msg = f"a green function was expected, got {self._func!r}"
                     raise TypeError(msg)
+
+                result = self._func(*self._args)
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -379,11 +390,11 @@ def _get_gevent_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
-
-                if iscoroutinefunction(self._func):
+                if isawaitable(self._func) or iscoroutinefunction(self._func):
                     msg = f"a green function was expected, got {self._func!r}"
                     raise TypeError(msg)
+
+                result = self._func(*self._args)
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -437,10 +448,13 @@ def _get_asyncio_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
+                if isawaitable(self._func):
+                    result = await self._func
+                else:
+                    result = self._func(*self._args)
 
-                if iscoroutinefunction(self._func):
-                    result = await result
+                    if iscoroutinefunction(self._func):
+                        result = await result
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -494,10 +508,13 @@ def _get_curio_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
+                if isawaitable(self._func):
+                    result = await self._func
+                else:
+                    result = self._func(*self._args)
 
-                if iscoroutinefunction(self._func):
-                    result = await result
+                    if iscoroutinefunction(self._func):
+                        result = await result
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -551,10 +568,13 @@ def _get_trio_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
+                if isawaitable(self._func):
+                    result = await self._func
+                else:
+                    result = self._func(*self._args)
 
-                if iscoroutinefunction(self._func):
-                    result = await result
+                    if iscoroutinefunction(self._func):
+                        result = await result
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -609,10 +629,13 @@ def _get_anyio_task_class() -> type[Task[_T]]:
             try:
                 self._started.future.set_result(True)
 
-                result = self._func(*self._args)
+                if isawaitable(self._func):
+                    result = await self._func
+                else:
+                    result = self._func(*self._args)
 
-                if iscoroutinefunction(self._func):
-                    result = await result
+                    if iscoroutinefunction(self._func):
+                        result = await result
             except get_cancelled_exc_class() as exc:
                 self._cancelled_after_start = True
 
@@ -644,6 +667,13 @@ def _get_anyio_task_class() -> type[Task[_T]]:
 
 @overload
 def _create_threading_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_threading_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -664,6 +694,13 @@ def _create_threading_task(func, /, *args, executor):
     return _create_threading_task(func, *args, executor=executor)
 
 
+@overload
+def _create_eventlet_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
 @overload
 def _create_eventlet_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
@@ -688,6 +725,13 @@ def _create_eventlet_task(func, /, *args, executor):
 
 @overload
 def _create_gevent_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_gevent_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -708,6 +752,13 @@ def _create_gevent_task(func, /, *args, executor):
     return _create_gevent_task(func, *args, executor=executor)
 
 
+@overload
+def _create_asyncio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
 @overload
 def _create_asyncio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
@@ -732,6 +783,13 @@ def _create_asyncio_task(func, /, *args, executor):
 
 @overload
 def _create_curio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_curio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -752,6 +810,13 @@ def _create_curio_task(func, /, *args, executor):
     return _create_curio_task(func, *args, executor=executor)
 
 
+@overload
+def _create_trio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
 @overload
 def _create_trio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
@@ -776,6 +841,13 @@ def _create_trio_task(func, /, *args, executor):
 
 @overload
 def _create_anyio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_anyio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -796,6 +868,14 @@ def _create_anyio_task(func, /, *args, executor):
     return _create_anyio_task(func, *args, executor=executor)
 
 
+@overload
+@external
+def create_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor | None = None,
+) -> Task[_T]: ...
 @overload
 @external
 def create_task(

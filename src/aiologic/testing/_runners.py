@@ -21,14 +21,24 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Coroutine
+        from collections.abc import Awaitable, Callable, Coroutine
     else:
-        from typing import Callable, Coroutine
+        from typing import Awaitable, Callable, Coroutine
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
 
 
+@overload
+@external
+def run(
+    func: Awaitable[_T],
+    /,
+    *,
+    library: str | None = None,
+    backend: str | None = None,
+    backend_options: dict[str, Any] | None = None,
+) -> _T: ...
 @overload
 @external
 def run(

@@ -17,7 +17,7 @@ from concurrent.futures import (
 )
 from contextvars import Context, copy_context
 from functools import partial
-from inspect import iscoroutinefunction
+from inspect import isawaitable, iscoroutinefunction
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -46,9 +46,9 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Coroutine
+        from collections.abc import Awaitable, Callable, Coroutine
     else:
-        from typing import Callable, Coroutine
+        from typing import Awaitable, Callable, Coroutine
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -72,6 +72,18 @@ class _WorkItem(Generic[_T]):
         "_new_task",
     )
 
+    @overload
+    def __init__(self, future: Future[_T], func: Awaitable[_T], /): ...
+    @overload
+    def __init__(
+        self,
+        future: Future[_T],
+        func: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> None: ...
+    @overload
     def __init__(
         self,
         future: Future[_T],
@@ -79,7 +91,8 @@ class _WorkItem(Generic[_T]):
         /,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> None:
+    ) -> None: ...
+    def __init__(self, future, func, /, *args, **kwargs):
         self._future = future
 
         self._func = func
@@ -105,10 +118,13 @@ class _WorkItem(Generic[_T]):
             return
 
         try:
-            result = self._func(*self._args, **self._kwargs)
+            if isawaitable(self._func):
+                result = await self._func
+            else:
+                result = self._func(*self._args, **self._kwargs)
 
-            if iscoroutinefunction(self._func):
-                result = await result
+                if iscoroutinefunction(self._func):
+                    result = await result
         except BaseException as exc:
             try:
                 self._future.set_exception(exc)
@@ -133,11 +149,11 @@ class _WorkItem(Generic[_T]):
             _executor_tlocal.executor = executor
 
         try:
-            result = self._func(*self._args, **self._kwargs)
-
-            if iscoroutinefunction(self._func):
+            if isawaitable(self._func) or iscoroutinefunction(self._func):
                 msg = f"a green function was expected, got {self._func!r}"
                 raise TypeError(msg)
+
+            result = self._func(*self._args, **self._kwargs)
         except BaseException as exc:
             try:
                 self._future.set_exception(exc)
@@ -285,6 +301,8 @@ class TaskExecutor(Executor, ABC):
             self._work_thread.join()
 
     @overload
+    def _create_work_item(self, fn: Awaitable[_T], /) -> _WorkItem[_T]: ...
+    @overload
     def _create_work_item(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -333,6 +351,8 @@ class TaskExecutor(Executor, ABC):
         self._work_queue.put(work_item)
 
     @overload
+    def schedule(self, fn: Awaitable[_T], /) -> Future[_T]: ...
+    @overload
     def schedule(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -356,6 +376,8 @@ class TaskExecutor(Executor, ABC):
 
             return work_item.future
 
+    @overload
+    def submit(self, fn: Awaitable[_T], /) -> Future[_T]: ...
     @overload
     def submit(
         self,
@@ -388,6 +410,8 @@ class TaskExecutor(Executor, ABC):
         _submit = submit
 
         @overload
+        def submit(self, fn: Awaitable[_T]) -> Future[_T]: ...
+        @overload
         def submit(
             self,
             fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -404,6 +428,13 @@ class TaskExecutor(Executor, ABC):
         def submit(self, fn, *args, **kwargs):
             return self._submit(fn, *args, **kwargs)
 
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Awaitable[_T],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
     @overload
     def _submit_with_context(
         self,

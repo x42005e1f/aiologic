@@ -23,9 +23,9 @@ else:
     from typing_extensions import ParamSpec
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Awaitable, Callable, Coroutine
 else:
-    from typing import Callable, Coroutine
+    from typing import Awaitable, Callable, Coroutine
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -46,6 +46,18 @@ class _WorkItem(Generic[_T]):
         "_new_task",
     )
 
+    @overload
+    def __init__(self, future: Future[_T], func: Awaitable[_T], /): ...
+    @overload
+    def __init__(
+        self,
+        future: Future[_T],
+        func: Callable[_P, Coroutine[Any, Any, _T]],
+        /,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> None: ...
+    @overload
     def __init__(
         self,
         future: Future[_T],
@@ -111,6 +123,8 @@ class TaskExecutor(Executor, ABC):
         traceback: TracebackType | None,
     ) -> None: ...
     @overload
+    def _create_work_item(self, fn: Awaitable[_T], /) -> _WorkItem[_T]: ...
+    @overload
     def _create_work_item(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -128,6 +142,8 @@ class TaskExecutor(Executor, ABC):
     ) -> _WorkItem[_T]: ...
     def _create_task(self, /, work_item: _WorkItem[Any]) -> None: ...
     @overload
+    def schedule(self, fn: Awaitable[_T], /) -> Future[_T]: ...
+    @overload
     def schedule(
         self,
         fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -144,6 +160,8 @@ class TaskExecutor(Executor, ABC):
         **kwargs: _P.kwargs,
     ) -> Future[_T]: ...
     if sys.version_info >= (3, 9):
+        @overload
+        def submit(self, fn: Awaitable[_T], /) -> Future[_T]: ...
         @overload
         def submit(
             self,
@@ -163,6 +181,8 @@ class TaskExecutor(Executor, ABC):
 
     else:
         @overload
+        def submit(self, fn: Awaitable[_T]) -> Future[_T]: ...
+        @overload
         def submit(
             self,
             fn: Callable[_P, Coroutine[Any, Any, _T]],
@@ -176,6 +196,13 @@ class TaskExecutor(Executor, ABC):
             *args: _P.args,
             **kwargs: _P.kwargs,
         ) -> Future[_T]: ...
+    @overload
+    def _submit_with_context(
+        self,
+        fn: Awaitable[_T],
+        /,
+        context: Context,
+    ) -> Future[_T]: ...
     @overload
     def _submit_with_context(
         self,

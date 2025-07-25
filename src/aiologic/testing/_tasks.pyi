@@ -18,9 +18,9 @@ else:
     from typing_extensions import TypeVarTuple, Unpack
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Coroutine, Generator
+    from collections.abc import Awaitable, Callable, Coroutine, Generator
 else:
-    from typing import Callable, Coroutine, Generator
+    from typing import Awaitable, Callable, Coroutine, Generator
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
@@ -41,6 +41,14 @@ class Task(Result[_T], ABC):
         "_started",
     )
 
+    @overload
+    def __init__(
+        self,
+        func: Awaitable[_T],
+        /,
+        *,
+        executor: TaskExecutor,
+    ) -> None: ...
     @overload
     def __init__(
         self,
@@ -82,6 +90,13 @@ def _get_trio_task_class() -> type[Task[_T]]: ...
 def _get_anyio_task_class() -> type[Task[_T]]: ...
 @overload
 def _create_threading_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_threading_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -96,6 +111,13 @@ def _create_threading_task(
 ) -> Task[_T]: ...
 @overload
 def _create_eventlet_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_eventlet_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -110,6 +132,13 @@ def _create_eventlet_task(
 ) -> Task[_T]: ...
 @overload
 def _create_gevent_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_gevent_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -124,6 +153,13 @@ def _create_gevent_task(
 ) -> Task[_T]: ...
 @overload
 def _create_asyncio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_asyncio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -138,6 +174,13 @@ def _create_asyncio_task(
 ) -> Task[_T]: ...
 @overload
 def _create_curio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_curio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -152,6 +195,13 @@ def _create_curio_task(
 ) -> Task[_T]: ...
 @overload
 def _create_trio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_trio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -166,6 +216,13 @@ def _create_trio_task(
 ) -> Task[_T]: ...
 @overload
 def _create_anyio_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def _create_anyio_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
@@ -177,6 +234,13 @@ def _create_anyio_task(
     /,
     *args: Unpack[_Ts],
     executor: TaskExecutor,
+) -> Task[_T]: ...
+@overload
+def create_task(
+    func: Awaitable[_T],
+    /,
+    *,
+    executor: TaskExecutor | None = None,
 ) -> Task[_T]: ...
 @overload
 def create_task(

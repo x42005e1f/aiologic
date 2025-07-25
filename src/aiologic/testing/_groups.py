@@ -31,9 +31,9 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Coroutine
+        from collections.abc import Awaitable, Callable, Coroutine
     else:
-        from typing import Callable, Coroutine
+        from typing import Awaitable, Callable, Coroutine
 
 _TaskT = TypeVar("_TaskT", bound=Task[Any])
 _T = TypeVar("_T")
@@ -264,6 +264,14 @@ class TaskGroup(ABC):
 
         return suppress
 
+    @overload
+    def create_task(
+        self,
+        func: Awaitable[_T],
+        /,
+        *,
+        executor: TaskExecutor | None = None,
+    ) -> Task[_T]: ...
     @overload
     def create_task(
         self,
