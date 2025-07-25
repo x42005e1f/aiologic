@@ -203,15 +203,15 @@ _async_checkpoints_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
     ),
 )
 
-__green_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
+_green_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
     _green_checkpoints_cvar.set(_green_checkpoints_cvar.get())
 )
-__async_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
+_async_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
     _async_checkpoints_cvar.set(_async_checkpoints_cvar.get())
 )
 
-_green_checkpoints_cvar.reset(__green_checkpoints_cvar_default_token)
-_async_checkpoints_cvar.reset(__async_checkpoints_cvar_default_token)
+_green_checkpoints_cvar.reset(_green_checkpoints_cvar_default_token)
+_async_checkpoints_cvar.reset(_async_checkpoints_cvar_default_token)
 
 
 def _green_checkpoints_reset(token: Token[tuple[int, bool | None]], /) -> None:
@@ -265,7 +265,14 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
             return enabled
 
         _green_checkpoints_enabled = True
-        _green_checkpoints_reset = _green_checkpoints_cvar.reset
+
+        @replaces(globals())
+        def _green_checkpoints_reset(
+            token: Token[tuple[int, bool | None]],
+            /,
+        ) -> None:
+            if token is not _green_checkpoints_cvar_default_token:
+                _green_checkpoints_cvar.reset(token)
 
         @replaces(globals())
         def _green_checkpoints_set(enabled):
@@ -276,7 +283,7 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
         return _green_checkpoints_set(enabled)
 
-    return __green_checkpoints_cvar_default_token
+    return _green_checkpoints_cvar_default_token
 
 
 def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
@@ -322,7 +329,14 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
             return enabled
 
         _async_checkpoints_enabled = True
-        _async_checkpoints_reset = _async_checkpoints_cvar.reset
+
+        @replaces(globals())
+        def _async_checkpoints_reset(
+            token: Token[tuple[int, bool | None]],
+            /,
+        ) -> None:
+            if token is not _async_checkpoints_cvar_default_token:
+                _async_checkpoints_cvar.reset(token)
 
         @replaces(globals())
         def _async_checkpoints_set(enabled):
@@ -333,7 +347,7 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
         return _async_checkpoints_set(enabled)
 
-    return __async_checkpoints_cvar_default_token
+    return _async_checkpoints_cvar_default_token
 
 
 class _CheckpointsManager:

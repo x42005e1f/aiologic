@@ -44,6 +44,9 @@ _async_checkpoints_enabled: bool
 def green_checkpoint_enabled() -> bool: ...
 def async_checkpoint_enabled() -> bool: ...
 
+_green_checkpoints_cvar_default_token: Token[tuple[int, bool | None]]
+_async_checkpoints_cvar_default_token: Token[tuple[int, bool | None]]
+
 _green_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
 _async_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
 
