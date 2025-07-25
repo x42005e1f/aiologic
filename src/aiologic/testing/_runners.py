@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sys
 
+from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from aiologic.lowlevel._utils import _external as external
@@ -51,7 +52,10 @@ def run(
 def run(func, /, *args, library=None, backend=None, backend_options=None):
     if library is None:
         if backend is None:
-            library = backend = "asyncio"
+            if iscoroutinefunction(func):
+                library = backend = "asyncio"
+            else:
+                library = backend = "threading"
         else:
             library = backend
 
