@@ -510,6 +510,8 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
@@ -517,7 +519,7 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -598,6 +600,8 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
@@ -605,7 +609,7 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -677,6 +681,8 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
@@ -684,7 +690,7 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         def _apply_backend_options(self, /) -> None:
             pass
@@ -755,13 +761,15 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 asyncio.run(self._listen(), **self._backend_options)
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         if sys.version_info >= (3, 11):
 
@@ -843,13 +851,15 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
         def _run(self, /) -> None:
             self._backend_options.setdefault("taskcls", curio.task.ContextTask)
 
+            shutdown_event = self._shutdown_event
+
             try:
                 curio.run(self._listen, **self._backend_options)
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         async def _listen(self, /) -> None:
             _executor_tlocal.executor = self
@@ -921,13 +931,15 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 trio.run(self._listen, **self._backend_options)
             except BaseException as exc:  # noqa: BLE001
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
             if work_item.context is None:
@@ -991,6 +1003,8 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
             raise TypeError(msg)
 
         def _run(self, /) -> None:
+            shutdown_event = self._shutdown_event
+
             try:
                 anyio.run(
                     self._listen,
@@ -1001,7 +1015,7 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                 self._abort(exc)
                 self = None  # noqa: PLW0642
             finally:
-                self._shutdown_event.set()
+                shutdown_event.set()
 
         def _create_task(self, /, work_item: _WorkItem[Any]) -> None:
             if work_item.context is None:
