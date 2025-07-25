@@ -296,6 +296,8 @@ def _get_threading_task_class() -> type[Task[_T]]:
 
                 msg = f"task raised {exc_cls_repr}"
                 raise RuntimeError(msg) from exc
+            finally:
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -349,6 +351,7 @@ def _get_eventlet_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._greenlet
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -407,6 +410,7 @@ def _get_gevent_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._greenlet
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -467,6 +471,7 @@ def _get_asyncio_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._task
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -527,6 +532,7 @@ def _get_curio_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._task
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -588,6 +594,7 @@ def _get_trio_task_class() -> type[Task[_T]]:
             finally:
                 self._cancel_scope.__exit__(*sys.exc_info())
                 del self._cancel_scope
+                self = None  # noqa: PLW0642
 
             return result
 
@@ -649,6 +656,7 @@ def _get_anyio_task_class() -> type[Task[_T]]:
             finally:
                 self._cancel_scope.__exit__(*sys.exc_info())
                 del self._cancel_scope
+                self = None  # noqa: PLW0642
 
             return result
 
