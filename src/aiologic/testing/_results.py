@@ -53,15 +53,13 @@ class Result(Generic[_T]):
             extra = "running"
         elif self._future.done():
             if self._future.cancelled():
-                extra = "cancelled and notified"
+                extra = "cancelled"
             elif isinstance(self._future.exception(), _CancelledError):
-                extra = "cancelled and notified"
+                extra = "cancelled"
             elif isinstance(self._future.exception(), BrokenExecutor):
                 extra = "aborted"
             else:
                 extra = "finished"
-        elif self._future.cancelled():
-            extra = "cancelled"
         else:
             extra = "pending"
 
