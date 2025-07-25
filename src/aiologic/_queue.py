@@ -10,7 +10,15 @@ import warnings
 from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Protocol,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from ._semaphore import Semaphore
 from .lowlevel import (
@@ -46,14 +54,22 @@ class _SupportsBool(Protocol):
     def __bool__(self, /) -> bool: ...
 
 
-class _RichComparable(Protocol[_T_contra]):
+class _SupportsLT(Protocol[_T_contra]):
     __slots__ = ()
 
     def __lt__(self, other: _T_contra, /) -> _SupportsBool: ...
+
+
+class _SupportsGT(Protocol[_T_contra]):
+    __slots__ = ()
+
     def __gt__(self, other: _T_contra, /) -> _SupportsBool: ...
 
 
-_RichComparableT = TypeVar("_RichComparableT", bound=_RichComparable[Any])
+_RichComparableT = TypeVar(
+    "_RichComparableT",
+    bound=Union[_SupportsLT[Any], _SupportsGT[Any]],
+)
 
 
 class QueueEmpty(Exception):
