@@ -314,8 +314,8 @@ by many threads at a time.
 .. note::
 
     As a careful reader may notice, functions built on any of the techniques
-    cannot be imported directly, since they are only replaced at the level of
-    their module. In fact, aiologic uses such functions indirectly, to build
+    should not be imported directly, since they are only replaced at the level
+    of their module. In fact, aiologic uses such functions indirectly, to build
     more general abstractions based on them.
 
 .. hint::
