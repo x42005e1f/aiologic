@@ -130,9 +130,14 @@ when really needed.
     before.
 
 :class:`aiologic.CountdownEvent` represents a completely different class of
-events. Unlike regular events, it counts the number of "sets" and "resets" (to
-wake up tasks, you need to "set" a countdown event as many times as it has been
-"reset"), and it is "set" by default.
+events that is inspired by |dotnet-countdownevent|_. Unlike regular events, it
+counts the number of "sets" and "resets" (to wake up tasks, you need to "set" a
+countdown event as many times as it has been "reset"), and it is "set" by
+default.
+
+.. |dotnet-countdownevent| replace:: ``CountdownEvent`` from .NET Framework 4.0
+.. _dotnet-countdownevent: https://learn.microsoft.com/en-us/dotnet/api/
+   system.threading.countdownevent?view=netframework-4.0
 
 .. tab:: async
 
