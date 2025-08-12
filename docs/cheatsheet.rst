@@ -631,25 +631,61 @@ extends the already known use of barriers for similar purposes, such as
 reducing the impact of startup overhead for timeouts (improving test
 reproducibility).
 
-.. code:: python
+.. tab:: async
 
+  .. code:: python
+
+    import asyncio
+    import threading
+    # import time
+
+    import aiologic
+
+    N = 300
+
+    started = aiologic.Latch(N)
+    stopped = False
+
+
+    async def work(i):
+        global stopped
+
+        # without: 12.72 seconds
+        # with:     0.43 seconds
+        await started
+
+        if i == N - 1:  # the last thread
+            stopped = True  # stop the work
+
+        while not stopped:
+            await asyncio.sleep(0)  # do some work
+
+
+    for i in range(N):
+        threading.Thread(target=asyncio.run, args=[work(i)]).start()
+
+.. tab:: green
+
+  .. code:: python
+
+    # import asyncio
     import threading
     import time
 
     import aiologic
 
-    N = 1000
+    N = 300
 
-    barrier = aiologic.Latch(N)
+    started = aiologic.Latch(N)
     stopped = False
 
 
     def work(i):
         global stopped
 
-        # with:     0.27 seconds
-        # without: 12.95 seconds
-        barrier.wait()
+        # without: 1.17 seconds
+        # with:    0.13 seconds
+        started.wait()
 
         if i == N - 1:  # the last thread
             stopped = True  # stop the work
