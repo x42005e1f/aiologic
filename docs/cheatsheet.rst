@@ -64,7 +64,7 @@ as a shutdown. When the event is set, each wait call returns immediately.
 
     event = aiologic.Event()
 
-    async def worker(i):
+    async def work(i):
         print(f"worker #{i} started")
         await event  # waits one second
         print(f"worker #{i} notified")
@@ -72,8 +72,8 @@ as a shutdown. When the event is set, each wait call returns immediately.
         print(f"worker #{i} stopped")
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(worker, 1)
-        tg.start_soon(worker, 2)
+        tg.start_soon(work, 1)
+        tg.start_soon(work, 2)
 
         await anyio.sleep(1)
 
@@ -87,7 +87,7 @@ as a shutdown. When the event is set, each wait call returns immediately.
 
     event = aiologic.Event()
 
-    def worker(i):
+    def work(i):
         print(f"worker #{i} started")
         event.wait()  # waits one second
         print(f"worker #{i} notified")
@@ -95,8 +95,8 @@ as a shutdown. When the event is set, each wait call returns immediately.
         print(f"worker #{i} stopped")
 
     with ThreadPoolExecutor(2) as executor:
-        executor.submit(worker, 1)
-        executor.submit(worker, 2)
+        executor.submit(work, 1)
+        executor.submit(work, 2)
 
         time.sleep(1)
 
@@ -145,7 +145,7 @@ default.
 
     event = aiologic.CountdownEvent()
 
-    async def worker(i):
+    async def work(i):
         print(f"worker #{i} started")
         try:
             await anyio.sleep(i / 9)
@@ -157,7 +157,7 @@ default.
         for i in range(1, 10):
             event.up()  # one reset
 
-            tg.start_soon(worker, i)
+            tg.start_soon(work, i)
 
         assert event.value == 9
         await event  # waits one second
@@ -169,7 +169,7 @@ default.
 
     event = aiologic.CountdownEvent()
 
-    def worker(i):
+    def work(i):
         print(f"worker #{i} started")
         try:
             time.sleep(i / 9)
@@ -181,7 +181,7 @@ default.
         for i in range(1, 10):
             event.up()  # one reset
 
-            executor.submit(worker, i)
+            executor.submit(work, i)
 
         assert event.value == 9
         event.wait()  # waits one second
@@ -266,3 +266,466 @@ You can read about the origins of time complexity in mutual exclusion in `the
 one issue comment <https://github.com/apache/airflow/issues/50185
 #issuecomment-2928285691>`_. While the example of waking up all threads is
 considered there, the same inferences can be applied to waking up on a mutex.
+
+Barriers
+++++++++
+
+:class:`aiologic.Latch` is an auto-signaling mechanism. It notifies all tasks
+when they are all waiting, that is, call ``barrier.wait()`` /
+``await barrier``. When the barrier is used, each wait call returns
+immediately.
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Latch(3)  # for three workers
+
+    async def work(i):
+        print(f"worker #{i} started")
+        await barrier  # waits for all
+        print(f"worker #{i} notified")
+        await barrier  # returns immediately
+        print(f"worker #{i} stopped")
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(work, 1)
+        tg.start_soon(work, 2)
+        tg.start_soon(work, 3)
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Latch(3)  # for three workers
+
+    def work(i):
+        print(f"worker #{i} started")
+        barrier.wait()  # waits for all
+        print(f"worker #{i} notified")
+        barrier.wait()  # returns immediately
+        print(f"worker #{i} stopped")
+
+    with ThreadPoolExecutor(3) as executor:
+        executor.submit(work, 1)
+        executor.submit(work, 2)
+        executor.submit(work, 3)
+
+Unlike standard barriers (:class:`threading.Barrier` and
+:class:`asyncio.Barrier`), :class:`aiologic.Latch` is a single-phase barrier
+that cannot be reused. In this way it is similar to |cpp20-latch|_, and this is
+why it is called a single-use barrier.
+
+.. |cpp20-latch| replace:: ``std::latch`` from C++20
+.. _cpp20-latch: https://en.cppreference.com/w/cpp/thread/latch.html
+
+:class:`aiologic.Barrier`, in contrast, is a cyclic (or multi-phase) barrier.
+It is convenient when your application logic contains sequential phases (as is
+usually the case with parallel computing).
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(2)  # for two workers
+
+    async def work(i):
+        print(f"worker #{i} started")
+        await barrier  # waits for all
+        print(f"worker #{i} notified")
+        await barrier  # waits for all
+        print(f"worker #{i} stopped")
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(work, 1)
+        tg.start_soon(work, 2)
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(2)  # for two workers
+
+    def work(i):
+        print(f"worker #{i} started")
+        barrier.wait()  # waits for all
+        print(f"worker #{i} notified")
+        barrier.wait()  # waits for all
+        print(f"worker #{i} stopped")
+
+    with ThreadPoolExecutor(2) as executor:
+        executor.submit(work, 1)
+        executor.submit(work, 2)
+
+Nevertheless, :class:`aiologic.Barrier` is still not reusable. You cannot
+return either of these two barrier types to the default, empty state, except
+via ``barrier.wait()`` / ``await barrier`` (only for the cyclic barrier). If
+you need the ``barrier.reset()`` method, there is a third type for that,
+:class:`aiologic.RBarrier`.
+
+Error handling
+^^^^^^^^^^^^^^
+
+Barriers require a special approach to error handling because of their
+auto-signaling nature. If even one worker fails to wait, all others will wait
+forever. To solve this problem, they have a special, "broken" state.
+
+There are two ways to put a barrier into the broken state. The first is
+automatic, on cancellation or timeouts. When ``barrier.wait()`` fails, each
+current or future call raises :exc:`aiologic.BrokenBarrierError`. It is not
+raised for the failed call if the failure is due to some other exception, but
+it is raised on internal timeouts.
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Latch(3)  # for three workers
+
+    async def work(i):
+        print(f"worker #{i} started")
+        try:
+            with anyio.fail_after(i):
+                await barrier  # waits one second + fails
+        except (aiologic.BrokenBarrierError, TimeoutError):
+            print(f"worker #{i} failed")
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(work, 1)
+        tg.start_soon(work, 2)
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Latch(3)  # for three workers
+
+    def work(i):
+        print(f"worker #{i} started")
+        try:
+            # with internal timeout
+            barrier.wait(i)  # waits one second + fails
+        except aiologic.BrokenBarrierError:
+            print(f"worker #{i} failed")
+
+    with ThreadPoolExecutor(2) as executor:
+        executor.submit(work, 1)
+        executor.submit(work, 2)
+
+The second is manual, by calling ``barrier.abort()``. It is useful at startup
+(when at least one worker fails to start), it is useful at shutdown, and it is
+especially useful during phases.
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Latch(1)  # for one worker
+
+    try:
+        pass  # do some work
+    except:
+        barrier.abort()  # something went wrong
+        raise
+
+    await barrier  # waits or fails
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Latch(1)  # for one worker
+
+    try:
+        pass  # do some work
+    except:
+        barrier.abort()  # something went wrong
+        raise
+
+    barrier.wait()  # waits or fails
+
+The case of sequential phases is particularly complex. Unless it is ensured
+that no one raises an exception at a wait call on a successful wakeup, the
+failed call must also abort the next phase. The need for correct handling
+creates inconvenient patterns when using different barriers for different
+phases:
+
+.. tab:: async
+
+  .. code:: python
+
+    phase1 = aiologic.Latch(1)  # for one worker
+    phase2 = aiologic.Latch(1)  # for one worker
+    phase3 = aiologic.Latch(1)  # for one worker
+
+    try:
+        await phase1  # waits or fails
+
+        pass  # do some work, phase #1
+    except:
+        phase2.abort()  # something went wrong
+        raise
+
+    try:
+        await phase2  # waits or fails
+
+        pass  # do some work, phase #2
+    except:
+        phase3.abort()  # something went wrong
+        raise
+
+.. tab:: green
+
+  .. code:: python
+
+    phase1 = aiologic.Latch(1)  # for one worker
+    phase2 = aiologic.Latch(1)  # for one worker
+    phase3 = aiologic.Latch(1)  # for one worker
+
+    try:
+        phase1.wait()  # waits or fails
+
+        pass  # do some work, phase #1
+    except:
+        phase2.abort()  # something went wrong
+        raise
+
+    try:
+        phase2.wait()  # waits or fails
+
+        pass  # do some work, phase #2
+    except:
+        phase3.abort()  # something went wrong
+        raise
+
+This problem is solved by :class:`aiologic.Barrier` (and its relative
+:class:`aiologic.RBarrier`). Besides the fact that using a single instance for
+all phases simplifies the pattern to a single-phase case, it also supports use
+as a context manager:
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(1)  # for one worker
+
+    async with barrier:  # waits or fails at enter
+        pass  # do some work, phase #1
+
+    async with barrier:  # waits or fails at enter
+        pass  # do some work, phase #2
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(1)  # for one worker
+
+    with barrier:  # waits or fails at enter
+        pass  # do some work, phase #1
+
+    with barrier:  # waits or fails at enter
+        pass  # do some work, phase #2
+
+.. note::
+
+    Using aiologic barriers as context managers ensures that
+    ``barrier.abort()`` is called if an exception has been raised. However,
+    :class:`asyncio.Barrier` instances do not do this, and do not even put a
+    barrier into the broken state on exceptions raised at ``await
+    barrier.wait()``. In fact, the only way to put an asyncio barrier into the
+    broken state is to explicitly do ``await barrier.abort()``.
+
+    The possible reason for such behavior in asyncio is quite simple. Like any
+    other modern asynchronous framework, asyncio has developed cancellation
+    semantics. Instead of doing ``await barrier.abort()``, you can simply
+    cancel tasks directly. Or even use :class:`asyncio.TaskGroup`. This
+    eliminates the need to mess with :exc:`asyncio.BrokenBarrierError` at all.
+
+    What makes aiologic different is that its barriers can work with different
+    libraries at the same time, and each may have different cancellation
+    semantics (or even no cancellation semantics). So you need to work with
+    :exc:`aiologic.BrokenBarrierError` on all interfaces.
+
+Finalizing
+^^^^^^^^^^
+
+:class:`aiologic.Barrier` (and its relative :class:`aiologic.RBarrier`) gives
+each worker its own integer, in wakeup order. It is returned both when waiting
+and when using a barrier as a context manager.
+
+.. tab:: async
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(3)  # for three workers
+
+    async def work(i):
+        print(f"worker #{i} started")
+        async with barrier as j:  # int in range(0, 3)
+            print(f"worker #{i} notified as #{j + 1}")
+        print(f"worker #{i} stopped")
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(work, 1)
+        tg.start_soon(work, 2)
+        tg.start_soon(work, 3)
+
+.. tab:: green
+
+  .. code:: python
+
+    barrier = aiologic.Barrier(3)  # for three workers
+
+    def work(i):
+        print(f"worker #{i} started")
+        with barrier as j:  # int in range(0, 3)
+            print(f"worker #{i} notified as #{j + 1}")
+        print(f"worker #{i} stopped")
+
+    with ThreadPoolExecutor(3) as executor:
+        executor.submit(work, 1)
+        executor.submit(work, 2)
+        executor.submit(work, 3)
+
+This can be used to finalize a resource in a single thread when the previous
+phase is complete.
+
+Special behavior
+^^^^^^^^^^^^^^^^
+
+The barriers implement the same special behavior as :class:`aiologic.Event`,
+but with the following specifics:
+
+1. Successful and unsuccessful wakeups (due to explicit or implicit
+   ``barrier.abort()``) can race. When threads wake up in a natural way (due to
+   sufficient ``barrier.wait()`` calls), they wake each other up with the
+   information that the wakeup was successful. When threads wake up in an
+   unnatural way (due to a timeout, an exception, or a ``barrier.abort()``
+   call), they do the same thing, but with the information that the wakeup was
+   unsuccessful. In a multithreaded scenario where both types of wakeup
+   coexist, the success of a thread's wakeup is determined by the race
+   condition.
+2. The parallelism of successful wakeup is limited for
+   :class:`aiologic.Barrier` and :class:`aiologic.RBarrier`. When tasks are
+   more than expected, they are divided into phases. Tasks wake up each other
+   in their phase, but the wakeup of phases is sequential - a task from the
+   next phase will be woken up only when the wakeup initiator wakes up all
+   tasks in its phase. In particular, the case where the expected number is
+   :math:`1` and the actual number is :math:`n` gives :math:`O(n^2)` complexity
+   of a full wakeup (instead of :math:`O(n)` if the expected number was
+   :math:`n`).
+3. The wakeup order of phases may not be exactly FIFO for
+   :class:`aiologic.Barrier` and :class:`aiologic.RBarrier` without GIL (free
+   threading, perfect fairness disabled). When perfect fairness is disabled, a
+   separate list is used to parallelize wakeups. As a result, an unsuccessful
+   wakeup may wake up new tasks before the phase wakeup is complete.
+
+The ability of the barriers to wake up all tasks at once opens the way for one
+non-trivial application of them: solving the squares problem. By using a
+barrier to synchronize the start of threads, you can ensure that none of them
+run until they all start, and thus eliminate unnecessary context switching (and
+wasted CPU cycles) during the wakeup process. As a result, you will lower the
+time complexity of a full start from :math:`O(n^2)` to :math:`O(n)`. This
+extends the already known use of barriers for similar purposes, such as
+reducing the impact of startup overhead for timeouts (improving test
+reproducibility).
+
+.. code:: python
+
+    import threading
+    import time
+
+    import aiologic
+
+    N = 1000
+
+    barrier = aiologic.Latch(N)
+    stopped = False
+
+
+    def work(i):
+        global stopped
+
+        # with:     0.27 seconds
+        # without: 12.95 seconds
+        barrier.wait()
+
+        if i == N - 1:  # the last thread
+            stopped = True  # stop the work
+
+        while not stopped:
+            time.sleep(0)  # do some work
+
+
+    for i in range(N):
+        threading.Thread(target=work, args=[i]).start()
+
+Like all other aiologic primitives, the barriers implement the FIFO wakeup
+order. This is achieved by forcing a checkpoint for the task that came last in
+the current phase. Besides giving more expected and predictable behavior, this
+also distinguishes them from :class:`asyncio.Barrier`.
+
+.. tab:: aiologic.Barrier
+
+  .. code:: python
+
+    import asyncio
+
+    from itertools import count
+
+    import aiologic
+
+
+    async def work(barrier, c, i):
+        print(f"worker #{i} started")
+        async with barrier:
+            j = next(c)
+            print(f"worker #{i} notified as #{j}")
+            assert j == i  # passes for all tasks
+        print(f"worker #{i} stopped")
+
+
+    async def main():
+        barrier = aiologic.Barrier(3)  # for three workers
+        c = count(1)  # for wakeup enumerating
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(work(barrier, c, 1))
+            tg.create_task(work(barrier, c, 2))
+            tg.create_task(work(barrier, c, 3))
+
+
+    asyncio.run(main())
+
+.. tab:: asyncio.Barrier
+
+  .. code:: python
+
+    import asyncio
+
+    from itertools import count
+
+    # import aiologic
+
+
+    async def work(barrier, c, i):
+        print(f"worker #{i} started")
+        async with barrier:
+            j = next(c)
+            print(f"worker #{i} notified as #{j}")
+            assert j == i  # fails for all tasks
+        print(f"worker #{i} stopped")
+
+
+    async def main():
+        barrier = asyncio.Barrier(3)  # for three workers
+        c = count(1)  # for wakeup enumerating
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(work(barrier, c, 1))
+            tg.create_task(work(barrier, c, 2))
+            tg.create_task(work(barrier, c, 3))
+
+
+    asyncio.run(main())
