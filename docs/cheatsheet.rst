@@ -1084,3 +1084,45 @@ that they are raised after completion, and in the correct order:
     :exc:`KeyboardInterrupt` - if you want safe cancelling, make sure you have
     proper signal handlers (such as those that asyncio installs by default in
     :func:`asyncio.run`).
+
+Know more
+---------
+
+    We are currently preparing students for jobs that don't yet exist, using
+    technologies that haven't been invented, in order to solve problems we
+    don't even know are problems yet.
+
+    -- Richard Riley; Gunderson et al., 2004
+
+This document describes not all the secrets of aiologic. The scope of the
+documentation is gradually increasing, describing more and more details. But if
+you want to get the information right now, there are several ways:
+
+0. Open the rest of the documentation if you have not already done so.
+1. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`_ or ask Devin
+   there as well. The information there is generated from both the source code
+   and the documentation you are reading right now. Although Devin may lie
+   sometimes (because it is an AI) or not know about some things (especially
+   complex concurrent things), it gets smarter with every documentation update
+   and can tell you what to do in your particular case.
+2. Read `the author's answers on Stack Overflow <https://stackoverflow.com/
+   users/27526808/ilya-egorov?tab=answers>`_. Many of them reveal the use of
+   aiologic in specific use cases and even contain unique information that you
+   may not find within the documentation.
+3. Check out `the changelog <./changelog.html>`_. It has information about some
+   non-trivial things.
+4. Look at `the source code <https://github.com/x42005e1f/aiologic>`_. Stub
+   files (``.pyi`` files) can serve as a good guide to the interfaces, and you
+   can also learn a lot just by reading the implementation code. Note, however,
+   that understanding some behaviors requires more than just being able to read
+   source code.
+5. Ask your question on `GitHub Discussions <https://github.com/x42005e1f/
+   aiologic/discussions>`_ or `write to the author
+   <mailto:0x42005e1f@gmail.com>`_. Response times vary, but you can expect a
+   quality answer. Moreover, this way you will show your interest in the
+   project, and thus give the author extra motivation to keep working on it. Do
+   not be afraid to give feedback.
+
+Perhaps, even with all the answers, you still will not know the spirit of
+aiologic. Well, that is okay, because few people actually do. But the more you
+know, the closer you are to the truth.
