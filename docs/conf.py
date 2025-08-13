@@ -48,6 +48,7 @@ intersphinx_mapping = {
     "curio": ("https://curio.readthedocs.io/en/stable/", None),
     "eventlet": ("https://eventlet.readthedocs.io/en/stable/", None),
     "gevent": ("https://www.gevent.org/", None),
+    "greenlet": ("https://greenlet.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "sniffio": ("https://sniffio.readthedocs.io/en/stable/", None),
     "trio": ("https://trio.readthedocs.io/en/stable/", None),

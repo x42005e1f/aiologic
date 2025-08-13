@@ -15,35 +15,6 @@ into separate sections in the future.
     relevant for the latest (development) version. Make sure you install the
     package from GitHub before we start.
 
-Cancellation and timeouts
--------------------------
-
-"When in Rome, do as the Romans do" is a proverb attributed to St. Ambrose, a
-fourth-century bishop of Milan, and it also reflects well aiologic's vision of
-cancellation and timeouts. You can pass timeouts when using "green" libraries,
-but when using "async" libraries you have to use the mechanisms they provide.
-
-.. tab:: async
-
-  .. code:: python
-
-    async with aiologic.Condition() as cv:
-        await asyncio.wait_for(cv, timeout=5)
-
-.. tab:: green
-
-  .. code:: python
-
-    with aiologic.Condition() as cv:
-        cv.wait(timeout=5)
-
-One reason why aiologic does not provide its own timeouts for async libraries
-is `the difference between cancellation semantics <https://
-anyio.readthedocs.io/en/stable/cancellation.html
-#differences-between-asyncio-and-anyio-cancellation-semantics>`_ combined with
-the fact that AnyIO with the asyncio backend cannot be distinguished from pure
-asyncio on the aiologic side.
-
 Synchronization primitives
 --------------------------
 
@@ -765,3 +736,351 @@ also distinguishes them from :class:`asyncio.Barrier`.
 
 
     asyncio.run(main())
+
+Advanced topics
+---------------
+
+There is a whole layer of topics that aiologic covers or in some way takes into
+account. Since these are related to features that are commonly used in some
+special cases, such topics are called advanced topics. Nevertheless, they are
+recommended reading for anyone who wants to use aiologic effectively.
+
+Cancellation and timeouts
++++++++++++++++++++++++++
+
+"When in Rome, do as the Romans do" is a proverb attributed to St. Ambrose, a
+fourth-century bishop of Milan, and it also reflects well aiologic's vision of
+cancellation and timeouts. You can pass timeouts when using "green" libraries,
+but when using "async" libraries you have to use the mechanisms they provide.
+
+.. tab:: async
+
+  .. code:: python
+
+    async with aiologic.Condition() as cv:
+        await asyncio.wait_for(cv, timeout=5)
+
+.. tab:: green
+
+  .. code:: python
+
+    with aiologic.Condition() as cv:
+        cv.wait(timeout=5)
+
+One reason why aiologic does not provide its own timeouts for async libraries
+is `the difference between cancellation semantics <https://
+anyio.readthedocs.io/en/stable/cancellation.html
+#differences-between-asyncio-and-anyio-cancellation-semantics>`_ combined with
+the fact that AnyIO with the asyncio backend cannot be distinguished from pure
+asyncio on the aiologic side.
+
+Shielding
+^^^^^^^^^
+
+Sometimes you need to ensure that something will not be cancelled. For example,
+some piece of asynchronous code in ``aclose()`` or ``__aexit__()`` method that
+finalizes your resource. Or a task that you are waiting for. In general, you
+may want to shield from being cancelled one of the following things:
+
+1. An awaitable object
+2. A call (async or green)
+3. A code block
+
+aiologic provides :func:`aiologic.lowlevel.shield` universal decorator that
+works on the first two levels. It creates `a wrapt-powered object proxy
+<https://wrapt.readthedocs.io/en/master/wrappers.html>`_ that adds shielding
+from cancellation to any awaitable or callable object, and can be used like
+this:
+
+.. code:: python
+
+    # for an awaitable object (coroutine)
+    result = await aiologic.lowlevel.shield(corofunc(...))
+
+or like this:
+
+.. tab:: async
+
+  .. code:: python
+
+    # for a callable object (coroutine function)
+    result = await aiologic.lowlevel.shield(corofunc)(...)
+
+.. tab:: green
+
+  .. code:: python
+
+    # for a callable object (regular function)
+    result = aiologic.lowlevel.shield(func)(...)
+
+or even like this:
+
+.. tab:: async
+
+  .. code:: python
+
+    # for a callable object (coroutine function) as a decorator
+    @aiologic.lowlevel.shield
+    async def corofunc(...):
+        ...
+
+    result = await corofunc(...)
+
+.. tab:: green
+
+  .. code:: python
+
+    # for a callable object (regular function) as a decorator
+    @aiologic.lowlevel.shield
+    def func(...):
+        ...
+
+    result = func()
+
+But what is its particularity? Let's take asyncio as an example.
+
+Using asyncio, you can directly work with future objects, a special case of
+which are tasks. And when you wait for a future object, a quite logical
+"chaining" takes place, which delegates cancelling of the current task to the
+object:
+
+.. tab:: task
+
+  .. code:: python
+
+    task = asyncio.create_task(asyncio.sleep(5))
+
+    await asyncio.sleep(0)  # start the task
+
+    asyncio.current_task().cancel()  # cancel the current task
+
+    try:
+        await task  # cancels immediately
+    finally:
+        print(task.cancelled())  # True
+
+.. tab:: future
+
+  .. code:: python
+
+    future = asyncio.get_running_loop().create_future()
+
+    # future is pending
+
+    asyncio.current_task().cancel()  # cancel the current task
+
+    try:
+        await future  # cancels immediately
+    finally:
+        print(future.cancelled())  # True
+
+This is the same as if, instead of cancelling the current task (via
+``asyncio.current_task().cancel()``), you would cancel the waiting object
+directly (via ``task.cancel()`` / ``future.cancel()``). In particular, the
+current task would wait until the asynchronous call actually completes:
+
+.. code:: python
+
+    async def work():
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            await asyncio.sleep(1)  # wait for one second
+            raise
+
+    task = asyncio.create_task(work())
+
+    await asyncio.sleep(0)  # start the task
+
+    asyncio.current_task().cancel()  # cancel the current task
+
+    try:
+        await task  # cancels after one second
+    finally:
+        print(task.cancelled())  # True
+
+Such behavior mimics that which would be the case if ``await`` were applied to
+a coroutine (which are interacted with in ``yield from`` style, and thus work
+in the context of the current task) rather than a future object, and is the
+expected behavior. But what if you want the cancelling of the current task to
+have no effect on the waiting object? For example, if it can be used later by
+someone else to get a result? In that case you can use :func:`asyncio.shield`,
+which works at the first level (shielding an awaitable object):
+
+.. tab:: task
+
+  .. code:: python
+
+    task = asyncio.create_task(asyncio.sleep(5))
+
+    await asyncio.sleep(0)  # start the task
+
+    asyncio.current_task().cancel()  # cancel the current task
+
+    try:
+        await asyncio.shield(task)  # cancels immediately
+    finally:
+        print(task.cancelled())  # False
+
+.. tab:: future
+
+  .. code:: python
+
+    future = asyncio.get_running_loop().create_future()
+
+    # future is pending
+
+    asyncio.current_task().cancel()  # cancel the current task
+
+    try:
+        await asyncio.shield(future)  # cancels immediately
+    finally:
+        print(future.cancelled())  # False
+
+As you can see, using :func:`asyncio.shield()` only "undoes the chaining". The
+asynchronous call will still be cancelled. The difference is that the future
+object will neither be cancelled nor waiting to be done when the current task
+is cancelled. Sadly, this difference in the levels is often misunderstood,
+resulting in incorrect use of :func:`asyncio.shield` for finalization in the
+wild.
+
+Okay, but how can we actually shield asynchronous calls (and thus safely
+perform finalization)? Well, you can see an example of such shielding in
+|asyncio-condition-loop|_, which uses shielding from cancellation to ensure
+that the lock is acquired anyway. It catches and suppresses each
+:exc:`asyncio.CancelledError` in the loop, and raises the last one when
+finished. It does not use :func:`asyncio.shield`, since cancelling the
+``acquire()`` method does not affect operability in its case (it does, however,
+affect performance).
+
+.. |asyncio-condition-loop| replace:: the ``asyncio.Condition`` implementation
+.. _asyncio-condition-loop: https://github.com/python/cpython/blob/
+   bcb25d60b1baf9348e73cbd2359342cea6009c36/Lib/asyncio/locks.py#L278-L293
+
+So as you can guess, :func:`aiologic.lowlevel.shield` uses both of these
+techniques. By using :func:`asyncio.shield`, it shields the waiting object
+(such as the coroutine resulting from an asynchronous function call), allowing
+it to never be "chained". By using the loop with the try-except block, it
+suppresses cancellation and raises it upon completion. This is consistent with
+the cancellation semantics of pure asyncio.
+
+As for AnyIO, it has a different cancellation semantics and its own
+cancellation shielding mechanism. :class:`anyio.CancelScope` with
+``shield=True`` works at the third level and, unlike the second technique of
+pure asyncio, does not raise :exc:`asyncio.CancelledError` upon completion - it
+will be raised on the next asynchronous call within the cancelled scope (since
+in AnyIO the cancel is raised at each unshielded call, even if you have
+previously suppressed the cancel). But along with this, it does not handle pure
+asyncio level cancels in any way, which makes its cancel scopes incompatible
+with any code capable of calling ``task.cancel()``:
+
+.. code:: python
+
+    async def work():
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            await asyncio.sleep(1)  # wait for one second
+            raise
+
+    task = asyncio.create_task(work())
+
+    await asyncio.sleep(0)  # start the task
+
+    with anyio.CancelScope(shield=True):
+        asyncio.current_task().cancel()  # cancel the current task
+
+        try:
+            await task  # still cancels after one second
+        finally:
+            print(task.cancelled())  # True
+
+Because of the difference in cancellation semantics, aiologic also has to
+explicitly support AnyIO. When the library is imported, it adds a shielded
+cancel scope from AnyIO to the two techniques described above. As a result, you
+have a solution that fills two holes at once: it implements proper shielding
+for asynchronous calls on pure asyncio, and also provides accompanying
+shielding from ``task.cancel()`` on AnyIO.
+
+.. tab:: anyio
+
+  .. code:: python
+
+    with anyio.CancelScope() as scope:  # anyio level
+        scope.cancel()  # cancel the current scope
+
+        coro = anyio.sleep(5)
+        await aiologic.lowlevel.shield(coro)  # returns after five seconds
+
+.. tab:: anyio + asyncio
+
+  .. code:: python
+
+    with anyio.CancelScope() as scope:  # anyio level
+        asyncio.current_task().cancel()  # cancel the current task
+
+        coro = anyio.sleep(5)
+        await aiologic.lowlevel.shield(coro)  # cancels after five seconds
+
+.. tab:: asyncio
+
+  .. code:: python
+
+    # asyncio level
+    asyncio.current_task().cancel()  # cancel the current task
+
+    coro = asyncio.sleep(5)
+    await aiologic.lowlevel.shield(coro)  # cancels after five seconds
+
+Other async libraries also provide their own ways of shielding from
+cancellation, and these are used directly. A more interesting situation is in
+the case of green libraries. For them, aiologic uses an implementation similar
+to the techniques of pure asyncio, but for :exc:`greenlet.GreenletExit` and
+timeouts. And adds to that rescheduling of all caught timeouts, which ensures
+that they are raised after completion, and in the correct order:
+
+.. tab:: gevent
+
+  .. code:: python
+
+    with gevent.Timeout(2):  # second
+        with gevent.Timeout(1, False):  # first
+            # raises the first timeout (1) after three seconds
+            aiologic.lowlevel.shield(gevent.sleep)(3)
+
+            assert "never be reached"
+
+        # raises the second timeout (2)
+        gevent.sleep(0)
+
+.. tab:: eventlet
+
+  .. code:: python
+
+    with eventlet.Timeout(2):  # second
+        with eventlet.Timeout(1, False):  # first
+            # raises the first timeout (1) after three seconds
+            aiologic.lowlevel.shield(eventlet.sleep)(3)
+
+            assert "never be reached"
+
+        # raises the second timeout (2)
+        eventlet.sleep(0)
+
+.. note::
+
+    Using :func:`asyncio.shield` effectively gives that each run of the
+    shielded coroutine function will create a new task. The same is true for
+    green libraries - they create a new greenlet via :func:`gevent.spawn` /
+    :func:`eventlet.spawn`. If you rely on the number of context switches in
+    your applications, you should take this into account.
+
+.. warning::
+
+    :func:`aiologic.lowlevel.shield` performs shielding only for known
+    cancellation types. If you kill a greenlet with an exception other than
+    :exc:`greenlet.GreenletExit`, it will be successfully raised as if you did
+    not perform shielding from cancellation. The same is true for
+    :exc:`KeyboardInterrupt` - if you want safe cancelling, make sure you have
+    proper signal handlers (such as those that asyncio installs by default in
+    :func:`asyncio.run`).
