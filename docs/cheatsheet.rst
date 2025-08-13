@@ -1075,7 +1075,7 @@ that they are raised after completion, and in the correct order:
     :func:`eventlet.spawn`. If you rely on the number of context switches in
     your applications, you should take this into account.
 
-.. warning::
+.. caution::
 
     :func:`aiologic.lowlevel.shield` performs shielding only for known
     cancellation types. If you kill a greenlet with an exception other than
