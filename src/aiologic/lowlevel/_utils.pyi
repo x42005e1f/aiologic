@@ -34,3 +34,15 @@ def _replaces(
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
+@overload
+def _copies(
+    original: Callable[_P, _T],
+    wrapper: None = None,
+    /,
+) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
+@overload
+def _copies(
+    original: Callable[_P, _T],
+    wrapper: Callable[_P, _T],
+    /,
+) -> Callable[_P, _T]: ...

@@ -30,10 +30,12 @@ _USE_DELATTR: Final[bool] = (
 
 
 class BusyResourceError(RuntimeError):
-    pass
+    """..."""
 
 
 class ResourceGuard:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_action",
@@ -41,6 +43,8 @@ class ResourceGuard:
     )
 
     def __new__(cls, /, action: str = "using") -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         self._action = action
@@ -53,15 +57,21 @@ class ResourceGuard:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if (action := self._action) != "using":
             return (action,)
 
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -75,12 +85,16 @@ class ResourceGuard:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         try:
             return not self._unlocked
         except AttributeError:
             return True
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         try:
             if _USE_DELATTR:
                 del self._unlocked
@@ -99,6 +113,8 @@ class ResourceGuard:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         if _USE_DELATTR:
             self._unlocked = True
         else:
@@ -106,4 +122,6 @@ class ResourceGuard:
 
     @property
     def action(self, /) -> str:
+        """..."""
+
         return self._action

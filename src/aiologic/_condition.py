@@ -73,6 +73,8 @@ _S_co = TypeVar(
 
 
 class Condition(Generic[_T_co, _S_co]):
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_impl",
@@ -103,6 +105,8 @@ class Condition(Generic[_T_co, _S_co]):
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
     def __new__(cls, /, lock=MISSING, timer=MISSING):
+        """..."""
+
         if lock is MISSING:
             lock = RLock()
 
@@ -138,6 +142,8 @@ class Condition(Generic[_T_co, _S_co]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         try:
             timer_is_count = self.timer.__self__.__class__ is count
         except AttributeError:
@@ -149,9 +155,13 @@ class Condition(Generic[_T_co, _S_co]):
         return (self.lock, self.timer)
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -176,12 +186,18 @@ class Condition(Generic[_T_co, _S_co]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return bool(self._impl)
 
     async def __aenter__(self, /) -> Self:
+        """..."""
+
         return await self._impl.__aenter__()
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         return self._impl.__enter__()
 
     async def __aexit__(
@@ -191,6 +207,8 @@ class Condition(Generic[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         return await self._impl.__aexit__(exc_type, exc_value, traceback)
 
     def __exit__(
@@ -200,12 +218,18 @@ class Condition(Generic[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         return self._impl.__exit__(exc_type, exc_value, traceback)
 
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         return (yield from self._impl.__await__())
 
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         return self._impl.wait(timeout)
 
     async def for_(
@@ -215,6 +239,8 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         delegate: bool = True,
     ) -> _T:
+        """..."""
+
         return await self._impl.for_(predicate, delegate=delegate)
 
     def wait_for(
@@ -225,6 +251,8 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         delegate: bool = True,
     ) -> _T:
+        """..."""
+
         return self._impl.wait_for(predicate, timeout, delegate=delegate)
 
     def notify(
@@ -234,21 +262,31 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         deadline: float | None = None,
     ) -> int:
+        """..."""
+
         return self._impl.notify(count, deadline=deadline)
 
     def notify_all(self, /, *, deadline: float | None = None) -> int:
+        """..."""
+
         return self._impl.notify_all(deadline=deadline)
 
     @property
     def lock(self, /) -> _T_co:
+        """..."""
+
         return self._impl.lock
 
     @property
     def timer(self, /) -> _S_co:
+        """..."""
+
         return self._impl.timer
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return self._impl.waiting
 
 
@@ -1334,9 +1372,9 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if token[5]:
                         self._lock._unpark(event)
 
-                    self._lock.green_acquire(_shield=True)
-                else:
-                    self._lock._after_park()
+                    self._lock._green_acquire(_shield=True)
+
+                self._lock._after_park()
 
                 if count:
                     self._counts[task] = count
@@ -1418,9 +1456,9 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if token[5]:
                         self._lock._unpark(event)
 
-                    self._lock.green_acquire(_shield=True)
-                else:
-                    self._lock._after_park()
+                    self._lock._green_acquire(_shield=True)
+
+                self._lock._after_park()
 
                 if count:
                     self._counts[task] = count

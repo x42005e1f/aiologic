@@ -198,6 +198,7 @@ ignore = [
     "PYI053",  # string-or-bytes-too-long
     "PYI054",  # numeric-literal-too-long
     # flake8-return
+    "RET501",  # unnecessary-return-none
     "RET504",  # unnecessary-assign
     "RET505",  # superfluous-else-return
     "RET506",  # superfluous-else-raise

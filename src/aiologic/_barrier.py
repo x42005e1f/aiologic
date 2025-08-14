@@ -18,6 +18,7 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     import sys
@@ -50,10 +51,12 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
 
 
 class BrokenBarrierError(RuntimeError):
-    pass
+    """..."""
 
 
 class Latch:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_filling",
@@ -63,6 +66,8 @@ class Latch:
     )
 
     def __new__(cls, /, parties: int | None = None) -> Self:
+        """..."""
+
         if parties is None:
             parties = 1
         elif parties < 0:
@@ -81,12 +86,18 @@ class Latch:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         return (self._parties,)
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -104,9 +115,13 @@ class Latch:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return not self._filling
 
     def __await__(self, /) -> Generator[Any, Any, None]:
+        """..."""
+
         if not self._filling:
             unbroken = self._unbroken
 
@@ -151,6 +166,8 @@ class Latch:
         self._wakeup(unbroken)
 
     def wait(self, /, timeout: float | None = None) -> None:
+        """..."""
+
         if not self._filling:
             unbroken = self._unbroken
 
@@ -195,6 +212,8 @@ class Latch:
         self._wakeup(unbroken)
 
     def abort(self, /) -> None:
+        """..."""
+
         self._unbroken = False
 
         if self._filling:
@@ -246,18 +265,26 @@ class Latch:
 
     @property
     def parties(self, /) -> int:
+        """..."""
+
         return self._parties
 
     @property
     def broken(self, /) -> bool:
+        """..."""
+
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)
 
 
 class Barrier:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_parties",
@@ -267,6 +294,8 @@ class Barrier:
     )
 
     def __new__(cls, /, parties: int | None = None) -> Self:
+        """..."""
+
         if parties is None:
             parties = 1
         elif parties < 0:
@@ -285,12 +314,18 @@ class Barrier:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         return (self._parties,)
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -308,9 +343,13 @@ class Barrier:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     async def __aenter__(self, /) -> int:
+        """..."""
+
         return await self
 
     def __enter__(self, /) -> int:
+        """..."""
+
         return self.wait()
 
     async def __aexit__(
@@ -320,6 +359,8 @@ class Barrier:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         if exc_value is not None:
             self.abort()
 
@@ -330,10 +371,14 @@ class Barrier:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         if exc_value is not None:
             self.abort()
 
     def __await__(self, /) -> Generator[Any, Any, int]:
+        """..."""
+
         if not self._unbroken:
             yield from async_checkpoint().__await__()
 
@@ -381,6 +426,8 @@ class Barrier:
         return index
 
     def wait(self, /, timeout: float | None = None) -> int:
+        """..."""
+
         if not self._unbroken:
             green_checkpoint()
 
@@ -428,6 +475,8 @@ class Barrier:
         return index
 
     def abort(self, /) -> None:
+        """..."""
+
         self._unbroken = False
 
         self._wakeup_on_breaking()
@@ -576,24 +625,34 @@ class Barrier:
 
     @property
     def parties(self, /) -> int:
+        """..."""
+
         return self._parties
 
     @property
     def broken(self, /) -> bool:
+        """..."""
+
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)
 
 
 class RBarrier(Barrier):
+    """..."""
+
     __slots__ = (
         "_resetting",
         "_timer",
     )
 
     def __new__(cls, /, parties: int | None = None) -> Self:
+        """..."""
+
         if parties is None:
             parties = 1
         elif parties < 0:
@@ -613,7 +672,21 @@ class RBarrier(Barrier):
 
         return self
 
+    @copies(Barrier.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return Barrier.__getnewargs__(self)
+
+    @copies(Barrier.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Barrier.__getstate__(self)
+
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -632,7 +705,45 @@ class RBarrier(Barrier):
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
+    @copies(Barrier.__aenter__)
+    async def __aenter__(self, /) -> int:
+        """..."""
+
+        return await Barrier.__aenter__(self)
+
+    @copies(Barrier.__enter__)
+    def __enter__(self, /) -> int:
+        """..."""
+
+        return Barrier.__enter__(self)
+
+    @copies(Barrier.__aexit__)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await Barrier.__aexit__(self, exc_type, exc_value, traceback)
+
+    @copies(Barrier.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return Barrier.__exit__(self, exc_type, exc_value, traceback)
+
     def __await__(self, /) -> Generator[Any, Any, int]:
+        """..."""
+
         if not self._unbroken:
             yield from async_checkpoint().__await__()
 
@@ -682,6 +793,8 @@ class RBarrier(Barrier):
         return index
 
     def wait(self, /, timeout: float | None = None) -> int:
+        """..."""
+
         if not self._unbroken:
             green_checkpoint()
 
@@ -731,6 +844,8 @@ class RBarrier(Barrier):
         return index
 
     def reset(self, /) -> None:
+        """..."""
+
         self._resetting.append(None)
 
         try:
@@ -743,6 +858,8 @@ class RBarrier(Barrier):
             self._resetting.pop()
 
     def abort(self, /) -> None:
+        """..."""
+
         self._unbroken.clear()
 
         self._wakeup_on_breaking()
@@ -876,3 +993,24 @@ class RBarrier(Barrier):
                     waiters.remove(token)
                 except ValueError:
                     pass
+
+    @property
+    @copies(Barrier.parties.fget)
+    def parties(self, /) -> int:
+        """..."""
+
+        return Barrier.parties.fget(self)
+
+    @property
+    @copies(Barrier.broken.fget)
+    def broken(self, /) -> bool:
+        """..."""
+
+        return Barrier.broken.fget(self)
+
+    @property
+    @copies(Barrier.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Barrier.waiting.fget(self)

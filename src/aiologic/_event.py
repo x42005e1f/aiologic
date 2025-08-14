@@ -20,6 +20,7 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     import sys
@@ -50,6 +51,8 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
 
 
 class Event:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_is_unset",
@@ -57,6 +60,8 @@ class Event:
     )
 
     def __new__(cls, /, is_set: bool = False) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         self._is_unset = not is_set
@@ -65,15 +70,21 @@ class Event:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if not self._is_unset:
             return (True,)
 
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -89,9 +100,13 @@ class Event:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return not self._is_unset
 
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         if not self._is_unset:
             yield from async_checkpoint().__await__()
 
@@ -126,6 +141,8 @@ class Event:
         return success
 
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         if not self._is_unset:
             green_checkpoint()
 
@@ -160,10 +177,14 @@ class Event:
         return success
 
     def set(self, /) -> None:
+        """..."""
+
         self._is_unset = False
         self._wakeup()
 
     def is_set(self, /) -> bool:
+        """..."""
+
         return not self._is_unset
 
     def _wakeup(self, /) -> None:
@@ -188,13 +209,19 @@ class Event:
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)
 
 
 class REvent(Event):
+    """..."""
+
     __slots__ = ("_timer",)
 
     def __new__(cls, /, is_set: bool = False) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         self._is_unset = Flag()
@@ -207,7 +234,33 @@ class REvent(Event):
 
         return self
 
+    @copies(Event.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return Event.__getnewargs__(self)
+
+    @copies(Event.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Event.__getstate__(self)
+
+    @copies(Event.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return Event.__repr__(self)
+
+    @copies(Event.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return Event.__bool__(self)
+
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         if not self._is_unset:
             yield from async_checkpoint().__await__()
 
@@ -249,6 +302,8 @@ class REvent(Event):
         return success
 
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         if not self._is_unset:
             green_checkpoint()
 
@@ -290,11 +345,21 @@ class REvent(Event):
         return success
 
     def clear(self, /) -> None:
+        """..."""
+
         self._is_unset.set()
 
     def set(self, /) -> None:
+        """..."""
+
         self._is_unset.clear()
         self._wakeup()
+
+    @copies(Event.is_set)
+    def is_set(self, /) -> bool:
+        """..."""
+
+        return Event.is_set(self)
 
     def _wakeup(self, /, deadline: float | None = None) -> None:
         waiters = self._waiters
@@ -325,8 +390,17 @@ class REvent(Event):
                 except ValueError:
                     pass
 
+    @property
+    @copies(Event.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Event.waiting.fget(self)
+
 
 class CountdownEvent:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_is_unset",
@@ -335,6 +409,8 @@ class CountdownEvent:
     )
 
     def __new__(cls, /, value: int | None = None) -> Self:
+        """..."""
+
         if value is None:
             value = 0
         elif value < 0:
@@ -350,15 +426,21 @@ class CountdownEvent:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if value := len(self._is_unset):
             return (value,)
 
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -374,9 +456,13 @@ class CountdownEvent:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return not self._is_unset
 
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         if not self._is_unset:
             yield from async_checkpoint().__await__()
 
@@ -418,6 +504,8 @@ class CountdownEvent:
         return success
 
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         if not self._is_unset:
             green_checkpoint()
 
@@ -459,12 +547,16 @@ class CountdownEvent:
         return success
 
     def up(self, /, count: int = 1) -> None:
+        """..."""
+
         if count == 1:
             self._is_unset.append(object())
         else:
             self._is_unset.extend([object()] * count)
 
     def down(self, /) -> None:
+        """..."""
+
         try:
             self._is_unset.pop()
         except IndexError:
@@ -474,6 +566,8 @@ class CountdownEvent:
         self._wakeup()
 
     def clear(self, /) -> None:
+        """..."""
+
         self._is_unset.clear()
         self._wakeup()
 
@@ -539,8 +633,12 @@ class CountdownEvent:
 
     @property
     def value(self, /) -> int:
+        """..."""
+
         return len(self._is_unset)
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)

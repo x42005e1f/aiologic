@@ -30,6 +30,7 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     import sys
@@ -73,14 +74,16 @@ _RichComparableT = TypeVar(
 
 
 class QueueEmpty(Exception):
-    pass
+    """..."""
 
 
 class QueueFull(Exception):
-    pass
+    """..."""
 
 
 class SimpleQueue(Generic[_T]):
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_data",
@@ -88,6 +91,8 @@ class SimpleQueue(Generic[_T]):
     )
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         if items is not MISSING:
@@ -100,12 +105,18 @@ class SimpleQueue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -123,16 +134,24 @@ class SimpleQueue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return bool(self._data)
 
     def __len__(self) -> int:
+        """..."""
+
         return len(self._data)
 
     def put(self, /, item: _T) -> None:
+        """..."""
+
         self._data.append(item)
         self._semaphore.release()
 
     async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+        """..."""
+
         if blocking:
             await async_checkpoint()
 
@@ -147,6 +166,8 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
+        """..."""
+
         if blocking:
             green_checkpoint()
 
@@ -154,6 +175,8 @@ class SimpleQueue(Generic[_T]):
         self._semaphore.green_release()
 
     async def async_get(self, /, *, blocking: bool = True) -> _T:
+        """..."""
+
         success = await self._semaphore.async_acquire(blocking=blocking)
 
         if not success:
@@ -168,6 +191,8 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
+        """..."""
+
         success = self._semaphore.green_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -180,21 +205,31 @@ class SimpleQueue(Generic[_T]):
 
     @property
     def putting(self, /) -> int:
+        """..."""
+
         return 0
 
     @property
     def getting(self, /) -> int:
+        """..."""
+
         return self._semaphore.waiting
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return self._semaphore.waiting
 
 
 class SimpleLifoQueue(SimpleQueue[_T]):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         if items is not MISSING:
@@ -206,7 +241,69 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         return self
 
+    @copies(SimpleQueue.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return SimpleQueue.__getnewargs__(self)
+
+    @copies(SimpleQueue.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return SimpleQueue.__getstate__(self)
+
+    @copies(SimpleQueue.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return SimpleQueue.__repr__(self)
+
+    @copies(SimpleQueue.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return SimpleQueue.__bool__(self)
+
+    @copies(SimpleQueue.__len__)
+    def __len__(self) -> int:
+        """..."""
+
+        return SimpleQueue.__len__(self)
+
+    @copies(SimpleQueue.put)
+    def put(self, /, item: _T) -> None:
+        """..."""
+
+        return SimpleQueue.put(self, item)
+
+    @copies(SimpleQueue.async_put)
+    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+        """..."""
+
+        return await SimpleQueue.async_put(self, item, blocking=blocking)
+
+    @copies(SimpleQueue.green_put)
+    def green_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
+        """..."""
+
+        return SimpleQueue.green_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
+
     async def async_get(self, /, *, blocking: bool = True) -> _T:
+        """..."""
+
         success = await self._semaphore.async_acquire(blocking=blocking)
 
         if not success:
@@ -221,6 +318,8 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
+        """..."""
+
         success = self._semaphore.green_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -231,8 +330,31 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         return self._data.pop()
 
+    @property
+    @copies(SimpleQueue.putting.fget)
+    def putting(self, /) -> int:
+        """..."""
+
+        return SimpleQueue.putting.fget(self)
+
+    @property
+    @copies(SimpleQueue.getting.fget)
+    def getting(self, /) -> int:
+        """..."""
+
+        return SimpleQueue.getting.fget(self)
+
+    @property
+    @copies(SimpleQueue.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return SimpleQueue.waiting.fget(self)
+
 
 class Queue(Generic[_T]):
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_data",
@@ -254,6 +376,8 @@ class Queue(Generic[_T]):
         maxsize: int | None = None,
     ) -> Self: ...
     def __new__(cls, items=MISSING, /, maxsize=None):
+        """..."""
+
         if maxsize is None and (items is None or isinstance(items, int)):
             items, maxsize = MISSING, items
 
@@ -284,15 +408,21 @@ class Queue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if (maxsize := self._maxsize) != 0:
             return (tuple(copy(self._data)), maxsize)
 
         return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -317,9 +447,13 @@ class Queue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return bool(self._data)
 
     def __len__(self) -> int:
+        """..."""
+
         return len(self._data)
 
     def _acquire_nowait_on_putting(self, /) -> bool:
@@ -490,6 +624,8 @@ class Queue(Generic[_T]):
         return success
 
     async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+        """..."""
+
         acquired = await self._async_acquire(
             self._acquire_nowait_on_putting,
             self._putters,
@@ -512,6 +648,8 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
+        """..."""
+
         acquired = self._green_acquire(
             self._acquire_nowait_on_putting,
             self._putters,
@@ -528,6 +666,8 @@ class Queue(Generic[_T]):
             self._release()
 
     async def async_get(self, /, *, blocking: bool = True) -> _T:
+        """..."""
+
         acquired = await self._async_acquire(
             self._acquire_nowait_on_getting,
             self._getters,
@@ -549,6 +689,8 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
+        """..."""
+
         acquired = self._green_acquire(
             self._acquire_nowait_on_getting,
             self._getters,
@@ -605,23 +747,115 @@ class Queue(Generic[_T]):
 
     @property
     def maxsize(self, /) -> int:
+        """..."""
+
         return self._maxsize
 
     @property
     def putting(self, /) -> int:
+        """..."""
+
         return len(self._putters)
 
     @property
     def getting(self, /) -> int:
+        """..."""
+
         return len(self._getters)
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._putters_and_getters)
 
 
 class LifoQueue(Queue[_T]):
+    """..."""
+
     __slots__ = ()
+
+    @overload
+    def __new__(cls, /, maxsize: int | None = None) -> Self: ...
+    @overload
+    def __new__(
+        cls,
+        items: Iterable[_T] | MissingType = MISSING,
+        /,
+        maxsize: int | None = None,
+    ) -> Self: ...
+    @copies(Queue.__new__)
+    def __new__(cls, items=MISSING, /, maxsize=None):
+        """..."""
+
+        return Queue.__new__(cls, items, maxsize)
+
+    @copies(Queue.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return Queue.__getnewargs__(self)
+
+    @copies(Queue.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Queue.__getstate__(self)
+
+    @copies(Queue.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return Queue.__repr__(self)
+
+    @copies(Queue.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return Queue.__bool__(self)
+
+    @copies(Queue.__len__)
+    def __len__(self, /) -> bool:
+        """..."""
+
+        return Queue.__len__(self)
+
+    @copies(Queue.async_put)
+    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+        """..."""
+
+        return await Queue.async_put(self, item, blocking=blocking)
+
+    @copies(Queue.green_put)
+    def green_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
+        """..."""
+
+        return Queue.green_put(self, item, blocking=blocking, timeout=timeout)
+
+    @copies(Queue.async_get)
+    async def async_get(self, /, *, blocking: bool = True) -> _T:
+        """..."""
+
+        return await Queue.async_get(self, blocking=blocking)
+
+    @copies(Queue.green_get)
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
+        """..."""
+
+        return Queue.green_get(self, blocking=blocking, timeout=timeout)
 
     def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
         self._data = list(items)
@@ -632,9 +866,127 @@ class LifoQueue(Queue[_T]):
     def _get(self, /) -> _T:
         return self._data.pop()
 
+    @property
+    @copies(Queue.maxsize.fget)
+    def maxsize(self, /) -> int:
+        """..."""
+
+        return Queue.maxsize.fget(self)
+
+    @property
+    @copies(Queue.putting.fget)
+    def putting(self, /) -> int:
+        """..."""
+
+        return Queue.putting.fget(self)
+
+    @property
+    @copies(Queue.getting.fget)
+    def getting(self, /) -> int:
+        """..."""
+
+        return Queue.getting.fget(self)
+
+    @property
+    @copies(Queue.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Queue.waiting.fget(self)
+
 
 class PriorityQueue(Queue[_RichComparableT]):
+    """..."""
+
     __slots__ = ()
+
+    @overload
+    def __new__(cls, /, maxsize: int | None = None) -> Self: ...
+    @overload
+    def __new__(
+        cls,
+        items: Iterable[_RichComparableT] | MissingType = MISSING,
+        /,
+        maxsize: int | None = None,
+    ) -> Self: ...
+    @copies(Queue.__new__)
+    def __new__(cls, items=MISSING, /, maxsize=None):
+        """..."""
+
+        return Queue.__new__(cls, items, maxsize)
+
+    @copies(Queue.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return Queue.__getnewargs__(self)
+
+    @copies(Queue.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Queue.__getstate__(self)
+
+    @copies(Queue.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return Queue.__repr__(self)
+
+    @copies(Queue.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return Queue.__bool__(self)
+
+    @copies(Queue.__len__)
+    def __len__(self, /) -> bool:
+        """..."""
+
+        return Queue.__len__(self)
+
+    @copies(Queue.async_put)
+    async def async_put(
+        self,
+        /,
+        item: _RichComparableT,
+        *,
+        blocking: bool = True,
+    ) -> None:
+        """..."""
+
+        return await Queue.async_put(self, item, blocking=blocking)
+
+    @copies(Queue.green_put)
+    def green_put(
+        self,
+        /,
+        item: _RichComparableT,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
+        """..."""
+
+        return Queue.green_put(self, item, blocking=blocking, timeout=timeout)
+
+    @copies(Queue.async_get)
+    async def async_get(self, /, *, blocking: bool = True) -> _RichComparableT:
+        """..."""
+
+        return await Queue.async_get(self, blocking=blocking)
+
+    @copies(Queue.green_get)
+    def green_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _RichComparableT:
+        """..."""
+
+        return Queue.green_get(self, blocking=blocking, timeout=timeout)
 
     def _init(
         self,
@@ -651,3 +1003,31 @@ class PriorityQueue(Queue[_RichComparableT]):
 
     def _get(self, /) -> _RichComparableT:
         return heappop(self._data)
+
+    @property
+    @copies(Queue.maxsize.fget)
+    def maxsize(self, /) -> int:
+        """..."""
+
+        return Queue.maxsize.fget(self)
+
+    @property
+    @copies(Queue.putting.fget)
+    def putting(self, /) -> int:
+        """..."""
+
+        return Queue.putting.fget(self)
+
+    @property
+    @copies(Queue.getting.fget)
+    def getting(self, /) -> int:
+        """..."""
+
+        return Queue.getting.fget(self)
+
+    @property
+    @copies(Queue.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Queue.waiting.fget(self)

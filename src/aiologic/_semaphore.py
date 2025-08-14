@@ -19,6 +19,7 @@ from .lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -53,6 +54,8 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
 
 
 class Semaphore:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_initial_value",
@@ -77,6 +80,8 @@ class Semaphore:
     @overload
     def __new__(cls, /, *, max_value: int) -> BoundedSemaphore: ...
     def __new__(cls, /, initial_value=None, max_value=None):
+        """..."""
+
         if max_value is not None:
             if cls is not Semaphore:
                 msg = (
@@ -112,15 +117,21 @@ class Semaphore:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if (initial_value := self._initial_value) != 1:
             return (initial_value,)
 
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -136,11 +147,15 @@ class Semaphore:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     async def __aenter__(self, /) -> Self:
+        """..."""
+
         await self.async_acquire()
 
         return self
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         self.green_acquire()
 
         return self
@@ -152,6 +167,8 @@ class Semaphore:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.async_release()
 
     def __exit__(
@@ -161,6 +178,8 @@ class Semaphore:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.green_release()
 
     def _acquire_nowait(self, /) -> bool:
@@ -174,7 +193,7 @@ class Semaphore:
 
         return False
 
-    async def async_acquire(
+    async def _async_acquire(
         self,
         /,
         *,
@@ -221,7 +240,7 @@ class Semaphore:
 
         return success
 
-    def green_acquire(
+    def _green_acquire(
         self,
         /,
         *,
@@ -269,7 +288,23 @@ class Semaphore:
 
         return success
 
-    def release(self, /, count: int = 1) -> None:
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
+        return await self._async_acquire(blocking=blocking)
+
+    def green_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        """..."""
+
+        return self._green_acquire(blocking=blocking, timeout=timeout)
+
+    def _release(self, /, count: int = 1) -> None:
         waiters = self._waiters
 
         while True:
@@ -314,28 +349,46 @@ class Semaphore:
             else:
                 break
 
-    async_release = release
-    green_release = release
+    @copies(_release)
+    def release(self, /, count: int = 1) -> None:
+        """..."""
 
-    _async_acquire = async_acquire
-    _green_acquire = green_acquire
+        return self._release(count)
 
-    _release = release
+    @copies(release)
+    def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
+    @copies(release)
+    def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
 
     @property
     def initial_value(self, /) -> int:
+        """..."""
+
         return self._initial_value
 
     @property
     def value(self, /) -> int:
+        """..."""
+
         return len(self._unlocked)
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)
 
 
 class BoundedSemaphore(Semaphore):
+    """..."""
+
     __slots__ = (
         "_locked",
         "_max_value",
@@ -358,6 +411,8 @@ class BoundedSemaphore(Semaphore):
     @overload
     def __new__(cls, /, *, max_value: int) -> Self: ...
     def __new__(cls, /, initial_value=None, max_value=None):
+        """..."""
+
         if (
             cls is BoundedSemaphore
             and (initial_value is None or initial_value <= 1)
@@ -407,6 +462,8 @@ class BoundedSemaphore(Semaphore):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         initial_value = self._initial_value
         max_value = self._max_value
 
@@ -419,9 +476,13 @@ class BoundedSemaphore(Semaphore):
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -444,14 +505,46 @@ class BoundedSemaphore(Semaphore):
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    async def async_acquire(
+    @copies(Semaphore.__aenter__)
+    async def __aenter__(self, /) -> Self:
+        """..."""
+
+        return await Semaphore.__aenter__(self)
+
+    @copies(Semaphore.__enter__)
+    def __enter__(self, /) -> Self:
+        """..."""
+
+        return Semaphore.__enter__(self)
+
+    @copies(Semaphore.__aexit__)
+    async def __aexit__(
         self,
         /,
-        *,
-        blocking: bool = True,
-        _shield: bool = False,
-    ) -> bool:
-        success = await self._async_acquire(blocking=blocking, _shield=_shield)
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await Semaphore.__aexit__(self, exc_type, exc_value, traceback)
+
+    @copies(Semaphore.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return Semaphore.__exit__(self, exc_type, exc_value, traceback)
+
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
+        success = await self._async_acquire(blocking=blocking)
 
         if success:
             if _USE_BYTEARRAY:
@@ -467,13 +560,10 @@ class BoundedSemaphore(Semaphore):
         *,
         blocking: bool = True,
         timeout: float | None = None,
-        _shield: bool = False,
     ) -> bool:
-        success = self._green_acquire(
-            blocking=blocking,
-            timeout=timeout,
-            _shield=_shield,
-        )
+        """..."""
+
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             if _USE_BYTEARRAY:
@@ -484,6 +574,8 @@ class BoundedSemaphore(Semaphore):
         return success
 
     def release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count != 1:
             msg = "count must be 1"
             raise ValueError(msg)
@@ -496,19 +588,49 @@ class BoundedSemaphore(Semaphore):
 
         self._release(count)
 
-    async_release = release
-    green_release = release
+    @copies(release)
+    def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
+    @copies(release)
+    def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
+    @property
+    @copies(Semaphore.initial_value.fget)
+    def initial_value(self, /) -> int:
+        """..."""
+
+        return Semaphore.initial_value.fget(self)
 
     @property
     def max_value(self, /) -> int:
+        """..."""
+
         return self._max_value
 
     @property
+    @copies(Semaphore.value.fget)
     def value(self, /) -> int:
-        return len(self._unlocked)
+        """..."""
+
+        return Semaphore.value.fget(self)
+
+    @property
+    @copies(Semaphore.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Semaphore.waiting.fget(self)
 
 
 class BinarySemaphore(Semaphore):
+    """..."""
+
     __slots__ = ()
 
     @overload
@@ -528,6 +650,8 @@ class BinarySemaphore(Semaphore):
     @overload
     def __new__(cls, /, *, max_value: int) -> BoundedBinarySemaphore: ...
     def __new__(cls, /, initial_value=None, max_value=None):
+        """..."""
+
         if max_value is not None:
             if cls is not BinarySemaphore:
                 msg = (
@@ -559,15 +683,77 @@ class BinarySemaphore(Semaphore):
 
         return self
 
-    def release(self, /, count: int = 1) -> None:
-        if count != 1:
-            msg = "count must be 1"
-            raise ValueError(msg)
+    @copies(Semaphore.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
 
-        self._release(count)
+        return Semaphore.__getnewargs__(self)
 
-    async_release = release
-    green_release = release
+    @copies(Semaphore.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Semaphore.__getstate__(self)
+
+    @copies(Semaphore.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return Semaphore.__repr__(self)
+
+    @copies(Semaphore.__aenter__)
+    async def __aenter__(self, /) -> Self:
+        """..."""
+
+        return await Semaphore.__aenter__(self)
+
+    @copies(Semaphore.__enter__)
+    def __enter__(self, /) -> Self:
+        """..."""
+
+        return Semaphore.__enter__(self)
+
+    @copies(Semaphore.__aexit__)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await Semaphore.__aexit__(self, exc_type, exc_value, traceback)
+
+    @copies(Semaphore.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return Semaphore.__exit__(self, exc_type, exc_value, traceback)
+
+    @copies(Semaphore.async_acquire)
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
+        return await Semaphore.async_acquire(blocking=blocking)
+
+    @copies(Semaphore.green_acquire)
+    def green_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
+        """..."""
+
+        return Semaphore.green_acquire(blocking=blocking, timeout=timeout)
 
     def _release(self, /, count: int = 1) -> None:
         waiters = self._waiters
@@ -592,9 +778,47 @@ class BinarySemaphore(Semaphore):
             else:
                 break
 
+    def release(self, /, count: int = 1) -> None:
+        """..."""
+
+        if count != 1:
+            msg = "count must be 1"
+            raise ValueError(msg)
+
+        self._release(count)
+
+    @copies(release)
+    def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
+    @copies(release)
+    def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
     @property
+    @copies(Semaphore.initial_value.fget)
+    def initial_value(self, /) -> int:
+        """..."""
+
+        return Semaphore.initial_value.fget(self)
+
+    @property
+    @copies(Semaphore.value.fget)
     def value(self, /) -> int:
-        return len(self._unlocked)
+        """..."""
+
+        return Semaphore.value.fget(self)
+
+    @property
+    @copies(Semaphore.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Semaphore.waiting.fget(self)
 
     # Internal methods used by condition variables
 
@@ -629,6 +853,8 @@ class BinarySemaphore(Semaphore):
 
 
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
+    """..."""
+
     __slots__ = ()
 
     @overload
@@ -648,6 +874,8 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     @overload
     def __new__(cls, /, *, max_value: int) -> Self: ...
     def __new__(cls, /, initial_value=None, max_value=None):
+        """..."""
+
         self = object.__new__(cls)
 
         if initial_value is not None:
@@ -686,18 +914,69 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
         return self
 
-    __getnewargs__ = BoundedSemaphore.__getnewargs__
-    __getstate__ = BoundedSemaphore.__getstate__
-    __repr__ = BoundedSemaphore.__repr__
+    @copies(BoundedSemaphore.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
 
-    async def async_acquire(
+        return BoundedSemaphore.__getnewargs__(self)
+
+    @copies(BoundedSemaphore.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return BoundedSemaphore.__getstate__(self)
+
+    @copies(BoundedSemaphore.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return BoundedSemaphore.__repr__(self)
+
+    @copies(BinarySemaphore.__aenter__)
+    async def __aenter__(self, /) -> Self:
+        """..."""
+
+        return await BinarySemaphore.__aenter__(self)
+
+    @copies(BinarySemaphore.__enter__)
+    def __enter__(self, /) -> Self:
+        """..."""
+
+        return BinarySemaphore.__enter__(self)
+
+    @copies(BinarySemaphore.__aexit__)
+    async def __aexit__(
         self,
         /,
-        *,
-        blocking: bool = True,
-        _shield: bool = False,
-    ) -> bool:
-        success = await self._async_acquire(blocking=blocking, _shield=_shield)
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await BinarySemaphore.__aexit__(
+            self,
+            exc_type,
+            exc_value,
+            traceback,
+        )
+
+    @copies(BinarySemaphore.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return BinarySemaphore.__exit__(self, exc_type, exc_value, traceback)
+
+    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
+        success = await self._async_acquire(blocking=blocking)
 
         if success:
             if _USE_DELATTR:
@@ -713,13 +992,10 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         *,
         blocking: bool = True,
         timeout: float | None = None,
-        _shield: bool = False,
     ) -> bool:
-        success = self._green_acquire(
-            blocking=blocking,
-            timeout=timeout,
-            _shield=_shield,
-        )
+        """..."""
+
+        success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             if _USE_DELATTR:
@@ -730,6 +1006,8 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         return success
 
     def release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count != 1:
             msg = "count must be 1"
             raise ValueError(msg)
@@ -745,12 +1023,45 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
         self._release(count)
 
-    async_release = release
-    green_release = release
+    @copies(release)
+    def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
+
+    @copies(release)
+    def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
+        return self.release(count)
 
     @property
+    @copies(BinarySemaphore.initial_value.fget)
+    def initial_value(self, /) -> int:
+        """..."""
+
+        return BinarySemaphore.initial_value.fget(self)
+
+    @property
+    @copies(BoundedSemaphore.max_value.fget)
+    def max_value(self, /) -> int:
+        """..."""
+
+        return BoundedSemaphore.max_value.fget(self)
+
+    @property
+    @copies(BinarySemaphore.value.fget)
     def value(self, /) -> int:
-        return len(self._unlocked)
+        """..."""
+
+        return BinarySemaphore.value.fget(self)
+
+    @property
+    @copies(BinarySemaphore.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return BinarySemaphore.waiting.fget(self)
 
     # Internal methods used by condition variables
 

@@ -157,7 +157,6 @@ def current_green_library(*, failsafe=False):
         if the current green library was not recognized.
 
     Example:
-
       .. code:: python
 
         def green_sleep(seconds: float) -> None:
@@ -209,7 +208,6 @@ def current_async_library(*, failsafe=False):
         if the current async library was not recognized.
 
     Example:
-
       .. code:: python
 
         async def async_sleep(seconds: float) -> None:

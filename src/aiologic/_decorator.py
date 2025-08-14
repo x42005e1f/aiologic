@@ -500,6 +500,8 @@ def synchronized(  # type: ignore[overload-overlap]
 @external
 def synchronized(wrapped: object, /) -> _SynchronizedDecorator: ...
 def synchronized(wrapped, /):
+    """..."""
+
     if hasattr(wrapped, "acquire") and hasattr(wrapped, "release"):
         if iscoroutinefunction(wrapped.acquire):
             if iscoroutinefunction(wrapped.release):

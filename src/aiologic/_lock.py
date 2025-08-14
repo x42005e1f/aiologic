@@ -20,6 +20,7 @@ from .lowlevel import (
     current_green_task_ident,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     import sys
@@ -175,6 +176,8 @@ class BLock(PLock):
 
 
 class Lock(PLock):
+    """..."""
+
     __slots__ = (
         # "__weakref__",
         "_owner",
@@ -184,6 +187,8 @@ class Lock(PLock):
     )
 
     def __new__(cls, /) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         self._owner = None
@@ -194,10 +199,19 @@ class Lock(PLock):
 
         return self
 
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return ()
+
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -211,14 +225,20 @@ class Lock(PLock):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return not self._unlocked
 
     async def __aenter__(self, /) -> Self:
+        """..."""
+
         await self.async_acquire()
 
         return self
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         self.green_acquire()
 
         return self
@@ -230,6 +250,8 @@ class Lock(PLock):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.async_release()
 
     def __exit__(
@@ -239,6 +261,8 @@ class Lock(PLock):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.green_release()
 
     def _acquire_nowait(self, /) -> bool:
@@ -376,6 +400,8 @@ class Lock(PLock):
         return success
 
     async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
         return await self._async_acquire_on_behalf_of(
             current_async_task_ident(),
             blocking=blocking,
@@ -388,6 +414,8 @@ class Lock(PLock):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
+        """..."""
+
         return self._green_acquire_on_behalf_of(
             current_green_task_ident(),
             blocking=blocking,
@@ -423,6 +451,8 @@ class Lock(PLock):
                 break
 
     def async_release(self, /) -> None:
+        """..."""
+
         if self._owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
@@ -436,6 +466,8 @@ class Lock(PLock):
         self._release()
 
     def green_release(self, /) -> None:
+        """..."""
+
         if self._owner is None:
             msg = "release unlocked lock"
             raise RuntimeError(msg)
@@ -449,24 +481,34 @@ class Lock(PLock):
         self._release()
 
     def async_owned(self, /) -> bool:
+        """..."""
+
         return (
             self._owner == current_async_task_ident() and not self._releasing
         )
 
     def green_owned(self, /) -> bool:
+        """..."""
+
         return (
             self._owner == current_green_task_ident() and not self._releasing
         )
 
     def locked(self, /) -> bool:
+        """..."""
+
         return not self._unlocked
 
     @property
     def owner(self, /) -> tuple[str, int] | None:
+        """..."""
+
         return self._owner
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return len(self._waiters)
 
     # Internal methods used by condition variables
@@ -509,9 +551,13 @@ class Lock(PLock):
 
 
 class RLock(Lock):
+    """..."""
+
     __slots__ = ("_count",)
 
     def __new__(cls, /) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         self._count = 0
@@ -522,6 +568,66 @@ class RLock(Lock):
         self._waiters = deque()
 
         return self
+
+    @copies(Lock.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return Lock.__getnewargs__(self)
+
+    @copies(Lock.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return Lock.__getstate__(self)
+
+    @copies(Lock.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return Lock.__repr__(self)
+
+    @copies(Lock.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return Lock.__bool__(self)
+
+    @copies(Lock.__aenter__)
+    async def __aenter__(self, /) -> Self:
+        """..."""
+
+        return await Lock.__aenter__(self)
+
+    @copies(Lock.__enter__)
+    def __enter__(self, /) -> Self:
+        """..."""
+
+        return Lock.__enter__(self)
+
+    @copies(Lock.__aexit__)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await Lock.__aexit__(self, exc_type, exc_value, traceback)
+
+    @copies(Lock.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return Lock.__exit__(self, exc_type, exc_value, traceback)
 
     async def _async_acquire_on_behalf_of(
         self,
@@ -673,6 +779,8 @@ class RLock(Lock):
         *,
         blocking: bool = True,
     ) -> bool:
+        """..."""
+
         return await self._async_acquire_on_behalf_of(
             current_async_task_ident(),
             count,
@@ -687,6 +795,8 @@ class RLock(Lock):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
+        """..."""
+
         return self._green_acquire_on_behalf_of(
             current_green_task_ident(),
             count,
@@ -724,6 +834,8 @@ class RLock(Lock):
                 break
 
     def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -748,6 +860,8 @@ class RLock(Lock):
             self._release()
 
     def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -771,8 +885,35 @@ class RLock(Lock):
         if not self._count:
             self._release()
 
+    @copies(Lock.async_owned)
+    def async_owned(self, /) -> bool:
+        """..."""
+
+        return Lock.async_owned(self)
+
+    @copies(Lock.green_owned)
+    def green_owned(self, /) -> bool:
+        """..."""
+
+        return Lock.green_owned(self)
+
+    @copies(Lock.locked)
+    def locked(self, /) -> bool:
+        """..."""
+
+        return Lock.locked(self)
+
+    @property
+    @copies(Lock.owner.fget)
+    def owner(self, /) -> tuple[str, int] | None:
+        """..."""
+
+        return Lock.owner.fget(self)
+
     @property
     def count(self, /) -> int:
+        """..."""
+
         return self._count
 
     @property
@@ -780,3 +921,10 @@ class RLock(Lock):
         warnings.warn("Use 'count' instead", DeprecationWarning, stacklevel=2)
 
         return self._count
+
+    @property
+    @copies(Lock.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return Lock.waiting.fget(self)

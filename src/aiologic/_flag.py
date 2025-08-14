@@ -32,12 +32,16 @@ _D = TypeVar("_D")
 
 
 class Flag(Generic[_T]):
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_markers",
     )
 
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self:
+        """..."""
+
         self = object.__new__(cls)
 
         if marker is not MISSING:
@@ -48,6 +52,8 @@ class Flag(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if self._markers:
             try:
                 return (self._markers[0],)
@@ -57,9 +63,13 @@ class Flag(Generic[_T]):
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -72,6 +82,8 @@ class Flag(Generic[_T]):
         return f"{cls_repr}()"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return bool(self._markers)
 
     @overload
@@ -107,6 +119,8 @@ class Flag(Generic[_T]):
         default_factory: Callable[[], _D],
     ) -> _T | _D: ...
     def get(self, /, default=MISSING, *, default_factory=MISSING):
+        """..."""
+
         if self._markers:
             try:
                 return self._markers[0]
@@ -126,6 +140,8 @@ class Flag(Generic[_T]):
     @overload
     def set(self, /, marker: _T) -> bool: ...
     def set(self, /, marker=MISSING):
+        """..."""
+
         markers = self._markers
 
         if not markers:
@@ -146,4 +162,6 @@ class Flag(Generic[_T]):
         return False
 
     def clear(self, /) -> None:
+        """..."""
+
         self._markers.clear()

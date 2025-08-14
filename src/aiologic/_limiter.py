@@ -15,6 +15,7 @@ from .lowlevel import (
     current_green_task_ident,
     green_checkpoint,
 )
+from .lowlevel._utils import _copies as copies
 
 if TYPE_CHECKING:
     import sys
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
 
 
 class CapacityLimiter:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_borrowers",
@@ -34,6 +37,8 @@ class CapacityLimiter:
     )
 
     def __new__(cls, /, total_tokens: int | None = None) -> Self:
+        """..."""
+
         if total_tokens is None:
             total_tokens = 1
         elif total_tokens < 0:
@@ -53,15 +58,21 @@ class CapacityLimiter:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
         if (total_tokens := self._semaphore.initial_value) != 1:
             return (total_tokens,)
 
         return ()
 
     def __getstate__(self, /) -> None:
+        """..."""
+
         return None
 
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -79,14 +90,20 @@ class CapacityLimiter:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """..."""
+
         return self._semaphore.initial_value > self._semaphore.value
 
     async def __aenter__(self, /) -> Self:
+        """..."""
+
         await self.async_acquire()
 
         return self
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         self.green_acquire()
 
         return self
@@ -98,6 +115,8 @@ class CapacityLimiter:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.async_release()
 
     def __exit__(
@@ -107,9 +126,13 @@ class CapacityLimiter:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         self.green_release()
 
     async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+        """..."""
+
         task = current_async_task_ident()
 
         if task in self._borrowers:
@@ -133,6 +156,8 @@ class CapacityLimiter:
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
+        """..."""
+
         task = current_green_task_ident()
 
         if task in self._borrowers:
@@ -153,6 +178,8 @@ class CapacityLimiter:
         return success
 
     def async_release(self, /) -> None:
+        """..."""
+
         task = current_async_task_ident()
 
         try:
@@ -167,6 +194,8 @@ class CapacityLimiter:
         self._semaphore.async_release()
 
     def green_release(self, /) -> None:
+        """..."""
+
         task = current_green_task_ident()
 
         try:
@@ -181,34 +210,121 @@ class CapacityLimiter:
         self._semaphore.green_release()
 
     def async_borrowed(self, /) -> bool:
+        """..."""
+
         return current_async_task_ident() in self._borrowers
 
     def green_borrowed(self, /) -> bool:
+        """..."""
+
         return current_green_task_ident() in self._borrowers
 
     @property
     def total_tokens(self, /) -> int:
+        """..."""
+
         return self._semaphore.initial_value
 
     @property
     def available_tokens(self, /) -> int:
+        """..."""
+
         return self._semaphore.value
 
     @property
     def borrowed_tokens(self, /) -> int:
+        """..."""
+
         return self._semaphore.initial_value - self._semaphore.value
 
     @property
     def borrowers(self, /) -> MappingProxyType[tuple[str, int], int]:
+        """..."""
+
         return self._borrowers_proxy
 
     @property
     def waiting(self, /) -> int:
+        """..."""
+
         return self._semaphore.waiting
 
 
 class RCapacityLimiter(CapacityLimiter):
+    """..."""
+
     __slots__ = ()
+
+    @copies(CapacityLimiter.__new__)
+    def __new__(cls, /, total_tokens: int | None = None) -> Self:
+        """..."""
+
+        return CapacityLimiter.__new__(cls, total_tokens)
+
+    @copies(CapacityLimiter.__getnewargs__)
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """..."""
+
+        return CapacityLimiter.__getnewargs__(self)
+
+    @copies(CapacityLimiter.__getstate__)
+    def __getstate__(self, /) -> None:
+        """..."""
+
+        return CapacityLimiter.__getstate__(self)
+
+    @copies(CapacityLimiter.__repr__)
+    def __repr__(self, /) -> str:
+        """..."""
+
+        return CapacityLimiter.__repr__(self)
+
+    @copies(CapacityLimiter.__bool__)
+    def __bool__(self, /) -> bool:
+        """..."""
+
+        return CapacityLimiter.__bool__(self)
+
+    @copies(CapacityLimiter.__aenter__)
+    async def __aenter__(self, /) -> Self:
+        """..."""
+
+        return await CapacityLimiter.__aenter__(self)
+
+    @copies(CapacityLimiter.__enter__)
+    def __enter__(self, /) -> Self:
+        """..."""
+
+        return CapacityLimiter.__enter__(self)
+
+    @copies(CapacityLimiter.__aexit__)
+    async def __aexit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return await CapacityLimiter.__aexit__(
+            self,
+            exc_type,
+            exc_value,
+            traceback,
+        )
+
+    @copies(CapacityLimiter.__exit__)
+    def __exit__(
+        self,
+        /,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """..."""
+
+        return CapacityLimiter.__exit__(self, exc_type, exc_value, traceback)
 
     async def async_acquire(
         self,
@@ -217,6 +333,8 @@ class RCapacityLimiter(CapacityLimiter):
         *,
         blocking: bool = True,
     ) -> bool:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -250,6 +368,8 @@ class RCapacityLimiter(CapacityLimiter):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -279,6 +399,8 @@ class RCapacityLimiter(CapacityLimiter):
         return success
 
     def async_release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -305,6 +427,8 @@ class RCapacityLimiter(CapacityLimiter):
             raise RuntimeError(msg)
 
     def green_release(self, /, count: int = 1) -> None:
+        """..."""
+
         if count < 1:
             msg = "count must be >= 1"
             raise ValueError(msg)
@@ -330,8 +454,59 @@ class RCapacityLimiter(CapacityLimiter):
             msg = "capacity limiter released too many times"
             raise RuntimeError(msg)
 
+    @copies(CapacityLimiter.async_borrowed)
+    def async_borrowed(self, /) -> bool:
+        """..."""
+
+        return CapacityLimiter.async_borrowed(self)
+
+    @copies(CapacityLimiter.green_borrowed)
+    def green_borrowed(self, /) -> bool:
+        """..."""
+
+        return CapacityLimiter.green_borrowed(self)
+
     def async_count(self, /) -> int:
+        """..."""
+
         return self._borrowers.get(current_async_task_ident(), 0)
 
     def green_count(self, /) -> int:
+        """..."""
+
         return self._borrowers.get(current_green_task_ident(), 0)
+
+    @property
+    @copies(CapacityLimiter.total_tokens.fget)
+    def total_tokens(self, /) -> int:
+        """..."""
+
+        return CapacityLimiter.total_tokens.fget(self)
+
+    @property
+    @copies(CapacityLimiter.available_tokens.fget)
+    def available_tokens(self, /) -> int:
+        """..."""
+
+        return CapacityLimiter.available_tokens.fget(self)
+
+    @property
+    @copies(CapacityLimiter.borrowed_tokens.fget)
+    def borrowed_tokens(self, /) -> int:
+        """..."""
+
+        return CapacityLimiter.borrowed_tokens.fget(self)
+
+    @property
+    @copies(CapacityLimiter.borrowers.fget)
+    def borrowers(self, /) -> MappingProxyType[tuple[str, int], int]:
+        """..."""
+
+        return CapacityLimiter.borrowers.fget(self)
+
+    @property
+    @copies(CapacityLimiter.waiting.fget)
+    def waiting(self, /) -> int:
+        """..."""
+
+        return CapacityLimiter.waiting.fget(self)
