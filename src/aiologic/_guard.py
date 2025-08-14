@@ -57,7 +57,25 @@ class ResourceGuard:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = ResourceGuard('waiting')
+            >>> orig.action
+            'waiting'
+            >>> copy = ResourceGuard(*orig.__getnewargs__())
+            >>> copy.action
+            'waiting'
+        """
 
         if (action := self._action) != "using":
             return (action,)
@@ -65,7 +83,9 @@ class ResourceGuard:
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 

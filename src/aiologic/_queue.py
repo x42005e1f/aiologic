@@ -105,12 +105,32 @@ class SimpleQueue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = SimpleQueue('items')
+            >>> orig.green_get()
+            'i'
+            >>> copy = SimpleQueue(*orig.__getnewargs__())
+            >>> copy.green_get()
+            't'
+        """
 
         return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -243,13 +263,33 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
     @copies(SimpleQueue.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = SimpleLifoQueue('items')
+            >>> orig.green_get()
+            's'
+            >>> copy = SimpleLifoQueue(*orig.__getnewargs__())
+            >>> copy.green_get()
+            'm'
+        """
 
         return SimpleQueue.__getnewargs__(self)
 
     @copies(SimpleQueue.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return SimpleQueue.__getstate__(self)
 
@@ -408,7 +448,25 @@ class Queue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = Queue('items')
+            >>> orig.green_get()
+            'i'
+            >>> copy = Queue(*orig.__getnewargs__())
+            >>> copy.green_get()
+            't'
+        """
 
         if (maxsize := self._maxsize) != 0:
             return (tuple(copy(self._data)), maxsize)
@@ -416,7 +474,9 @@ class Queue(Generic[_T]):
         return (tuple(copy(self._data)),)
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -792,13 +852,33 @@ class LifoQueue(Queue[_T]):
 
     @copies(Queue.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = LifoQueue('items')
+            >>> orig.green_get()
+            's'
+            >>> copy = LifoQueue(*orig.__getnewargs__())
+            >>> copy.green_get()
+            'm'
+        """
 
         return Queue.__getnewargs__(self)
 
     @copies(Queue.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Queue.__getstate__(self)
 
@@ -917,13 +997,33 @@ class PriorityQueue(Queue[_RichComparableT]):
 
     @copies(Queue.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = PriorityQueue('items')
+            >>> orig.green_get()
+            'e'
+            >>> copy = PriorityQueue(*orig.__getnewargs__())
+            >>> copy.green_get()
+            'i'
+        """
 
         return Queue.__getnewargs__(self)
 
     @copies(Queue.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Queue.__getstate__(self)
 

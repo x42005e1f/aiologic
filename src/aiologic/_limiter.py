@@ -58,7 +58,25 @@ class CapacityLimiter:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = CapacityLimiter(3)
+            >>> orig.total_tokens
+            3
+            >>> copy = CapacityLimiter(*orig.__getnewargs__())
+            >>> copy.total_tokens
+            3
+        """
 
         if (total_tokens := self._semaphore.initial_value) != 1:
             return (total_tokens,)
@@ -66,7 +84,9 @@ class CapacityLimiter:
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -263,13 +283,33 @@ class RCapacityLimiter(CapacityLimiter):
 
     @copies(CapacityLimiter.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = RCapacityLimiter(3)
+            >>> orig.total_tokens
+            3
+            >>> copy = RCapacityLimiter(*orig.__getnewargs__())
+            >>> copy.total_tokens
+            3
+        """
 
         return CapacityLimiter.__getnewargs__(self)
 
     @copies(CapacityLimiter.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return CapacityLimiter.__getstate__(self)
 

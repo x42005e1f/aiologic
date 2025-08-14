@@ -70,7 +70,26 @@ class Event:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = Event()
+            >>> orig.set()  # change the state
+            >>> orig.is_set()
+            True
+            >>> copy = Event(*orig.__getnewargs__())
+            >>> copy.is_set()
+            True
+        """
 
         if not self._is_unset:
             return (True,)
@@ -78,7 +97,9 @@ class Event:
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -236,13 +257,34 @@ class REvent(Event):
 
     @copies(Event.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = REvent()
+            >>> orig.set()  # change the state
+            >>> orig.is_set()
+            True
+            >>> copy = REvent(*orig.__getnewargs__())
+            >>> copy.is_set()
+            True
+        """
 
         return Event.__getnewargs__(self)
 
     @copies(Event.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Event.__getstate__(self)
 
@@ -426,7 +468,26 @@ class CountdownEvent:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = CountdownEvent()
+            >>> orig.up()  # change the state
+            >>> orig.value
+            1
+            >>> copy = CountdownEvent(*orig.__getnewargs__())
+            >>> copy.value
+            1
+        """
 
         if value := len(self._is_unset):
             return (value,)
@@ -434,7 +495,9 @@ class CountdownEvent:
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 

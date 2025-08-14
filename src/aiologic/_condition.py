@@ -142,7 +142,23 @@ class Condition(Generic[_T_co, _S_co]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Condition()
+            >>> copy = Condition(*orig.__getnewargs__())
+            >>> copy.lock is orig.lock
+            True
+        """
 
         try:
             timer_is_count = self.timer.__self__.__class__ is count
@@ -155,7 +171,9 @@ class Condition(Generic[_T_co, _S_co]):
         return (self.lock, self.timer)
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 

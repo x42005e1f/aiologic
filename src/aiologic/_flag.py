@@ -52,7 +52,26 @@ class Flag(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same state.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state affects the arguments.
+
+        Example:
+            >>> orig = Flag()
+            >>> orig.set('value')  # change the state
+            >>> orig.get()
+            'value'
+            >>> copy = Flag(*orig.__getnewargs__())
+            >>> copy.get()
+            'value'
+        """
 
         if self._markers:
             try:
@@ -63,7 +82,9 @@ class Flag(Generic[_T]):
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 

@@ -200,12 +200,28 @@ class Lock(PLock):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Lock()
+            >>> copy = Lock(*orig.__getnewargs__())
+        """
 
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -571,13 +587,29 @@ class RLock(Lock):
 
     @copies(Lock.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = RLock()
+            >>> copy = RLock(*orig.__getnewargs__())
+        """
 
         return Lock.__getnewargs__(self)
 
     @copies(Lock.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Lock.__getstate__(self)
 

@@ -86,12 +86,32 @@ class Latch:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Latch(4)
+            >>> orig.parties
+            4
+            >>> copy = Latch(*orig.__getnewargs__())
+            >>> copy.parties
+            4
+        """
 
         return (self._parties,)
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -314,12 +334,32 @@ class Barrier:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Barrier(4)
+            >>> orig.parties
+            4
+            >>> copy = Barrier(*orig.__getnewargs__())
+            >>> copy.parties
+            4
+        """
 
         return (self._parties,)
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -674,13 +714,33 @@ class RBarrier(Barrier):
 
     @copies(Barrier.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = RBarrier(4)
+            >>> orig.parties
+            4
+            >>> copy = RBarrier(*orig.__getnewargs__())
+            >>> copy.parties
+            4
+        """
 
         return Barrier.__getnewargs__(self)
 
     @copies(Barrier.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Barrier.__getstate__(self)
 

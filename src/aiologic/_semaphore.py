@@ -117,7 +117,25 @@ class Semaphore:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Semaphore(2)
+            >>> orig.initial_value
+            2
+            >>> copy = Semaphore(*orig.__getnewargs__())
+            >>> copy.initial_value
+            2
+        """
 
         if (initial_value := self._initial_value) != 1:
             return (initial_value,)
@@ -125,7 +143,9 @@ class Semaphore:
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -462,7 +482,25 @@ class BoundedSemaphore(Semaphore):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = BoundedSemaphore(2)
+            >>> orig.max_value
+            2
+            >>> copy = BoundedSemaphore(*orig.__getnewargs__())
+            >>> copy.max_value
+            2
+        """
 
         initial_value = self._initial_value
         max_value = self._max_value
@@ -476,7 +514,9 @@ class BoundedSemaphore(Semaphore):
         return ()
 
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return None
 
@@ -685,13 +725,33 @@ class BinarySemaphore(Semaphore):
 
     @copies(Semaphore.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = BinarySemaphore(0)
+            >>> orig.initial_value
+            0
+            >>> copy = BinarySemaphore(*orig.__getnewargs__())
+            >>> copy.initial_value
+            0
+        """
 
         return Semaphore.__getnewargs__(self)
 
     @copies(Semaphore.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return Semaphore.__getstate__(self)
 
@@ -916,13 +976,33 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
     @copies(BoundedSemaphore.__getnewargs__)
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """..."""
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = BoundedBinarySemaphore(0)
+            >>> orig.max_value
+            0
+            >>> copy = BoundedBinarySemaphore(*orig.__getnewargs__())
+            >>> copy.max_value
+            0
+        """
 
         return BoundedSemaphore.__getnewargs__(self)
 
     @copies(BoundedSemaphore.__getstate__)
     def __getstate__(self, /) -> None:
-        """..."""
+        """
+        Disables the use of internal state for pickling and copying.
+        """
 
         return BoundedSemaphore.__getstate__(self)
 
