@@ -1357,13 +1357,13 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
         try:
             if self._counts:
-                task = current_green_task_ident()
+                task = current_async_task_ident()
 
                 count = self._counts.pop(task, 0)
             else:
                 count = 0
 
-            self._lock.green_release()
+            self._lock.async_release()
 
             try:
                 success = await event
@@ -1372,7 +1372,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if token[5]:
                         self._lock._unpark(event)
 
-                    self._lock._green_acquire(_shield=True)
+                    await self._lock._async_acquire(_shield=True)
 
                 self._lock._after_park()
 
