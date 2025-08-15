@@ -10,6 +10,11 @@ from typing import Any, Final, overload
 
 from .lowlevel import DEFAULT, DefaultType
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -27,6 +32,7 @@ class ResourceGuard:
     )
 
     @overload
+    @deprecated("Use keyword-only parameter instead")
     def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
     @overload
     def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
