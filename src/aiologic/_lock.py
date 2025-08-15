@@ -241,7 +241,19 @@ class Lock(PLock):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the lock is used by any task.
+
+        Example:
+            >>> writing = Lock()
+            >>> bool(writing)
+            False
+            >>> with writing:  # lock is in use
+            ...     bool(writing)
+            True
+            >>> bool(writing)
+            False
+        """
 
         return not self._unlocked
 
@@ -621,7 +633,19 @@ class RLock(Lock):
 
     @copies(Lock.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the lock is used by any task.
+
+        Example:
+            >>> writing = RLock()
+            >>> bool(writing)
+            False
+            >>> with writing:  # lock is in use
+            ...     bool(writing)
+            True
+            >>> bool(writing)
+            False
+        """
 
         return Lock.__bool__(self)
 

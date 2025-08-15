@@ -109,7 +109,19 @@ class CapacityLimiter:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the capacity limiter is used by any task.
+
+        Example:
+            >>> reading = CapacityLimiter()
+            >>> bool(reading)
+            False
+            >>> with reading:  # capacity limiter is in use
+            ...     bool(reading)
+            True
+            >>> bool(reading)
+            False
+        """
 
         return self._semaphore.initial_value > self._semaphore.value
 
@@ -320,7 +332,19 @@ class RCapacityLimiter(CapacityLimiter):
 
     @copies(CapacityLimiter.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the capacity limiter is used by any task.
+
+        Example:
+            >>> reading = RCapacityLimiter()
+            >>> bool(reading)
+            False
+            >>> with reading:  # capacity limiter is in use
+            ...     bool(reading)
+            True
+            >>> bool(reading)
+            False
+        """
 
         return CapacityLimiter.__bool__(self)
 

@@ -154,7 +154,20 @@ class SimpleQueue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the queue is not empty.
+
+        Example:
+            >>> items = SimpleQueue()  # queue is empty
+            >>> bool(items)
+            False
+            >>> items.green_put('spam')  # queue is not empty
+            >>> bool(items)
+            True
+            >>> item = items.green_get()  # queue is empty
+            >>> bool(items)
+            False
+        """
 
         return bool(self._data)
 
@@ -301,7 +314,20 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
     @copies(SimpleQueue.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the queue is not empty.
+
+        Example:
+            >>> items = SimpleLifoQueue()  # queue is empty
+            >>> bool(items)
+            False
+            >>> items.green_put('spam')  # queue is not empty
+            >>> bool(items)
+            True
+            >>> item = items.green_get()  # queue is empty
+            >>> bool(items)
+            False
+        """
 
         return SimpleQueue.__bool__(self)
 
@@ -507,7 +533,20 @@ class Queue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the queue is not empty.
+
+        Example:
+            >>> items = Queue()  # queue is empty
+            >>> bool(items)
+            False
+            >>> items.green_put('spam')  # queue is not empty
+            >>> bool(items)
+            True
+            >>> item = items.green_get()  # queue is empty
+            >>> bool(items)
+            False
+        """
 
         return bool(self._data)
 
@@ -890,7 +929,20 @@ class LifoQueue(Queue[_T]):
 
     @copies(Queue.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the queue is not empty.
+
+        Example:
+            >>> items = LifoQueue()  # queue is empty
+            >>> bool(items)
+            False
+            >>> items.green_put('spam')  # queue is not empty
+            >>> bool(items)
+            True
+            >>> item = items.green_get()  # queue is empty
+            >>> bool(items)
+            False
+        """
 
         return Queue.__bool__(self)
 
@@ -1035,7 +1087,20 @@ class PriorityQueue(Queue[_RichComparableT]):
 
     @copies(Queue.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the queue is not empty.
+
+        Example:
+            >>> items = PriorityQueue()  # queue is empty
+            >>> bool(items)
+            False
+            >>> items.green_put('spam')  # queue is not empty
+            >>> bool(items)
+            True
+            >>> item = items.green_get()  # queue is empty
+            >>> bool(items)
+            False
+        """
 
         return Queue.__bool__(self)
 

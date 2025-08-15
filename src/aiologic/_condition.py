@@ -205,7 +205,21 @@ class Condition(Generic[_T_co, _S_co]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the underlying lock is used by any task.
+
+        If there is no lock, returns :data:`False`.
+
+        Example:
+            >>> accessing = Condition()
+            >>> bool(accessing)
+            False
+            >>> with accessing:  # condition variable is in use
+            ...     bool(accessing)
+            True
+            >>> bool(accessing)
+            False
+        """
 
         return bool(self._impl)
 

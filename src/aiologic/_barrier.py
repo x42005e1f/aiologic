@@ -147,7 +147,20 @@ class Latch:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the barrier has been passed or broken.
+
+        Example:
+            >>> started = Latch(1)  # barrier is filling
+            >>> bool(started)
+            False
+            >>> started.wait()  # barrier is draining
+            >>> bool(started)
+            True
+            >>> started.abort()  # barrier is broken
+            >>> bool(started)
+            True
+        """
 
         return not self._filling
 

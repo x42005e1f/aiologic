@@ -120,7 +120,19 @@ class ResourceGuard:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the resource guard is used by any task.
+
+        Example:
+            >>> using = ResourceGuard()
+            >>> bool(using)
+            False
+            >>> with using:  # resource guard is in use
+            ...     bool(using)
+            True
+            >>> bool(using)
+            False
+        """
 
         try:
             return not self._unlocked

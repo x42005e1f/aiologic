@@ -103,7 +103,17 @@ class Flag(Generic[_T]):
         return f"{cls_repr}()"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the flag is set.
+
+        Example:
+            >>> cancelled = Flag()  # flag is unset
+            >>> bool(cancelled)
+            False
+            >>> cancelled.set()  # flag is set
+            >>> bool(cancelled)
+            True
+        """
 
         return bool(self._markers)
 

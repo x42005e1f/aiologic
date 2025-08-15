@@ -113,7 +113,17 @@ class Event:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the event is set.
+
+        Example:
+            >>> finished = Event()  # event is unset
+            >>> bool(finished)
+            False
+            >>> finished.set()  # event is set
+            >>> bool(finished)
+            True
+        """
 
         return not self._is_unset
 
@@ -281,7 +291,20 @@ class REvent(Event):
 
     @copies(Event.__bool__)
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the event is set.
+
+        Example:
+            >>> running = REvent()  # event is unset
+            >>> bool(running)
+            False
+            >>> running.set()  # event is set
+            >>> bool(running)
+            True
+            >>> running.clear()  # event is unset
+            >>> bool(running)
+            False
+        """
 
         return Event.__bool__(self)
 
@@ -513,7 +536,20 @@ class CountdownEvent:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Returns :data:`True` if the event value is zero.
+
+        Example:
+            >>> done = CountdownEvent()  # value == 0
+            >>> bool(done)
+            True
+            >>> done.up()  # value == 1
+            >>> bool(done)
+            False
+            >>> done.down()  # value == 0
+            >>> bool(done)
+            True
+        """
 
         return not self._is_unset
 
