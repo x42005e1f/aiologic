@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import _replaces as replaces
 
 from ._executors import TaskExecutor, current_executor
@@ -158,9 +159,9 @@ def _assert_trio_checkpoints(expected: bool) -> AbstractContextManager[None]:
 
 def assert_checkpoints(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]:
-    if executor is None:
+    if executor is DEFAULT:
         executor = current_executor()
 
     backend = executor.backend
@@ -186,9 +187,9 @@ def assert_checkpoints(
 
 def assert_no_checkpoints(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]:
-    if executor is None:
+    if executor is DEFAULT:
         executor = current_executor()
 
     backend = executor.backend

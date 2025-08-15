@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 from ._flag import Flag
 from .lowlevel import (
+    DEFAULT,
+    DefaultType,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -65,11 +67,11 @@ class Latch:
         "_waiters",
     )
 
-    def __new__(cls, /, parties: int | None = None) -> Self:
+    def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
-        if parties is None:
-            parties = 1
+        if parties is DEFAULT:
+            parties = 0
         elif parties < 0:
             msg = "parties must be >= 0"
             raise ValueError(msg)
@@ -106,7 +108,12 @@ class Latch:
             4
         """
 
-        return (self._parties,)
+        parties = self._parties
+
+        if parties != 0:
+            return (parties,)
+
+        return ()
 
     def __getstate__(self, /) -> None:
         """
@@ -121,7 +128,12 @@ class Latch:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        object_repr = f"{cls_repr}({self._parties!r})"
+        parties = self._parties
+
+        if parties == 0:
+            object_repr = f"{cls_repr}()"
+        else:
+            object_repr = f"{cls_repr}({parties!r})"
 
         waiting = len(self._waiters)
 
@@ -313,11 +325,11 @@ class Barrier:
         "_waiters",
     )
 
-    def __new__(cls, /, parties: int | None = None) -> Self:
+    def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
-        if parties is None:
-            parties = 1
+        if parties is DEFAULT:
+            parties = 0
         elif parties < 0:
             msg = "parties must be >= 0"
             raise ValueError(msg)
@@ -354,7 +366,12 @@ class Barrier:
             4
         """
 
-        return (self._parties,)
+        parties = self._parties
+
+        if parties != 0:
+            return (parties,)
+
+        return ()
 
     def __getstate__(self, /) -> None:
         """
@@ -369,13 +386,18 @@ class Barrier:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        object_repr = f"{cls_repr}({self._parties!r})"
+        parties = self._parties
+
+        if parties == 0:
+            object_repr = f"{cls_repr}()"
+        else:
+            object_repr = f"{cls_repr}({parties!r})"
 
         waiting = len(self._waiters)
 
         if not self._unbroken:
             extra = "broken"
-        elif waiting >= self._parties:
+        elif waiting >= self._parties > 0:
             extra = "draining"
         else:
             extra = f"filling, waiting={waiting}"
@@ -690,11 +712,11 @@ class RBarrier(Barrier):
         "_timer",
     )
 
-    def __new__(cls, /, parties: int | None = None) -> Self:
+    def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
-        if parties is None:
-            parties = 1
+        if parties is DEFAULT:
+            parties = 0
         elif parties < 0:
             msg = "parties must be >= 0"
             raise ValueError(msg)
@@ -758,7 +780,7 @@ class RBarrier(Barrier):
             extra = "resetting"
         elif not self._unbroken:
             extra = "broken"
-        elif waiting >= self._parties:
+        elif waiting >= self._parties > 0:
             extra = "draining"
         else:
             extra = f"filling, waiting={waiting}"

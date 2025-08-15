@@ -6,8 +6,11 @@
 from __future__ import annotations
 
 import sys
+import warnings
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, overload
+
+from .lowlevel import DEFAULT, DefaultType
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -42,8 +45,23 @@ class ResourceGuard:
         "_unlocked",
     )
 
-    def __new__(cls, /, action: str = "using") -> Self:
+    @overload
+    def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
+    @overload
+    def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
+    def __new__(cls, maybe_action=DEFAULT, /, *, action=DEFAULT):
         """..."""
+
+        if maybe_action is not DEFAULT:
+            warnings.warn(
+                "Use keyword-only parameter instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            action = maybe_action
+        elif action is DEFAULT:
+            action = "using"
 
         self = object.__new__(cls)
 
@@ -69,7 +87,7 @@ class ResourceGuard:
         The current state does not affect the arguments.
 
         Example:
-            >>> orig = ResourceGuard('waiting')
+            >>> orig = ResourceGuard(action='waiting')
             >>> orig.action
             'waiting'
             >>> copy = ResourceGuard(*orig.__getnewargs__())
@@ -77,10 +95,7 @@ class ResourceGuard:
             'waiting'
         """
 
-        if (action := self._action) != "using":
-            return (action,)
-
-        return ()
+        return (self._action,)
 
     def __getstate__(self, /) -> None:
         """

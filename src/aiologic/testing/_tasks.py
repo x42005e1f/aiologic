@@ -14,6 +14,8 @@ from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
 from aiologic.lowlevel import (
+    DEFAULT,
+    DefaultType,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -882,7 +884,7 @@ def create_task(
     func: Awaitable[_T],
     /,
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
 @external
@@ -890,7 +892,7 @@ def create_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
 @external
@@ -898,10 +900,10 @@ def create_task(
     func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
-def create_task(func, /, *args, executor=None):
-    if executor is None:
+def create_task(func, /, *args, executor=DEFAULT):
+    if executor is DEFAULT:
         executor = current_executor()
 
     library = executor.library

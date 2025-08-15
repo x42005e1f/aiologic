@@ -30,6 +30,7 @@ Commit messages are consistent with
   efficient implementation.
 - `aiologic.RBarrier` as a reusable barrier, i.e. a barrier that can be reset
   to its initial state (async-aware alternative to `threading.Barrier`).
+- `aiologic.lowlevel.DEFAULT` as a marker for parameters with default values.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
   i.e. new low-level primitives that encapsulate library-specific wait-wake
@@ -149,6 +150,11 @@ Commit messages are consistent with
     stubs but also at runtime, making it possible to use subscriptions on
     Python 3.8. Also, capacity limiters' and flags' type parameters now have
     default values.
+  + The use of markers as default parameter values has been expanded. `None` is
+    used when it disables a particular feature (e.g. timeouts or maxsize).
+    `aiologic.lowlevel.MISSING` is used when it specifies a special default
+    behavior. `aiologic.lowlevel.DEFAULT` is used when an existing value that
+    is compatible in type will be taken.
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
   + Calling `flag.set()` without arguments is now only allowed for
@@ -218,8 +224,14 @@ Commit messages are consistent with
   + They now return `False` after waiting again if they were previously
     cancelled. Previously `True` was returned, which could be considered
     unexpected behavior.
+- Events have been rewritten:
+  + They no longer save their state when being pickled/copied. So they now
+    share the same behavior as the other synchronization primitives.
+  + The `value` parameter of `aiologic.CountdownEvent` has been renamed to
+    `initial_value`. Accordingly, a property with the same name has also been
+    added.
 - Barriers have been rewritten:
-  + The `parties` parameter now has a default value of `1`. This allows
+  + The `parties` parameter now has a default value of `0`. This allows
     barriers to be used directly as default factories.
   + They now allow passing `parties` equal to `0`, with which they ignore the
     waiting queue length (they only wake up tasks when `abort()` is called
@@ -367,6 +379,8 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `action` as a positional parameter in `aiologic.ResourceGuard` in favor of
+  using it as a keyword-only parameter.
 - `maxsize<=0` in complex queue constructors in favor of `maxsize=None`:
   support for `maxsize<0` is not pythonic, goes against common style, and
   `maxsize=0` may in the future be used to create special empty queues.
@@ -387,6 +401,8 @@ Commit messages are consistent with
   proper thread-safety level (capacity limiters need to be higher-level
   primitives for this), but also made the implementation more complex and thus
   degraded performance.
+- `is_set` parameter from one-time and reusable events (`aiologic.Event` and
+  `aiologic.REvent`).
 - `aiologic.lowlevel.<library>_running()`: these functions have not been used
   and could be misleading.
 - `aiologic.lowlevel.checkpoint_if_cancelled()` and

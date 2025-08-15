@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sys
 
+from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import _replaces as replaces
 
 from ._executors import TaskExecutor, current_executor
@@ -74,10 +75,10 @@ def _get_trio_cancelled_exc_class() -> type[BaseException]:
 
 def get_cancelled_exc_class(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]:
-    if executor is None:
+    if executor is DEFAULT:
         if failback is None:
             executor = current_executor()
         else:
@@ -182,10 +183,10 @@ def _get_anyio_timeout_exc_class() -> type[BaseException]:
 
 def get_timeout_exc_class(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]:
-    if executor is None:
+    if executor is DEFAULT:
         if failback is None:
             executor = current_executor()
         else:

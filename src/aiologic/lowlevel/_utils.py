@@ -11,6 +11,8 @@ from functools import partial, update_wrapper
 from types import FunctionType
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from ._markers import MISSING, MissingType
+
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
 else:
@@ -36,7 +38,7 @@ def _external(func: _F, /) -> _F:
 @overload
 def _replaces(
     namespace: dict[str, Any],
-    wrapper: None = None,
+    wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
@@ -45,8 +47,8 @@ def _replaces(
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
-def _replaces(namespace, wrapper=None, /):
-    if wrapper is None:
+def _replaces(namespace, wrapper=MISSING, /):
+    if wrapper is MISSING:
         return partial(_replaces, namespace)
 
     wrapper = update_wrapper(wrapper, namespace[wrapper.__name__])
@@ -61,7 +63,7 @@ def _replaces(namespace, wrapper=None, /):
 @overload
 def _copies(
     original: Callable[_P, _T],
-    wrapper: None = None,
+    wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
@@ -70,8 +72,8 @@ def _copies(
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
-def _copies(original, wrapper=None, /):
-    if wrapper is None:
+def _copies(original, wrapper=MISSING, /):
+    if wrapper is MISSING:
         return partial(_copies, original)
 
     if not TYPE_CHECKING:

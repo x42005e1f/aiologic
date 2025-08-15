@@ -6,7 +6,9 @@
 import sys
 
 from types import TracebackType
-from typing import Any, Final
+from typing import Any, Final, overload
+
+from .lowlevel import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -24,7 +26,10 @@ class ResourceGuard:
         "_unlocked",
     )
 
-    def __new__(cls, /, action: str = "using") -> Self: ...
+    @overload
+    def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
+    @overload
+    def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
     def __repr__(self, /) -> str: ...

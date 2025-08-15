@@ -7,6 +7,8 @@ import sys
 
 from typing import Any, TypeVar, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack
 else:
@@ -25,8 +27,8 @@ def run(
     func: Awaitable[_T],
     /,
     *,
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
@@ -34,8 +36,8 @@ def run(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
@@ -43,7 +45,7 @@ def run(
     func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...

@@ -30,6 +30,7 @@ from typing import (
 
 import aiologic
 
+from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._threads import _once as once
 
 if sys.version_info >= (3, 10):
@@ -1171,16 +1172,27 @@ def _create_anyio_executor(
     return _create_anyio_executor(library, backend, backend_options)
 
 
+@overload
 def create_executor(
     library: str,
-    backend: str | None = None,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
-) -> TaskExecutor:
-    if backend is None:
+) -> TaskExecutor: ...
+@overload
+def create_executor(
+    library: DefaultType = DEFAULT,
+    *,
+    backend: str,
+    backend_options: dict[str, Any] | None = None,
+) -> TaskExecutor: ...
+def create_executor(library=DEFAULT, backend=DEFAULT, backend_options=None):
+    if backend is DEFAULT:
         if library == "anyio":
             backend = "asyncio"
         else:
             backend = library
+    elif library is DEFAULT:
+        library = backend
 
     if backend_options is None:
         backend_options = {}

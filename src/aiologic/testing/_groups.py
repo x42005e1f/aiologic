@@ -12,7 +12,9 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
 
 from aiologic.lowlevel import (
+    DEFAULT,
     DUMMY_EVENT,
+    DefaultType,
     create_async_event,
     create_green_event,
 )
@@ -270,7 +272,7 @@ class TaskGroup(ABC):
         func: Awaitable[_T],
         /,
         *,
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     @overload
     def create_task(
@@ -278,7 +280,7 @@ class TaskGroup(ABC):
         func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
         /,
         *args: Unpack[_Ts],
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     @overload
     def create_task(
@@ -286,15 +288,15 @@ class TaskGroup(ABC):
         func: Callable[[Unpack[_Ts]], _T],
         /,
         *args: Unpack[_Ts],
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
-    def create_task(self, func, /, *args, executor=None):
+    def create_task(self, func, /, *args, executor=DEFAULT):
         with self._active_lock:
             if not self._active:
                 msg = "this task group is not active"
                 raise RuntimeError(msg)
 
-            if executor is None:
+            if executor is DEFAULT:
                 executor = self._executor
 
             return self.add_task(_create_task(func, *args, executor=executor))
@@ -350,8 +352,11 @@ class _WaitAllTaskGroup(TaskGroup):
                 self._event.set()
 
 
-def create_task_group(*, executor: TaskExecutor | None = None) -> TaskGroup:
-    if executor is None:
+def create_task_group(
+    *,
+    executor: TaskExecutor | DefaultType = DEFAULT,
+) -> TaskGroup:
+    if executor is DEFAULT:
         executor = current_executor()
 
     return _WaitAllTaskGroup(executor=executor)

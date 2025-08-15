@@ -49,7 +49,9 @@ from ._libraries import (
     current_green_library_tlocal as current_green_library_tlocal,
 )
 from ._markers import (
+    DEFAULT as DEFAULT,
     MISSING as MISSING,
+    DefaultType as DefaultType,
     MissingType as MissingType,
 )
 from ._tasks import (

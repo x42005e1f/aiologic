@@ -18,8 +18,9 @@ from ._guard import ResourceGuard
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
 from .lowlevel import (
+    DEFAULT,
     MISSING,
-    MissingType,
+    DefaultType,
     _thread,
     async_checkpoint,
     create_async_event,
@@ -84,14 +85,14 @@ class Condition(Generic[_T_co, _S_co]):
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
-        timer: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[RLock, Callable[[], int]]: ...
     @overload
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
         *,
         timer: _S_co,
     ) -> Condition[RLock, _S_co]: ...
@@ -100,17 +101,17 @@ class Condition(Generic[_T_co, _S_co]):
         cls,
         /,
         lock: _T_co,
-        timer: MissingType = MISSING,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[_T_co, Callable[[], int]]: ...
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
-    def __new__(cls, /, lock=MISSING, timer=MISSING):
+    def __new__(cls, /, lock=DEFAULT, timer=DEFAULT):
         """..."""
 
-        if lock is MISSING:
+        if lock is DEFAULT:
             lock = RLock()
 
-        if timer is MISSING:
+        if timer is DEFAULT:
             timer = count().__next__
 
         if lock is None:
@@ -324,7 +325,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
         self._waiters = deque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 
@@ -708,7 +709,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
 
         self._waiters = deque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 
@@ -1157,7 +1158,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
         self._waiters = deque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 

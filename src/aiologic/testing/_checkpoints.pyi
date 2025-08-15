@@ -7,6 +7,8 @@ import sys
 
 from contextlib import contextmanager
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 from ._executors import TaskExecutor
 
 if sys.version_info >= (3, 9):
@@ -36,9 +38,9 @@ def _assert_trio_checkpoints(
 ) -> AbstractContextManager[None]: ...
 def assert_checkpoints(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]: ...
 def assert_no_checkpoints(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]: ...

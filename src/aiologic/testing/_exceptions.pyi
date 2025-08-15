@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 from ._executors import TaskExecutor
 
 def _get_threading_cancelled_exc_class() -> type[BaseException]: ...
@@ -13,7 +15,7 @@ def _get_curio_cancelled_exc_class() -> type[BaseException]: ...
 def _get_trio_cancelled_exc_class() -> type[BaseException]: ...
 def get_cancelled_exc_class(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]: ...
 def _get_threading_timeout_exc_class() -> type[BaseException]: ...
@@ -25,7 +27,7 @@ def _get_trio_timeout_exc_class() -> type[BaseException]: ...
 def _get_anyio_timeout_exc_class() -> type[BaseException]: ...
 def get_timeout_exc_class(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]: ...
 

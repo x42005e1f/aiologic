@@ -13,7 +13,9 @@ from typing import TYPE_CHECKING, Any, Final, overload
 
 from ._flag import Flag
 from .lowlevel import (
+    DEFAULT,
     MISSING,
+    DefaultType,
     MissingType,
     async_checkpoint,
     create_async_event,
@@ -59,12 +61,12 @@ class Event:
         "_waiters",
     )
 
-    def __new__(cls, /, is_set: bool = False) -> Self:
+    def __new__(cls, /) -> Self:
         """..."""
 
         self = object.__new__(cls)
 
-        self._is_unset = not is_set
+        self._is_unset = True
         self._waiters = deque()
 
         return self
@@ -72,27 +74,19 @@ class Event:
     def __getnewargs__(self, /) -> tuple[Any, ...]:
         """
         Returns arguments that can be used to create new instances with the
-        same state.
+        same initial values.
 
         Used by:
 
         * The :mod:`pickle` module for pickling.
         * The :mod:`copy` module for copying.
 
-        The current state affects the arguments.
+        The current state does not affect the arguments.
 
         Example:
             >>> orig = Event()
-            >>> orig.set()  # change the state
-            >>> orig.is_set()
-            True
             >>> copy = Event(*orig.__getnewargs__())
-            >>> copy.is_set()
-            True
         """
-
-        if not self._is_unset:
-            return (True,)
 
         return ()
 
@@ -109,11 +103,9 @@ class Event:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        is_set = not self._is_unset
+        object_repr = f"{cls_repr}()"
 
-        object_repr = f"{cls_repr}(is_set={is_set!r})"
-
-        if is_set:
+        if not self._is_unset:
             extra = "set"
         else:
             extra = f"unset, waiting={len(self._waiters)}"
@@ -240,15 +232,13 @@ class REvent(Event):
 
     __slots__ = ("_timer",)
 
-    def __new__(cls, /, is_set: bool = False) -> Self:
+    def __new__(cls, /) -> Self:
         """..."""
 
         self = object.__new__(cls)
 
         self._is_unset = Flag()
-
-        if not is_set:
-            self._is_unset.set()
+        self._is_unset.set()
 
         self._timer = count().__next__
         self._waiters = deque()
@@ -259,23 +249,18 @@ class REvent(Event):
     def __getnewargs__(self, /) -> tuple[Any, ...]:
         """
         Returns arguments that can be used to create new instances with the
-        same state.
+        same initial values.
 
         Used by:
 
         * The :mod:`pickle` module for pickling.
         * The :mod:`copy` module for copying.
 
-        The current state affects the arguments.
+        The current state does not affect the arguments.
 
         Example:
             >>> orig = REvent()
-            >>> orig.set()  # change the state
-            >>> orig.is_set()
-            True
             >>> copy = REvent(*orig.__getnewargs__())
-            >>> copy.is_set()
-            True
         """
 
         return Event.__getnewargs__(self)
@@ -445,23 +430,26 @@ class CountdownEvent:
 
     __slots__ = (
         "__weakref__",
+        "_initial_value",
         "_is_unset",
         "_timer",
         "_waiters",
     )
 
-    def __new__(cls, /, value: int | None = None) -> Self:
+    def __new__(cls, /, initial_value: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
-        if value is None:
-            value = 0
-        elif value < 0:
-            msg = "value must be >= 0"
+        if initial_value is DEFAULT:
+            initial_value = 0
+        elif initial_value < 0:
+            msg = "initial_value must be >= 0"
             raise ValueError(msg)
 
         self = object.__new__(cls)
 
-        self._is_unset = [object()] * value
+        self._initial_value = initial_value
+
+        self._is_unset = [object()] * initial_value
         self._timer = count().__next__
         self._waiters = deque()
 
@@ -470,27 +458,28 @@ class CountdownEvent:
     def __getnewargs__(self, /) -> tuple[Any, ...]:
         """
         Returns arguments that can be used to create new instances with the
-        same state.
+        same initial values.
 
         Used by:
 
         * The :mod:`pickle` module for pickling.
         * The :mod:`copy` module for copying.
 
-        The current state affects the arguments.
+        The current state does not affect the arguments.
 
         Example:
-            >>> orig = CountdownEvent()
-            >>> orig.up()  # change the state
-            >>> orig.value
+            >>> orig = CountdownEvent(1)
+            >>> orig.initial_value
             1
             >>> copy = CountdownEvent(*orig.__getnewargs__())
-            >>> copy.value
+            >>> copy.initial_value
             1
         """
 
-        if value := len(self._is_unset):
-            return (value,)
+        initial_value = self._initial_value
+
+        if initial_value != 0:
+            return (initial_value,)
 
         return ()
 
@@ -507,9 +496,14 @@ class CountdownEvent:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        value = len(self._is_unset)
+        initial_value = self._initial_value
 
-        object_repr = f"{cls_repr}(value={value!r})"
+        if initial_value == 0:
+            object_repr = f"{cls_repr}()"
+        else:
+            object_repr = f"{cls_repr}({initial_value!r})"
+
+        value = len(self._is_unset)
 
         if value == 0:
             extra = f"value={value}"
@@ -693,6 +687,12 @@ class CountdownEvent:
                     waiters.remove(token)
                 except ValueError:
                     pass
+
+    @property
+    def initial_value(self, /) -> int:
+        """..."""
+
+        return self._initial_value
 
     @property
     def value(self, /) -> int:

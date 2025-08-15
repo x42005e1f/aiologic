@@ -7,6 +7,8 @@ import sys
 
 from typing import Any, TypeVar, overload
 
+from ._markers import MISSING, MissingType
+
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
 else:
@@ -25,7 +27,7 @@ def _external(func: _F, /) -> _F: ...
 @overload
 def _replaces(
     namespace: dict[str, Any],
-    wrapper: None = None,
+    wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
@@ -37,7 +39,7 @@ def _replaces(
 @overload
 def _copies(
     original: Callable[_P, _T],
-    wrapper: None = None,
+    wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload

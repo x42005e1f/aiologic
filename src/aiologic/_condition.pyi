@@ -12,7 +12,7 @@ from typing import Any, Final, Generic, overload
 
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
-from .lowlevel import MISSING, MissingType, _thread
+from .lowlevel import DEFAULT, DefaultType, _thread
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -63,14 +63,14 @@ class Condition(Generic[_T_co, _S_co]):
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
-        timer: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[RLock, Callable[[], int]]: ...
     @overload
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
         *,
         timer: _S_co,
     ) -> Condition[RLock, _S_co]: ...
@@ -79,7 +79,7 @@ class Condition(Generic[_T_co, _S_co]):
         cls,
         /,
         lock: _T_co,
-        timer: MissingType = MISSING,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[_T_co, Callable[[], int]]: ...
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...

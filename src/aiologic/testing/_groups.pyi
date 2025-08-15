@@ -10,6 +10,8 @@ from concurrent.futures import Future
 from types import TracebackType
 from typing import Any, NoReturn, TypeVar, final, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 from ._executors import TaskExecutor
 from ._tasks import Task
 
@@ -62,7 +64,7 @@ class TaskGroup(ABC):
         func: Awaitable[_T],
         /,
         *,
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     @overload
     def create_task(
@@ -70,7 +72,7 @@ class TaskGroup(ABC):
         func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
         /,
         *args: Unpack[_Ts],
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     @overload
     def create_task(
@@ -78,7 +80,7 @@ class TaskGroup(ABC):
         func: Callable[[Unpack[_Ts]], _T],
         /,
         *args: Unpack[_Ts],
-        executor: TaskExecutor | None = None,
+        executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     def add_task(self, /, task: _TaskT) -> _TaskT: ...
     @abstractmethod
@@ -96,5 +98,5 @@ class _WaitAllTaskGroup(TaskGroup):
 
 def create_task_group(
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> TaskGroup: ...

@@ -7,6 +7,8 @@ import sys
 
 from typing import Any, TypeVar, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 from ._executors import TaskExecutor
 
 if sys.version_info >= (3, 11):
@@ -119,7 +121,7 @@ def timeout_after(
     maybe_func: Awaitable[_T],
     /,
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Coroutine[Any, Any, _T]: ...
 @overload
 def timeout_after(
@@ -127,5 +129,5 @@ def timeout_after(
     maybe_func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> _T: ...

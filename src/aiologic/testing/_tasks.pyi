@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 from concurrent.futures import Future
 from typing import Any, TypeVar, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 from ._executors import TaskExecutor
 from ._results import Result
 
@@ -240,19 +242,19 @@ def create_task(
     func: Awaitable[_T],
     /,
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
 def create_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
 def create_task(
     func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...

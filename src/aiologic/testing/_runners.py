@@ -10,6 +10,7 @@ import sys
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import _external as external
 
 from ._executors import create_executor
@@ -35,8 +36,8 @@ def run(
     func: Awaitable[_T],
     /,
     *,
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
@@ -45,8 +46,8 @@ def run(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
     *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
@@ -55,13 +56,20 @@ def run(
     func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    library: str | None = None,
-    backend: str | None = None,
+    library: str | DefaultType = DEFAULT,
+    backend: str | DefaultType = DEFAULT,
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
-def run(func, /, *args, library=None, backend=None, backend_options=None):
-    if library is None:
-        if backend is None:
+def run(
+    func,
+    /,
+    *args,
+    library=DEFAULT,
+    backend=DEFAULT,
+    backend_options=None,
+):
+    if library is DEFAULT:
+        if backend is DEFAULT:
             if iscoroutinefunction(func):
                 library = backend = "asyncio"
             else:

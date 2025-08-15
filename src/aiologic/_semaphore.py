@@ -13,6 +13,8 @@ from collections import deque
 from typing import TYPE_CHECKING, Any, Final, overload
 
 from .lowlevel import (
+    DEFAULT,
+    DefaultType,
     Event,
     async_checkpoint,
     create_async_event,
@@ -67,19 +69,24 @@ class Semaphore:
     def __new__(
         cls,
         /,
-        initial_value: int | None = None,
+        initial_value: int | DefaultType = DEFAULT,
         max_value: None = None,
     ) -> Self: ...
     @overload
     def __new__(
         cls,
         /,
-        initial_value: int | None,
-        max_value: int,
+        initial_value: int | DefaultType,
+        max_value: int | DefaultType,
     ) -> BoundedSemaphore: ...
     @overload
-    def __new__(cls, /, *, max_value: int) -> BoundedSemaphore: ...
-    def __new__(cls, /, initial_value=None, max_value=None):
+    def __new__(
+        cls,
+        /,
+        *,
+        max_value: int | DefaultType,
+    ) -> BoundedSemaphore: ...
+    def __new__(cls, /, initial_value=DEFAULT, max_value=None):
         """..."""
 
         if max_value is not None:
@@ -98,7 +105,7 @@ class Semaphore:
 
         self = object.__new__(cls)
 
-        if initial_value is not None:
+        if initial_value is not DEFAULT:
             if initial_value < 0:
                 msg = "initial_value must be >= 0"
                 raise ValueError(msg)
@@ -137,10 +144,7 @@ class Semaphore:
             2
         """
 
-        if (initial_value := self._initial_value) != 1:
-            return (initial_value,)
-
-        return ()
+        return (self._initial_value,)
 
     def __getstate__(self, /) -> None:
         """
@@ -414,29 +418,18 @@ class BoundedSemaphore(Semaphore):
         "_max_value",
     )
 
-    @overload
     def __new__(
         cls,
         /,
-        initial_value: int | None = None,
-        max_value: None = None,
-    ) -> Self: ...
-    @overload
-    def __new__(
-        cls,
-        /,
-        initial_value: int | None,
-        max_value: int,
-    ) -> Self: ...
-    @overload
-    def __new__(cls, /, *, max_value: int) -> Self: ...
-    def __new__(cls, /, initial_value=None, max_value=None):
+        initial_value: int | DefaultType = DEFAULT,
+        max_value: int | DefaultType = DEFAULT,
+    ) -> Self:
         """..."""
 
         if (
             cls is BoundedSemaphore
-            and (initial_value is None or initial_value <= 1)
-            and (max_value is None or max_value <= 1)
+            and (initial_value is DEFAULT or initial_value <= 1)
+            and (max_value is DEFAULT or max_value <= 1)
         ):
             return BoundedBinarySemaphore.__new__(
                 BoundedBinarySemaphore,
@@ -446,18 +439,18 @@ class BoundedSemaphore(Semaphore):
 
         self = object.__new__(cls)
 
-        if initial_value is not None:
+        if initial_value is not DEFAULT:
             if initial_value < 0:
                 msg = "initial_value must be >= 0"
                 raise ValueError(msg)
 
             self._initial_value = initial_value
-        elif max_value is not None:
+        elif max_value is not DEFAULT:
             self._initial_value = max_value
         else:
             self._initial_value = 1
 
-        if max_value is not None:
+        if max_value is not DEFAULT:
             if max_value < 0:
                 msg = "max_value must be >= 0"
                 raise ValueError(msg)
@@ -502,16 +495,7 @@ class BoundedSemaphore(Semaphore):
             2
         """
 
-        initial_value = self._initial_value
-        max_value = self._max_value
-
-        if initial_value != max_value:
-            return (initial_value, max_value)
-
-        if initial_value != 1:
-            return (initial_value,)
-
-        return ()
+        return (self._initial_value, self._max_value)
 
     def __getstate__(self, /) -> None:
         """
@@ -529,10 +513,10 @@ class BoundedSemaphore(Semaphore):
         initial_value = self._initial_value
         max_value = self._max_value
 
-        if initial_value != max_value:
-            args_repr = f"{initial_value!r}, max_value={max_value!r}"
-        else:
+        if initial_value == max_value:
             args_repr = f"{initial_value!r}"
+        else:
+            args_repr = f"{initial_value!r}, max_value={max_value!r}"
 
         object_repr = f"{cls_repr}({args_repr})"
 
@@ -677,19 +661,24 @@ class BinarySemaphore(Semaphore):
     def __new__(
         cls,
         /,
-        initial_value: int | None = None,
+        initial_value: int | DefaultType = DEFAULT,
         max_value: None = None,
     ) -> Self: ...
     @overload
     def __new__(
         cls,
         /,
-        initial_value: int | None,
-        max_value: int,
+        initial_value: int | DefaultType,
+        max_value: int | DefaultType,
     ) -> BoundedBinarySemaphore: ...
     @overload
-    def __new__(cls, /, *, max_value: int) -> BoundedBinarySemaphore: ...
-    def __new__(cls, /, initial_value=None, max_value=None):
+    def __new__(
+        cls,
+        /,
+        *,
+        max_value: int | DefaultType,
+    ) -> BoundedBinarySemaphore: ...
+    def __new__(cls, /, initial_value=DEFAULT, max_value=None):
         """..."""
 
         if max_value is not None:
@@ -708,7 +697,7 @@ class BinarySemaphore(Semaphore):
 
         self = object.__new__(cls)
 
-        if initial_value is not None:
+        if initial_value is not DEFAULT:
             if initial_value < 0 or 1 < initial_value:
                 msg = "initial_value must be 0 or 1"
                 raise ValueError(msg)
@@ -917,39 +906,28 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
     __slots__ = ()
 
-    @overload
     def __new__(
         cls,
         /,
-        initial_value: int | None = None,
-        max_value: None = None,
-    ) -> Self: ...
-    @overload
-    def __new__(
-        cls,
-        /,
-        initial_value: int | None,
-        max_value: int,
-    ) -> Self: ...
-    @overload
-    def __new__(cls, /, *, max_value: int) -> Self: ...
-    def __new__(cls, /, initial_value=None, max_value=None):
+        initial_value: int | DefaultType = DEFAULT,
+        max_value: int | DefaultType = DEFAULT,
+    ) -> Self:
         """..."""
 
         self = object.__new__(cls)
 
-        if initial_value is not None:
+        if initial_value is not DEFAULT:
             if initial_value < 0 or 1 < initial_value:
                 msg = "initial_value must be 0 or 1"
                 raise ValueError(msg)
 
             self._initial_value = initial_value
-        elif max_value is not None:
+        elif max_value is not DEFAULT:
             self._initial_value = max_value
         else:
             self._initial_value = 1
 
-        if max_value is not None:
+        if max_value is not DEFAULT:
             if max_value < 0 or 1 < max_value:
                 msg = "max_value must be 0 or 1"
                 raise ValueError(msg)

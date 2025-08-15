@@ -12,6 +12,8 @@ from contextvars import Context
 from types import TracebackType
 from typing import Any, Generic, NoReturn, TypeVar, final, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -273,9 +275,17 @@ def _create_anyio_executor(
     backend: str,
     backend_options: dict[str, Any],
 ) -> TaskExecutor: ...
+@overload
 def create_executor(
     library: str,
-    backend: str | None = None,
+    backend: str | DefaultType = DEFAULT,
+    backend_options: dict[str, Any] | None = None,
+) -> TaskExecutor: ...
+@overload
+def create_executor(
+    library: DefaultType = DEFAULT,
+    *,
+    backend: str,
     backend_options: dict[str, Any] | None = None,
 ) -> TaskExecutor: ...
 def current_executor(*, failsafe: bool = False) -> TaskExecutor: ...

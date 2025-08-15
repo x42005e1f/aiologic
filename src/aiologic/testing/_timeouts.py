@@ -10,6 +10,7 @@ import sys
 from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import (
     _external as external,
     _replaces as replaces,
@@ -361,7 +362,7 @@ def timeout_after(
     maybe_func: Awaitable[_T],
     /,
     *,
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Coroutine[Any, Any, _T]: ...
 @overload
 @external
@@ -370,10 +371,10 @@ def timeout_after(
     maybe_func: Callable[[Unpack[_Ts]], _T],
     /,
     *args: Unpack[_Ts],
-    executor: TaskExecutor | None = None,
+    executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> _T: ...
-def timeout_after(seconds, maybe_func, /, *args, executor=None):
-    if executor is None:
+def timeout_after(seconds, maybe_func, /, *args, executor=DEFAULT):
+    if executor is DEFAULT:
         executor = current_executor()
 
     library = executor.library

@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 from ._semaphore import BinarySemaphore, Semaphore
 from .lowlevel import (
+    DEFAULT,
+    DefaultType,
     async_checkpoint,
     current_async_task_ident,
     current_green_task_ident,
@@ -36,10 +38,10 @@ class CapacityLimiter:
         "_semaphore",
     )
 
-    def __new__(cls, /, total_tokens: int | None = None) -> Self:
+    def __new__(cls, /, total_tokens: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
-        if total_tokens is None:
+        if total_tokens is DEFAULT:
             total_tokens = 1
         elif total_tokens < 0:
             msg = "total_tokens must be >= 0"
@@ -78,10 +80,7 @@ class CapacityLimiter:
             3
         """
 
-        if (total_tokens := self._semaphore.initial_value) != 1:
-            return (total_tokens,)
-
-        return ()
+        return (self._semaphore.initial_value,)
 
     def __getstate__(self, /) -> None:
         """
@@ -276,7 +275,7 @@ class RCapacityLimiter(CapacityLimiter):
     __slots__ = ()
 
     @copies(CapacityLimiter.__new__)
-    def __new__(cls, /, total_tokens: int | None = None) -> Self:
+    def __new__(cls, /, total_tokens: int | DefaultType = DEFAULT) -> Self:
         """..."""
 
         return CapacityLimiter.__new__(cls, total_tokens)
