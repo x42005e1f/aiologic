@@ -37,6 +37,7 @@ toc_object_entries = False
 
 autodoc_class_signature = "separated"
 autodoc_inherit_docstrings = False
+autodoc_preserve_defaults = True
 autodoc_default_options = {
     "exclude-members": "__init_subclass__,__class_getitem__,__weakref__",
     "inherited-members": True,
