@@ -632,7 +632,7 @@ class CountdownEvent:
     def _get(
         self,
         /,
-        default: object,
+        default: object = MISSING,
         *,
         default_factory: MissingType = MISSING,
     ) -> object: ...

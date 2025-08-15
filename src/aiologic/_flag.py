@@ -111,7 +111,7 @@ class Flag(Generic[_T]):
     def get(
         self,
         /,
-        default: _T | MissingType,
+        default: _T | MissingType = MISSING,
         *,
         default_factory: MissingType = MISSING,
     ) -> _T: ...
