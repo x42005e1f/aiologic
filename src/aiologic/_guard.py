@@ -169,6 +169,8 @@ class ResourceGuard:
 
     @property
     def action(self, /) -> str:
-        """..."""
+        """
+        The action to guard against.
+        """
 
         return self._action

@@ -238,19 +238,32 @@ class SimpleQueue(Generic[_T]):
 
     @property
     def putting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to put.
+
+        It is always :data:`0` for simple queues.
+        """
 
         return 0
 
     @property
     def getting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to get.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return self._semaphore.waiting
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to access.
+
+        It is the same as the :attr:`getting` property.
+        """
 
         return self._semaphore.waiting
 
@@ -399,21 +412,34 @@ class SimpleLifoQueue(SimpleQueue[_T]):
     @property
     @copies(SimpleQueue.putting.fget)
     def putting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to put.
+
+        It is always :data:`0` for simple queues.
+        """
 
         return SimpleQueue.putting.fget(self)
 
     @property
     @copies(SimpleQueue.getting.fget)
     def getting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to get.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return SimpleQueue.getting.fget(self)
 
     @property
     @copies(SimpleQueue.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to access.
+
+        It is the same as the :attr:`getting` property.
+        """
 
         return SimpleQueue.waiting.fget(self)
 
@@ -846,25 +872,43 @@ class Queue(Generic[_T]):
 
     @property
     def maxsize(self, /) -> int:
-        """..."""
+        """
+        The maximum number of items which the queue can hold.
+        """
 
         return self._maxsize
 
     @property
     def putting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to put.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._putters)
 
     @property
     def getting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to get.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._getters)
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to access.
+
+        It is roughly equivalent to the sum of the :attr:`putting` and
+        :attr:`getting` properties, but is more reliable than the sum in a
+        multithreaded environment.
+        """
 
         return len(self._putters_and_getters)
 
@@ -1001,28 +1045,46 @@ class LifoQueue(Queue[_T]):
     @property
     @copies(Queue.maxsize.fget)
     def maxsize(self, /) -> int:
-        """..."""
+        """
+        The maximum number of items which the queue can hold.
+        """
 
         return Queue.maxsize.fget(self)
 
     @property
     @copies(Queue.putting.fget)
     def putting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to put.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Queue.putting.fget(self)
 
     @property
     @copies(Queue.getting.fget)
     def getting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to get.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Queue.getting.fget(self)
 
     @property
     @copies(Queue.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to access.
+
+        It is roughly equivalent to the sum of the :attr:`putting` and
+        :attr:`getting` properties, but is more reliable than the sum in a
+        multithreaded environment.
+        """
 
         return Queue.waiting.fget(self)
 
@@ -1172,27 +1234,45 @@ class PriorityQueue(Queue[_RichComparableT]):
     @property
     @copies(Queue.maxsize.fget)
     def maxsize(self, /) -> int:
-        """..."""
+        """
+        The maximum number of items which the queue can hold.
+        """
 
         return Queue.maxsize.fget(self)
 
     @property
     @copies(Queue.putting.fget)
     def putting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to put.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Queue.putting.fget(self)
 
     @property
     @copies(Queue.getting.fget)
     def getting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to get.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Queue.getting.fget(self)
 
     @property
     @copies(Queue.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to access.
+
+        It is roughly equivalent to the sum of the :attr:`putting` and
+        :attr:`getting` properties, but is more reliable than the sum in a
+        multithreaded environment.
+        """
 
         return Queue.waiting.fget(self)

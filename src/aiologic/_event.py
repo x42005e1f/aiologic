@@ -232,7 +232,12 @@ class Event:
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting for the event.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)
 
@@ -443,7 +448,12 @@ class REvent(Event):
     @property
     @copies(Event.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting for the event.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Event.waiting.fget(self)
 
@@ -537,16 +547,16 @@ class CountdownEvent:
 
     def __bool__(self, /) -> bool:
         """
-        Returns :data:`True` if the event value is zero.
+        Returns :data:`True` if the event is set.
 
         Example:
-            >>> done = CountdownEvent()  # value == 0
+            >>> done = CountdownEvent()  # event is set
             >>> bool(done)
             True
-            >>> done.up()  # value == 1
+            >>> done.up()  # event is unset
             >>> bool(done)
             False
-            >>> done.down()  # value == 0
+            >>> done.down()  # event is set
             >>> bool(done)
             True
         """
@@ -726,18 +736,27 @@ class CountdownEvent:
 
     @property
     def initial_value(self, /) -> int:
-        """..."""
+        """
+        The initial number of :meth:`down` calls required to set the event.
+        """
 
         return self._initial_value
 
     @property
     def value(self, /) -> int:
-        """..."""
+        """
+        The current number of :meth:`down` calls remaining to set the event.
+        """
 
         return len(self._is_unset)
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting for the event.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)

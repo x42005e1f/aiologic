@@ -393,19 +393,31 @@ class Semaphore:
 
     @property
     def initial_value(self, /) -> int:
-        """..."""
+        """
+        The initial number of permits available for acquiring.
+        """
 
         return self._initial_value
 
     @property
     def value(self, /) -> int:
-        """..."""
+        """
+        The current number of permits available to be acquired.
+
+        It may not change after release if all the released permits were
+        reassigned to waiting tasks during the release.
+        """
 
         return len(self._unlocked)
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to acquire.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)
 
@@ -627,27 +639,41 @@ class BoundedSemaphore(Semaphore):
     @property
     @copies(Semaphore.initial_value.fget)
     def initial_value(self, /) -> int:
-        """..."""
+        """
+        The initial number of permits available for acquiring.
+        """
 
         return Semaphore.initial_value.fget(self)
 
     @property
     def max_value(self, /) -> int:
-        """..."""
+        """
+        The maximum number of permits which the semaphore can hold.
+        """
 
         return self._max_value
 
     @property
     @copies(Semaphore.value.fget)
     def value(self, /) -> int:
-        """..."""
+        """
+        The current number of permits available to be acquired.
+
+        It may not change after release if all the released permits were
+        reassigned to waiting tasks during the release.
+        """
 
         return Semaphore.value.fget(self)
 
     @property
     @copies(Semaphore.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to acquire.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Semaphore.waiting.fget(self)
 
@@ -851,21 +877,33 @@ class BinarySemaphore(Semaphore):
     @property
     @copies(Semaphore.initial_value.fget)
     def initial_value(self, /) -> int:
-        """..."""
+        """
+        The initial number of permits available for acquiring.
+        """
 
         return Semaphore.initial_value.fget(self)
 
     @property
     @copies(Semaphore.value.fget)
     def value(self, /) -> int:
-        """..."""
+        """
+        The current number of permits available to be acquired.
+
+        It may not change after release if all the released permits were
+        reassigned to waiting tasks during the release.
+        """
 
         return Semaphore.value.fget(self)
 
     @property
     @copies(Semaphore.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to acquire.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Semaphore.waiting.fget(self)
 
@@ -1096,28 +1134,42 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
     @property
     @copies(BinarySemaphore.initial_value.fget)
     def initial_value(self, /) -> int:
-        """..."""
+        """
+        The initial number of permits available for acquiring.
+        """
 
         return BinarySemaphore.initial_value.fget(self)
 
     @property
     @copies(BoundedSemaphore.max_value.fget)
     def max_value(self, /) -> int:
-        """..."""
+        """
+        The maximum number of permits which the semaphore can hold.
+        """
 
         return BoundedSemaphore.max_value.fget(self)
 
     @property
     @copies(BinarySemaphore.value.fget)
     def value(self, /) -> int:
-        """..."""
+        """
+        The current number of permits available to be acquired.
+
+        It may not change after release if all the released permits were
+        reassigned to waiting tasks during the release.
+        """
 
         return BinarySemaphore.value.fget(self)
 
     @property
     @copies(BinarySemaphore.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to acquire.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return BinarySemaphore.waiting.fget(self)
 

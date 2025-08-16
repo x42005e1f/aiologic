@@ -529,13 +529,25 @@ class Lock(PLock):
 
     @property
     def owner(self, /) -> tuple[str, int] | None:
-        """..."""
+        """
+        The current identifier of the task that owns the lock, or :data:`None`
+        if no one owns the lock.
+
+        It is not reliable during release, as it may temporarily be the
+        identifier of a task that has cancelled the :meth:`async_acquire` or
+        :meth:`green_acquire` call (e.g., due to a timeout).
+        """
 
         return self._owner
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to own.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)
 
@@ -962,13 +974,27 @@ class RLock(Lock):
     @property
     @copies(Lock.owner.fget)
     def owner(self, /) -> tuple[str, int] | None:
-        """..."""
+        """
+        The current identifier of the task that owns the lock, or :data:`None`
+        if no one owns the lock.
+
+        It is not reliable during release, as it may temporarily be the
+        identifier of a task that has cancelled the :meth:`async_acquire` or
+        :meth:`green_acquire` call (e.g., due to a timeout).
+        """
 
         return Lock.owner.fget(self)
 
     @property
     def count(self, /) -> int:
-        """..."""
+        """
+        The current recursion level of the task that owns the lock, or
+        :data:`0` if no one owns the lock.
+
+        It is not reliable during release, as it may temporarily be the
+        recursion level of a task that has cancelled the :meth:`async_acquire`
+        or :meth:`green_acquire` call (e.g., due to a timeout).
+        """
 
         return self._count
 
@@ -981,6 +1007,11 @@ class RLock(Lock):
     @property
     @copies(Lock.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to own.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Lock.waiting.fget(self)

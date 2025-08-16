@@ -252,31 +252,56 @@ class CapacityLimiter:
 
     @property
     def total_tokens(self, /) -> int:
-        """..."""
+        """
+        The initial number of tokens available for borrowing.
+        """
 
         return self._semaphore.initial_value
 
     @property
     def available_tokens(self, /) -> int:
-        """..."""
+        """
+        The current number of tokens available to be borrowed.
+
+        It may not change after release if all the released tokens were
+        reassigned to waiting tasks during the release.
+        """
 
         return self._semaphore.value
 
     @property
     def borrowed_tokens(self, /) -> int:
-        """..."""
+        """
+        The current number of tokens that have been borrowed.
+
+        It may not change after release if all the released tokens were
+        reassigned to waiting tasks during the release.
+        """
 
         return self._semaphore.initial_value - self._semaphore.value
 
     @property
     def borrowers(self, /) -> MappingProxyType[tuple[str, int], int]:
-        """..."""
+        """
+        The read-only proxy of the dictionary that maps tasks' identifiers to
+        their respective recursion levels. Contains identifiers of only those
+        tasks that hold any token. Updated automatically when the current state
+        changes.
+
+        It may not contain identifiers of those tasks to which tokens were
+        reassigned during release if they have not yet resumed execution.
+        """
 
         return self._borrowers_proxy
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to borrow.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return self._semaphore.waiting
 
@@ -542,34 +567,59 @@ class RCapacityLimiter(CapacityLimiter):
     @property
     @copies(CapacityLimiter.total_tokens.fget)
     def total_tokens(self, /) -> int:
-        """..."""
+        """
+        The initial number of tokens available for borrowing.
+        """
 
         return CapacityLimiter.total_tokens.fget(self)
 
     @property
     @copies(CapacityLimiter.available_tokens.fget)
     def available_tokens(self, /) -> int:
-        """..."""
+        """
+        The current number of tokens available to be borrowed.
+
+        It may not change after release if all the released tokens were
+        reassigned to waiting tasks during the release.
+        """
 
         return CapacityLimiter.available_tokens.fget(self)
 
     @property
     @copies(CapacityLimiter.borrowed_tokens.fget)
     def borrowed_tokens(self, /) -> int:
-        """..."""
+        """
+        The current number of tokens that have been borrowed.
+
+        It may not change after release if all the released tokens were
+        reassigned to waiting tasks during the release.
+        """
 
         return CapacityLimiter.borrowed_tokens.fget(self)
 
     @property
     @copies(CapacityLimiter.borrowers.fget)
     def borrowers(self, /) -> MappingProxyType[tuple[str, int], int]:
-        """..."""
+        """
+        The read-only proxy of the dictionary that maps tasks' identifiers to
+        their respective recursion levels. Contains identifiers of only those
+        tasks that hold any token. Updated automatically when the current state
+        changes.
+
+        It may not contain identifiers of those tasks to which tokens were
+        reassigned during release if they have not yet resumed execution.
+        """
 
         return CapacityLimiter.borrowers.fget(self)
 
     @property
     @copies(CapacityLimiter.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to borrow.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return CapacityLimiter.waiting.fget(self)

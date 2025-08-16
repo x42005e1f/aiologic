@@ -306,19 +306,28 @@ class Condition(Generic[_T_co, _S_co]):
 
     @property
     def lock(self, /) -> _T_co:
-        """..."""
+        """
+        The underlying lock used by the condition variable.
+        """
 
         return self._impl.lock
 
     @property
     def timer(self, /) -> _S_co:
-        """..."""
+        """
+        The callable object used by the condition variable.
+        """
 
         return self._impl.timer
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to be notified.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return self._impl.waiting
 

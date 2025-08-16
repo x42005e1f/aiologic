@@ -310,19 +310,28 @@ class Latch:
 
     @property
     def parties(self, /) -> int:
-        """..."""
+        """
+        The initial number of tasks required to pass the barrier.
+        """
 
         return self._parties
 
     @property
     def broken(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the barrier is in the broken state.
+        """
 
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to pass.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)
 
@@ -700,19 +709,28 @@ class Barrier:
 
     @property
     def parties(self, /) -> int:
-        """..."""
+        """
+        The initial number of tasks required to pass the barrier.
+        """
 
         return self._parties
 
     @property
     def broken(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the barrier is in the broken state.
+        """
 
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to pass.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return len(self._waiters)
 
@@ -1092,20 +1110,29 @@ class RBarrier(Barrier):
     @property
     @copies(Barrier.parties.fget)
     def parties(self, /) -> int:
-        """..."""
+        """
+        The initial number of tasks required to pass the barrier.
+        """
 
         return Barrier.parties.fget(self)
 
     @property
     @copies(Barrier.broken.fget)
     def broken(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the barrier is in the broken state.
+        """
 
         return Barrier.broken.fget(self)
 
     @property
     @copies(Barrier.waiting.fget)
     def waiting(self, /) -> int:
-        """..."""
+        """
+        The current number of tasks waiting to pass.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
 
         return Barrier.waiting.fget(self)
