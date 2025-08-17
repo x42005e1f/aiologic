@@ -116,6 +116,8 @@ class Event:
         """
         Returns :data:`True` if the event is set.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> finished = Event()  # event is unset
             >>> bool(finished)
@@ -298,6 +300,8 @@ class REvent(Event):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the event is set.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> running = REvent()  # event is unset
@@ -548,6 +552,8 @@ class CountdownEvent:
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the event is set.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> done = CountdownEvent()  # event is set

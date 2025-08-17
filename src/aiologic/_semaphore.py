@@ -404,8 +404,8 @@ class Semaphore:
         """
         The current number of permits available to be acquired.
 
-        It may not change after release if all the released permits were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released permits have been
+        reassigned to waiting tasks.
         """
 
         return len(self._unlocked)
@@ -659,8 +659,8 @@ class BoundedSemaphore(Semaphore):
         """
         The current number of permits available to be acquired.
 
-        It may not change after release if all the released permits were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released permits have been
+        reassigned to waiting tasks.
         """
 
         return Semaphore.value.fget(self)
@@ -889,8 +889,8 @@ class BinarySemaphore(Semaphore):
         """
         The current number of permits available to be acquired.
 
-        It may not change after release if all the released permits were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released permits have been
+        reassigned to waiting tasks.
         """
 
         return Semaphore.value.fget(self)
@@ -1155,8 +1155,8 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         """
         The current number of permits available to be acquired.
 
-        It may not change after release if all the released permits were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released permits have been
+        reassigned to waiting tasks.
         """
 
         return BinarySemaphore.value.fget(self)

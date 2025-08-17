@@ -150,6 +150,8 @@ class Latch:
         """
         Returns :data:`True` if the barrier has been passed or broken.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> started = Latch(1)  # barrier is filling
             >>> bool(started)

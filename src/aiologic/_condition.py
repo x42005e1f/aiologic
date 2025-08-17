@@ -210,6 +210,8 @@ class Condition(Generic[_T_co, _S_co]):
 
         If there is no lock, returns :data:`False`.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> accessing = Condition()
             >>> bool(accessing)

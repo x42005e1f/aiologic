@@ -157,6 +157,8 @@ class SimpleQueue(Generic[_T]):
         """
         Returns :data:`True` if the queue is not empty.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> items = SimpleQueue()  # queue is empty
             >>> bool(items)
@@ -329,6 +331,8 @@ class SimpleLifoQueue(SimpleQueue[_T]):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the queue is not empty.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> items = SimpleLifoQueue()  # queue is empty
@@ -561,6 +565,8 @@ class Queue(Generic[_T]):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the queue is not empty.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> items = Queue()  # queue is empty
@@ -976,6 +982,8 @@ class LifoQueue(Queue[_T]):
         """
         Returns :data:`True` if the queue is not empty.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> items = LifoQueue()  # queue is empty
             >>> bool(items)
@@ -1151,6 +1159,8 @@ class PriorityQueue(Queue[_RichComparableT]):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the queue is not empty.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> items = PriorityQueue()  # queue is empty

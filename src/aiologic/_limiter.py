@@ -112,6 +112,8 @@ class CapacityLimiter:
         """
         Returns :data:`True` if the capacity limiter is used by any task.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> reading = CapacityLimiter()
             >>> bool(reading)
@@ -263,8 +265,8 @@ class CapacityLimiter:
         """
         The current number of tokens available to be borrowed.
 
-        It may not change after release if all the released tokens were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released tokens have been
+        reassigned to waiting tasks.
         """
 
         return self._semaphore.value
@@ -274,8 +276,8 @@ class CapacityLimiter:
         """
         The current number of tokens that have been borrowed.
 
-        It may not change after release if all the released tokens were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released tokens have been
+        reassigned to waiting tasks.
         """
 
         return self._semaphore.initial_value - self._semaphore.value
@@ -359,6 +361,8 @@ class RCapacityLimiter(CapacityLimiter):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the capacity limiter is used by any task.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> reading = RCapacityLimiter()
@@ -579,8 +583,8 @@ class RCapacityLimiter(CapacityLimiter):
         """
         The current number of tokens available to be borrowed.
 
-        It may not change after release if all the released tokens were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released tokens have been
+        reassigned to waiting tasks.
         """
 
         return CapacityLimiter.available_tokens.fget(self)
@@ -591,8 +595,8 @@ class RCapacityLimiter(CapacityLimiter):
         """
         The current number of tokens that have been borrowed.
 
-        It may not change after release if all the released tokens were
-        reassigned to waiting tasks during the release.
+        It may not change after release if all the released tokens have been
+        reassigned to waiting tasks.
         """
 
         return CapacityLimiter.borrowed_tokens.fget(self)

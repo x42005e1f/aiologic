@@ -244,6 +244,8 @@ class Lock(PLock):
         """
         Returns :data:`True` if the lock is used by any task.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> writing = Lock()
             >>> bool(writing)
@@ -647,6 +649,8 @@ class RLock(Lock):
     def __bool__(self, /) -> bool:
         """
         Returns :data:`True` if the lock is used by any task.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
 
         Example:
             >>> writing = RLock()

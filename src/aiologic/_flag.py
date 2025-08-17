@@ -106,6 +106,8 @@ class Flag(Generic[_T]):
         """
         Returns :data:`True` if the flag is set.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> cancelled = Flag()  # flag is unset
             >>> bool(cancelled)

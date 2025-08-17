@@ -123,6 +123,8 @@ class ResourceGuard:
         """
         Returns :data:`True` if the resource guard is used by any task.
 
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
         Example:
             >>> using = ResourceGuard()
             >>> bool(using)
