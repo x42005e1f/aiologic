@@ -208,7 +208,17 @@ class Event:
         self._wakeup()
 
     def is_set(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the event is set.
+
+        Example:
+            >>> event = Event()
+            >>> event.is_set()
+            False
+            >>> event.set()
+            >>> event.is_set()
+            True
+        """
 
         return not self._is_unset
 
@@ -416,7 +426,20 @@ class REvent(Event):
 
     @copies(Event.is_set)
     def is_set(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the event is set.
+
+        Example:
+            >>> event = REvent()
+            >>> event.is_set()
+            False
+            >>> event.set()
+            >>> event.is_set()
+            True
+            >>> event.clear()
+            >>> event.is_set()
+            False
+        """
 
         return Event.is_set(self)
 

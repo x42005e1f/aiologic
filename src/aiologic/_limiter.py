@@ -243,12 +243,36 @@ class CapacityLimiter:
         self._semaphore.green_release()
 
     def async_borrowed(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current async task holds any token.
+
+        Example:
+            >>> limiter = CapacityLimiter()
+            >>> limiter.async_borrowed()
+            False
+            >>> async with limiter:
+            ...     limiter.async_borrowed()
+            True
+            >>> limiter.async_borrowed()
+            False
+        """
 
         return current_async_task_ident() in self._borrowers
 
     def green_borrowed(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current green task holds any token.
+
+        Example:
+            >>> limiter = CapacityLimiter()
+            >>> limiter.green_borrowed()
+            False
+            >>> with limiter:
+            ...     limiter.green_borrowed()
+            True
+            >>> limiter.green_borrowed()
+            False
+        """
 
         return current_green_task_ident() in self._borrowers
 
@@ -548,23 +572,71 @@ class RCapacityLimiter(CapacityLimiter):
 
     @copies(CapacityLimiter.async_borrowed)
     def async_borrowed(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current async task holds any token.
+
+        Example:
+            >>> limiter = RCapacityLimiter()
+            >>> limiter.async_borrowed()
+            False
+            >>> async with limiter:
+            ...     limiter.async_borrowed()
+            True
+            >>> limiter.async_borrowed()
+            False
+        """
 
         return CapacityLimiter.async_borrowed(self)
 
     @copies(CapacityLimiter.green_borrowed)
     def green_borrowed(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current green task holds any token.
+
+        Example:
+            >>> limiter = RCapacityLimiter()
+            >>> limiter.green_borrowed()
+            False
+            >>> with limiter:
+            ...     limiter.green_borrowed()
+            True
+            >>> limiter.green_borrowed()
+            False
+        """
 
         return CapacityLimiter.green_borrowed(self)
 
     def async_count(self, /) -> int:
-        """..."""
+        """
+        Return the recursion level of the current async task.
+
+        Example:
+            >>> limiter = RCapacityLimiter()
+            >>> limiter.async_count()
+            0
+            >>> async with limiter:
+            ...     limiter.async_count()
+            1
+            >>> limiter.async_count()
+            0
+        """
 
         return self._borrowers.get(current_async_task_ident(), 0)
 
     def green_count(self, /) -> int:
-        """..."""
+        """
+        Return the recursion level of the current green task.
+
+        Example:
+            >>> limiter = RCapacityLimiter()
+            >>> limiter.green_count()
+            0
+            >>> with limiter:
+            ...     limiter.green_count()
+            1
+            >>> limiter.green_count()
+            0
+        """
 
         return self._borrowers.get(current_green_task_ident(), 0)
 

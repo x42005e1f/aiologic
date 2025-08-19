@@ -511,21 +511,66 @@ class Lock(PLock):
         self._release()
 
     def async_owned(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current async task owns the lock.
+
+        Unlike the :attr:`owner` property, always reliable.
+
+        Example:
+            >>> lock = Lock()
+            >>> lock.async_owned()
+            False
+            >>> async with lock:
+            ...     lock.async_owned()
+            True
+            >>> lock.async_owned()
+            False
+        """
 
         return (
             self._owner == current_async_task_ident() and not self._releasing
         )
 
     def green_owned(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current green task owns the lock.
+
+        Unlike the :attr:`owner` property, always reliable.
+
+        Example:
+            >>> lock = Lock()
+            >>> lock.green_owned()
+            False
+            >>> with lock:
+            ...     lock.green_owned()
+            True
+            >>> lock.green_owned()
+            False
+        """
 
         return (
             self._owner == current_green_task_ident() and not self._releasing
         )
 
     def locked(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if anyone owns the lock.
+
+        Example:
+            >>> import asyncio
+            >>> async def own_the_lock():
+            ...     async with lock:
+            ...         await asyncio.sleep(3600)
+            >>> lock = Lock()
+            >>> lock.locked()
+            False
+            >>> task = asyncio.create_task(own_the_lock())
+            >>> lock.locked()
+            True
+            >>> task.cancel()
+            >>> lock.locked()
+            False
+        """
 
         return not self._unlocked
 
@@ -959,19 +1004,64 @@ class RLock(Lock):
 
     @copies(Lock.async_owned)
     def async_owned(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current async task owns the lock.
+
+        Unlike the :attr:`owner` property, always reliable.
+
+        Example:
+            >>> lock = RLock()
+            >>> lock.async_owned()
+            False
+            >>> async with lock:
+            ...     lock.async_owned()
+            True
+            >>> lock.async_owned()
+            False
+        """
 
         return Lock.async_owned(self)
 
     @copies(Lock.green_owned)
     def green_owned(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the current green task owns the lock.
+
+        Unlike the :attr:`owner` property, always reliable.
+
+        Example:
+            >>> lock = RLock()
+            >>> lock.green_owned()
+            False
+            >>> with lock:
+            ...     lock.green_owned()
+            True
+            >>> lock.green_owned()
+            False
+        """
 
         return Lock.green_owned(self)
 
     @copies(Lock.locked)
     def locked(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if anyone owns the lock.
+
+        Example:
+            >>> import asyncio
+            >>> async def own_the_lock():
+            ...     async with lock:
+            ...         await asyncio.sleep(3600)
+            >>> lock = RLock()
+            >>> lock.locked()
+            False
+            >>> task = asyncio.create_task(own_the_lock())
+            >>> lock.locked()
+            True
+            >>> task.cancel()
+            >>> lock.locked()
+            False
+        """
 
         return Lock.locked(self)
 
