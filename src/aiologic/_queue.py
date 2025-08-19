@@ -174,7 +174,22 @@ class SimpleQueue(Generic[_T]):
         return bool(self._data)
 
     def __len__(self) -> int:
-        """..."""
+        """
+        Returns the number of items in the queue.
+
+        Used by the :func:`len` function.
+
+        Example:
+            >>> items = SimpleQueue()  # queue has no items
+            >>> len(items)
+            0
+            >>> items.green_put('spam')  # queue has one item
+            >>> len(items)
+            1
+            >>> item = items.green_get()  # queue has no items
+            >>> len(items)
+            0
+        """
 
         return len(self._data)
 
@@ -350,7 +365,22 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
     @copies(SimpleQueue.__len__)
     def __len__(self) -> int:
-        """..."""
+        """
+        Returns the number of items in the queue.
+
+        Used by the :func:`len` function.
+
+        Example:
+            >>> items = SimpleLifoQueue()  # queue has no items
+            >>> len(items)
+            0
+            >>> items.green_put('spam')  # queue has one item
+            >>> len(items)
+            1
+            >>> item = items.green_get()  # queue has no items
+            >>> len(items)
+            0
+        """
 
         return SimpleQueue.__len__(self)
 
@@ -583,7 +613,22 @@ class Queue(Generic[_T]):
         return bool(self._data)
 
     def __len__(self) -> int:
-        """..."""
+        """
+        Returns the number of items in the queue.
+
+        Used by the :func:`len` function.
+
+        Example:
+            >>> items = Queue()  # queue has no items
+            >>> len(items)
+            0
+            >>> items.green_put('spam')  # queue has one item
+            >>> len(items)
+            1
+            >>> item = items.green_get()  # queue has no items
+            >>> len(items)
+            0
+        """
 
         return len(self._data)
 
@@ -1000,7 +1045,22 @@ class LifoQueue(Queue[_T]):
 
     @copies(Queue.__len__)
     def __len__(self, /) -> bool:
-        """..."""
+        """
+        Returns the number of items in the queue.
+
+        Used by the :func:`len` function.
+
+        Example:
+            >>> items = LifoQueue()  # queue has no items
+            >>> len(items)
+            0
+            >>> items.green_put('spam')  # queue has one item
+            >>> len(items)
+            1
+            >>> item = items.green_get()  # queue has no items
+            >>> len(items)
+            0
+        """
 
         return Queue.__len__(self)
 
@@ -1178,7 +1238,22 @@ class PriorityQueue(Queue[_RichComparableT]):
 
     @copies(Queue.__len__)
     def __len__(self, /) -> bool:
-        """..."""
+        """
+        Returns the number of items in the queue.
+
+        Used by the :func:`len` function.
+
+        Example:
+            >>> items = PriorityQueue()  # queue has no items
+            >>> len(items)
+            0
+            >>> items.green_put('spam')  # queue has one item
+            >>> len(items)
+            1
+            >>> item = items.green_get()  # queue has no items
+            >>> len(items)
+            0
+        """
 
         return Queue.__len__(self)
 
