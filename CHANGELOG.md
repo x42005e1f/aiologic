@@ -62,9 +62,9 @@ Commit messages are consistent with
   `green_owned()` and `async_owned()` methods to locks. They allow to reliably
   check if the current task is holding the primitive (or any of its tokens)
   without importing additional functions.
-- `async_count()` and `green_count()` to reentrant capacity limiters for the
-  same purpose, but returning how many releases need to be made before the
-  token is actually released by the current task.
+- `async_count()` and `green_count()` to reentrant primitives for the same
+  purpose, but returning how many releases need to be made before the primitive
+  is actually released by the current task.
 - Reentrant primitives can now be acquired and released multiple times in a
   single call.
 - Multi-use barriers (cyclic and reusable) can now be used as context managers,

@@ -1042,6 +1042,50 @@ class RLock(Lock):
 
         return Lock.green_owned(self)
 
+    def async_count(self, /) -> int:
+        """
+        Return the recursion level of the current async task.
+
+        Unlike the :attr:`count` property, always reliable.
+
+        Example:
+            >>> lock = RLock()
+            >>> lock.async_count()
+            0
+            >>> async with lock:
+            ...     lock.async_count()
+            1
+            >>> lock.async_count()
+            0
+        """
+
+        if self._owner == current_async_task_ident() and not self._releasing:
+            return self._count
+        else:
+            return 0
+
+    def green_count(self, /) -> int:
+        """
+        Return the recursion level of the current green task.
+
+        Unlike the :attr:`count` property, always reliable.
+
+        Example:
+            >>> lock = RLock()
+            >>> lock.green_count()
+            0
+            >>> with lock:
+            ...     lock.green_count()
+            1
+            >>> lock.green_count()
+            0
+        """
+
+        if self._owner == current_green_task_ident() and not self._releasing:
+            return self._count
+        else:
+            return 0
+
     @copies(Lock.locked)
     def locked(self, /) -> bool:
         """
