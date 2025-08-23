@@ -28,7 +28,7 @@ def _patch_eventlet() -> None:
         event.wait()  # will take 1 second
 
     Also supports ``destroy()`` injected by `a separate patch <https://
-    gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe>`_.
+    gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe>`__.
     """
 
     from eventlet.hubs.asyncio import Hub as AsyncioHub

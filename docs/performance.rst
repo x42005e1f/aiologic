@@ -6,9 +6,9 @@ Performance
 ===========
 
 You probably came here to see how fast aiologic is. To see detailed
-measurements, beautifully drawn with `Matplotlib <https://matplotlib.org/>`_,
+measurements, beautifully drawn with `Matplotlib <https://matplotlib.org/>`__,
 such as in `the reply to one issue <https://github.com/x42005e1f/aiologic/
-issues/7#issuecomment-3067270072>`_. Well, try to come back another time!
+issues/7#issuecomment-3067270072>`__. Well, try to come back another time!
 
 The purpose of this section is to show how deep the rabbit hole in which
 aiologic has burrowed goes. Just as with great power comes great
@@ -191,12 +191,12 @@ With each new thread, the required number of context switches to start the next
 one increases. We see a triangle (:math:`1+2+3+…+n` context switches of the
 threads until stopping), which becomes a *square* when the constant is
 discarded (:math:`1+2+3+…+n=\frac{n(1+n)}{2}⇒n^2`) - that is where the
-quadratic `time complexity <https://en.wikipedia.org/wiki/Time_complexity>`_
+quadratic `time complexity <https://en.wikipedia.org/wiki/Time_complexity>`__
 comes from!
 
 Our example is not the only one with the square. There are others, also scarily
 simple and reproducible. But let us now express the time complexity using `big
-O notation <https://en.wikipedia.org/wiki/Big_O_notation>`_ for simplicity.
+O notation <https://en.wikipedia.org/wiki/Big_O_notation>`__ for simplicity.
 From this point on, "square" and :math:`O(n^2)` are synonymous.
 
 Squares, squares everywhere

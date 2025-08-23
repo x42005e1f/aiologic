@@ -769,7 +769,7 @@ but when using "async" libraries you have to use the mechanisms they provide.
 One reason why aiologic does not provide its own timeouts for async libraries
 is `the difference between cancellation semantics <https://
 anyio.readthedocs.io/en/stable/cancellation.html
-#differences-between-asyncio-and-anyio-cancellation-semantics>`_ combined with
+#differences-between-asyncio-and-anyio-cancellation-semantics>`__ combined with
 the fact that AnyIO with the asyncio backend cannot be distinguished from pure
 asyncio on the aiologic side.
 
@@ -787,7 +787,7 @@ may want to shield from being cancelled one of the following things:
 
 aiologic provides :func:`aiologic.lowlevel.shield` universal decorator that
 works on the first two levels. It creates `a wrapt-powered object proxy
-<https://wrapt.readthedocs.io/en/master/wrappers.html>`_ that adds shielding
+<https://wrapt.readthedocs.io/en/master/wrappers.html>`__ that adds shielding
 from cancellation to any awaitable or callable object, and can be used like
 this:
 
@@ -1098,26 +1098,26 @@ documentation is gradually increasing, describing more and more details. But if
 you want to get the information right now, there are several ways:
 
 0. Open the rest of the documentation if you have not already done so.
-1. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`_ or ask Devin
-   there as well. The information there is generated from both the source code
-   and the documentation you are reading right now. Although Devin may lie
+1. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`__ or ask
+   Devin there as well. The information there is generated from both the source
+   code and the documentation you are reading right now. Although Devin may lie
    sometimes (because it is an AI) or not know about some things (especially
    complex concurrent things), it gets smarter with every documentation update
    and can tell you what to do in your particular case.
 2. Read `the author's answers on Stack Overflow <https://stackoverflow.com/
-   users/27526808/ilya-egorov?tab=answers>`_. Many of them reveal the use of
+   users/27526808/ilya-egorov?tab=answers>`__. Many of them reveal the use of
    aiologic in specific use cases and even contain unique information that you
    may not find within the documentation.
-3. Check out `the changelog <./changelog.html>`_. It has information about some
-   non-trivial things.
-4. Look at `the source code <https://github.com/x42005e1f/aiologic>`_. Stub
+3. Check out `the changelog <./changelog.html>`__. It has information about
+   some non-trivial things.
+4. Look at `the source code <https://github.com/x42005e1f/aiologic>`__. Stub
    files (``.pyi`` files) can serve as a good guide to the interfaces, and you
    can also learn a lot just by reading the implementation code. Note, however,
    that understanding some behaviors requires more than just being able to read
    source code.
 5. Ask your question on `GitHub Discussions <https://github.com/x42005e1f/
-   aiologic/discussions>`_ or `write to the author
-   <mailto:0x42005e1f@gmail.com>`_. Response times vary, but you can expect a
+   aiologic/discussions>`__ or `write to the author
+   <mailto:0x42005e1f@gmail.com>`__. Response times vary, but you can expect a
    quality answer. Moreover, this way you will show your interest in the
    project, and thus give the author extra motivation to keep working on it. Do
    not be afraid to give feedback.
