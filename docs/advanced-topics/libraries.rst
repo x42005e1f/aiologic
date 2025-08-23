@@ -335,15 +335,21 @@ functions, aiologic implements detection of the currently running library - the
 one whose API should be used to create a waiter or get the current task.
 
 .. autofunction:: aiologic.lowlevel.current_green_library
+  :no-index:
+
 .. autofunction:: aiologic.lowlevel.current_async_library
+  :no-index:
 
 .. py:exception:: aiologic.lowlevel.GreenLibraryNotFoundError
+  :no-index:
 
   Bases: :exc:`RuntimeError`
 
   Exception raised by the :func:`aiologic.lowlevel.current_green_library`
   function if the current green library was not recognized.
+
 .. py:exception:: aiologic.lowlevel.AsyncLibraryNotFoundError
+  :no-index:
 
   Bases: :exc:`RuntimeError`
 
@@ -428,6 +434,7 @@ thread.
 
 .. py:data:: aiologic.lowlevel.current_green_library_tlocal
   :type: threading.local
+  :no-index:
 
   Thread-local data to control the return value of
   :func:`aiologic.lowlevel.current_green_library`.
@@ -435,6 +442,7 @@ thread.
   .. py:attribute:: aiologic.lowlevel.current_green_library_tlocal.name
     :type: str | None
     :value: None
+    :no-index:
 
     Unless set to a non-:data:`None` object, the function detects the current
     green library with its own algorithms. Otherwise the function returns
@@ -455,6 +463,7 @@ thread.
 
 .. py:data:: aiologic.lowlevel.current_async_library_tlocal
   :type: threading.local
+  :no-index:
 
   Thread-local data to control the return value of
   :func:`aiologic.lowlevel.current_async_library`.
@@ -462,6 +471,7 @@ thread.
   .. py:attribute:: aiologic.lowlevel.current_async_library_tlocal.name
     :type: str | None
     :value: None
+    :no-index:
 
     Unless set to a non-:data:`None` object, the function detects the current
     async library with its own algorithms. Otherwise the function returns

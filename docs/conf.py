@@ -33,8 +33,6 @@ extensions = [
 if sys.version_info >= (3, 11):
     extensions.append("sphinxcontrib.autodoc_inherit_overload")
 
-toc_object_entries = False
-
 autodoc_class_signature = "separated"
 autodoc_inherit_docstrings = False
 autodoc_preserve_defaults = True
