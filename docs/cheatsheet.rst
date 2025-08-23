@@ -233,9 +233,8 @@ The events implement the following special behavior:
    :math:`O(n)` time for repeated ``event.set()`` calls due to mutual
    exclusion.
 
-You can read about the origins of time complexity in mutual exclusion in `the
-one issue comment <https://github.com/apache/airflow/issues/50185
-#issuecomment-2928285691>`_. While the example of waking up all threads is
+You can read about the origins of time complexity in mutual exclusion in the
+:doc:`performance` section. While the example of waking up all threads is
 considered there, the same inferences can be applied to waking up on a mutex.
 
 Barriers

@@ -11,6 +11,34 @@
     font-family: FontAwesome;
 }
 
+table.widetable {
+    width: 100%;
+}
+
+table.widetable th,
+table.widetable td {
+    text-align: center;
+}
+
+div.tab-set {
+    margin: 1px 0 24px;
+}
+
+div.tab-set > label.tab-label {
+    padding-top: 0;
+}
+
+div.tab-content > div[class^="highlight-"]:first-child,
+div.tab-content > div[class*=" highlight-"]:first-child {
+    border-top: none;
+    margin: 0;
+}
+
+div.tab-content table.widetable:first-child,
+div.tab-content table.widetable:first-child th {
+    border-top: none;
+}
+
 dl.py:not(.class):has(dt.py.sig + dt.py.sig) {
     display: inline-grid !important;
 }
