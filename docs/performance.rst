@@ -165,34 +165,40 @@ If we look at the order in which context switching occurs on each pass of the
 scheduler, we will see something like this (where thread #0 is the main
 thread):
 
-* ``thread #0 → thread #1`` (starting the first thread)
-* ``thread #0 → thread #1 → thread #2`` (starting the second thread)
+* ``±thread #0`` (starting the first thread)
+* ``+thread #1`` (running one thread)
+* ``±thread #0 → thread #1`` (starting the second thread)
+* ``+thread #2 → thread #1`` (running two threads)
+* ``±thread #0 → thread #2 → thread #1`` (starting the third thread)
+* ``+thread #3 → thread #2 → thread #1`` (running three threads)
 * ...
-* ``thread #0 → thread #1 → ... → thread #(N-1) → thread #(N)`` (starting and
-  stopping the last thread)
-* ``thread #0 → thread #1 → ... → thread #(N-1)`` (stopping the other threads)
-* ``thread #0`` (the end)
+* ``±thread #0 → thread #(N-1) → ... → thread #1`` (starting the last thread)
+* ``±thread #(N) → -thread #(N-1) → ... → -thread #1`` (stopping all threads)
+* ``±thread #0`` (the end)
 
 In particular, for :math:`n=1`:
 
-* ``thread #0 → thread #1`` (starting and stopping the first/last thread)
-* ``thread #0`` (the end)
+* ``±thread #0`` (starting the first/last thread)
+* ``±thread #1`` (stopping all threads)
+* ``±thread #0`` (the end)
 
 For :math:`n=3`:
 
-* ``thread #0 → thread #1`` (starting the first thread)
-* ``thread #0 → thread #1 → thread #2`` (starting the second thread)
-* ``thread #0 → thread #1 → thread #2 → thread #3``  (starting and stopping the
-  last thread)
-* ``thread #0 → thread #1 → thread #2`` (stopping the other threads)
-* ``thread #0`` (the end)
+* ``±thread #0`` (starting the first thread)
+* ``+thread #1`` (running one thread)
+* ``±thread #0 → thread #1`` (starting the second thread)
+* ``+thread #2 → thread #1`` (running two threads)
+* ``±thread #0 → thread #2 → thread #1`` (starting the third thread)
+* ``±thread #3 → -thread #2 → -thread #1`` (stopping all threads)
+* ``±thread #0`` (the end)
 
 With each new thread, the required number of context switches to start the next
-one increases. We see a triangle (:math:`1+2+3+…+n` context switches of the
-threads until stopping), which becomes a *square* when the constant is
-discarded (:math:`1+2+3+…+n=\frac{n(1+n)}{2}⇒n^2`) - that is where the
-quadratic `time complexity <https://en.wikipedia.org/wiki/Time_complexity>`__
-comes from!
+one increases. We see two triangles (:math:`1+1+2+2+3+3+…+n+n`
+:math:`=2(1+2+3+…+n)` context switches until the end), which becomes one
+*square* when the constants is discarded (:math:`2(1+2+3+…+n)+1`
+:math:`=2\frac{n(1+n)}{2}+1` :math:`=n(1+n)+1` :math:`⇒n(n)` :math:`=n^2`) -
+that is where the quadratic `time complexity <https://en.wikipedia.org/wiki/
+Time_complexity>`__ comes from!
 
 Our example is not the only one with the square. There are others, also scarily
 simple and reproducible. But let us now express the time complexity using `big
