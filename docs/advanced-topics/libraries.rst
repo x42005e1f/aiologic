@@ -336,25 +336,15 @@ one whose API should be used to create a waiter or get the current task.
 
 .. autofunction:: aiologic.lowlevel.current_green_library
   :no-index:
-
 .. autofunction:: aiologic.lowlevel.current_async_library
   :no-index:
 
-.. py:exception:: aiologic.lowlevel.GreenLibraryNotFoundError
-  :no-index:
-
-  Bases: :exc:`RuntimeError`
-
-  Exception raised by the :func:`aiologic.lowlevel.current_green_library`
-  function if the current green library was not recognized.
-
-.. py:exception:: aiologic.lowlevel.AsyncLibraryNotFoundError
-  :no-index:
-
-  Bases: :exc:`RuntimeError`
-
-  Exception raised by the :func:`aiologic.lowlevel.current_async_library`
-  function if the current async library was not recognized.
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.GreenLibraryNotFoundError-start-marker
+  :end-before: .. aiologic.lowlevel.GreenLibraryNotFoundError-end-marker
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.AsyncLibraryNotFoundError-start-marker
+  :end-before: .. aiologic.lowlevel.AsyncLibraryNotFoundError-end-marker
 
 When are libraries counted as running?
 ++++++++++++++++++++++++++++++++++++++
@@ -432,63 +422,12 @@ between them. For these situations, aiologic provides thread-local objects with
 which you can explicitly set the name of any supported library for the current
 thread.
 
-.. py:data:: aiologic.lowlevel.current_green_library_tlocal
-  :type: threading.local
-  :no-index:
-
-  Thread-local data to control the return value of
-  :func:`aiologic.lowlevel.current_green_library`.
-
-  .. py:attribute:: aiologic.lowlevel.current_green_library_tlocal.name
-    :type: str | None
-    :value: None
-    :no-index:
-
-    Unless set to a non-:data:`None` object, the function detects the current
-    green library with its own algorithms. Otherwise the function returns
-    exactly the set object.
-
-  .. rubric:: Example
-
-  .. code:: python
-
-    library = aiologic.lowlevel.current_green_library_tlocal.name
-
-    aiologic.lowlevel.current_green_library_tlocal.name = "somelet"
-
-    try:
-        ...  # aiologic.lowlevel.current_green_library() == "somelet"
-    finally:
-        aiologic.lowlevel.current_green_library_tlocal.name = library
-
-.. py:data:: aiologic.lowlevel.current_async_library_tlocal
-  :type: threading.local
-  :no-index:
-
-  Thread-local data to control the return value of
-  :func:`aiologic.lowlevel.current_async_library`.
-
-  .. py:attribute:: aiologic.lowlevel.current_async_library_tlocal.name
-    :type: str | None
-    :value: None
-    :no-index:
-
-    Unless set to a non-:data:`None` object, the function detects the current
-    async library with its own algorithms. Otherwise the function returns
-    exactly the set object.
-
-  .. rubric:: Example
-
-  .. code:: python
-
-    library = aiologic.lowlevel.current_async_library_tlocal.name
-
-    aiologic.lowlevel.current_async_library_tlocal.name = "someio"
-
-    try:
-        ...  # aiologic.lowlevel.current_async_library() == "someio"
-    finally:
-        aiologic.lowlevel.current_async_library_tlocal.name = library
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.current_green_library_tlocal-start-marker
+  :end-before: .. aiologic.lowlevel.current_green_library_tlocal-end-marker
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.current_async_library_tlocal-start-marker
+  :end-before: .. aiologic.lowlevel.current_async_library_tlocal-end-marker
 
 It is worth noting that
 :data:`aiologic.lowlevel.current_async_library_tlocal.name` is the same as

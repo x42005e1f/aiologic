@@ -374,6 +374,8 @@ def timeout_after(
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> _T: ...
 def timeout_after(seconds, maybe_func, /, *args, executor=DEFAULT):
+    """..."""
+
     if executor is DEFAULT:
         executor = current_executor()
 

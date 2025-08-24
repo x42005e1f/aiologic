@@ -78,6 +78,8 @@ def get_cancelled_exc_class(
     executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]:
+    """..."""
+
     if executor is DEFAULT:
         if failback is None:
             executor = current_executor()
@@ -186,6 +188,8 @@ def get_timeout_exc_class(
     executor: TaskExecutor | DefaultType = DEFAULT,
     failback: type[BaseException] | None = None,
 ) -> type[BaseException]:
+    """..."""
+
     if executor is DEFAULT:
         if failback is None:
             executor = current_executor()

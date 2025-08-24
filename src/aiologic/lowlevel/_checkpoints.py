@@ -157,6 +157,8 @@ def _(_):
 
 
 def green_checkpoint_enabled() -> bool:
+    """..."""
+
     if _green_checkpoints_enabled:
         library = current_green_library(failsafe=True)
 
@@ -173,6 +175,8 @@ def green_checkpoint_enabled() -> bool:
 
 
 def async_checkpoint_enabled() -> bool:
+    """..."""
+
     if _async_checkpoints_enabled:
         library = current_async_library(failsafe=True)
 
@@ -497,6 +501,8 @@ def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @external
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_checkpoints(wrapped=MISSING, /):
+    """..."""
+
     if wrapped is MISSING:
         return _CheckpointsManager()
 
@@ -522,6 +528,8 @@ def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @external
 def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_checkpoints(wrapped=MISSING, /):
+    """..."""
+
     if wrapped is MISSING:
         return _NoCheckpointsManager()
 
@@ -543,6 +551,8 @@ async def _trio_checkpoint() -> None:
 
 
 def green_checkpoint(*, force: bool = False) -> None:
+    """..."""
+
     if _green_checkpoints_enabled or force:
         library = current_green_library(failsafe=True)
 
@@ -579,6 +589,8 @@ async def checkpoint(*, force: bool = False) -> None:
 
 
 async def async_checkpoint(*, force: bool = False) -> None:
+    """..."""
+
     if _async_checkpoints_enabled or force:
         library = current_async_library(failsafe=True)
 
@@ -629,10 +641,12 @@ async def _trio_checkpoint_if_cancelled() -> None:
 
 
 def green_checkpoint_if_cancelled(*, force: bool = False) -> None:
-    pass
+    """..."""
 
 
 async def async_checkpoint_if_cancelled(*, force: bool = False) -> None:
+    """..."""
+
     if _async_checkpoints_enabled or force:
         library = current_async_library(failsafe=True)
 

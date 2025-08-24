@@ -46,23 +46,42 @@ _USE_DELATTR: Final[bool] = (
 
 
 class Event(Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def __bool__(self, /) -> bool: ...
-    def set(self, /) -> bool: ...
-    def is_set(self, /) -> bool: ...
-    def cancelled(self, /) -> bool: ...
+    def __bool__(self, /) -> bool:
+        """..."""
+
+    def set(self, /) -> bool:
+        """..."""
+
+    def is_set(self, /) -> bool:
+        """..."""
+
+    def cancelled(self, /) -> bool:
+        """..."""
+
     @property
-    def shield(self, /) -> bool: ...
+    def shield(self, /) -> bool:
+        """..."""
+
     @shield.setter
-    def shield(self, /, value: bool) -> None: ...
+    def shield(self, /, value: bool) -> None:
+        """..."""
+
     @property
-    def force(self, /) -> bool: ...
+    def force(self, /) -> bool:
+        """..."""
+
     @force.setter
-    def force(self, /, value: bool) -> None: ...
+    def force(self, /, value: bool) -> None:
+        """..."""
 
 
 class GreenEvent(ABC, Event):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
@@ -79,46 +98,66 @@ class GreenEvent(ABC, Event):
 
     @abstractmethod
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def __bool__(self, /) -> bool:
+        """..."""
+
         return self.is_set()
 
     @abstractmethod
     def set(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def is_set(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def cancelled(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @property
     @abstractmethod
     def shield(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @shield.setter
     @abstractmethod
     def shield(self, /, value: bool) -> None:
+        """..."""
+
         raise NotImplementedError
 
     @property
     @abstractmethod
     def force(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @force.setter
     @abstractmethod
     def force(self, /, value: bool) -> None:
+        """..."""
+
         raise NotImplementedError
 
 
 class AsyncEvent(ABC, Event):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
@@ -135,47 +174,67 @@ class AsyncEvent(ABC, Event):
 
     @abstractmethod
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def __bool__(self, /) -> bool:
+        """..."""
+
         return self.is_set()
 
     @abstractmethod
     def set(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def is_set(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @abstractmethod
     def cancelled(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @property
     @abstractmethod
     def shield(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @shield.setter
     @abstractmethod
     def shield(self, /, value: bool) -> None:
+        """..."""
+
         raise NotImplementedError
 
     @property
     @abstractmethod
     def force(self, /) -> bool:
+        """..."""
+
         raise NotImplementedError
 
     @force.setter
     @abstractmethod
     def force(self, /, value: bool) -> None:
+        """..."""
+
         raise NotImplementedError
 
 
 @final
 class SetEvent(GreenEvent, AsyncEvent):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, /) -> SetEvent:
@@ -243,6 +302,8 @@ class SetEvent(GreenEvent, AsyncEvent):
 
 @final
 class DummyEvent(GreenEvent, AsyncEvent):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, /) -> DummyEvent:
@@ -310,6 +371,8 @@ class DummyEvent(GreenEvent, AsyncEvent):
 
 @final
 class CancelledEvent(GreenEvent, AsyncEvent):
+    """..."""
+
     __slots__ = ()
 
     def __new__(cls, /) -> CancelledEvent:
@@ -596,6 +659,8 @@ def create_green_event(
     shield: bool = False,
     force: bool = False,
 ) -> GreenEvent:
+    """..."""
+
     return _GreenEventImpl(shield, force)
 
 
@@ -604,4 +669,6 @@ def create_async_event(
     shield: bool = False,
     force: bool = False,
 ) -> AsyncEvent:
+    """..."""
+
     return _AsyncEventImpl(shield, force)

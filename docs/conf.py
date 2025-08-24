@@ -68,3 +68,12 @@ html_context = {
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
+
+
+def enable_api_index(app, docname, source):
+    if docname == "api":
+        source[0] = source[0].replace(":no-index:", "")
+
+
+def setup(app):
+    app.connect("source-read", enable_api_index)

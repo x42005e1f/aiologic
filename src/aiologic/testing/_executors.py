@@ -1186,6 +1186,8 @@ def create_executor(
     backend_options: dict[str, Any] | None = None,
 ) -> TaskExecutor: ...
 def create_executor(library=DEFAULT, backend=DEFAULT, backend_options=None):
+    """..."""
+
     if backend is DEFAULT:
         if library == "anyio":
             backend = "asyncio"
@@ -1232,6 +1234,8 @@ def create_executor(library=DEFAULT, backend=DEFAULT, backend_options=None):
 
 
 def current_executor(*, failsafe: bool = False) -> TaskExecutor:
+    """..."""
+
     executor = _executor_tlocal.executor
 
     if executor is None and not failsafe:

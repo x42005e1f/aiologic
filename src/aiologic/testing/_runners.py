@@ -68,6 +68,8 @@ def run(
     backend=DEFAULT,
     backend_options=None,
 ):
+    """..."""
+
     if library is DEFAULT:
         if backend is DEFAULT:
             if iscoroutinefunction(func):

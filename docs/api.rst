@@ -80,3 +80,332 @@ Resource guards
 .. autoclass:: aiologic.ResourceGuard
 .. autoexception:: aiologic.BusyResourceError
   :no-inherited-members:
+
+Low-level primitives
+--------------------
+
+Waiters (low-level)
++++++++++++++++++++
+
+.. autoclass:: aiologic.lowlevel.Waiter
+.. autoclass:: aiologic.lowlevel.AsyncWaiter
+.. autoclass:: aiologic.lowlevel.GreenWaiter
+.. autofunction:: aiologic.lowlevel.create_async_waiter
+.. autofunction:: aiologic.lowlevel.create_green_waiter
+
+Events (low-level)
+++++++++++++++++++
+
+.. autoclass:: aiologic.lowlevel.Event
+.. autoclass:: aiologic.lowlevel.AsyncEvent
+.. autoclass:: aiologic.lowlevel.GreenEvent
+.. autoclass:: aiologic.lowlevel.SetEvent
+  :no-inherited-members:
+.. autoclass:: aiologic.lowlevel.DummyEvent
+  :no-inherited-members:
+.. autoclass:: aiologic.lowlevel.CancelledEvent
+  :no-inherited-members:
+
+.. aiologic.lowlevel.SET_EVENT-start-marker
+.. data:: aiologic.lowlevel.SET_EVENT
+  :type: SetEvent
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.SET_EVENT-end-marker
+
+.. aiologic.lowlevel.DUMMY_EVENT-start-marker
+.. data:: aiologic.lowlevel.DUMMY_EVENT
+  :type: DummyEvent
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.DUMMY_EVENT-end-marker
+
+.. aiologic.lowlevel.CANCELLED_EVENT-start-marker
+.. data:: aiologic.lowlevel.CANCELLED_EVENT
+  :type: CancelledEvent
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.CANCELLED_EVENT-end-marker
+
+.. autofunction:: aiologic.lowlevel.create_async_event
+.. autofunction:: aiologic.lowlevel.create_green_event
+
+Testing framework
+-----------------
+
+Constants
++++++++++
+
+.. aiologic.testing.ASYNC_PAIRS-start-marker
+.. data:: aiologic.testing.ASYNC_PAIRS
+  :type: tuple[tuple[str, str], ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.ASYNC_PAIRS-end-marker
+
+.. aiologic.testing.GREEN_PAIRS-start-marker
+.. data:: aiologic.testing.GREEN_PAIRS
+  :type: tuple[tuple[str, str], ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.GREEN_PAIRS-end-marker
+
+.. aiologic.testing.ASYNC_LIBRARIES-start-marker
+.. data:: aiologic.testing.ASYNC_LIBRARIES
+  :type: tuple[str, ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.ASYNC_LIBRARIES-end-marker
+
+.. aiologic.testing.GREEN_LIBRARIES-start-marker
+.. data:: aiologic.testing.GREEN_LIBRARIES
+  :type: tuple[str, ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.GREEN_LIBRARIES-end-marker
+
+.. aiologic.testing.ASYNC_BACKENDS-start-marker
+.. data:: aiologic.testing.ASYNC_BACKENDS
+  :type: tuple[str, ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.ASYNC_BACKENDS-end-marker
+
+.. aiologic.testing.GREEN_BACKENDS-start-marker
+.. data:: aiologic.testing.GREEN_BACKENDS
+  :type: tuple[str, ...]
+  :no-index:
+
+  ...
+.. aiologic.testing.GREEN_BACKENDS-end-marker
+
+Executors
++++++++++
+
+..
+  .. autoclass:: aiologic.testing.TaskExecutor
+.. autofunction:: aiologic.testing.create_executor
+.. autofunction:: aiologic.testing.current_executor
+
+Runners
++++++++
+
+.. autofunction:: aiologic.testing.run
+
+Results
++++++++
+
+.. autoclass:: aiologic.testing.Result
+.. autoclass:: aiologic.testing.FalseResult
+  :no-inherited-members:
+.. autoclass:: aiologic.testing.TrueResult
+  :no-inherited-members:
+
+.. aiologic.testing.FALSE_RESULT-start-marker
+.. data:: aiologic.testing.FALSE_RESULT
+  :type: FalseResult
+  :no-index:
+
+  ...
+.. aiologic.testing.FALSE_RESULT-end-marker
+
+.. aiologic.testing.TRUE_RESULT-start-marker
+.. data:: aiologic.testing.TRUE_RESULT
+  :type: TrueResult
+  :no-index:
+
+  ...
+.. aiologic.testing.TRUE_RESULT-end-marker
+
+Tasks
++++++
+
+.. autoclass:: aiologic.testing.Task
+.. autoclass:: aiologic.testing.TaskGroup
+.. autofunction:: aiologic.testing.create_task
+.. autofunction:: aiologic.testing.create_task_group
+.. autoexception:: aiologic.testing.TaskCancelled
+  :no-inherited-members:
+
+Cancellation and timeouts
++++++++++++++++++++++++++
+
+.. autofunction:: aiologic.testing.timeout_after
+
+Checkpoints
++++++++++++
+
+.. autofunction:: aiologic.testing.assert_checkpoints
+.. autofunction:: aiologic.testing.assert_no_checkpoints
+
+Exceptions
+++++++++++
+
+.. autofunction:: aiologic.testing.get_cancelled_exc_class
+.. autofunction:: aiologic.testing.get_timeout_exc_class
+
+Advanced topics
+---------------
+
+Libraries
++++++++++
+
+.. autofunction:: aiologic.lowlevel.current_async_library
+.. autofunction:: aiologic.lowlevel.current_green_library
+
+.. aiologic.lowlevel.current_async_library_tlocal-start-marker
+.. py:data:: aiologic.lowlevel.current_async_library_tlocal
+  :type: threading.local
+  :no-index:
+
+  Thread-local data to control the return value of
+  :func:`aiologic.lowlevel.current_async_library`.
+
+  .. py:attribute:: aiologic.lowlevel.current_async_library_tlocal.name
+    :type: str | None
+    :value: None
+    :no-index:
+
+    Unless set to a non-:data:`None` object, the function detects the current
+    async library with its own algorithms. Otherwise the function returns
+    exactly the set object.
+
+  .. rubric:: Example
+
+  .. code:: python
+
+    library = aiologic.lowlevel.current_async_library_tlocal.name
+
+    aiologic.lowlevel.current_async_library_tlocal.name = "someio"
+
+    try:
+        ...  # aiologic.lowlevel.current_async_library() == "someio"
+    finally:
+        aiologic.lowlevel.current_async_library_tlocal.name = library
+.. aiologic.lowlevel.current_async_library_tlocal-end-marker
+
+.. aiologic.lowlevel.current_green_library_tlocal-start-marker
+.. py:data:: aiologic.lowlevel.current_green_library_tlocal
+  :type: threading.local
+  :no-index:
+
+  Thread-local data to control the return value of
+  :func:`aiologic.lowlevel.current_green_library`.
+
+  .. py:attribute:: aiologic.lowlevel.current_green_library_tlocal.name
+    :type: str | None
+    :value: None
+    :no-index:
+
+    Unless set to a non-:data:`None` object, the function detects the current
+    green library with its own algorithms. Otherwise the function returns
+    exactly the set object.
+
+  .. rubric:: Example
+
+  .. code:: python
+
+    library = aiologic.lowlevel.current_green_library_tlocal.name
+
+    aiologic.lowlevel.current_green_library_tlocal.name = "somelet"
+
+    try:
+        ...  # aiologic.lowlevel.current_green_library() == "somelet"
+    finally:
+        aiologic.lowlevel.current_green_library_tlocal.name = library
+.. aiologic.lowlevel.current_green_library_tlocal-end-marker
+
+.. aiologic.lowlevel.AsyncLibraryNotFoundError-start-marker
+.. py:exception:: aiologic.lowlevel.AsyncLibraryNotFoundError
+  :no-index:
+
+  Bases: :exc:`RuntimeError`
+
+  Exception raised by the :func:`aiologic.lowlevel.current_async_library`
+  function if the current async library was not recognized.
+.. aiologic.lowlevel.AsyncLibraryNotFoundError-end-marker
+
+.. aiologic.lowlevel.GreenLibraryNotFoundError-start-marker
+.. py:exception:: aiologic.lowlevel.GreenLibraryNotFoundError
+  :no-index:
+
+  Bases: :exc:`RuntimeError`
+
+  Exception raised by the :func:`aiologic.lowlevel.current_green_library`
+  function if the current green library was not recognized.
+.. aiologic.lowlevel.GreenLibraryNotFoundError-end-marker
+
+Execution units
++++++++++++++++
+
+.. aiologic.lowlevel.current_thread-start-marker
+.. py:function:: aiologic.lowlevel.current_thread() -> threading.Thread
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.current_thread-end-marker
+
+.. aiologic.lowlevel.current_thread_ident-start-marker
+.. py:function:: aiologic.lowlevel.current_thread_ident() -> int
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.current_thread_ident-end-marker
+
+.. autofunction:: aiologic.lowlevel.current_async_token
+.. autofunction:: aiologic.lowlevel.current_green_token
+.. autofunction:: aiologic.lowlevel.current_async_token_ident
+.. autofunction:: aiologic.lowlevel.current_green_token_ident
+.. autofunction:: aiologic.lowlevel.current_async_task
+.. autofunction:: aiologic.lowlevel.current_green_task
+.. autofunction:: aiologic.lowlevel.current_async_task_ident
+.. autofunction:: aiologic.lowlevel.current_green_task_ident
+
+Cancellation and timeouts
++++++++++++++++++++++++++
+
+.. autofunction:: aiologic.lowlevel.shield
+
+Checkpoints and fairness
+++++++++++++++++++++++++
+
+.. autofunction:: aiologic.lowlevel.async_checkpoint
+.. autofunction:: aiologic.lowlevel.green_checkpoint
+.. autofunction:: aiologic.lowlevel.async_checkpoint_if_cancelled
+.. autofunction:: aiologic.lowlevel.green_checkpoint_if_cancelled
+.. autofunction:: aiologic.lowlevel.async_checkpoint_enabled
+.. autofunction:: aiologic.lowlevel.green_checkpoint_enabled
+.. autofunction:: aiologic.lowlevel.enable_checkpoints
+.. autofunction:: aiologic.lowlevel.disable_checkpoints
+
+Markers
+-------
+
+.. autoclass:: aiologic.lowlevel.MissingType
+  :no-inherited-members:
+.. autoclass:: aiologic.lowlevel.DefaultType
+  :no-inherited-members:
+
+.. aiologic.lowlevel.MISSING-start-marker
+.. data:: aiologic.lowlevel.MISSING
+  :type: MissingType
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.MISSING-end-marker
+
+.. aiologic.lowlevel.DEFAULT-start-marker
+.. data:: aiologic.lowlevel.DEFAULT
+  :type: DefaultType
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.DEFAULT-end-marker

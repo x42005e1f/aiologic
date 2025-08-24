@@ -20,31 +20,58 @@ if TYPE_CHECKING:
 
 
 class Waiter(Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def wake(self, /) -> None: ...
+    def wake(self, /) -> None:
+        """..."""
 
 
 class GreenWaiter(Waiter, Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def __init__(self, /, *, shield: bool = False) -> None: ...
-    def wait(self, /, timeout: float | None = None) -> bool: ...
+    def __init__(self, /, *, shield: bool = False) -> None:
+        """..."""
+
+    def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+    def wake(self, /) -> None:
+        """..."""
+
     @property
-    def shield(self, /) -> bool: ...
+    def shield(self, /) -> bool:
+        """..."""
+
     @shield.setter
-    def shield(self, /, value: bool) -> None: ...
+    def shield(self, /, value: bool) -> None:
+        """..."""
 
 
 class AsyncWaiter(Waiter, Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def __init__(self, /, *, shield: bool = False) -> None: ...
-    def __await__(self, /) -> Generator[Any, Any, bool]: ...
+    def __init__(self, /, *, shield: bool = False) -> None:
+        """..."""
+
+    def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
+    def wake(self, /) -> None:
+        """..."""
+
     @property
-    def shield(self, /) -> bool: ...
+    def shield(self, /) -> bool:
+        """..."""
+
     @shield.setter
-    def shield(self, /, value: bool) -> None: ...
+    def shield(self, /, value: bool) -> None:
+        """..."""
 
 
 @once
@@ -681,6 +708,8 @@ def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
 
 
 def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -697,6 +726,8 @@ def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
 
 
 def create_async_waiter(*, shield: bool = False) -> AsyncWaiter:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":

@@ -26,6 +26,8 @@ class __DefaultMeta(enum.EnumMeta):
 
 @final
 class MissingType(enum.Enum, metaclass=__MissingMeta):
+    """..."""
+
     __slots__ = ()
 
     MISSING = "MISSING"
@@ -59,6 +61,8 @@ class MissingType(enum.Enum, metaclass=__MissingMeta):
 
 @final
 class DefaultType(enum.Enum, metaclass=__DefaultMeta):
+    """..."""
+
     __slots__ = ()
 
     DEFAULT = "DEFAULT"
