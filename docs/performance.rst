@@ -195,7 +195,7 @@ For :math:`n=3`:
 
 With each new thread, the required number of context switches to start the next
 one increases. We see two triangles (:math:`1+1+2+2+3+3+…+n+n`
-:math:`=2(1+2+3+…+n)` context switches until the end), which becomes one
+:math:`=2(1+2+3+…+n)` context switches until the end), which become one
 *square* when the constants is discarded (:math:`2(1+2+3+…+n)+1`
 :math:`=2\frac{n(1+n)}{2}+1` :math:`=n(1+n)+1` :math:`⇒n(n)` :math:`=n^2`) -
 that is where the quadratic `time complexity <https://en.wikipedia.org/wiki/
