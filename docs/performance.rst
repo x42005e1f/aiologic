@@ -27,9 +27,10 @@ Meet the square
 +++++++++++++++
 
 Suppose we want to start :math:`n` threads to perform some long work. Whether
-it is for parallel computing with NumPy arrays, for network operations, or for
-simulating some game processes - it does not matter. Here is an example that
-allows us to estimate the time spent on performing a full start of all threads:
+it is for parallel computing with `NumPy <https://numpy.org/>`__ arrays, for
+network operations, or for simulating some game processes - it does not matter.
+Here is an example that allows us to estimate the time spent on performing a
+full start of all threads:
 
 .. code:: python
 
@@ -207,5 +208,177 @@ From this point on, "square" and :math:`O(n^2)` are synonymous.
 
 Squares, squares everywhere
 +++++++++++++++++++++++++++
+
+Suppose we use mutual exclusion to provide exclusive access to a shared state.
+We have :math:`n` threads that first synchronize via a lock, aka a mutex, and
+then do some work until each thread gains access to the shared state. And by
+some coincidence, each thread (except the first one) waited on the lock.
+
+.. code:: python
+
+    #!/usr/bin/env python3
+
+    import sys
+    import threading
+    import time
+
+
+    def main():
+        n = int(sys.argv[1])  # the number of threads
+        count = []  # as a thread-safe counter
+        start_time = None
+        lock = threading.Lock()
+
+        def work():
+            nonlocal start_time
+
+            count.append(None)  # increment
+
+            with lock:
+                if start_time is None:  # the first thread
+                    while len(count) < n:  # wait for the other threads
+                        time.sleep(0)  # (via polling)
+
+                    start_time = time.perf_counter()
+
+            count.pop()  # decrement
+
+            while count:  # wait for the other threads
+                time.sleep(0)  # do some work
+
+        threads = [threading.Thread(target=work) for _ in range(n)]
+
+        for thread in threads:  # start all threads
+            thread.start()
+
+        for thread in threads:  # join all threads
+            thread.join()
+
+        print(time.perf_counter() - start_time)  # elapsed time in seconds
+
+
+    if __name__ == "__main__":
+        sys.exit(main())
+
+.. tab:: CPython
+
+  .. table::
+    :class: widetable
+
+    +-------------+------------------------+--------------------+
+    | n (threads) | elapsed time (seconds) |       factor       |
+    +=============+========================+====================+
+    |     100     |   00.040662774990778   | 01.000000000000000 |
+    +-------------+------------------------+--------------------+
+    |     200     |   00.163145697966684   | 04.012163409990640 |
+    +-------------+------------------------+--------------------+
+    |     300     |   00.384463688998949   | 09.454929947258597 |
+    +-------------+------------------------+--------------------+
+    |     400     |   00.717438969993964   | 17.643630326672640 |
+    +-------------+------------------------+--------------------+
+    |     500     |   01.193486175034195   | 29.350829482367010 |
+    +-------------+------------------------+--------------------+
+    |     600     |   01.716789263999090   | 42.220169783995960 |
+    +-------------+------------------------+--------------------+
+    |     700     |   02.327792735013645   | 57.246283253947780 |
+    +-------------+------------------------+--------------------+
+    |     800     |   02.976299398986157   | 73.194694647896710 |
+    +-------------+------------------------+--------------------+
+    |     900     |   03.700176201004069   | 90.996647470400200 |
+    +-------------+------------------------+--------------------+
+
+.. tab:: PyPy
+
+  .. table::
+    :class: widetable
+
+    +-------------+------------------------+--------------------+
+    | n (threads) | elapsed time (seconds) |       factor       |
+    +=============+========================+====================+
+    |     100     |   00.238932970969472   | 01.000000000000000 |
+    +-------------+------------------------+--------------------+
+    |     200     |   00.900706941029057   | 03.769705526091408 |
+    +-------------+------------------------+--------------------+
+    |     300     |   02.093295602011494   | 08.761016085465032 |
+    +-------------+------------------------+--------------------+
+    |     400     |   03.856209805991966   | 16.139295428108436 |
+    +-------------+------------------------+--------------------+
+    |     500     |   06.133253426000010   | 25.669347353420060 |
+    +-------------+------------------------+--------------------+
+    |     600     |   08.936387986002956   | 37.401234119106725 |
+    +-------------+------------------------+--------------------+
+    |     700     |   12.695628314977512   | 53.134685696431590 |
+    +-------------+------------------------+--------------------+
+    |     800     |   16.309672918985598   | 68.260453351452480 |
+    +-------------+------------------------+--------------------+
+    |     900     |   20.873524700989947   | 87.361424487777820 |
+    +-------------+------------------------+--------------------+
+
+.. note::
+
+    The code above does not guarantee that all threads will actually be in the
+    lock's waiting queue. In fact, a thread may do a context switch after the
+    increment but before attempting to acquire the lock. However, it is
+    extremely unlikely that it will not have time to join the waiting queue, so
+    this fact does not affect the results.
+
+    It is possible to provide such a guarantee using one of the aiologic
+    primitives and their :attr:`~aiologic.Lock.waiting` property, but this
+    approach would not inspire the same trust as using standard primitives,
+    would it?
+
+Well, :math:`O(n^2)` again! And this is quite expected.
+
+On each pass of the scheduler, one :meth:`~threading.Lock.release()` call is
+made. This means that on the next pass, the number of running threads will be
+increased by one. The remaining threads cannot wake up until future passes, as
+they are still queued. And at the same time, the operating system still
+allocates CPU resources to the running threads.
+
+* ...
+* ``+thread #1`` (running one thread)
+* ``+thread #2 → thread #1`` (running two threads)
+* ``+thread #3 → thread #2 → thread #1`` (running three threads)
+* ...
+* ``±thread #(N) → -thread #(N-1) → ... → -thread #1`` (stopping all threads)
+* ...
+
+In particular, for :math:`n=1`:
+
+* ...
+* ``±thread #1`` (stopping all threads)
+* ...
+
+For :math:`n=3`:
+
+* ...
+* ``+thread #1`` (running one thread)
+* ``+thread #2 → thread #1`` (running two threads)
+* ``±thread #3 → -thread #2 → -thread #1`` (stopping all threads)
+* ...
+
+This is a very obvious triangle, which becomes half of one square, and
+therefore gives :math:`O(n^2)`: :math:`1+2+3+…+n` :math:`=\frac{n(1+n)}{2}`
+:math:`⇒n(n)` :math:`=n^2`.
+
+Okay, we have examined two simple but important examples. It will now become
+clear why.
+
+In the first case, we addressed the topic of waking up multiple threads.
+Despite its simplicity, its interpretation also applies to any other similar
+case, such as ``semaphore.release(n)``, ``condition.notify_all()``, or even
+just ``event.set()``! Waiting for one queue by multiple threads also suffers
+from the squares problem.
+
+In the second case, we addressed the topic of mutual exclusion. You know how
+ubiquitous it is; you can encounter it in almost any multithreaded application.
+In fact, all standard threading primitives are implemented on top of
+:class:`threading.Lock`! The world you know is poisoned by a dark army of
+squares...
+
+But how close are we to the truth?
+
+The square is (not) a lie
++++++++++++++++++++++++++
 
 Check back later!
