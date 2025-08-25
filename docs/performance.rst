@@ -366,9 +366,10 @@ clear why.
 
 In the first case, we addressed the topic of waking up multiple threads.
 Despite its simplicity, its interpretation also applies to any other similar
-case, such as ``semaphore.release(n)``, ``condition.notify_all()``, or even
-just ``event.set()``! Waiting for one queue by multiple threads also suffers
-from the squares problem.
+case, such as multiple :meth:`condition.notify() <threading.Condition.notify>`,
+:meth:`semaphore.release() <threading.Semaphore.release>`, or even just
+:meth:`lock.release() <threading.Lock.release>`! Waiting for one queue by
+multiple threads also suffers from the squares problem.
 
 In the second case, we addressed the topic of mutual exclusion. You know how
 ubiquitous it is; you can encounter it in almost any multithreaded application.
