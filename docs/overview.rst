@@ -237,9 +237,78 @@ And the exception is the wait methods:
     www.gevent.org/>`__, they behave like "sync" methods!
 
 The aiologic library aims to be the best locking library as far as it can be.
-Harder than just thread-safe `asyncio primitives <https://docs.python.org/3/
-library/asyncio-sync.html#asyncio-sync>`__. Better than `AnyIO primitives
-<https://anyio.readthedocs.io/en/stable/synchronization.html>`__. Faster than
+*Harder* than just thread-safe `asyncio primitives <https://docs.python.org/3/
+library/asyncio-sync.html#asyncio-sync>`__. *Better* than `AnyIO primitives
+<https://anyio.readthedocs.io/en/stable/synchronization.html>`__. *Faster* than
 `Curio's universal synchronization <https://curio.readthedocs.io/en/latest/
-reference.html#universal-synchronizaton>`__. And stronger than separate
+reference.html#universal-synchronizaton>`__. *Stronger* than separate
 solutions.
+
+Features
+--------
+
+There are many features common to the entire library. Below is a brief
+description of just a few of them. If you want to know more, please read the
+rest of the documentation.
+
+Versatility
++++++++++++
+
+Every primitive can be used as:
+
+1. **Single-library:** you can use it with a single library, like a standard
+   primitive or native to a third-party library (but better?).
+2. **Multi-library/single-threaded:** you can use it with multiple libraries
+   combined in some tricky way in a single thread (such as `the asyncio hub in
+   eventlet <https://eventlet.readthedocs.io/en/stable/asyncio/
+   migration.html>`__, `asyncio-gevent <https://github.com/gfmio/
+   asyncio-gevent>`__, or `trio-asyncio <https://github.com/python-trio/
+   trio-asyncio>`__).
+3. **Multi-library/multi-threaded:** you can use it with multiple libraries
+   running in different threads (even with multiple event loops!).
+
+And also every primitive is:
+
+1. **Async-aware:** it is designed to support asynchronous libraries (there is
+   async/await!).
+2. **Thread-aware:** it is designed to support threads (regardless of the
+   interface used!).
+3. **Greenlet-aware:** it is designed to support greenlet-based libraries (both
+   with and without monkey patching!).
+
+But the versatility does not end there.
+
+Safety
+++++++
+
+Unless explicitly stated otherwise, *everything* in aiologic is:
+
+1. **Thread-safe:** you can freely call the same functions and methods in
+   different threads (even with `free-threading <https://docs.python.org/3/
+   howto/free-threading-python.html>`__!).
+2. **Coroutine-safe:** you can freely call the same functions and methods in
+   different tasks within the same thread (even with `greenlets <https://
+   greenlet.readthedocs.io/en/stable/>`__!).
+3. **Cancellation-safe:** you can freely cancel any blocking call at any point
+   in time without the risk of data loss or other unpleasant things (but this
+   does not mean that you will not lose your place in the waiting queue — a
+   note for those who came from `Tokio <https://tokio.rs/>`__).
+
+Neither standard nor native primitives have all three guarantees.
+
+.. note::
+
+    There is also *async-signal-safety*, also known as just *reentrancy*.
+    Functions with this property can be safely called from inside a signal
+    handler or destructor (which can be called after any bytecode instruction).
+
+    You may find that :meth:`queue.SimpleQueue.put` is reentrant, but only when
+    implemented at the C level, and only that one. No primitive from the
+    :mod:`threading` module provides reentrant functions (at least those
+    implemented at the Python level).
+
+    Yes, as you may have guessed, aiologic has a different situation. Due to
+    its design (lockless, lock-free, thread-safe, etc.) almost all of its
+    functions are potentially reentrant (which makes aiologic primitives even
+    more unique). But there are some caveats that are beyond the scope of this
+    overview.
