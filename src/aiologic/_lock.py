@@ -343,11 +343,11 @@ class Lock(PLock):
         )
 
         if self._acquire_nowait():
-            self._owner = task
+            event.set()
 
             self._waiters.remove(token)
 
-            event.set()
+            self._owner = task
 
         success = False
 
@@ -405,11 +405,11 @@ class Lock(PLock):
         )
 
         if self._acquire_nowait():
-            self._owner = task
+            event.set()
 
             self._waiters.remove(token)
 
-            event.set()
+            self._owner = task
 
         success = False
 
@@ -768,8 +768,8 @@ class RLock(Lock):
             return True
 
         if self._acquire_nowait():
-            self._owner = task
             self._count = count
+            self._owner = task
 
             if blocking:
                 try:
@@ -792,12 +792,12 @@ class RLock(Lock):
         )
 
         if self._acquire_nowait():
-            self._owner = task
-            self._count = count
+            event.set()
 
             self._waiters.remove(token)
 
-            event.set()
+            self._count = count
+            self._owner = task
 
         success = False
 
@@ -840,8 +840,8 @@ class RLock(Lock):
             return True
 
         if self._acquire_nowait():
-            self._owner = task
             self._count = count
+            self._owner = task
 
             if blocking:
                 try:
@@ -864,12 +864,12 @@ class RLock(Lock):
         )
 
         if self._acquire_nowait():
-            self._owner = task
-            self._count = count
+            event.set()
 
             self._waiters.remove(token)
 
-            event.set()
+            self._count = count
+            self._owner = task
 
         success = False
 
@@ -1134,13 +1134,19 @@ class RLock(Lock):
         or :meth:`green_acquire` call (e.g., due to a timeout).
         """
 
-        return self._count
+        if self._owner is not None:
+            return self._count
+        else:
+            return 0
 
     @property
     def level(self, /) -> int:
         warnings.warn("Use 'count' instead", DeprecationWarning, stacklevel=2)
 
-        return self._count
+        if self._owner is not None:
+            return self._count
+        else:
+            return 0
 
     @property
     @copies(Lock.waiting.fget)

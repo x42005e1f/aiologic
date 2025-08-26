@@ -438,6 +438,11 @@ Commit messages are consistent with
     with `gevent` (now the same as from `threading.main_thread()`).
   + green thread objects for dummy threads whose identifier matched the running
     greenlets (now raises an exception according to the new behavior).
+- Using `aiologic.RLock` from inside a signal handler or destructor could
+  result in a false release if the execution occurred inside an `*_acquire()`
+  call after setting the `owner` property but before setting the `count`
+  property. The order of operations is now inverted. This makes
+  `aiologic.RLock` more signal-safe than `threading._PyRLock`.
 - Using checkpoints for `threading` could cause hub spawning in worker threads
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been
