@@ -177,7 +177,7 @@ class SimpleQueue(Generic[_T]):
         """
         Returns the number of items in the queue.
 
-        Used by the :func:`len` function.
+        Used by the built-in function :func:`len`.
 
         Example:
             >>> items = SimpleQueue()  # queue has no items
@@ -368,7 +368,7 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         """
         Returns the number of items in the queue.
 
-        Used by the :func:`len` function.
+        Used by the built-in function :func:`len`.
 
         Example:
             >>> items = SimpleLifoQueue()  # queue has no items
@@ -616,7 +616,7 @@ class Queue(Generic[_T]):
         """
         Returns the number of items in the queue.
 
-        Used by the :func:`len` function.
+        Used by the built-in function :func:`len`.
 
         Example:
             >>> items = Queue()  # queue has no items
@@ -1048,7 +1048,7 @@ class LifoQueue(Queue[_T]):
         """
         Returns the number of items in the queue.
 
-        Used by the :func:`len` function.
+        Used by the built-in function :func:`len`.
 
         Example:
             >>> items = LifoQueue()  # queue has no items
@@ -1241,7 +1241,7 @@ class PriorityQueue(Queue[_RichComparableT]):
         """
         Returns the number of items in the queue.
 
-        Used by the :func:`len` function.
+        Used by the built-in function :func:`len`.
 
         Example:
             >>> items = PriorityQueue()  # queue has no items
