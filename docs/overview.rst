@@ -296,19 +296,45 @@ Unless explicitly stated otherwise, *everything* in aiologic is:
 
 Neither standard nor native primitives have all three guarantees.
 
-.. note::
+Reentrancy
+++++++++++
 
-    There is also *async-signal-safety*, also known as just *reentrancy*.
-    Functions with this property can be safely called from inside a signal
-    handler or destructor (which can be called after any bytecode instruction).
+Let us give the following definitions:
 
-    You may find that :meth:`queue.SimpleQueue.put` is reentrant, but only when
-    implemented at the C level, and only that one. No primitive from the
-    :mod:`threading` module provides reentrant functions (at least those
-    implemented at the Python level).
+1. **A reentrant primitive** is a primitive that can be safely reused
+   (reacquired) by the same execution unit after it has already been used
+   (acquired). For example, :class:`threading.Lock` is not reentrant because
+   calling :meth:`acquire() <threading.Lock.acquire>` twice will result in a
+   deadlock, but :class:`threading.RLock` is reentrant.
+2. **A reentrant function**, also known as *an async-signal-safe function*, is
+   a function that can be safely called from inside a signal handler or
+   destructor (which can be called after any bytecode instruction). For
+   example, :meth:`queue.SimpleQueue.put` is reentrant, but only when
+   implemented at the C level, and only that one.
+3. **A signal-safe primitive** is a primitive whose functions are all
+   reentrant. For example, no primitive from the :mod:`threading` module is
+   signal-safe, because attempting to use a primitive while interrupted in any
+   of its methods can lead to a deadlock or broken behavior, even for
+   non-blocking calls, even with :class:`threading.RLock`.
 
-    Yes, as you may have guessed, aiologic has a different situation. Due to
-    its design (lockless, lock-free, thread-safe, etc.) almost all of its
-    functions are potentially reentrant (which makes aiologic primitives even
-    more unique). But there are some caveats that are beyond the scope of this
-    overview.
+Due to its design (lockless, lock-free, thread-safe, etc.), aiologic boasts
+both reentrant and signal-safe primitives. You may find that
+:class:`aiologic.RLock` is a reentrant lock, and
+:class:`aiologic.RCapacityLimiter` is, when compared to standard primitives, a
+reentrant semaphore. And what about signal-safety...
+
+The following primitives work as expected in conditions requiring
+signal-safety:
+
+* Events: all (including low-level)
+* Semaphores: unbounded only (both counting and binary)
+* Queues: simple only (both FIFO and LIFO)
+* Flags (nothing to say)
+* Resource guards (but does this make sense?)
+
+All others may behave unexpectedly (for example, you will not be able to put
+items into a complex queue that is in use, and sometimes you will not even be
+able to reacquire a reentrant capacity limiter or lock), but they still remain
+functional inside signal handlers and destructors. In particular, all
+non-blocking calls remain non-blocking and do not lead to deadlocks or any
+other undesirable things.
