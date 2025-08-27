@@ -927,16 +927,21 @@ class RLock(Lock):
         while True:
             self._releasing = True
 
+            self._count = 0
+
             while waiters:
                 try:
-                    event, self._owner, self._count = waiters.popleft()
+                    event, self._owner, count = waiters.popleft()
                 except IndexError:
                     break
                 else:
+                    self._count = count
+
                     if event.set():
                         return
 
-            self._count = 0
+                    self._count = 0
+
             self._owner = None
 
             self._releasing = False
@@ -1134,19 +1139,18 @@ class RLock(Lock):
         or :meth:`green_acquire` call (e.g., due to a timeout).
         """
 
-        if self._owner is not None:
-            return self._count
-        else:
+        count = self._count
+
+        if self._owner is None:
             return 0
+
+        return count
 
     @property
     def level(self, /) -> int:
         warnings.warn("Use 'count' instead", DeprecationWarning, stacklevel=2)
 
-        if self._owner is not None:
-            return self._count
-        else:
-            return 0
+        return self.count
 
     @property
     @copies(Lock.waiting.fget)
