@@ -341,14 +341,17 @@ class Semaphore:
                 except IndexError:
                     break
                 else:
-                    if event.set():
+                    if remove := event.set():
                         count -= 1
 
                     if _PERFECT_FAIRNESS_ENABLED:
                         try:
-                            waiters.remove(event)
-                        except ValueError:
-                            pass
+                            if remove or waiters[0] is event:
+                                waiters.remove(event)
+                        except ValueError:  # waiters does not contain event
+                            continue
+                        except IndexError:  # waiters is empty
+                            break
 
             if count < 1:
                 break

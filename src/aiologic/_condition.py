@@ -517,6 +517,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                 if time > deadline:
                     break
 
+                remove = True
                 rotate = False
 
                 if predicate is not None:
@@ -530,7 +531,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                         except Exception as exc:
                             token[4] = exc
 
-                            if event.set():
+                            if remove := event.set():
                                 notified += 1
                             else:
                                 LOGGER.exception(
@@ -546,22 +547,30 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                                 rotate = True
 
                 if not rotate:
-                    if event.set():
+                    if remove := event.set():
                         notified += 1
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
                 else:
-                    if rotate:
-                        waiters.append(token)
+                    if not rotate:
+                        continue
 
-                        if event.is_set() or event.cancelled():
-                            try:
+                    waiters.append(token)
+
+                    if event.is_set() or event.cancelled():
+                        try:
+                            if waiters[0] is token:
                                 waiters.remove(token)
-                            except ValueError:
-                                pass
+                        except ValueError:  # waiters does not contain token
+                            continue
+                        except IndexError:  # waiters is empty
+                            break
 
         return notified
 
@@ -1338,6 +1347,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if time > deadline:
                         break
 
+                    remove = True
                     rotate = False
 
                     if predicate is not None:
@@ -1346,7 +1356,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                         except Exception as exc:
                             token[4] = exc
 
-                            if self._lock._park(token):
+                            if remove := self._lock._park(token):
                                 notified += 1
                             else:
                                 LOGGER.exception(
@@ -1362,22 +1372,30 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                                 rotate = True
 
                     if not rotate:
-                        if self._lock._park(token):
+                        if remove := self._lock._park(token):
                             notified += 1
 
                     try:
-                        waiters.remove(token)
-                    except ValueError:
-                        pass
+                        if remove or waiters[0] is token:
+                            waiters.remove(token)
+                    except ValueError:  # token not in waiters
+                        continue
+                    except IndexError:  # waiters is empty
+                        break
                     else:
-                        if rotate:
-                            waiters.append(token)
+                        if not rotate:
+                            continue
 
-                            if event.is_set() or event.cancelled():
-                                try:
+                        waiters.append(token)
+
+                        if event.is_set() or event.cancelled():
+                            try:
+                                if waiters[0] is token:
                                     waiters.remove(token)
-                                except ValueError:
-                                    pass
+                            except ValueError:  # token not in waiters
+                                continue
+                            except IndexError:  # waiters is empty
+                                break
 
             return notified
 

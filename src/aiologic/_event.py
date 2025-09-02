@@ -234,13 +234,16 @@ class Event:
             except IndexError:
                 break
             else:
-                event.set()
+                remove = event.set()
 
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
-                        waiters.remove(event)
-                    except ValueError:
-                        pass
+                        if remove or waiters[0] is event:
+                            waiters.remove(event)
+                    except ValueError:  # waiters does not contain event
+                        continue
+                    except IndexError:  # waiters is empty
+                        break
 
     @property
     def waiting(self, /) -> int:
@@ -465,12 +468,15 @@ class REvent(Event):
 
                 token[3] = deadline
 
-                event.set()
+                remove = event.set()
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
 
     @property
     @copies(Event.waiting.fget)
@@ -756,12 +762,15 @@ class CountdownEvent:
 
                 token[3] = deadline
 
-                event.set()
+                remove = event.set()
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
 
     @property
     def initial_value(self, /) -> int:

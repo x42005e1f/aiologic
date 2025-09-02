@@ -302,13 +302,16 @@ class Latch:
 
                 token[1] = unbroken
 
-                event.set()
+                remove = event.set()
 
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
-                        waiters.remove(token)
-                    except ValueError:
-                        pass
+                        if remove or waiters[0] is token:
+                            waiters.remove(token)
+                    except ValueError:  # waiters does not contain token
+                        continue
+                    except IndexError:  # waiters is empty
+                        break
 
     @property
     def parties(self, /) -> int:
@@ -662,12 +665,15 @@ class Barrier:
                 if marker is not tokens_marker:
                     break
 
-                event.set()
+                remove = event.set()
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
 
     def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
         while tokens:
@@ -692,13 +698,16 @@ class Barrier:
             else:
                 event, _, _ = token
 
-                event.set()
+                remove = event.set()
 
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
-                        waiters.remove(token)
-                    except ValueError:
-                        pass
+                        if remove or waiters[0] is token:
+                            waiters.remove(token)
+                    except ValueError:  # waiters does not contain token
+                        continue
+                    except IndexError:  # waiters is empty
+                        break
 
     def _release(self, /) -> None:
         while True:
@@ -1064,12 +1073,15 @@ class RBarrier(Barrier):
                 if marker is not tokens_marker:
                     break
 
-                event.set()
+                remove = event.set()
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
 
     def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
         while tokens:
@@ -1102,12 +1114,15 @@ class RBarrier(Barrier):
 
                 token[3] = deadline
 
-                event.set()
+                remove = event.set()
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
+                    if remove or waiters[0] is token:
+                        waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
 
     @property
     @copies(Barrier.parties.fget)
