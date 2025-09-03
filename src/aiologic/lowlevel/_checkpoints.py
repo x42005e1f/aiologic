@@ -112,54 +112,63 @@ def _trio_checkpoints_enabled() -> bool:
     return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
 
-_green_checkpoints_enabled: bool = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
-_async_checkpoints_enabled: bool = False
+_green_checkpoints_enabled_by_default: bool = (
+    _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+)
+_async_checkpoints_enabled_by_default: bool = False
+_green_checkpoints_used: list[None] = []
+_async_checkpoints_used: list[None] = []
 
 
 @when_imported("eventlet")
 def _(_):
-    global _green_checkpoints_enabled
+    global _green_checkpoints_enabled_by_default
 
     if _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _green_checkpoints_enabled = True
+        _green_checkpoints_enabled_by_default = True
+        _green_checkpoints_used.clear()
 
 
 @when_imported("gevent")
 def _(_):
-    global _green_checkpoints_enabled
+    global _green_checkpoints_enabled_by_default
 
     if _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _green_checkpoints_enabled = True
+        _green_checkpoints_enabled_by_default = True
+        _green_checkpoints_used.clear()
 
 
 @when_imported("asyncio")
 def _(_):
-    global _async_checkpoints_enabled
+    global _async_checkpoints_enabled_by_default
 
     if _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
+        _async_checkpoints_enabled_by_default = True
+        _async_checkpoints_used.clear()
 
 
 @when_imported("curio")
 def _(_):
-    global _async_checkpoints_enabled
+    global _async_checkpoints_enabled_by_default
 
     if _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
+        _async_checkpoints_enabled_by_default = True
+        _async_checkpoints_used.clear()
 
 
 @when_imported("trio")
 def _(_):
-    global _async_checkpoints_enabled
+    global _async_checkpoints_enabled_by_default
 
     if _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
+        _async_checkpoints_enabled_by_default = True
+        _async_checkpoints_used.clear()
 
 
 def green_checkpoint_enabled() -> bool:
     """..."""
 
-    if _green_checkpoints_enabled:
+    if _green_checkpoints_enabled_by_default or _green_checkpoints_used:
         library = current_green_library(failsafe=True)
 
         if library == "threading":
@@ -177,7 +186,7 @@ def green_checkpoint_enabled() -> bool:
 def async_checkpoint_enabled() -> bool:
     """..."""
 
-    if _async_checkpoints_enabled:
+    if _async_checkpoints_enabled_by_default or _async_checkpoints_used:
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
@@ -227,10 +236,7 @@ def _async_checkpoints_reset(token: Token[tuple[int, bool | None]], /) -> None:
 
 
 def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _green_checkpoints_enabled
-    global _green_checkpoints_reset
-
-    if enabled or _green_checkpoints_enabled:
+    if enabled or _green_checkpoints_enabled_by_default:
 
         @replaces(globals())
         def _threading_checkpoints_enabled():
@@ -268,22 +274,72 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        _green_checkpoints_enabled = True
-
         @replaces(globals())
         def _green_checkpoints_reset(
             token: Token[tuple[int, bool | None]],
             /,
         ) -> None:
             if token is not _green_checkpoints_cvar_default_token:
+                if not _green_checkpoints_enabled_by_default:
+                    ident, enabled = _green_checkpoints_cvar.get()
+
+                    if token.old_value is not token.MISSING:
+                        was_enabled = token.old_value[1]
+
+                        if was_enabled is None:
+                            was_enabled = False
+
+                        if token.old_value[0] != ident:
+                            was_enabled = False
+                    else:
+                        was_enabled = False
+
+                    if was_enabled != enabled:
+                        if enabled:
+                            try:
+                                _green_checkpoints_used.pop()
+                            except IndexError:
+                                pass
+                        else:
+                            _green_checkpoints_used.append(None)
+
+                            if _green_checkpoints_enabled_by_default:
+                                _green_checkpoints_used.clear()
+
                 _green_checkpoints_cvar.reset(token)
 
         @replaces(globals())
         def _green_checkpoints_set(enabled):
-            return _green_checkpoints_cvar.set((
-                current_thread_ident(),
+            token = _green_checkpoints_cvar.set((
+                ident := current_thread_ident(),
                 enabled,
             ))
+
+            if not _green_checkpoints_enabled_by_default:
+                if token.old_value is not token.MISSING:
+                    was_enabled = token.old_value[1]
+
+                    if was_enabled is None:
+                        was_enabled = False
+
+                    if token.old_value[0] != ident:
+                        was_enabled = False
+                else:
+                    was_enabled = False
+
+                if was_enabled != enabled:
+                    if enabled:
+                        _green_checkpoints_used.append(None)
+
+                        if _green_checkpoints_enabled_by_default:
+                            _green_checkpoints_used.clear()
+                    else:
+                        try:
+                            _green_checkpoints_used.pop()
+                        except IndexError:
+                            pass
+
+            return token
 
         return _green_checkpoints_set(enabled)
 
@@ -291,10 +347,7 @@ def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
 
 def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _async_checkpoints_enabled
-    global _async_checkpoints_reset
-
-    if enabled or _async_checkpoints_enabled:
+    if enabled or _async_checkpoints_enabled_by_default:
 
         @replaces(globals())
         def _asyncio_checkpoints_enabled():
@@ -332,22 +385,72 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
             return enabled
 
-        _async_checkpoints_enabled = True
-
         @replaces(globals())
         def _async_checkpoints_reset(
             token: Token[tuple[int, bool | None]],
             /,
         ) -> None:
             if token is not _async_checkpoints_cvar_default_token:
+                if not _async_checkpoints_enabled_by_default:
+                    ident, enabled = _async_checkpoints_cvar.get()
+
+                    if token.old_value is not token.MISSING:
+                        was_enabled = token.old_value[1]
+
+                        if was_enabled is None:
+                            was_enabled = False
+
+                        if token.old_value[0] != ident:
+                            was_enabled = False
+                    else:
+                        was_enabled = False
+
+                    if was_enabled != enabled:
+                        if enabled:
+                            try:
+                                _async_checkpoints_used.pop()
+                            except IndexError:
+                                pass
+                        else:
+                            _async_checkpoints_used.append(None)
+
+                            if _async_checkpoints_enabled_by_default:
+                                _async_checkpoints_used.clear()
+
                 _async_checkpoints_cvar.reset(token)
 
         @replaces(globals())
         def _async_checkpoints_set(enabled):
-            return _async_checkpoints_cvar.set((
-                current_thread_ident(),
+            token = _async_checkpoints_cvar.set((
+                ident := current_thread_ident(),
                 enabled,
             ))
+
+            if not _async_checkpoints_enabled_by_default:
+                if token.old_value is not token.MISSING:
+                    was_enabled = token.old_value[1]
+
+                    if was_enabled is None:
+                        was_enabled = False
+
+                    if token.old_value[0] != ident:
+                        was_enabled = False
+                else:
+                    was_enabled = False
+
+                if was_enabled != enabled:
+                    if enabled:
+                        _async_checkpoints_used.append(None)
+
+                        if _async_checkpoints_enabled_by_default:
+                            _async_checkpoints_used.clear()
+                    else:
+                        try:
+                            _async_checkpoints_used.pop()
+                        except IndexError:
+                            pass
+
+            return token
 
         return _async_checkpoints_set(enabled)
 
@@ -553,7 +656,11 @@ async def _trio_checkpoint() -> None:
 def green_checkpoint(*, force: bool = False) -> None:
     """..."""
 
-    if _green_checkpoints_enabled or force:
+    if (
+        force
+        or _green_checkpoints_enabled_by_default
+        or _green_checkpoints_used
+    ):
         library = current_green_library(failsafe=True)
 
         if library == "threading":
@@ -574,7 +681,11 @@ async def checkpoint(*, force: bool = False) -> None:
         stacklevel=2,
     )
 
-    if _async_checkpoints_enabled or force:
+    if (
+        force
+        or _async_checkpoints_enabled_by_default
+        or _async_checkpoints_used
+    ):
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
@@ -591,7 +702,11 @@ async def checkpoint(*, force: bool = False) -> None:
 async def async_checkpoint(*, force: bool = False) -> None:
     """..."""
 
-    if _async_checkpoints_enabled or force:
+    if (
+        force
+        or _async_checkpoints_enabled_by_default
+        or _async_checkpoints_used
+    ):
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
@@ -647,7 +762,11 @@ def green_checkpoint_if_cancelled(*, force: bool = False) -> None:
 async def async_checkpoint_if_cancelled(*, force: bool = False) -> None:
     """..."""
 
-    if _async_checkpoints_enabled or force:
+    if (
+        force
+        or _async_checkpoints_enabled_by_default
+        or _async_checkpoints_used
+    ):
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
