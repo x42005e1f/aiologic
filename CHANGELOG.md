@@ -39,6 +39,13 @@ Commit messages are consistent with
   regardless of whether the wait has been completed or not). And, of course,
   for the same reason, they are even less safe (they require more specific
   conditions for their correct operation).
+- `aiologic.lowlevel.enable_signal_safety` and
+  `aiologic.lowlevel.disable_signal_safety` universal decorators to enable and
+  disable signal-safety in the current thread's context. They support awaitable
+  objects, coroutine functions, and green functions, and can be used directly
+  as context managers.
+- `aiologic.lowlevel.signal_safety_enabled()` to determine if signal-safety is
+  enabled.
 - `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()` as a new way to create low-level
   events.
@@ -121,6 +128,7 @@ Commit messages are consistent with
   result in place.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
+- `AIOLOGIC_SIGNAL_SAFETY` environment variable.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
 
 ### Changed
@@ -140,6 +148,9 @@ Commit messages are consistent with
   implementation flaws, "perfect fairness" can still be useful, so since this
   version `aiologic` provides the `AIOLOGIC_PERFECT_FAIRNESS` environment
   variable to explicitly enable or disable it.
+- Signal-safety is now also explicit and can be configured both via universal
+  decorators and via the `AIOLOGIC_SIGNAL_SAFETY` environment variable
+  (currently only affects low-level waiters).
 - Flags are now a high-level primitive, available as `aiologic.Flag`, with
   `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should

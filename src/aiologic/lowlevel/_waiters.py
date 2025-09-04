@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
 from ._libraries import current_async_library, current_green_library
+from ._safety import signal_safety_enabled
 from ._threads import _once as once
 
 if TYPE_CHECKING:
@@ -198,7 +199,7 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
         def wake(self, /) -> None:
             current_hub = getattr(_threadlocal, "hub", None)
 
-            if current_hub is self.__hub:
+            if current_hub is self.__hub and not signal_safety_enabled():
                 self.__hub.schedule_call_global(0, self.__notify)
             else:
                 self.__hub.schedule_call_threadsafe(0, self.__notify)
@@ -287,7 +288,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
             current_hub = get_hub_if_exists()
 
             try:
-                if current_hub is self.__hub:
+                if current_hub is self.__hub and not signal_safety_enabled():
                     self.__hub.loop.run_callback(self.__notify)
                 else:
                     self.__hub.loop.run_callback_threadsafe(self.__notify)
@@ -361,7 +362,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
         def wake(self, /) -> None:
             current_loop = get_running_loop_if_exists()
 
-            if current_loop is self.__loop:
+            if current_loop is self.__loop and not signal_safety_enabled():
                 self.__notify()
             else:
                 try:
@@ -648,7 +649,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             except RuntimeError:  # no called trio.run()
                 current_token = None
 
-            if current_token is self.__token:
+            if current_token is self.__token and not signal_safety_enabled():
                 self.__notify()
             else:
                 try:

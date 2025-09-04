@@ -312,10 +312,11 @@ Let us give the following definitions:
    example, :meth:`queue.SimpleQueue.put` is reentrant, but only when
    implemented at the C level, and only that one.
 3. **A signal-safe primitive** is a primitive whose functions are all
-   reentrant. For example, no primitive from the :mod:`threading` module is
-   signal-safe, because attempting to use a primitive while interrupted in any
-   of its methods can lead to a deadlock or broken behavior, even for
-   non-blocking calls, even with :class:`threading.RLock`.
+   reentrant. For example, no primitive from the :mod:`threading` module
+   (except :class:`threading.Lock`) is signal-safe, because attempting to use a
+   primitive while interrupted in any of its methods can lead to a deadlock or
+   broken behavior, even for non-blocking calls, even with
+   :class:`threading.RLock`.
 
 Due to its design (lockless, lock-free, thread-safe, etc.), aiologic boasts
 both reentrant and signal-safe primitives. You may find that
@@ -338,3 +339,44 @@ able to reacquire a reentrant capacity limiter or lock), but they still remain
 functional inside signal handlers and destructors. In particular, all
 non-blocking calls remain non-blocking and do not lead to deadlocks or any
 other undesirable things.
+
+.. caution::
+
+    By default, low-level waiters (via which all of the above-mentioned
+    blocking primitives operate!) are not signal-safe for all libraries except
+    threading, when tasks wait in the same thread (in the case of signal
+    handlers, :ref:`in the main thread <signals-and-threads>`). This is because
+    when using primitives in a single thread, fast local ways of waking up
+    tasks are used, which are not thread-safe and certainly not signal-safe.
+
+    If you want to use signal handlers or destructors to wake up, for example,
+    asyncio tasks, you can apply :func:`aiologic.lowlevel.enable_signal_safety`
+    to your function or code block:
+
+    .. code:: python
+
+        import asyncio
+        import signal
+
+        import aiologic
+
+
+        async def main():
+            signalled = aiologic.Event()
+
+            @aiologic.lowlevel.enable_signal_safety
+            def handler(signum, frame):
+                signalled.set()
+
+            # set the signal handler and a 1-second alarm
+            signal.signal(signal.SIGALRM, handler)
+            signal.alarm(1)
+
+            print("before")
+            await signalled  # waits for the alarm
+            print("after")
+
+
+        asyncio.run(main())
+
+        # program will end in 1 second

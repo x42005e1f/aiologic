@@ -386,6 +386,13 @@ Checkpoints and fairness
 .. autofunction:: aiologic.lowlevel.enable_checkpoints
 .. autofunction:: aiologic.lowlevel.disable_checkpoints
 
+Safety and reentrancy
++++++++++++++++++++++
+
+.. autofunction:: aiologic.lowlevel.signal_safety_enabled
+.. autofunction:: aiologic.lowlevel.enable_signal_safety
+.. autofunction:: aiologic.lowlevel.disable_signal_safety
+
 Markers
 -------
 

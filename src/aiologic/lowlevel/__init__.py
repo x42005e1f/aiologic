@@ -54,6 +54,11 @@ from ._markers import (
     DefaultType as DefaultType,
     MissingType as MissingType,
 )
+from ._safety import (
+    disable_signal_safety as disable_signal_safety,
+    enable_signal_safety as enable_signal_safety,
+    signal_safety_enabled as signal_safety_enabled,
+)
 from ._tasks import (
     shield as shield,
 )
