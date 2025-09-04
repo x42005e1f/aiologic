@@ -190,10 +190,11 @@ Commit messages are consistent with
     shields both the called function and the calling task from being cancelled.
     It supports awaitable objects, coroutine functions, and green functions:
     timeouts are suppressed, and are re-raised after the call completes.
-  + They now skip the current library detection if they have not been enabled
-    for any imported libraries. This also affects checkpoints in low-level
-    events, which no longer access context variables before enabling
-    checkpoints, making them much faster.
+  + They now skip the current library detection when it is not required (for
+    example, when checkpoints are not enabled for any of the imported
+    libraries). This also affects checkpoints in low-level events, which no
+    longer access context variables before using checkpoints, making them much
+    faster.
   + They can now only be enabled dynamically (without environment variables) at
     the thread level. This prevents checkpoints from being enabled in created
     worker threads.

@@ -31,27 +31,22 @@ _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT: Final[bool]
 _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT: Final[bool]
 _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT: Final[bool]
 
+_green_checkpoints_enabled: bool
+_async_checkpoints_enabled: bool
+_green_checkpoints_disabled: bool
+_async_checkpoints_disabled: bool
+_green_checkpoints_used: bool
+_async_checkpoints_used: bool
+
+_green_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
+_async_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
+
 def _threading_checkpoints_enabled() -> bool: ...
 def _eventlet_checkpoints_enabled() -> bool: ...
 def _gevent_checkpoints_enabled() -> bool: ...
 def _asyncio_checkpoints_enabled() -> bool: ...
 def _curio_checkpoints_enabled() -> bool: ...
 def _trio_checkpoints_enabled() -> bool: ...
-
-_green_checkpoints_enabled_by_default: bool
-_async_checkpoints_enabled_by_default: bool
-_green_checkpoints_used: list[None]
-_async_checkpoints_used: list[None]
-
-def green_checkpoint_enabled() -> bool: ...
-def async_checkpoint_enabled() -> bool: ...
-
-_green_checkpoints_cvar_default_token: Token[tuple[int, bool | None]]
-_async_checkpoints_cvar_default_token: Token[tuple[int, bool | None]]
-
-_green_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
-_async_checkpoints_cvar: ContextVar[tuple[int, bool | None]]
-
 def _green_checkpoints_reset(
     token: Token[tuple[int, bool | None]],
     /,
@@ -66,6 +61,8 @@ def _green_checkpoints_set(
 def _async_checkpoints_set(
     enabled: bool,
 ) -> Token[tuple[int, bool | None]]: ...
+def green_checkpoint_enabled() -> bool: ...
+def async_checkpoint_enabled() -> bool: ...
 
 class _CheckpointsManager:
     __slots__ = ("__token",)
