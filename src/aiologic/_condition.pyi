@@ -4,15 +4,15 @@
 # SPDX-License-Identifier: ISC
 
 import sys
-import threading
 
 from logging import Logger
 from types import TracebackType
 from typing import Any, Final, Generic, overload
 
+from . import lowlevel
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
-from .lowlevel import DEFAULT, DefaultType, _thread
+from .lowlevel import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -38,9 +38,8 @@ _T_co = TypeVar(
         Lock
         | PLock
         | BinarySemaphore
-        | threading.RLock
-        | threading.Lock
-        | _thread.LockType
+        | lowlevel.ThreadRLock
+        | lowlevel.ThreadLock
         | None
     ),
     default=RLock,

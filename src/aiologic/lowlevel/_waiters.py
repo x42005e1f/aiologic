@@ -8,8 +8,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
 from ._libraries import current_async_library, current_green_library
+from ._locks import once
 from ._safety import signal_safety_enabled
-from ._threads import _once as once
 
 if TYPE_CHECKING:
     import sys
@@ -77,7 +77,7 @@ class AsyncWaiter(Waiter, Protocol):
 
 @once
 def _get_threading_waiter_class() -> type[GreenWaiter]:
-    from ._thread import allocate_lock
+    from ._locks import create_thread_lock
 
     @final
     class _ThreadingWaiter(GreenWaiter):
@@ -89,7 +89,7 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
         shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
-            self.__lock = allocate_lock()
+            self.__lock = create_thread_lock()
             self.__lock.acquire()
 
             self.shield = shield

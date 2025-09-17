@@ -30,8 +30,7 @@ from typing import (
 
 import aiologic
 
-from aiologic.lowlevel import DEFAULT, DefaultType
-from aiologic.lowlevel._threads import _once as once
+from aiologic.lowlevel import DEFAULT, DefaultType, once
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec

@@ -20,8 +20,8 @@ from aiologic.lowlevel import (
     create_async_event,
     create_green_event,
     green_checkpoint,
+    once,
 )
-from aiologic.lowlevel._threads import _once as once
 from aiologic.lowlevel._utils import _external as external
 
 from ._exceptions import (

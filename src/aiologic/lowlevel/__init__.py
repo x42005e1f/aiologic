@@ -48,6 +48,15 @@ from ._libraries import (
     current_green_library as current_green_library,
     current_green_library_tlocal as current_green_library_tlocal,
 )
+from ._locks import (
+    ThreadLock as ThreadLock,
+    ThreadOnceLock as ThreadOnceLock,
+    ThreadRLock as ThreadRLock,
+    create_thread_lock as create_thread_lock,
+    create_thread_oncelock as create_thread_oncelock,
+    create_thread_rlock as create_thread_rlock,
+    once as once,
+)
 from ._markers import (
     DEFAULT as DEFAULT,
     MISSING as MISSING,

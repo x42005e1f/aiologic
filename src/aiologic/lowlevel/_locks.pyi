@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: ISC
+
+import sys
+
+from types import TracebackType
+from typing import TypeVar, final
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+else:
+    from typing import Callable
+
+_T = TypeVar("_T")
+
+@final
+class ThreadLock:
+    def __enter__(self, /) -> bool: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
+    if sys.version_info >= (3, 9):
+        def _at_fork_reinit(self, /) -> None: ...
+    def acquire(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> bool: ...
+    def release(self, /) -> None: ...
+    def locked(self, /) -> bool: ...
+
+    # Obsolete synonyms
+
+    def acquire_lock(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> bool: ...
+    def release_lock(self, /) -> None: ...
+    def locked_lock(self, /) -> bool: ...
+
+@final
+class ThreadRLock:
+    def __enter__(self, /) -> bool: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
+    if sys.version_info >= (3, 9):
+        def _at_fork_reinit(self, /) -> None: ...
+    def acquire(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> bool: ...
+    def release(self, /) -> None: ...
+    if sys.version_info >= (3, 14):
+        def locked(self, /) -> bool: ...
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, /, state: tuple[int, int]) -> None: ...
+    def _release_save(self, /) -> tuple[int, int]: ...
+    def _is_owned(self, /) -> bool: ...
+
+    # Internal method used for reentrancy checks
+
+    if sys.version_info >= (3, 11):
+        def _recursion_count(self, /) -> int: ...
+
+@final
+class ThreadOnceLock:
+    def __enter__(self, /) -> bool: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
+    if sys.version_info >= (3, 9):
+        def _at_fork_reinit(self, /) -> None: ...
+    def acquire(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> bool: ...
+    def release(self, /) -> None: ...
+    if sys.version_info >= (3, 14):
+        def locked(self, /) -> bool: ...
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, /, state: tuple[int, int]) -> None: ...
+    def _release_save(self, /) -> tuple[int, int]: ...
+    def _is_owned(self, /) -> bool: ...
+
+    # Internal method used for reentrancy checks
+
+    if sys.version_info >= (3, 11):
+        def _recursion_count(self, /) -> int: ...
+
+def create_thread_lock() -> ThreadLock: ...
+def create_thread_rlock() -> ThreadRLock: ...
+def create_thread_oncelock() -> ThreadOnceLock: ...
+def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]: ...

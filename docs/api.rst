@@ -133,6 +133,44 @@ Events (low-level)
 .. autofunction:: aiologic.lowlevel.create_async_event
 .. autofunction:: aiologic.lowlevel.create_green_event
 
+Locks (low-level)
++++++++++++++++++
+
+.. aiologic.lowlevel.ThreadLock-start-marker
+.. class:: aiologic.lowlevel.ThreadLock
+  :final:
+  :no-index:
+
+  Bases: :class:`object`
+
+  ...
+.. aiologic.lowlevel.ThreadLock-end-marker
+
+.. aiologic.lowlevel.ThreadRLock-start-marker
+.. class:: aiologic.lowlevel.ThreadRLock
+  :final:
+  :no-index:
+
+  Bases: :class:`object`
+
+  ...
+.. aiologic.lowlevel.ThreadRLock-end-marker
+
+.. aiologic.lowlevel.ThreadOnceLock-start-marker
+.. class:: aiologic.lowlevel.ThreadOnceLock
+  :final:
+  :no-index:
+
+  Bases: :class:`object`
+
+  ...
+.. aiologic.lowlevel.ThreadOnceLock-end-marker
+
+.. autofunction:: aiologic.lowlevel.create_thread_lock() -> ThreadLock
+.. autofunction:: aiologic.lowlevel.create_thread_rlock() -> ThreadRLock
+.. autofunction:: aiologic.lowlevel.create_thread_oncelock() -> ThreadOnceLock
+.. autofunction:: aiologic.lowlevel.once
+
 Testing framework
 -----------------
 

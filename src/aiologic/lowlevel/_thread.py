@@ -7,18 +7,20 @@ from __future__ import annotations
 
 from . import _monkey
 
+__import__("warnings").warn(
+    "Use low-level features instead",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 # third-party patchers can break the original objects from the threading
 # module, so we need to use the _thread module in the first place
 
 if _monkey._eventlet_patched("_thread"):
-    from sys import modules
-
-    modules[__name__] = _monkey._import_eventlet_original("_thread")
-
-    del modules
+    __import__("sys").modules[__name__] = _monkey._import_eventlet_original(
+        "_thread"
+    )
 else:
-    __globals = globals()
-
     if _monkey._gevent_patched("_thread"):
         __module = _monkey._import_gevent_original("_thread")
     else:
@@ -28,12 +30,11 @@ else:
         if __key.startswith("__"):
             continue
 
-        __globals[__key] = __value
+        globals()[__key] = __value
 
         del __value
         del __key
 
     del __module
-    del __globals
 
 del _monkey

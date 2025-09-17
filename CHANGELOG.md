@@ -30,6 +30,32 @@ Commit messages are consistent with
   efficient implementation.
 - `aiologic.RBarrier` as a reusable barrier, i.e. a barrier that can be reset
   to its initial state (async-aware alternative to `threading.Barrier`).
+- `aiologic.lowlevel.ThreadLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_lock()` factory function as a new way to
+  obtain unpatched `threading.Lock`.
+- `aiologic.lowlevel.ThreadRLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_rlock()` factory function as a unique way to
+  obtain unpatched `threading.RLock`. Solves the problem of using reentrant
+  thread-level locks in the gevent-patched world (due to the fact that
+  `threading._PyRLock.__globals__` referenced the patched namespace, which made
+  it impossible to use the original object because it used the patched
+  `threading.Lock`). Note: like `threading._PyRLock`, the fallback pure Python
+  implementation is not signal-safe.
+- `aiologic.lowlevel.ThreadOnceLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_oncelock()` factory function as a way to
+  obtain a one-time reentrant lock. The interface mimics that of
+  `aiologic.lowlevel.ThreadRLock`, but the semantics are different: the first
+  successful `release()` call, which sets the internal counter to zero, wakes
+  up all threads at once (just like `aiologic.Event`), and all further
+  `acquire()` calls become no-ops, which effectively turns the lock into a
+  dummy primitive. And unlike `aiologic.lowlevel.ThreadRLock`, this primitive
+  is signal-safe, which, combined with the described semantics, makes the
+  primitive suitable for protecting initialization sections.
+- `aiologic.lowlevel.once` decorator to ensure that a function is executed only
+  once (inspired by `std::sync::Once` from Rust). It uses
+  `aiologic.lowlevel.ThreadOnceLock` under the hood and stores the result in
+  the wrapper's closure, which makes the function both thread-safe and
+  signal-safe (note: this does not apply to side effects!).
 - `aiologic.lowlevel.DEFAULT` as a marker for parameters with default values.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
@@ -39,11 +65,11 @@ Commit messages are consistent with
   regardless of whether the wait has been completed or not). And, of course,
   for the same reason, they are even less safe (they require more specific
   conditions for their correct operation).
-- `aiologic.lowlevel.enable_signal_safety` and
-  `aiologic.lowlevel.disable_signal_safety` universal decorators to enable and
-  disable signal-safety in the current thread's context. They support awaitable
-  objects, coroutine functions, and green functions, and can be used directly
-  as context managers.
+- `aiologic.lowlevel.enable_signal_safety()` and
+  `aiologic.lowlevel.disable_signal_safety()` universal decorators to enable
+  and disable signal-safety in the current thread's context. They support
+  awaitable objects, coroutine functions, and green functions, and can be used
+  directly as context managers.
 - `aiologic.lowlevel.signal_safety_enabled()` to determine if signal-safety is
   enabled.
 - `aiologic.lowlevel.create_green_event()` and
@@ -282,15 +308,14 @@ Commit messages are consistent with
     cooperatively. Previously, it was not possible to determine the next lock
     owner after release in the same task (it was `None`).
 - Condition variables have been rewritten:
-  + They now only support passing locks from the `threading` module
-    (synchronous mode), binary semaphores and locks from the `aiologic` module
-    (mixed mode), and `None` (lockless mode). This change was made to simplify
-    their implementation. For special cases it is recommended to use low-level
-    events directly.
+  + They now only support passing low-level (thread-level) locks (synchronous
+    mode), binary semaphores and high-level locks (mixed mode), and `None`
+    (lockless mode). This change was made to simplify their implementation. For
+    special cases it is recommended to use low-level events directly.
   + Waiting for a predicate now supports delegating its checking to notifiers
     and is the default (`delegate=True`). This reduces the number of context
     switches to the minimum necessary.
-  + For `aiologic` primitives, all waits are now truly fair and always run with
+  + For high-level primitives, all waits are now truly fair and always run with
     exactly one checkpoint (exactly two in case of cancel), just like all other
     `aiologic` functions. This works by using a new reparking mechanism and
     solves the well-known [resource starvation
@@ -298,10 +323,10 @@ Commit messages are consistent with
   + They now count the number of lock acquires to avoid redundant `release()`
     calls when used as context managers. Because of this, they will now never
     throw a `RuntimeError` when a `wait()` call fails (e.g. due to a
-    `KeyboardInterrupt` while trying to reacquire `threading.Lock`) except in
-    the case of concurrent `notify()` calls. This makes it safe (with some
-    caveats) to use condition variables even when shielding from external
-    cancellation is not guaranteed.
+    `KeyboardInterrupt` while trying to reacquire
+    `aiologic.lowlevel.ThreadLock`) except in the case of concurrent `notify()`
+    calls. This makes it safe (with some caveats) to use condition variables
+    even when shielding from external cancellation is not guaranteed.
   + They now shield lock state restoring not only in async methods, but also in
     green methods. It is still not guaranteed that a `wait()` call cannot be
     cancelled in any unpredictable way (e.g. when a greenlet is killed by an
@@ -313,7 +338,7 @@ Commit messages are consistent with
     meaningful messages.
   + They now check that the current task is the owner of the lock before
     starting notification for predicates for all variations, and in general for
-    any calls for `aiologic` primitives. While this change reduces the number
+    any calls for high-level primitives. While this change reduces the number
     of scenarios in which condition variables can be used, it provides the
     thread-safety needed for the new features to work.
   + They now always yield themselves when used as context managers. This
@@ -450,11 +475,15 @@ Commit messages are consistent with
     with `gevent` (now the same as from `threading.main_thread()`).
   + green thread objects for dummy threads whose identifier matched the running
     greenlets (now raises an exception according to the new behavior).
+- The initialization of low-level waiter classes was protected from concurrent
+  execution using a mutex, which could lead to deadlock if it was interrupted
+  and retried in the same thread. Now, `aiologic.lowlevel.ThreadOnceLock` is
+  used for this (via `aiologic.lowlevel.once()`), which ensures signal-safety.
 - Using `aiologic.RLock` from inside a signal handler or destructor could
   result in a false release if the execution occurred inside an `*_acquire()`
   call after setting the `owner` property but before setting the `count`
   property. The order of operations is now inverted. This makes
-  `aiologic.RLock` more signal-safe than `threading._PyRLock`.
+  `aiologic.RLock` a bit more signal-safe than `threading._PyRLock`.
 - Using checkpoints for `threading` could cause hub spawning in worker threads
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been

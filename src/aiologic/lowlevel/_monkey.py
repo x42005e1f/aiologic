@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import ModuleType
+from typing import Any, overload
 
 from wrapt import when_imported
 
@@ -97,3 +98,56 @@ def _(_):
             return module
 
         return _import_gevent_original(module_name)
+
+
+@overload
+def _import_original(module_name: str, name: None = None, /) -> ModuleType: ...
+@overload
+def _import_original(module_name: str, name: str, /) -> Any: ...
+def _import_original(module_name, name=None, /):
+    if name is None:
+        if _eventlet_patched(module_name):
+            return _import_eventlet_original(module_name)
+
+        if _gevent_patched(module_name):
+            return _import_gevent_original(module_name)
+
+        return _import_python_original(module_name)
+
+    try:
+        if _eventlet_patched(module_name):
+            return getattr(_import_eventlet_original(module_name), name)
+
+        if _gevent_patched(module_name):
+            return getattr(_import_gevent_original(module_name), name)
+
+        original = getattr(_import_python_original(module_name), name)
+
+        if _eventlet_patched(module_name):
+            return getattr(_import_eventlet_original(module_name), name)
+
+        if _gevent_patched(module_name):
+            return getattr(_import_gevent_original(module_name), name)
+    except AttributeError as exc:
+        if hasattr(exc, "obj"):
+            module_path = getattr(exc.obj, "__file__", None)
+            msg = (
+                f"cannot import name {name!r}"
+                f" from {module_name!r}"
+                f" ({module_path or 'unknown location'})"
+            )
+        else:
+            module_path = None
+            msg = f"cannot import name {name!r} from {module_name!r}"
+
+        import_exc = ImportError(msg)
+        import_exc.name = module_name
+        import_exc.name_from = name
+        import_exc.path = module_path
+
+        try:
+            raise import_exc from None
+        finally:
+            del import_exc
+
+    return original

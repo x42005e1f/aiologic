@@ -11,19 +11,7 @@ from . import _monkey
 def _threading_sleep(seconds: float, /) -> None:
     global _threading_sleep
 
-    if _monkey._eventlet_patched("time"):
-        _threading_sleep = _monkey._import_eventlet_original("time").sleep
-    elif _monkey._gevent_patched("time"):
-        _threading_sleep = _monkey._import_gevent_original("time").sleep
-    else:
-        time_sleep = _monkey._import_python_original("time").sleep
-
-        if _monkey._eventlet_patched("time"):
-            _threading_sleep = _monkey._import_eventlet_original("time").sleep
-        elif _monkey._gevent_patched("time"):
-            _threading_sleep = _monkey._import_gevent_original("time").sleep
-        else:
-            _threading_sleep = time_sleep
+    _threading_sleep = _monkey._import_original("time", "sleep")
 
     _threading_sleep(seconds)
 

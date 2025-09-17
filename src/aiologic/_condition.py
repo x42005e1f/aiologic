@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import threading
 import time
 
 from collections import defaultdict, deque
@@ -14,6 +13,7 @@ from itertools import count
 from logging import Logger, getLogger
 from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
 
+from . import lowlevel
 from ._guard import ResourceGuard
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
@@ -21,7 +21,6 @@ from .lowlevel import (
     DEFAULT,
     MISSING,
     DefaultType,
-    _thread,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -57,9 +56,8 @@ _T_co = TypeVar(
         Lock,
         PLock,
         BinarySemaphore,
-        threading.RLock,
-        threading.Lock,
-        _thread.LockType,
+        lowlevel.ThreadRLock,
+        lowlevel.ThreadLock,
         None,
     ],
     default=RLock,
@@ -127,10 +125,10 @@ class Condition(Generic[_T_co, _S_co]):
             # aiologic.BoundedBinarySemaphore | aiologic.BinarySemaphore
             imp = _MixedCondition
         elif hasattr(lock, "_is_owned"):
-            # threading.RLock
+            # aiologic.lowlevel.ThreadRLock
             imp = _RSyncCondition
         else:
-            # threading.Lock | _thread.LockType
+            # aiologic.lowlevel.ThreadLock
             imp = _SyncCondition
 
         if cls is Condition:

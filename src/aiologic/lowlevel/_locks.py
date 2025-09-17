@@ -1,0 +1,398 @@
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: ISC
+
+from __future__ import annotations
+
+import sys
+
+from functools import wraps
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
+
+from . import _checkpoints, _monkey, _time
+from ._markers import MISSING
+from ._threads import current_thread_ident
+
+if sys.version_info >= (3, 9):
+    from collections.abc import Callable
+else:
+    from typing import Callable
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+_T = TypeVar("_T")
+
+ThreadLock = _monkey._import_original("_thread", "LockType")
+
+try:
+    ThreadRLock = _monkey._import_original("_thread", "RLock")
+except ImportError:
+
+    @final
+    class ThreadRLock:
+        __slots__ = (
+            "__weakref__",
+            "_block",
+            "_count",
+            "_owner",
+        )
+
+        _block: ThreadLock  # not provided by _thread.RLock
+        _count: int  # not provided by _thread.RLock
+        _owner: int | None  # not provided by _thread.RLock
+
+        def __init__(self, /) -> None:
+            self._block = create_thread_lock()
+            self._count = 0
+            self._owner = None
+
+        def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+            bcs = ThreadRLock
+            bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+            msg = f"type '{bcs_repr}' is not an acceptable base type"
+            raise TypeError(msg)
+
+        def __reduce__(self, /) -> NoReturn:
+            msg = f"cannot reduce {self!r}"
+            raise TypeError(msg)
+
+        def __repr__(self, /) -> str:
+            cls = self.__class__
+            cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+            if self._block.locked():
+                status = "locked"
+            else:
+                status = "unlocked"
+
+            object_repr = f"{status} {cls_repr} object"
+            extra = f"owner={self._owner!r} count={self._count!r}"
+
+            return f"<{object_repr} {extra} at {id(self):#x}>"
+
+        def __enter__(self, /) -> bool:
+            return self.acquire()
+
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+            /,
+        ) -> None:
+            self.release()
+
+        if sys.version_info >= (3, 9):
+
+            def _at_fork_reinit(self, /) -> None:
+                self._block._at_fork_reinit()
+                self._count = 0
+                self._owner = None
+
+        def acquire(
+            self,
+            /,
+            blocking: bool = True,
+            timeout: float = -1,
+        ) -> bool:
+            thread = current_thread_ident()
+
+            if self._owner == thread:
+                if blocking and _checkpoints._threading_checkpoints_enabled():
+                    _time._threading_sleep(0)
+
+                self._count += 1
+
+                return True
+
+            success = self._block.acquire(blocking, timeout)
+
+            if success:
+                self._count = 1
+                self._owner = thread
+
+            return success
+
+        def release(self, /) -> None:
+            if self._owner != current_thread_ident():
+                msg = "cannot release un-acquired lock"
+                raise RuntimeError(msg)
+
+            self._count -= 1
+
+            if not self._count:
+                self._owner = None
+                self._block.release()
+
+        if sys.version_info >= (3, 14):
+
+            def locked(self, /) -> bool:
+                return self._block.locked()
+
+        # Internal methods used by condition variables
+
+        def _acquire_restore(self, /, state: tuple[int, int]) -> None:
+            self._block.acquire()
+            self._count = state[0]
+            self._owner = state[1]
+
+        def _release_save(self, /) -> tuple[int, int]:
+            if self._count == 0:
+                msg = "cannot release un-acquired lock"
+                raise RuntimeError(msg)
+
+            state = (self._count, self._owner)
+
+            self._count = 0
+            self._owner = None
+            self._block.release()
+
+            return state
+
+        def _is_owned(self, /) -> bool:
+            return self._owner == current_thread_ident()
+
+        # Internal method used for reentrancy checks
+
+        if sys.version_info >= (3, 12, 1) or (
+            sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
+        ):
+
+            def _recursion_count(self, /) -> int:
+                if self._owner == current_thread_ident():
+                    return self._count
+                else:
+                    return 0
+
+
+@final
+class ThreadOnceLock:
+    __slots__ = (
+        "__count",
+        "__waiters",
+        "__weakref__",
+    )
+
+    def __init__(self, /) -> None:
+        self.__count = 1
+        self.__waiters = []
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+        bcs = ThreadOnceLock
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> NoReturn:
+        msg = f"cannot reduce {self!r}"
+        raise TypeError(msg)
+
+    def __repr__(self, /) -> str:
+        cls = self.__class__
+        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+
+        if self._owner is not None:
+            status = "locked"
+        else:
+            status = "unlocked"
+
+        object_repr = f"{status} {cls_repr} object"
+        extra = f"owner={self._owner!r} count={self._count!r}"
+
+        return f"<{object_repr} {extra} at {id(self):#x}>"
+
+    def __enter__(self, /) -> bool:
+        return self.acquire()
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None:
+        self.release()
+
+    if sys.version_info >= (3, 9):
+
+        def _at_fork_reinit(self, /) -> None:
+            self.__count = 1
+            self.__waiters.clear()
+
+    def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
+        if self.__count < 0:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+
+            return True
+
+        thread = current_thread_ident()
+
+        if self._owner == thread:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+
+            self.__count += 1
+
+            return True
+
+        block = create_thread_lock()
+        block.acquire()
+
+        self.__waiters.append((block, thread))
+
+        if self.__count < 0 or self._owner == thread:
+            return True
+
+        return block.acquire(blocking, timeout)
+
+    def release(self, /) -> None:
+        if self.__count >= 0:
+            thread = current_thread_ident()
+
+            if self._owner != thread:
+                msg = "cannot release un-acquired lock"
+                raise RuntimeError(msg)
+
+            self.__count -= 1
+
+            if self.__count > 0:
+                return
+
+            self.__count = -1
+            self.__waiters.reverse()
+
+        waiters = self.__waiters
+
+        while waiters:
+            try:
+                token = waiters.pop()
+            except IndexError:
+                break
+            else:
+                token[0].release()
+
+    if sys.version_info >= (3, 14):
+
+        def locked(self, /) -> bool:
+            return self.__count >= 0 and bool(self.__waiters)
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, /, state: tuple[int, int]) -> None:
+        pass
+
+    def _release_save(self, /) -> tuple[int, int]:
+        if self.__count <= 0:
+            msg = "cannot release un-acquired lock"
+            raise RuntimeError(msg)
+
+        state = (self._count, self._owner)
+
+        self.__count = -1
+        self.__waiters.reverse()
+        self.release()
+
+        return state
+
+    def _is_owned(self, /) -> bool:
+        return self._owner == current_thread_ident()
+
+    # Internal method used for reentrancy checks
+
+    if sys.version_info >= (3, 12, 1) or (
+        sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
+    ):
+
+        def _recursion_count(self, /) -> int:
+            count = self.__count
+
+            if count > 0 and self._owner == current_thread_ident():
+                return count
+
+            return 0
+
+    # Internal properties used for compatibility with threading._PyRLock
+
+    @property
+    def _block(self, /) -> ThreadLock:
+        if self.__waiters:
+            try:
+                token = self.__waiters[0]
+            except IndexError:
+                pass
+            else:
+                if self.__count >= 0:
+                    return token[0]
+
+        return create_thread_lock()
+
+    @property
+    def _count(self, /) -> int:
+        count = self.__count
+
+        if count > 0 and self._owner is not None:
+            return count
+
+        return 0
+
+    @property
+    def _owner(self, /) -> int | None:
+        if self.__waiters:
+            try:
+                token = self.__waiters[0]
+            except IndexError:
+                pass
+            else:
+                if self.__count >= 0:
+                    return token[1]
+
+        return None
+
+
+if sys.version_info >= (3, 13):
+    __allocate_lock = ThreadLock
+else:
+    __allocate_lock = _monkey._import_original("_thread", "allocate_lock")
+
+
+def create_thread_lock() -> ThreadLock:
+    """..."""
+
+    return __allocate_lock()
+
+
+def create_thread_rlock() -> ThreadRLock:
+    """..."""
+
+    return ThreadRLock()
+
+
+def create_thread_oncelock() -> ThreadOnceLock:
+    """..."""
+
+    return ThreadOnceLock()
+
+
+def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]:
+    """..."""
+
+    lock = create_thread_oncelock()
+    result = MISSING
+
+    @wraps(wrapped)
+    def wrapper():
+        nonlocal result
+
+        if result is MISSING:
+            with lock:
+                if result is MISSING:
+                    result = wrapped()
+
+        return result
+
+    return wrapper
