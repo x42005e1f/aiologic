@@ -7,7 +7,7 @@ import sys
 
 from contextvars import ContextVar, Token
 from types import TracebackType
-from typing import Any, Final, Literal, TypeVar, overload
+from typing import Any, Literal, TypeVar, overload
 
 from ._markers import MISSING, MissingType
 
@@ -18,8 +18,6 @@ else:
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
-
-_SIGNAL_SAFETY_ENABLED_BY_DEFAULT: Final[bool]
 
 _signal_safety_used: bool
 _signal_safety_cvar: ContextVar[tuple[int, bool | None]]

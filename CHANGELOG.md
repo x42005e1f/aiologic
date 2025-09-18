@@ -154,7 +154,6 @@ Commit messages are consistent with
   result in place.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
-- `AIOLOGIC_SIGNAL_SAFETY` environment variable.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
 
 ### Changed
@@ -174,9 +173,12 @@ Commit messages are consistent with
   implementation flaws, "perfect fairness" can still be useful, so since this
   version `aiologic` provides the `AIOLOGIC_PERFECT_FAIRNESS` environment
   variable to explicitly enable or disable it.
-- Signal-safety is now also explicit and can be configured both via universal
-  decorators and via the `AIOLOGIC_SIGNAL_SAFETY` environment variable
-  (currently only affects low-level waiters).
+- Signal-safety is now also explicit and can be configured via the universal
+  decorators. When enabled, code behaves as if it were running outside the
+  context in the same thread (as in a separate thread but with the same thread
+  identifiers), allowing both notifying and waiting to be performed safely from
+  inside signal handlers and destructors (affects library detection and
+  low-level waiters).
 - Flags are now a high-level primitive, available as `aiologic.Flag`, with
   `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should

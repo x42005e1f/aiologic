@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-import os
 import sys
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator
 
@@ -28,13 +27,6 @@ if TYPE_CHECKING:
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
-
-_SIGNAL_SAFETY_ENABLED_BY_DEFAULT: Final[bool] = bool(
-    os.getenv(
-        "AIOLOGIC_SIGNAL_SAFETY",
-        "",
-    )
-)
 
 _signal_safety_used: bool = False
 _signal_safety_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
@@ -81,7 +73,7 @@ def signal_safety_enabled() -> bool:
         if maybe_enabled is not None and ident == current_thread_ident():
             return maybe_enabled
 
-    return _SIGNAL_SAFETY_ENABLED_BY_DEFAULT
+    return False
 
 
 class _SignalSafetyManager:

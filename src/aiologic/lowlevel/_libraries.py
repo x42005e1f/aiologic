@@ -13,6 +13,7 @@ from sniffio import (
 )
 from wrapt import when_imported
 
+from ._safety import signal_safety_enabled
 from ._threads import _local
 from ._utils import _external as external, _replaces as replaces
 
@@ -172,14 +173,15 @@ def current_green_library(*, failsafe=False):
                     raise RuntimeError(msg)
     """
 
-    if (name := current_green_library_tlocal.name) is not None:
-        return name
+    if not signal_safety_enabled():
+        if (name := current_green_library_tlocal.name) is not None:
+            return name
 
-    if _gevent_running():
-        return "gevent"
+        if _gevent_running():
+            return "gevent"
 
-    if _eventlet_running():
-        return "eventlet"
+        if _eventlet_running():
+            return "eventlet"
 
     return "threading"
 
@@ -223,16 +225,17 @@ def current_async_library(*, failsafe=False):
                     raise RuntimeError(msg)
     """
 
-    if (name := current_async_library_tlocal.name) is not None:
-        return name
+    if not signal_safety_enabled():
+        if (name := current_async_library_tlocal.name) is not None:
+            return name
 
-    # trio is detected via current_async_library_tlocal.name
+        # trio is detected via current_async_library_tlocal.name
 
-    if _curio_running():
-        return "curio"
+        if _curio_running():
+            return "curio"
 
-    if _asyncio_running():
-        return "asyncio"
+        if _asyncio_running():
+            return "asyncio"
 
     if failsafe:
         return None
