@@ -6,7 +6,9 @@
 import sys
 
 from types import TracebackType
-from typing import Final, Literal, NoReturn, TypeVar, final
+from typing import Final, Literal, NoReturn, TypeVar, final, overload
+
+from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -151,4 +153,12 @@ THREAD_DUMMY_LOCK: Final[ThreadDummyLock]
 def create_thread_lock() -> ThreadLock: ...
 def create_thread_rlock() -> ThreadRLock: ...
 def create_thread_oncelock() -> ThreadOnceLock: ...
+@overload
+def once(
+    wrapped: MissingType = MISSING,
+    /,
+    *,
+    reentrant: bool = False,
+) -> Callable[[Callable[[], _T]], Callable[[], _T]]: ...
+@overload
 def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]: ...

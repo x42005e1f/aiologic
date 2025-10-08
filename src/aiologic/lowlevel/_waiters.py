@@ -75,7 +75,7 @@ class AsyncWaiter(Waiter, Protocol):
         """..."""
 
 
-@once
+@once(reentrant=True)
 def _get_threading_waiter_class() -> type[GreenWaiter]:
     from ._locks import create_thread_lock
 

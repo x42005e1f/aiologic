@@ -58,7 +58,8 @@ Commit messages are consistent with
   once (inspired by `std::sync::Once` from Rust). It uses
   `aiologic.lowlevel.ThreadOnceLock` under the hood and stores the result in
   the wrapper's closure, which makes the function both thread-safe and
-  signal-safe (note: this does not apply to side effects!).
+  signal-safe when `reentrant=True` is passed (note: this does not apply to
+  side effects!).
 - `aiologic.lowlevel.DEFAULT` as a marker for parameters with default values.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,

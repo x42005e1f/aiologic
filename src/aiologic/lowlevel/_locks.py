@@ -7,11 +7,20 @@ from __future__ import annotations
 
 import sys
 
-from functools import wraps
-from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
+from functools import partial, wraps
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    NoReturn,
+    TypeVar,
+    final,
+    overload,
+)
 
 from . import _checkpoints, _monkey, _time
-from ._markers import MISSING
+from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
 
 if sys.version_info >= (3, 9):
@@ -476,8 +485,20 @@ def create_thread_oncelock() -> ThreadOnceLock:
     return ThreadOnceLock()
 
 
-def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]:
+@overload
+def once(
+    wrapped: MissingType = MISSING,
+    /,
+    *,
+    reentrant: bool = False,
+) -> Callable[[Callable[[], _T]], Callable[[], _T]]: ...
+@overload
+def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]: ...
+def once(wrapped=MISSING, /, *, reentrant=False):
     """..."""
+
+    if wrapped is MISSING:
+        return partial(once, reentrant=reentrant)
 
     lock = create_thread_oncelock()
     result = MISSING
@@ -489,6 +510,10 @@ def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]:
         if result is MISSING:
             with lock:
                 if result is MISSING:
+                    if not reentrant and lock._count > 1:
+                        msg = "this function is already executing"
+                        raise RuntimeError(msg)
+
                     result = wrapped()
 
         return result
