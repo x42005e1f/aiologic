@@ -285,7 +285,8 @@ class ThreadOnceLock:
     # Internal methods used by condition variables
 
     def _acquire_restore(self, /, state: tuple[int, int]) -> None:
-        pass
+        if _checkpoints._threading_checkpoints_enabled():
+            _time._threading_sleep(0)
 
     def _release_save(self, /) -> tuple[int, int]:
         if self.__count <= 0:
