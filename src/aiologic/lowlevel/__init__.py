@@ -49,6 +49,8 @@ from ._libraries import (
     current_green_library_tlocal as current_green_library_tlocal,
 )
 from ._locks import (
+    THREAD_DUMMY_LOCK as THREAD_DUMMY_LOCK,
+    ThreadDummyLock as ThreadDummyLock,
     ThreadLock as ThreadLock,
     ThreadOnceLock as ThreadOnceLock,
     ThreadRLock as ThreadRLock,

@@ -51,6 +51,9 @@ Commit messages are consistent with
   dummy primitive. And unlike `aiologic.lowlevel.ThreadRLock`, this primitive
   is signal-safe, which, combined with the described semantics, makes the
   primitive suitable for protecting initialization sections.
+- `aiologic.lowlevel.ThreadDummyLock` class (for typing purposes) and
+  `aiologic.lowlevel.THREAD_DUMMY_LOCK` singleton object as a way to obtain a
+  dummy lock.
 - `aiologic.lowlevel.once` decorator to ensure that a function is executed only
   once (inspired by `std::sync::Once` from Rust). It uses
   `aiologic.lowlevel.ThreadOnceLock` under the hood and stores the result in

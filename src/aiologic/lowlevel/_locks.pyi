@@ -6,7 +6,7 @@
 import sys
 
 from types import TracebackType
-from typing import TypeVar, final
+from typing import Final, Literal, NoReturn, TypeVar, final
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -112,6 +112,41 @@ class ThreadOnceLock:
 
     if sys.version_info >= (3, 11):
         def _recursion_count(self, /) -> int: ...
+
+@final
+class ThreadDummyLock:
+    def __new__(cls, /) -> ThreadDummyLock: ...
+    def __enter__(self, /) -> Literal[True]: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
+    if sys.version_info >= (3, 9):
+        def _at_fork_reinit(self, /) -> None: ...
+    def acquire(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> Literal[True]: ...
+    def release(self, /) -> None: ...
+    def locked(self, /) -> Literal[False]: ...
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, /, state: tuple[int, int]) -> None: ...
+    def _release_save(self, /) -> NoReturn: ...
+    def _is_owned(self, /) -> Literal[False]: ...
+
+    # Internal method used for reentrancy checks
+
+    if sys.version_info >= (3, 11):
+        def _recursion_count(self, /) -> Literal[0]: ...
+
+THREAD_DUMMY_LOCK: Final[ThreadDummyLock]
 
 def create_thread_lock() -> ThreadLock: ...
 def create_thread_rlock() -> ThreadRLock: ...

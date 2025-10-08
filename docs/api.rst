@@ -166,6 +166,24 @@ Locks (low-level)
   ...
 .. aiologic.lowlevel.ThreadOnceLock-end-marker
 
+.. aiologic.lowlevel.ThreadDummyLock-start-marker
+.. class:: aiologic.lowlevel.ThreadDummyLock
+  :final:
+  :no-index:
+
+  Bases: :class:`object`
+
+  ...
+.. aiologic.lowlevel.ThreadDummyLock-end-marker
+
+.. aiologic.lowlevel.THREAD_DUMMY_LOCK-start-marker
+.. data:: aiologic.lowlevel.THREAD_DUMMY_LOCK
+  :type: ThreadDummyLock
+  :no-index:
+
+  ...
+.. aiologic.lowlevel.THREAD_DUMMY_LOCK-end-marker
+
 .. autofunction:: aiologic.lowlevel.create_thread_lock() -> ThreadLock
 .. autofunction:: aiologic.lowlevel.create_thread_rlock() -> ThreadRLock
 .. autofunction:: aiologic.lowlevel.create_thread_oncelock() -> ThreadOnceLock

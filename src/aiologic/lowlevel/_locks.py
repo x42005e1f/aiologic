@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
 
 from . import _checkpoints, _monkey, _time
 from ._markers import MISSING
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
 _T = TypeVar("_T")
+
 
 ThreadLock = _monkey._import_original("_thread", "LockType")
 
@@ -353,6 +354,102 @@ class ThreadOnceLock:
 
         return None
 
+
+@final
+class ThreadDummyLock:
+    __slots__ = ()
+
+    def __new__(cls, /) -> ThreadDummyLock:
+        return THREAD_DUMMY_LOCK
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
+        bcs = ThreadDummyLock
+        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+
+        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> str:
+        return "THREAD_DUMMY_LOCK"
+
+    def __repr__(self, /) -> str:
+        return f"{self.__class__.__module__}.THREAD_DUMMY_LOCK"
+
+    def __enter__(self, /) -> Literal[True]:
+        if _checkpoints._threading_checkpoints_enabled():
+            _time._threading_sleep(0)
+
+        return True
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None:
+        pass
+
+    if sys.version_info >= (3, 9):
+
+        def _at_fork_reinit(self, /) -> None:
+            pass
+
+    def acquire(
+        self,
+        /,
+        blocking: bool = True,
+        timeout: float = -1,
+    ) -> Literal[True]:
+        if blocking and _checkpoints._threading_checkpoints_enabled():
+            _time._threading_sleep(0)
+
+        return True
+
+    def release(self, /) -> None:
+        pass
+
+    def locked(self, /) -> Literal[False]:
+        return False
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, /, state: tuple[int, int]) -> None:
+        if _checkpoints._threading_checkpoints_enabled():
+            _time._threading_sleep(0)
+
+    def _release_save(self, /) -> NoReturn:
+        msg = "cannot release un-acquired lock"
+        raise RuntimeError(msg)
+
+    def _is_owned(self, /) -> Literal[False]:
+        return False
+
+    # Internal method used for reentrancy checks
+
+    if sys.version_info >= (3, 12, 1) or (
+        sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
+    ):
+
+        def _recursion_count(self, /) -> Literal[0]:
+            return 0
+
+    # Internal properties used for compatibility with threading._PyRLock
+
+    @property
+    def _block(self, /) -> ThreadLock:
+        return create_thread_lock()
+
+    @property
+    def _count(self, /) -> Literal[0]:
+        return 0
+
+    @property
+    def _owner(self, /) -> None:
+        return None
+
+
+THREAD_DUMMY_LOCK: Final[ThreadDummyLock] = object.__new__(ThreadDummyLock)
 
 if sys.version_info >= (3, 13):
     __allocate_lock = ThreadLock
