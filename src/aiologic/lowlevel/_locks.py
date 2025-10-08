@@ -505,6 +505,7 @@ def once(wrapped=MISSING, /, *, reentrant=False):
 
     @wraps(wrapped)
     def wrapper():
+        nonlocal lock
         nonlocal result
 
         if result is MISSING:
@@ -515,6 +516,7 @@ def once(wrapped=MISSING, /, *, reentrant=False):
                         raise RuntimeError(msg)
 
                     result = wrapped()
+                    lock = THREAD_DUMMY_LOCK
 
         return result
 
