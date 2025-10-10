@@ -250,6 +250,9 @@ class SetEvent(GreenEvent, AsyncEvent):
     def __reduce__(self, /) -> str:
         return "SET_EVENT"
 
+    def __copy__(self, /) -> SetEvent:
+        return SET_EVENT
+
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.SET_EVENT"
 
@@ -319,6 +322,9 @@ class DummyEvent(GreenEvent, AsyncEvent):
     def __reduce__(self, /) -> str:
         return "DUMMY_EVENT"
 
+    def __copy__(self, /) -> DummyEvent:
+        return DUMMY_EVENT
+
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.DUMMY_EVENT"
 
@@ -387,6 +393,9 @@ class CancelledEvent(GreenEvent, AsyncEvent):
 
     def __reduce__(self, /) -> str:
         return "CANCELLED_EVENT"
+
+    def __copy__(self, /) -> CancelledEvent:
+        return CANCELLED_EVENT
 
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.CANCELLED_EVENT"

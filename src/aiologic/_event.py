@@ -97,6 +97,11 @@ class Event:
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__()
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -302,6 +307,12 @@ class REvent(Event):
         """
 
         return Event.__getstate__(self)
+
+    @copies(Event.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Event.__copy__(self)
 
     @copies(Event.__repr__)
     def __repr__(self, /) -> str:
@@ -555,6 +566,11 @@ class CountdownEvent:
         """
 
         return None
+
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._initial_value)
 
     def __repr__(self, /) -> str:
         """..."""

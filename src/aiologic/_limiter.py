@@ -89,6 +89,11 @@ class CapacityLimiter:
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._semaphore.initial_value)
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -374,6 +379,12 @@ class RCapacityLimiter(CapacityLimiter):
         """
 
         return CapacityLimiter.__getstate__(self)
+
+    @copies(CapacityLimiter.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return CapacityLimiter.__copy__(self)
 
     @copies(CapacityLimiter.__repr__)
     def __repr__(self, /) -> str:

@@ -122,6 +122,11 @@ class Latch:
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._parties)
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -406,6 +411,11 @@ class Barrier:
         """
 
         return None
+
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._parties)
 
     def __repr__(self, /) -> str:
         """..."""
@@ -807,6 +817,12 @@ class RBarrier(Barrier):
         """
 
         return Barrier.__getstate__(self)
+
+    @copies(Barrier.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Barrier.__copy__(self)
 
     def __repr__(self, /) -> str:
         """..."""

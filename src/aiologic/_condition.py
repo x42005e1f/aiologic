@@ -176,6 +176,19 @@ class Condition(Generic[_T_co, _S_co]):
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            return self.__class__(self.lock)
+
+        return self.__class__(self.lock, self.timer)
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -362,6 +375,17 @@ class _BaseCondition(Condition[_T_co, _S_co]):
             return (Condition, (self._lock,))
 
         return (Condition, (self._lock, self._timer))
+
+    def __copy__(self, /) -> Self:
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            return self.__class__(self.lock, count().__next__)
+
+        return self.__class__(self.lock, self.timer)
 
     def __repr__(self, /) -> str:
         cls = Condition

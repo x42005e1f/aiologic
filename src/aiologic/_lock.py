@@ -62,8 +62,14 @@ class PLock:
 
         super().__init_subclass__(**kwargs)
 
+    def __getnewargs__(self, /) -> tuple[Any, ...]:
+        return ()
+
     def __getstate__(self, /) -> None:
         return None
+
+    def __copy__(self, /) -> Self:
+        return self.__class__()
 
     def __repr__(self, /) -> str:
         cls = self.__class__
@@ -224,6 +230,11 @@ class Lock(PLock):
         """
 
         return None
+
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__()
 
     def __repr__(self, /) -> str:
         """..."""
@@ -683,6 +694,12 @@ class RLock(Lock):
         """
 
         return Lock.__getstate__(self)
+
+    @copies(Lock.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Lock.__copy__(self)
 
     @copies(Lock.__repr__)
     def __repr__(self, /) -> str:

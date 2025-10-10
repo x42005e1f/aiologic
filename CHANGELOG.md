@@ -95,6 +95,8 @@ Commit messages are consistent with
   these methods have a slightly different meaning: they are intended to
   accompany `aiologic.lowlevel.shield()` calls to pre-check for cancellation,
   and do not guarantee actual checking.
+- `copy()` method to flags and queues as a way to create a shallow copy without
+  additional imports.
 - `async_borrowed()` and `green_borrowed()` methods to capacity limiters,
   `green_owned()` and `async_owned()` methods to locks. They allow to reliably
   check if the current task is holding the primitive (or any of its tokens)
@@ -183,6 +185,9 @@ Commit messages are consistent with
   identifiers), allowing both notifying and waiting to be performed safely from
   inside signal handlers and destructors (affects library detection and
   low-level waiters).
+- Shallow copying now relies on the `__copy__()` method instead of pickle
+  methods. This makes copying faster at the cost of additional overriding in
+  subclasses.
 - Flags are now a high-level primitive, available as `aiologic.Flag`, with
   `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should

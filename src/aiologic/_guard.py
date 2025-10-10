@@ -104,6 +104,11 @@ class ResourceGuard:
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._action)
+
     def __repr__(self, /) -> str:
         """..."""
 

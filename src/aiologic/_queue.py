@@ -8,6 +8,7 @@ from __future__ import annotations
 import warnings
 
 from collections import deque
+from copy import copy
 from heapq import heapify, heappop, heappush
 from typing import (
     TYPE_CHECKING,
@@ -124,7 +125,12 @@ class SimpleQueue(Generic[_T]):
             't'
         """
 
-        return (tuple(self._data.copy()),)
+        data = self._data.copy()
+
+        if not data:
+            return ()
+
+        return (tuple(data),)
 
     def __getstate__(self, /) -> None:
         """
@@ -133,13 +139,26 @@ class SimpleQueue(Generic[_T]):
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        data = self._data.copy()
+
+        if not data:
+            return self.__class__()
+
+        return self.__class__(data)
+
     def __repr__(self, /) -> str:
         """..."""
 
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        items = list(self._data.copy())
+        items = self._data.copy()
+
+        if not isinstance(items, list):
+            items = list(items)
 
         object_repr = f"{cls_repr}({items!r})"
 
@@ -191,6 +210,11 @@ class SimpleQueue(Generic[_T]):
         """
 
         return len(self._data)
+
+    def copy(self, /) -> Self:
+        """..."""
+
+        return self.__copy__()
 
     def put(self, /, item: _T) -> None:
         """..."""
@@ -335,6 +359,12 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         return SimpleQueue.__getstate__(self)
 
+    @copies(SimpleQueue.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return SimpleQueue.__copy__(self)
+
     @copies(SimpleQueue.__repr__)
     def __repr__(self, /) -> str:
         """..."""
@@ -382,6 +412,12 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         """
 
         return SimpleQueue.__len__(self)
+
+    @copies(SimpleQueue.copy)
+    def copy(self, /) -> Self:
+        """..."""
+
+        return SimpleQueue.copy(self)
 
     @copies(SimpleQueue.put)
     def put(self, /, item: _T) -> None:
@@ -553,10 +589,19 @@ class Queue(Generic[_T]):
             't'
         """
 
-        if (maxsize := self._maxsize) != 0:
-            return (tuple(self._data.copy()), maxsize)
+        data = copy(self._data)
+        maxsize = self._maxsize
 
-        return (tuple(self._data.copy()),)
+        if not data:
+            if not maxsize:
+                return ()
+
+            return (maxsize,)
+        else:
+            if not maxsize:
+                return (tuple(data),)
+
+            return (tuple(data), maxsize)
 
     def __getstate__(self, /) -> None:
         """
@@ -565,14 +610,30 @@ class Queue(Generic[_T]):
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        data = copy(self._data)
+        maxsize = self._maxsize
+
+        if not data:
+            if not maxsize:
+                return self.__class__()
+
+            return self.__class__(maxsize)
+        else:
+            if not maxsize:
+                return self.__class__(data)
+
+            return self.__class__(data, maxsize)
+
     def __repr__(self, /) -> str:
         """..."""
 
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        items = list(self._data.copy())
-
+        items = list(copy(self._data))
         maxsize = self._maxsize
 
         if maxsize > 0:
@@ -630,6 +691,11 @@ class Queue(Generic[_T]):
         """
 
         return len(self._data)
+
+    def copy(self, /) -> Self:
+        """..."""
+
+        return self.__copy__()
 
     def _acquire_nowait_on_putting(self, /) -> bool:
         if self._unlocked:
@@ -1015,6 +1081,12 @@ class LifoQueue(Queue[_T]):
 
         return Queue.__getstate__(self)
 
+    @copies(Queue.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Queue.__copy__(self)
+
     @copies(Queue.__repr__)
     def __repr__(self, /) -> str:
         """..."""
@@ -1062,6 +1134,12 @@ class LifoQueue(Queue[_T]):
         """
 
         return Queue.__len__(self)
+
+    @copies(Queue.copy)
+    def copy(self, /) -> Self:
+        """..."""
+
+        return Queue.copy(self)
 
     @copies(Queue.async_put)
     async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
@@ -1208,6 +1286,12 @@ class PriorityQueue(Queue[_RichComparableT]):
 
         return Queue.__getstate__(self)
 
+    @copies(Queue.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Queue.__copy__(self)
+
     @copies(Queue.__repr__)
     def __repr__(self, /) -> str:
         """..."""
@@ -1255,6 +1339,12 @@ class PriorityQueue(Queue[_RichComparableT]):
         """
 
         return Queue.__len__(self)
+
+    @copies(Queue.copy)
+    def copy(self, /) -> Self:
+        """..."""
+
+        return Queue.copy(self)
 
     @copies(Queue.async_put)
     async def async_put(

@@ -153,6 +153,11 @@ class Semaphore:
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._initial_value)
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -519,6 +524,11 @@ class BoundedSemaphore(Semaphore):
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._initial_value, self._max_value)
+
     def __repr__(self, /) -> str:
         """..."""
 
@@ -773,6 +783,12 @@ class BinarySemaphore(Semaphore):
 
         return Semaphore.__getstate__(self)
 
+    @copies(Semaphore.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return Semaphore.__copy__(self)
+
     @copies(Semaphore.__repr__)
     def __repr__(self, /) -> str:
         """..."""
@@ -1024,6 +1040,12 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         """
 
         return BoundedSemaphore.__getstate__(self)
+
+    @copies(BoundedSemaphore.__copy__)
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return BoundedSemaphore.__copy__(self)
 
     @copies(BoundedSemaphore.__repr__)
     def __repr__(self, /) -> str:

@@ -73,13 +73,18 @@ class Flag(Generic[_T]):
             'value'
         """
 
+        marker = MISSING
+
         if self._markers:
             try:
-                return (self._markers[0],)
+                marker = self._markers[0]
             except IndexError:
                 pass
 
-        return ()
+        if marker is MISSING:
+            return ()
+
+        return (marker,)
 
     def __getstate__(self, /) -> None:
         """
@@ -88,19 +93,37 @@ class Flag(Generic[_T]):
 
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        marker = MISSING
+
+        if self._markers:
+            try:
+                marker = self._markers[0]
+            except IndexError:
+                pass
+
+        return self.__class__(marker)
+
     def __repr__(self, /) -> str:
         """..."""
 
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
+        marker = MISSING
+
         if self._markers:
             try:
-                return f"{cls_repr}({self._markers[0]!r})"
+                marker = self._markers[0]
             except IndexError:
                 pass
 
-        return f"{cls_repr}()"
+        if marker is MISSING:
+            return f"{cls_repr}()"
+
+        return f"{cls_repr}({marker!r})"
 
     def __bool__(self, /) -> bool:
         """
@@ -118,6 +141,11 @@ class Flag(Generic[_T]):
         """
 
         return bool(self._markers)
+
+    def copy(self, /) -> Self:
+        """..."""
+
+        return self.__copy__()
 
     @overload
     def get(

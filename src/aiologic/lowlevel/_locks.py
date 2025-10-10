@@ -382,6 +382,9 @@ class ThreadDummyLock:
     def __reduce__(self, /) -> str:
         return "THREAD_DUMMY_LOCK"
 
+    def __copy__(self, /) -> ThreadDummyLock:
+        return THREAD_DUMMY_LOCK
+
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.THREAD_DUMMY_LOCK"
 

@@ -157,6 +157,9 @@ class FalseResult(Result[Literal[False]]):
     def __reduce__(self, /) -> str:
         return "FALSE_RESULT"
 
+    def __copy__(self, /) -> FalseResult:
+        return FALSE_RESULT
+
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.FALSE_RESULT"
 
@@ -198,6 +201,9 @@ class TrueResult(Result[Literal[True]]):
 
     def __reduce__(self, /) -> str:
         return "TRUE_RESULT"
+
+    def __copy__(self, /) -> TrueResult:
+        return TRUE_RESULT
 
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.TRUE_RESULT"
