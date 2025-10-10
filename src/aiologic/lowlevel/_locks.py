@@ -256,6 +256,9 @@ class ThreadOnceLock:
         self.__waiters.append((block, thread))
 
         if self.__count < 0 or self._owner == thread:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+
             return True
 
         return block.acquire(blocking, timeout)
