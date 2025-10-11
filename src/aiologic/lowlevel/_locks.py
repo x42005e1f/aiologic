@@ -181,14 +181,17 @@ except ImportError:
 @final
 class ThreadOnceLock:
     __slots__ = (
-        "__count",
-        "__waiters",
         "__weakref__",
+        "_oncelock_count",
+        "_oncelock_waiters",
     )
 
+    _oncelock_count: int
+    _oncelock_waiters: list[tuple[ThreadLock, int]] | None
+
     def __init__(self, /) -> None:
-        self.__count = 1
-        self.__waiters = []
+        self._oncelock_count = 1
+        self._oncelock_waiters = []
 
     def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
         bcs = ThreadOnceLock
@@ -205,13 +208,13 @@ class ThreadOnceLock:
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
-        if self._owner is not None:
+        if _get_owner(self) is not None:
             status = "locked"
         else:
             status = "unlocked"
 
         object_repr = f"{status} {cls_repr} object"
-        extra = f"owner={self._owner!r} count={self._count!r}"
+        extra = f"owner={_get_owner(self)!r} count={_get_count(self)!r}"
 
         return f"<{object_repr} {extra} at {id(self):#x}>"
 
@@ -230,11 +233,11 @@ class ThreadOnceLock:
     if sys.version_info >= (3, 9):
 
         def _at_fork_reinit(self, /) -> None:
-            self.__count = 1
-            self.__waiters = []
+            self._oncelock_count = 1
+            self._oncelock_waiters = []
 
     def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
-        if not self.__count:
+        if not self._oncelock_count:
             if blocking and _checkpoints._threading_checkpoints_enabled():
                 _time._threading_sleep(0)
 
@@ -242,52 +245,46 @@ class ThreadOnceLock:
 
         thread = current_thread_ident()
 
-        if self._owner == thread:
+        if _get_owner(self) == thread:
             if blocking and _checkpoints._threading_checkpoints_enabled():
                 _time._threading_sleep(0)
 
-            self.__count += 1
+            self._oncelock_count += 1
 
             return True
 
         block = create_thread_lock()
         block.acquire()
 
-        try:
-            waiters = self.__waiters
-        except AttributeError:
-            block.release()
-        else:
+        if (waiters := self._oncelock_waiters) is not None:
             waiters.append((block, thread))
 
-            if (owner := self._owner) is None or owner == thread:
+            if (owner := _get_owner(self)) is None or owner == thread:
                 if blocking and _checkpoints._threading_checkpoints_enabled():
                     _time._threading_sleep(0)
 
                 return True
+        else:
+            block.release()
 
         return block.acquire(blocking, timeout)
 
     def release(self, /) -> None:
-        maybe_acquired = self.__count
+        maybe_acquired = self._oncelock_count
 
         if maybe_acquired:
             thread = current_thread_ident()
 
-            if self._owner != thread:
+            if _get_owner(self) != thread:
                 msg = "cannot release un-acquired lock"
                 raise RuntimeError(msg)
 
-            self.__count -= 1
+            self._oncelock_count -= 1
 
-            if self.__count:
+            if self._oncelock_count:
                 return
 
-        try:
-            waiters = self.__waiters
-        except AttributeError:
-            pass
-        else:
+        if (waiters := self._oncelock_waiters) is not None:
             if maybe_acquired:
                 waiters.reverse()
 
@@ -299,15 +296,12 @@ class ThreadOnceLock:
                 else:
                     token[0].release()
 
-            try:
-                del self.__waiters
-            except AttributeError:
-                pass
+            self._oncelock_waiters = None
 
     if sys.version_info >= (3, 14):
 
         def locked(self, /) -> bool:
-            return self._owner is not None
+            return _get_owner(self) is not None
 
     # Internal methods used by condition variables
 
@@ -316,19 +310,15 @@ class ThreadOnceLock:
             _time._threading_sleep(0)
 
     def _release_save(self, /) -> tuple[int, int]:
-        if not self.__count:
+        if not self._oncelock_count:
             msg = "cannot release un-acquired lock"
             raise RuntimeError(msg)
 
-        state = (self._count, self._owner)
+        state = (_get_count(self), _get_owner(self))
 
-        self.__count = 0
+        self._oncelock_count = 0
 
-        try:
-            waiters = self.__waiters
-        except AttributeError:
-            pass
-        else:
+        if (waiters := self._oncelock_waiters) is not None:
             waiters.reverse()
 
             self.release()
@@ -336,7 +326,7 @@ class ThreadOnceLock:
         return state
 
     def _is_owned(self, /) -> bool:
-        return self._owner == current_thread_ident()
+        return _get_owner(self) == current_thread_ident()
 
     # Internal method used for reentrancy checks
 
@@ -345,9 +335,9 @@ class ThreadOnceLock:
     ):
 
         def _recursion_count(self, /) -> int:
-            count = self.__count
+            count = self._oncelock_count
 
-            if count and self._owner == current_thread_ident():
+            if count and _get_owner(self) == current_thread_ident():
                 return count
 
             return 0
@@ -356,48 +346,42 @@ class ThreadOnceLock:
 
     @property
     def _block(self, /) -> ThreadLock:
-        try:
-            waiters = self.__waiters
-        except AttributeError:
-            pass
-        else:
-            if waiters:
-                try:
-                    token = waiters[0]
-                except IndexError:
-                    pass
-                else:
-                    if self.__count:
-                        return token[0]
+        if waiters := self._oncelock_waiters:
+            try:
+                token = waiters[0]
+            except IndexError:
+                pass
+            else:
+                if self._oncelock_count:
+                    return token[0]
 
         return create_thread_lock()
 
     @property
     def _count(self, /) -> int:
-        count = self.__count
+        count = self._oncelock_count
 
-        if count and self._owner is not None:
+        if count and _get_owner(self) is not None:
             return count
 
         return 0
 
     @property
     def _owner(self, /) -> int | None:
-        try:
-            waiters = self.__waiters
-        except AttributeError:
-            pass
-        else:
-            if waiters:
-                try:
-                    token = waiters[0]
-                except IndexError:
-                    pass
-                else:
-                    if self.__count:
-                        return token[1]
+        if waiters := self._oncelock_waiters:
+            try:
+                token = waiters[0]
+            except IndexError:
+                pass
+            else:
+                if self._oncelock_count:
+                    return token[1]
 
         return None
+
+
+_get_count = ThreadOnceLock._count.fget
+_get_owner = ThreadOnceLock._owner.fget
 
 
 @final
