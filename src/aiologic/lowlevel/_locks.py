@@ -231,7 +231,7 @@ class ThreadOnceLock:
 
         def _at_fork_reinit(self, /) -> None:
             self.__count = 1
-            self.__waiters.clear()
+            self.__waiters = []
 
     def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
         if not self.__count:
@@ -253,18 +253,25 @@ class ThreadOnceLock:
         block = create_thread_lock()
         block.acquire()
 
-        self.__waiters.append((block, thread))
+        try:
+            waiters = self.__waiters
+        except AttributeError:
+            block.release()
+        else:
+            waiters.append((block, thread))
 
-        if (owner := self._owner) is None or owner == thread:
-            if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+            if (owner := self._owner) is None or owner == thread:
+                if blocking and _checkpoints._threading_checkpoints_enabled():
+                    _time._threading_sleep(0)
 
-            return True
+                return True
 
         return block.acquire(blocking, timeout)
 
     def release(self, /) -> None:
-        if self.__count:
+        maybe_acquired = self.__count
+
+        if maybe_acquired:
             thread = current_thread_ident()
 
             if self._owner != thread:
@@ -276,22 +283,31 @@ class ThreadOnceLock:
             if self.__count:
                 return
 
-            self.__waiters.reverse()
+        try:
+            waiters = self.__waiters
+        except AttributeError:
+            pass
+        else:
+            if maybe_acquired:
+                waiters.reverse()
 
-        waiters = self.__waiters
+            while waiters:
+                try:
+                    token = waiters.pop()
+                except IndexError:
+                    break
+                else:
+                    token[0].release()
 
-        while waiters:
             try:
-                token = waiters.pop()
-            except IndexError:
-                break
-            else:
-                token[0].release()
+                del self.__waiters
+            except AttributeError:
+                pass
 
     if sys.version_info >= (3, 14):
 
         def locked(self, /) -> bool:
-            return bool(self.__count and self.__waiters)
+            return self._owner is not None
 
     # Internal methods used by condition variables
 
@@ -307,8 +323,15 @@ class ThreadOnceLock:
         state = (self._count, self._owner)
 
         self.__count = 0
-        self.__waiters.reverse()
-        self.release()
+
+        try:
+            waiters = self.__waiters
+        except AttributeError:
+            pass
+        else:
+            waiters.reverse()
+
+            self.release()
 
         return state
 
@@ -333,14 +356,19 @@ class ThreadOnceLock:
 
     @property
     def _block(self, /) -> ThreadLock:
-        if self.__waiters:
-            try:
-                token = self.__waiters[0]
-            except IndexError:
-                pass
-            else:
-                if self.__count:
-                    return token[0]
+        try:
+            waiters = self.__waiters
+        except AttributeError:
+            pass
+        else:
+            if waiters:
+                try:
+                    token = waiters[0]
+                except IndexError:
+                    pass
+                else:
+                    if self.__count:
+                        return token[0]
 
         return create_thread_lock()
 
@@ -355,14 +383,19 @@ class ThreadOnceLock:
 
     @property
     def _owner(self, /) -> int | None:
-        if self.__waiters:
-            try:
-                token = self.__waiters[0]
-            except IndexError:
-                pass
-            else:
-                if self.__count:
-                    return token[1]
+        try:
+            waiters = self.__waiters
+        except AttributeError:
+            pass
+        else:
+            if waiters:
+                try:
+                    token = waiters[0]
+                except IndexError:
+                    pass
+                else:
+                    if self.__count:
+                        return token[1]
 
         return None
 
