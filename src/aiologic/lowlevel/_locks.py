@@ -234,7 +234,7 @@ class ThreadOnceLock:
             self.__waiters.clear()
 
     def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
-        if self.__count < 0:
+        if not self.__count:
             if blocking and _checkpoints._threading_checkpoints_enabled():
                 _time._threading_sleep(0)
 
@@ -255,7 +255,7 @@ class ThreadOnceLock:
 
         self.__waiters.append((block, thread))
 
-        if self.__count < 0 or self._owner == thread:
+        if (owner := self._owner) is None or owner == thread:
             if blocking and _checkpoints._threading_checkpoints_enabled():
                 _time._threading_sleep(0)
 
@@ -264,7 +264,7 @@ class ThreadOnceLock:
         return block.acquire(blocking, timeout)
 
     def release(self, /) -> None:
-        if self.__count >= 0:
+        if self.__count:
             thread = current_thread_ident()
 
             if self._owner != thread:
@@ -273,10 +273,9 @@ class ThreadOnceLock:
 
             self.__count -= 1
 
-            if self.__count > 0:
+            if self.__count:
                 return
 
-            self.__count = -1
             self.__waiters.reverse()
 
         waiters = self.__waiters
@@ -292,7 +291,7 @@ class ThreadOnceLock:
     if sys.version_info >= (3, 14):
 
         def locked(self, /) -> bool:
-            return self.__count >= 0 and bool(self.__waiters)
+            return bool(self.__count and self.__waiters)
 
     # Internal methods used by condition variables
 
@@ -301,13 +300,13 @@ class ThreadOnceLock:
             _time._threading_sleep(0)
 
     def _release_save(self, /) -> tuple[int, int]:
-        if self.__count <= 0:
+        if not self.__count:
             msg = "cannot release un-acquired lock"
             raise RuntimeError(msg)
 
         state = (self._count, self._owner)
 
-        self.__count = -1
+        self.__count = 0
         self.__waiters.reverse()
         self.release()
 
@@ -325,7 +324,7 @@ class ThreadOnceLock:
         def _recursion_count(self, /) -> int:
             count = self.__count
 
-            if count > 0 and self._owner == current_thread_ident():
+            if count and self._owner == current_thread_ident():
                 return count
 
             return 0
@@ -340,7 +339,7 @@ class ThreadOnceLock:
             except IndexError:
                 pass
             else:
-                if self.__count >= 0:
+                if self.__count:
                     return token[0]
 
         return create_thread_lock()
@@ -349,7 +348,7 @@ class ThreadOnceLock:
     def _count(self, /) -> int:
         count = self.__count
 
-        if count > 0 and self._owner is not None:
+        if count and self._owner is not None:
             return count
 
         return 0
@@ -362,7 +361,7 @@ class ThreadOnceLock:
             except IndexError:
                 pass
             else:
-                if self.__count >= 0:
+                if self.__count:
                     return token[1]
 
         return None
