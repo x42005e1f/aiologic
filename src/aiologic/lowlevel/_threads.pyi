@@ -4,9 +4,13 @@
 # SPDX-License-Identifier: ISC
 
 from threading import Thread, get_ident, local
+from typing import Final
 
 from ._greenlets import _GreenletLike
 
+_OS_SCHED_YIELD_AVAILABLE: Final[bool]
+
+def _sched_yield() -> None: ...
 def _is_main_thread() -> bool: ...
 def _current_python_thread() -> Thread | None: ...
 def _current_eventlet_thread() -> Thread | None: ...

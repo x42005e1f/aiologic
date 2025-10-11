@@ -19,7 +19,7 @@ from typing import (
     overload,
 )
 
-from . import _checkpoints, _monkey, _time
+from . import _checkpoints, _monkey, _threads
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
 
@@ -112,7 +112,7 @@ except ImportError:
 
             if self._owner == thread:
                 if blocking and _checkpoints._threading_checkpoints_enabled():
-                    _time._threading_sleep(0)
+                    _threads._sched_yield()
 
                 self._count += 1
 
@@ -239,7 +239,7 @@ class ThreadOnceLock:
     def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
         if not self._oncelock_count:
             if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+                _threads._sched_yield()
 
             return True
 
@@ -247,7 +247,7 @@ class ThreadOnceLock:
 
         if _get_owner(self) == thread:
             if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+                _threads._sched_yield()
 
             self._oncelock_count += 1
 
@@ -257,7 +257,7 @@ class ThreadOnceLock:
 
         if waiters is None:
             if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+                _threads._sched_yield()
 
             return True
 
@@ -265,7 +265,7 @@ class ThreadOnceLock:
 
         if (owner := _get_owner(self)) is None or owner == thread:
             if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+                _threads._sched_yield()
 
             return True
 
@@ -276,7 +276,7 @@ class ThreadOnceLock:
 
         if not self._oncelock_count:
             if blocking and _checkpoints._threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+                _threads._sched_yield()
 
             return True
 
@@ -321,7 +321,7 @@ class ThreadOnceLock:
 
     def _acquire_restore(self, /, state: tuple[int, int]) -> None:
         if _checkpoints._threading_checkpoints_enabled():
-            _time._threading_sleep(0)
+            _threads._sched_yield()
 
     def _release_save(self, /) -> tuple[int, int]:
         if not self._oncelock_count:
@@ -414,7 +414,7 @@ class ThreadDummyLock:
 
     def __enter__(self, /) -> Literal[True]:
         if _checkpoints._threading_checkpoints_enabled():
-            _time._threading_sleep(0)
+            _threads._sched_yield()
 
         return True
 
@@ -439,7 +439,7 @@ class ThreadDummyLock:
         timeout: float = -1,
     ) -> Literal[True]:
         if blocking and _checkpoints._threading_checkpoints_enabled():
-            _time._threading_sleep(0)
+            _threads._sched_yield()
 
         return True
 
@@ -453,7 +453,7 @@ class ThreadDummyLock:
 
     def _acquire_restore(self, /, state: tuple[int, int]) -> None:
         if _checkpoints._threading_checkpoints_enabled():
-            _time._threading_sleep(0)
+            _threads._sched_yield()
 
     def _release_save(self, /) -> NoReturn:
         msg = "cannot release un-acquired lock"

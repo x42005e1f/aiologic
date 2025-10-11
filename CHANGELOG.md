@@ -238,6 +238,9 @@ Commit messages are consistent with
     shields both the called function and the calling task from being cancelled.
     It supports awaitable objects, coroutine functions, and green functions:
     timeouts are suppressed, and are re-raised after the call completes.
+  + `threading` checkpoints now use `os.sched_yield()` (when available) as a
+    way to quickly switch the GIL. This makes them cheaper, but may slightly
+    alter their behavior in free-threading.
   + They now skip the current library detection when it is not required (for
     example, when checkpoints are not enabled for any of the imported
     libraries). This also affects checkpoints in low-level events, which no

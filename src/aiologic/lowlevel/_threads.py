@@ -5,17 +5,18 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
 from threading import main_thread
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from wrapt import when_imported
 
-from . import _greenlets, _monkey
+from . import _greenlets, _monkey, _time
 from ._utils import _replaces as replaces
 
 if TYPE_CHECKING:
-    import sys
-
     from threading import Thread
     from typing import Any
 
@@ -25,6 +26,26 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
+
+_OS_SCHED_YIELD_AVAILABLE: Final[bool] = hasattr(os, "sched_yield") and (
+    sys.version_info >= (3, 11, 1)  # python/cpython#96078
+    or (sys.version_info < (3, 11) and sys.version_info >= (3, 10, 8))
+)
+
+if _OS_SCHED_YIELD_AVAILABLE:
+
+    def _sched_yield() -> None:
+        global _sched_yield
+
+        _sched_yield = _monkey._import_original("os", "sched_yield")
+
+        _sched_yield()
+
+else:
+
+    def _sched_yield() -> None:
+        _time._threading_sleep(0)
+
 
 try:
     _get_main_thread_ident = _monkey._import_original(

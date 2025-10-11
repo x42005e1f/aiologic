@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from . import _time
+from . import _threads, _time
 from ._libraries import current_async_library, current_green_library
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
@@ -565,7 +565,7 @@ def green_checkpoint(*, force: bool = False) -> None:
                 enabled = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                _time._threading_sleep(0)
+                _threads._sched_yield()
         elif library == "eventlet":
             if enabled is None:
                 enabled = _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
