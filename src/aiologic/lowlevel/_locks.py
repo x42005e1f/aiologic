@@ -187,7 +187,7 @@ class ThreadOnceLock:
     )
 
     _oncelock_count: int
-    _oncelock_waiters: list[tuple[ThreadLock, int]] | None
+    _oncelock_waiters: list[Any] | None
 
     def __init__(self, /) -> None:
         self._oncelock_count = 1
@@ -253,19 +253,32 @@ class ThreadOnceLock:
 
             return True
 
+        waiters = self._oncelock_waiters
+
+        if waiters is None:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+
+            return True
+
+        waiters.append(token := [None, thread])
+
+        if (owner := _get_owner(self)) is None or owner == thread:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
+
+            return True
+
         block = create_thread_lock()
         block.acquire()
 
-        if (waiters := self._oncelock_waiters) is not None:
-            waiters.append((block, thread))
+        token[0] = block
 
-            if (owner := _get_owner(self)) is None or owner == thread:
-                if blocking and _checkpoints._threading_checkpoints_enabled():
-                    _time._threading_sleep(0)
+        if not self._oncelock_count:
+            if blocking and _checkpoints._threading_checkpoints_enabled():
+                _time._threading_sleep(0)
 
-                return True
-        else:
-            block.release()
+            return True
 
         return block.acquire(blocking, timeout)
 
@@ -290,11 +303,12 @@ class ThreadOnceLock:
 
             while waiters:
                 try:
-                    token = waiters.pop()
+                    block, _ = waiters.pop()
                 except IndexError:
                     break
                 else:
-                    token[0].release()
+                    if block is not None:
+                        block.release()
 
             self._oncelock_waiters = None
 
@@ -346,15 +360,6 @@ class ThreadOnceLock:
 
     @property
     def _block(self, /) -> ThreadLock:
-        if waiters := self._oncelock_waiters:
-            try:
-                token = waiters[0]
-            except IndexError:
-                pass
-            else:
-                if self._oncelock_count:
-                    return token[0]
-
         return create_thread_lock()
 
     @property
