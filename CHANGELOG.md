@@ -193,6 +193,13 @@ Commit messages are consistent with
   identifiers), allowing both notifying and waiting to be performed safely from
   inside signal handlers and destructors (affects library detection and
   low-level waiters).
+- All primitives now use `aiologic.lowlevel.lazydeque` instead of
+  `collections.deque` to reduce memory usage. This makes their memory usage a
+  bit closer to `asyncio` primitives (more lightweight than some `threading`
+  primitives!), and especially affects complex queues, which now consume only
+  ~0.5 KiB instead of ~3 KiB per instance. But the cost of this is
+  synchronization via `aiologic.lowlevel.ThreadOnceLock` at the first addition
+  to the queue in free-threading.
 - Shallow copying now relies on the `__copy__()` method instead of pickle
   methods. This makes copying faster at the cost of additional overriding in
   subclasses.

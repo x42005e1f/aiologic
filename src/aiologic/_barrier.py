@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 
-from collections import deque
 from itertools import count, islice
 from typing import TYPE_CHECKING, Any, Final
 
@@ -19,6 +18,7 @@ from .lowlevel import (
     create_async_event,
     create_green_event,
     green_checkpoint,
+    lazydeque,
 )
 from .lowlevel._utils import _copies as copies
 
@@ -83,7 +83,7 @@ class Latch:
         self._filling = [None]
         self._unbroken = True
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -373,7 +373,7 @@ class Barrier:
         self._unbroken = True
         self._unlocked = [None]
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -782,7 +782,7 @@ class RBarrier(Barrier):
         self._unbroken = Flag(object())
         self._unlocked = [None]
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 

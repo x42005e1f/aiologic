@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 
-from collections import deque
 from itertools import count
 from typing import TYPE_CHECKING, Any, Final, overload
 
@@ -21,6 +20,7 @@ from .lowlevel import (
     create_async_event,
     create_green_event,
     green_checkpoint,
+    lazydeque,
 )
 from .lowlevel._utils import _copies as copies
 
@@ -67,7 +67,7 @@ class Event:
         self = object.__new__(cls)
 
         self._is_unset = True
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -276,7 +276,7 @@ class REvent(Event):
         self._is_unset.set()
 
         self._timer = count().__next__
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -528,7 +528,7 @@ class CountdownEvent:
 
         self._is_unset = [object()] * initial_value
         self._timer = count().__next__
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 

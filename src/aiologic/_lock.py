@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import warnings
 
-from collections import deque
 from typing import TYPE_CHECKING, Any
 
 from ._semaphore import BinarySemaphore
@@ -19,6 +18,7 @@ from .lowlevel import (
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
+    lazydeque,
 )
 from .lowlevel._utils import _copies as copies
 
@@ -201,7 +201,7 @@ class Lock(PLock):
 
         self._releasing = False
         self._unlocked = [None]
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -663,7 +663,7 @@ class RLock(Lock):
 
         self._releasing = False
         self._unlocked = [None]
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 

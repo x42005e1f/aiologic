@@ -9,7 +9,6 @@ import os
 import platform
 import sys
 
-from collections import deque
 from typing import TYPE_CHECKING, Any, Final, overload
 
 from .lowlevel import (
@@ -20,6 +19,7 @@ from .lowlevel import (
     create_async_event,
     create_green_event,
     green_checkpoint,
+    lazydeque,
 )
 from .lowlevel._utils import _copies as copies
 
@@ -119,7 +119,7 @@ class Semaphore:
         else:
             self._unlocked = [None] * self._initial_value
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -490,7 +490,7 @@ class BoundedSemaphore(Semaphore):
             self._locked = [None] * (self._max_value - self._initial_value)
             self._unlocked = [None] * self._initial_value
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -747,7 +747,7 @@ class BinarySemaphore(Semaphore):
 
         self._unlocked = [None] * self._initial_value
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 
@@ -1005,7 +1005,7 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
         self._unlocked = [None] * self._initial_value
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         return self
 

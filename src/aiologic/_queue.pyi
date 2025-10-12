@@ -5,10 +5,9 @@
 
 import sys
 
-from collections import deque
 from typing import Any, Generic, Protocol, TypeVar, overload
 
-from .lowlevel import MISSING, Event, MissingType
+from .lowlevel import MISSING, Event, MissingType, lazydeque
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -176,7 +175,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: deque[Event],
+        waiters: lazydeque[Event],
         *,
         blocking: bool = True,
     ) -> bool: ...
@@ -184,7 +183,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: deque[Event],
+        waiters: lazydeque[Event],
         *,
         blocking: bool = True,
         timeout: float | None = None,

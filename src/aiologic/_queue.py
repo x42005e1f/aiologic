@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import warnings
 
-from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
 from typing import (
@@ -29,6 +28,7 @@ from .lowlevel import (
     create_async_event,
     create_green_event,
     green_checkpoint,
+    lazydeque,
 )
 from .lowlevel._utils import _copies as copies
 
@@ -96,9 +96,9 @@ class SimpleQueue(Generic[_T]):
         self = object.__new__(cls)
 
         if items is not MISSING:
-            self._data = deque(items)
+            self._data = lazydeque(items)
         else:
-            self._data = deque()
+            self._data = lazydeque()
 
         self._semaphore = Semaphore(len(self._data))
 
@@ -560,9 +560,9 @@ class Queue(Generic[_T]):
 
         self._unlocked = [None]
 
-        self._putters = deque()
-        self._putters_and_getters = deque()
-        self._getters = deque()
+        self._putters = lazydeque()
+        self._putters_and_getters = lazydeque()
+        self._getters = lazydeque()
 
         self._maxsize = maxsize
 
@@ -739,7 +739,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: deque[Event],
+        waiters: lazydeque[Event],
         *,
         blocking: bool = True,
     ) -> bool:
@@ -803,7 +803,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: deque[Event],
+        waiters: lazydeque[Event],
         *,
         blocking: bool = True,
         timeout: float | None = None,
@@ -978,7 +978,7 @@ class Queue(Generic[_T]):
                 break
 
     def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
-        self._data = deque(items)
+        self._data = lazydeque(items)
 
     def _put(self, /, item: _T) -> None:
         self._data.append(item)

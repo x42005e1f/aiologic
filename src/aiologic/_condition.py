@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 import time
 
-from collections import defaultdict, deque
+from collections import defaultdict
 from itertools import count
 from logging import Logger, getLogger
 from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
@@ -27,6 +27,7 @@ from .lowlevel import (
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
+    lazydeque,
 )
 
 if sys.version_info >= (3, 13):
@@ -359,7 +360,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         self._notifying = ResourceGuard(action="notifying")
 
@@ -763,7 +764,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         self._notifying = ResourceGuard(action="notifying")
 
@@ -1212,7 +1213,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
         self._notifying = ResourceGuard(action="notifying")
 
