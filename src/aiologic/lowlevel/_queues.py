@@ -62,19 +62,19 @@ class lazydeque(MutableSequence[_T]):
     ) -> Self:
         self = object.__new__(cls)
 
-        if iterable is MISSING:
-            self._data = None
+        self._data = None
 
-            if _USE_ONCELOCK:
-                self._data_holder = None
+        if _USE_ONCELOCK:
+            self._data_holder = None
 
-                ThreadOnceLock.__init__(self)
-            else:
-                self._data_holder = []
+            ThreadOnceLock.__init__(self)
         else:
-            self._data = deque(iterable, maxlen)
+            self._data_holder = []
 
         self._maxlen = maxlen
+
+        if iterable is not MISSING:
+            self += iterable
 
         return self
 
