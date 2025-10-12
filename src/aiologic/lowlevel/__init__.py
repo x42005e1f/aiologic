@@ -65,6 +65,9 @@ from ._markers import (
     DefaultType as DefaultType,
     MissingType as MissingType,
 )
+from ._queues import (
+    lazydeque as lazydeque,
+)
 from ._safety import (
     disable_signal_safety as disable_signal_safety,
     enable_signal_safety as enable_signal_safety,

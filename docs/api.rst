@@ -189,6 +189,18 @@ Locks (low-level)
 .. autofunction:: aiologic.lowlevel.create_thread_oncelock() -> ThreadOnceLock
 .. autofunction:: aiologic.lowlevel.once
 
+Queues (low-level)
+++++++++++++++++++
+
+.. aiologic.lowlevel.lazydeque-start-marker
+.. class:: aiologic.lowlevel.lazydeque
+  :no-index:
+
+  Bases: :class:`MutableSequence <collections.abc.MutableSequence>`
+
+  ...
+.. aiologic.lowlevel.lazydeque-end-marker
+
 Testing framework
 -----------------
 

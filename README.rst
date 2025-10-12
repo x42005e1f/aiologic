@@ -115,7 +115,7 @@ Features
 
 * Fairness wherever possible (with some caveats)
 * Thread-safety wherever possible
-* Lock-free implementation
+* Lock-free implementation (with some exceptions)
 * Bundled stub files
 
 Synchronization primitives:
