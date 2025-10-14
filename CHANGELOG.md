@@ -120,6 +120,9 @@ Commit messages are consistent with
 - Conditional variables now support user-defined timers. They can be passed to
   the constructor, called via the `timer` property, and used to pass the
   deadline to the notification methods.
+- Low-level events can now support `aiologic.lowlevel.ThreadOnceLock` methods
+  by passing `locking=True`. This allows to synchronize related one-time
+  operations with less memory overhead.
 - Low-level events can now be shielded from external cancellation by passing
   `shield=True`. This allows to implement efficient finalization strategies
   while preserving the one-time nature of low-level events.

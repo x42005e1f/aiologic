@@ -20,6 +20,7 @@ from typing import (
 )
 
 from ._checkpoints import async_checkpoint, green_checkpoint
+from ._locks import ThreadOnceLock
 from ._waiters import create_async_waiter, create_green_waiter
 
 if TYPE_CHECKING:
@@ -515,18 +516,10 @@ class _BaseEvent(ABC, Event):
         return self._is_cancelled
 
 
-@final
 class _GreenEventImpl(_BaseEvent, GreenEvent):
     __slots__ = ()
 
     __new__ = _BaseEvent.__new__
-
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
-        bcs = _GreenEventImpl
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
-
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
-        raise TypeError(msg)
 
     def __reduce__(self, /) -> NoReturn:
         msg = f"cannot reduce {self!r}"
@@ -589,18 +582,10 @@ class _GreenEventImpl(_BaseEvent, GreenEvent):
             self._waiter = None
 
 
-@final
 class _AsyncEventImpl(_BaseEvent, AsyncEvent):
     __slots__ = ()
 
     __new__ = _BaseEvent.__new__
-
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn:
-        bcs = _AsyncEventImpl
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
-
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
-        raise TypeError(msg)
 
     def __reduce__(self, /) -> NoReturn:
         msg = f"cannot reduce {self!r}"
@@ -663,21 +648,51 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
             self._waiter = None
 
 
+class __LockingGreenEventImpl(_GreenEventImpl):
+    __slots__ = tuple(
+        name for name in ThreadOnceLock.__slots__ if name != "__weakref__"
+    )
+
+
+class __LockingAsyncEventImpl(_AsyncEventImpl):
+    __slots__ = tuple(
+        name for name in ThreadOnceLock.__slots__ if name != "__weakref__"
+    )
+
+
 def create_green_event(
     *,
+    locking: bool = False,
     shield: bool = False,
     force: bool = False,
 ) -> GreenEvent:
     """..."""
 
-    return _GreenEventImpl(shield, force)
+    if locking:
+        event = __LockingGreenEventImpl(shield, force)
+    else:
+        event = _GreenEventImpl(shield, force)
+
+    if locking:
+        ThreadOnceLock.__init__(event)
+
+    return event
 
 
 def create_async_event(
     *,
+    locking: bool = False,
     shield: bool = False,
     force: bool = False,
 ) -> AsyncEvent:
     """..."""
 
-    return _AsyncEventImpl(shield, force)
+    if locking:
+        event = __LockingAsyncEventImpl(shield, force)
+    else:
+        event = _AsyncEventImpl(shield, force)
+
+    if locking:
+        ThreadOnceLock.__init__(event)
+
+    return event
