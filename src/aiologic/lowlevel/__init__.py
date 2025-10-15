@@ -67,6 +67,7 @@ from ._markers import (
 )
 from ._queues import (
     lazydeque as lazydeque,
+    lazyqueue as lazyqueue,
 )
 from ._safety import (
     disable_signal_safety as disable_signal_safety,

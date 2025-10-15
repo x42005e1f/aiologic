@@ -6,7 +6,15 @@
 import sys
 
 from collections import deque
-from typing import Any, ClassVar, Final, SupportsIndex, TypeVar
+from typing import (
+    Any,
+    ClassVar,
+    Final,
+    Generic,
+    NoReturn,
+    SupportsIndex,
+    TypeVar,
+)
 
 from ._markers import DEFAULT, MISSING, DefaultType, MissingType
 
@@ -19,6 +27,8 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+_USE_SIMPLEQUEUE: Final[bool]
 
 _USE_ONCELOCK: Final[bool]
 
@@ -103,3 +113,19 @@ class lazydeque(MutableSequence[_T]):
     def clear(self, /) -> None: ...
     @property
     def maxlen(self, /) -> int | None: ...
+
+class lazyqueue(Generic[_T]):
+    __slots__ = (
+        "__weakref__",
+        "_data",
+        "_data_holder",
+    )
+
+    def __init__(self, /) -> None: ...
+    def __reduce__(self, /) -> NoReturn: ...
+    def __repr__(self, /) -> str: ...
+    def __bool__(self, /) -> bool: ...
+    def __len__(self, /) -> int: ...
+    def _init(self, /) -> Any: ...
+    def put(self, x: _T, /) -> None: ...
+    def get(self, /) -> _T: ...

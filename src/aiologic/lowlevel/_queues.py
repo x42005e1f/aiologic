@@ -9,8 +9,18 @@ import sys
 
 from collections import deque
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ClassVar, Final, SupportsIndex, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Final,
+    Generic,
+    NoReturn,
+    SupportsIndex,
+    TypeVar,
+)
 
+from . import _monkey
 from ._locks import ThreadOnceLock
 from ._markers import DEFAULT, MISSING, DefaultType, MissingType
 
@@ -24,6 +34,16 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
+
+try:
+    _Empty = _monkey._import_original("_queue", "Empty")
+    _SimpleQueue = _monkey._import_original("_queue", "SimpleQueue")
+except ImportError:
+    __SIMPLEQUEUE_AVAILABLE: Final[bool] = False
+else:
+    __SIMPLEQUEUE_AVAILABLE: Final[bool] = True
+
+_USE_SIMPLEQUEUE: Final[bool] = __SIMPLEQUEUE_AVAILABLE
 
 try:
     from sys import _is_gil_enabled
@@ -656,3 +676,152 @@ class lazydeque(MutableSequence[_T]):
         """maximum size of a deque or None if unbounded"""
 
         return self._maxlen
+
+
+class lazyqueue(Generic[_T]):
+    __slots__ = (
+        "__weakref__",
+        "_data",
+        "_data_holder",
+    )
+
+    if _USE_ONCELOCK:
+        __slots__ = tuple(dict.fromkeys(__slots__ + ThreadOnceLock.__slots__))
+
+    def __init__(self, /) -> None:
+        self._data = None
+
+        if _USE_ONCELOCK:
+            self._data_holder = None
+
+            ThreadOnceLock.__init__(self)
+        else:
+            self._data_holder = []
+
+    def __reduce__(self, /) -> NoReturn:
+        msg = f"cannot reduce {self!r}"
+        raise TypeError(msg)
+
+    def __repr__(self, /) -> str:
+        cls_repr = self.__class__.__qualname__
+
+        state = f"length={len(self)}"
+
+        return f"<{cls_repr} object at {id(self):#x}: {state}>"
+
+    if _USE_SIMPLEQUEUE:
+
+        def __bool__(self, /) -> bool:
+            if (data := self._data) is not None:
+                return not data.empty()
+
+            return False
+
+    else:
+
+        def __bool__(self, /) -> bool:
+            if (data := self._data) is not None:
+                return bool(data)
+
+            return False
+
+    if _USE_SIMPLEQUEUE:
+
+        def __len__(self, /) -> int:
+            if (data := self._data) is not None:
+                return data.qsize()
+
+            return 0
+
+    else:
+
+        def __len__(self, /) -> int:
+            if (data := self._data) is not None:
+                return len(data)
+
+            return 0
+
+    if _USE_ONCELOCK:
+
+        def _init(self, /) -> Any:
+            ThreadOnceLock.acquire(self)
+
+            try:
+                if self._data is None:
+                    data_holder = self._data_holder
+
+                    if data_holder is None:
+                        self._data_holder = data_holder = []
+
+                    if _USE_SIMPLEQUEUE:
+                        data_holder.append(_SimpleQueue())
+                    else:
+                        data_holder.append(deque())
+
+                    if self._data is None:
+                        self._data = data_holder[0]
+
+                    self._data_holder = None
+            finally:
+                ThreadOnceLock.release(self)
+
+            return self._data
+
+    else:
+
+        def _init(self, /) -> Any:
+            if (data_holder := self._data_holder) is not None:
+                if not data_holder:
+                    if _USE_SIMPLEQUEUE:
+                        data_holder.append(_SimpleQueue())
+                    else:
+                        data_holder.append(deque())
+
+                self._data = data_holder[0]
+                self._data_holder = None
+
+            return self._data
+
+    if _USE_SIMPLEQUEUE:
+
+        def put(self, x: _T, /) -> None:
+            data = self._data
+
+            if data is None:
+                data = self._init()
+
+            return data.put_nowait(x)
+
+    else:
+
+        def put(self, x: _T, /) -> None:
+            data = self._data
+
+            if data is None:
+                data = self._init()
+
+            return data.append(x)
+
+    if _USE_SIMPLEQUEUE:
+
+        def get(self, /) -> _T:
+            if (data := self._data) is not None:
+                try:
+                    return data.get_nowait()
+                except _Empty:
+                    pass
+
+            msg = "get from an empty queue"
+            raise IndexError(msg)
+
+    else:
+
+        def get(self, /) -> _T:
+            if (data := self._data) is not None:
+                try:
+                    return data.popleft()
+                except IndexError:
+                    pass
+
+            msg = "get from an empty queue"
+            raise IndexError(msg)

@@ -61,13 +61,19 @@ Commit messages are consistent with
   signal-safe when `reentrant=True` is passed (note: this does not apply to
   side effects!).
 - `aiologic.lowlevel.lazydeque` as a thread-safe/signal-safe wrapper for
-  `collection.deque` with lazy initialization. It solves the problem of deques'
-  high memory usage: one empty instance of `collections.deque` takes up 760
-  bytes on Python 3.11+ (for comparison, one empty list takes up only 56
+  `collections.deque` with lazy initialization. It solves the problem of
+  deques' high memory usage: one empty instance of `collections.deque` takes up
+  760 bytes on Python 3.11+ (for comparison, one empty list takes up only 56
   bytes!). In contrast, one empty instance of `aiologic.lowlevel.lazydeque`
   takes up 128 bytes in total, and after initialization (first addition) takes
   up 832 bytes on Python 3.11+. Free-threading adds an additional 16 bytes in
   all cases (due to the internal use of `aiologic.lowlevel.ThreadOnceLock`).
+- `aiologic.lowlevel.lazyqueue` as a thread-safe/signal-safe wrapper for
+  `_queue.SimpleQueue` (when available) or `collections.deque` with lazy
+  initialization. It provides a non-blocking queue and differs from
+  `aiologic.lowlevel.lazydeque` in that it is more memory efficient at the cost
+  of less functionality. Instead of 128 and 832 bytes, it takes up 120 and 200
+  bytes on Python 3.13+.
 - `aiologic.lowlevel.DEFAULT` as a marker for parameters with default values.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,

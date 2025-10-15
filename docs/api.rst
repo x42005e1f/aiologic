@@ -196,10 +196,19 @@ Queues (low-level)
 .. class:: aiologic.lowlevel.lazydeque
   :no-index:
 
-  Bases: :class:`MutableSequence <collections.abc.MutableSequence>`
+  Bases: :class:`MutableSequence[_T] <collections.abc.MutableSequence>`
 
   ...
 .. aiologic.lowlevel.lazydeque-end-marker
+
+.. aiologic.lowlevel.lazyqueue-start-marker
+.. class:: aiologic.lowlevel.lazyqueue
+  :no-index:
+
+  Bases: :class:`Generic[_T] <typing.Generic>`
+
+  ...
+.. aiologic.lowlevel.lazyqueue-end-marker
 
 Testing framework
 -----------------
