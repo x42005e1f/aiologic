@@ -22,6 +22,9 @@ else:
 
 _PERFECT_FAIRNESS_ENABLED: Final[bool]
 
+_USE_ONCELOCK: Final[bool]
+_USE_ONCELOCK_FORCED: Final[bool]
+
 class BrokenBarrierError(RuntimeError): ...
 
 class Latch:

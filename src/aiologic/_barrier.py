@@ -14,6 +14,7 @@ from ._flag import Flag
 from .lowlevel import (
     DEFAULT,
     DefaultType,
+    ThreadOnceLock,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -50,6 +51,9 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
         "1" if __GIL_ENABLED else "",
     )
 )
+
+_USE_ONCELOCK: Final[bool] = _PERFECT_FAIRNESS_ENABLED and not __GIL_ENABLED
+_USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
 
 
 class BrokenBarrierError(RuntimeError):
@@ -188,7 +192,7 @@ class Latch:
 
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK),
                 self._unbroken,
             ]
         )
@@ -234,7 +238,7 @@ class Latch:
 
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK),
                 self._unbroken,
             ]
         )
@@ -312,7 +316,15 @@ class Latch:
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
                         if remove or waiters[0] is token:
-                            waiters.remove(token)
+                            if _USE_ONCELOCK:
+                                ThreadOnceLock.acquire(event)
+                                try:
+                                    if waiters[0] is token:
+                                        waiters.remove(token)
+                                finally:
+                                    ThreadOnceLock.release(event)
+                            else:
+                                waiters.remove(token)
                     except ValueError:  # waiters does not contain token
                         continue
                     except IndexError:  # waiters is empty
@@ -487,7 +499,7 @@ class Barrier:
 
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 None,
                 -1,
             ]
@@ -536,7 +548,7 @@ class Barrier:
 
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 None,
                 -1,
             ]
@@ -679,7 +691,15 @@ class Barrier:
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty
@@ -713,7 +733,15 @@ class Barrier:
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
                         if remove or waiters[0] is token:
-                            waiters.remove(token)
+                            if _USE_ONCELOCK_FORCED:
+                                ThreadOnceLock.acquire(event)
+                                try:
+                                    if waiters[0] is token:
+                                        waiters.remove(token)
+                                finally:
+                                    ThreadOnceLock.release(event)
+                            else:
+                                waiters.remove(token)
                     except ValueError:  # waiters does not contain token
                         continue
                     except IndexError:  # waiters is empty
@@ -893,7 +921,7 @@ class RBarrier(Barrier):
 
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._unbroken.get(default_factory=object),
                 self._timer(),
                 None,
@@ -944,7 +972,7 @@ class RBarrier(Barrier):
 
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._unbroken.get(default_factory=object),
                 self._timer(),
                 None,
@@ -1093,7 +1121,15 @@ class RBarrier(Barrier):
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty
@@ -1134,7 +1170,15 @@ class RBarrier(Barrier):
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty

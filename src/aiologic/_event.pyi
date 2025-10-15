@@ -21,6 +21,9 @@ else:
 
 _PERFECT_FAIRNESS_ENABLED: Final[bool]
 
+_USE_ONCELOCK: Final[bool]
+_USE_ONCELOCK_FORCED: Final[bool]
+
 class Event:
     __slots__ = (
         "__weakref__",

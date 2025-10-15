@@ -29,6 +29,8 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Callable, Generator
 
+_USE_ONCELOCK_FORCED: Final[bool]
+
 LOGGER: Final[Logger]
 
 _T = TypeVar("_T")

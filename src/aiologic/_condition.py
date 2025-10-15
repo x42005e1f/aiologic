@@ -21,6 +21,7 @@ from .lowlevel import (
     DEFAULT,
     MISSING,
     DefaultType,
+    ThreadOnceLock,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -47,6 +48,15 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
+
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    __GIL_ENABLED: Final[bool] = True
+else:
+    __GIL_ENABLED: Final[bool] = _is_gil_enabled()
+
+_USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
 
 LOGGER: Final[Logger] = getLogger(__name__)
 
@@ -575,7 +585,15 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty
@@ -589,7 +607,15 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                     if event.is_set() or event.cancelled():
                         try:
                             if waiters[0] is token:
-                                waiters.remove(token)
+                                if _USE_ONCELOCK_FORCED:
+                                    ThreadOnceLock.acquire(event)
+                                    try:
+                                        if waiters[0] is token:
+                                            waiters.remove(token)
+                                    finally:
+                                        ThreadOnceLock.release(event)
+                                else:
+                                    waiters.remove(token)
                         except ValueError:  # waiters does not contain token
                             continue
                         except IndexError:  # waiters is empty
@@ -608,7 +634,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -618,7 +644,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -680,7 +706,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -690,7 +716,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -837,7 +863,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -847,7 +873,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -924,7 +950,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -934,7 +960,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -1059,7 +1085,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -1069,7 +1095,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -1136,7 +1162,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -1146,7 +1172,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -1400,7 +1426,15 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
                     try:
                         if remove or waiters[0] is token:
-                            waiters.remove(token)
+                            if _USE_ONCELOCK_FORCED:
+                                ThreadOnceLock.acquire(event)
+                                try:
+                                    if waiters[0] is token:
+                                        waiters.remove(token)
+                                finally:
+                                    ThreadOnceLock.release(event)
+                            else:
+                                waiters.remove(token)
                     except ValueError:  # token not in waiters
                         continue
                     except IndexError:  # waiters is empty
@@ -1414,7 +1448,15 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                         if event.is_set() or event.cancelled():
                             try:
                                 if waiters[0] is token:
-                                    waiters.remove(token)
+                                    if _USE_ONCELOCK_FORCED:
+                                        ThreadOnceLock.acquire(event)
+                                        try:
+                                            if waiters[0] is token:
+                                                waiters.remove(token)
+                                        finally:
+                                            ThreadOnceLock.release(event)
+                                    else:
+                                        waiters.remove(token)
                             except ValueError:  # token not in waiters
                                 continue
                             except IndexError:  # waiters is empty
@@ -1429,7 +1471,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
     async def _async_wait(self, /, predicate):
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1513,7 +1555,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
     def _green_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1645,7 +1687,7 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     async def _async_wait(self, /, predicate):
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1726,7 +1768,7 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     def _green_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result

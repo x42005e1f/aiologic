@@ -190,6 +190,10 @@ Commit messages are consistent with
   implementation flaws, "perfect fairness" can still be useful, so since this
   version `aiologic` provides the `AIOLOGIC_PERFECT_FAIRNESS` environment
   variable to explicitly enable or disable it.
+- To avoid cubic complexity, token removal in perfect fairness style (cannot be
+  disabled in: multi-time events, multi-use barriers, and condition variables)
+  is now synchronized via `aiologic.lowlevel.ThreadOnceLock` methods in the
+  free-threaded mode.
 - Signal-safety is now also explicit and can be configured via the universal
   decorators. When enabled, code behaves as if it were running outside the
   context in the same thread (as in a separate thread but with the same thread

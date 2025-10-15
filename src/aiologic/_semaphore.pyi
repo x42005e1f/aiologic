@@ -20,6 +20,8 @@ _USE_BYTEARRAY: Final[bool]
 
 _PERFECT_FAIRNESS_ENABLED: Final[bool]
 
+_USE_ONCELOCK: Final[bool]
+
 class Semaphore:
     __slots__ = (
         "__weakref__",

@@ -15,6 +15,7 @@ from .lowlevel import (
     DEFAULT,
     DefaultType,
     Event,
+    ThreadOnceLock,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -53,6 +54,8 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
         "1" if __GIL_ENABLED else "",
     )
 )
+
+_USE_ONCELOCK: Final[bool] = _PERFECT_FAIRNESS_ENABLED and not __GIL_ENABLED
 
 
 class Semaphore:
@@ -242,7 +245,14 @@ class Semaphore:
         if not blocking:
             return False
 
-        self._waiters.append(event := create_async_event(shield=_shield))
+        self._waiters.append(
+            event := create_async_event(
+                locking=(
+                    _USE_ONCELOCK and not isinstance(self, BinarySemaphore)
+                ),
+                shield=_shield,
+            )
+        )
 
         if self._acquire_nowait():
             if event.set():
@@ -290,7 +300,14 @@ class Semaphore:
         if not blocking:
             return False
 
-        self._waiters.append(event := create_green_event(shield=_shield))
+        self._waiters.append(
+            event := create_green_event(
+                locking=(
+                    _USE_ONCELOCK and not isinstance(self, BinarySemaphore)
+                ),
+                shield=_shield,
+            )
+        )
 
         if self._acquire_nowait():
             if event.set():
@@ -352,7 +369,15 @@ class Semaphore:
                     if _PERFECT_FAIRNESS_ENABLED:
                         try:
                             if remove or waiters[0] is event:
-                                waiters.remove(event)
+                                if _USE_ONCELOCK:
+                                    ThreadOnceLock.acquire(event)
+                                    try:
+                                        if waiters[0] is event:
+                                            waiters.remove(event)
+                                    finally:
+                                        ThreadOnceLock.release(event)
+                                else:
+                                    waiters.remove(event)
                         except ValueError:  # waiters does not contain event
                             continue
                         except IndexError:  # waiters is empty

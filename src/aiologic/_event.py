@@ -16,6 +16,7 @@ from .lowlevel import (
     MISSING,
     DefaultType,
     MissingType,
+    ThreadOnceLock,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -50,6 +51,9 @@ _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
         "1" if __GIL_ENABLED else "",
     )
 )
+
+_USE_ONCELOCK: Final[bool] = _PERFECT_FAIRNESS_ENABLED and not __GIL_ENABLED
+_USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
 
 
 class Event:
@@ -144,7 +148,9 @@ class Event:
 
             return True
 
-        self._waiters.append(event := create_async_event())
+        self._waiters.append(
+            event := create_async_event(locking=_USE_ONCELOCK)
+        )
 
         if not self._is_unset:
             if event.set():
@@ -180,7 +186,9 @@ class Event:
 
             return True
 
-        self._waiters.append(event := create_green_event())
+        self._waiters.append(
+            event := create_green_event(locking=_USE_ONCELOCK)
+        )
 
         if not self._is_unset:
             if event.set():
@@ -244,7 +252,15 @@ class Event:
                 if _PERFECT_FAIRNESS_ENABLED:
                     try:
                         if remove or waiters[0] is event:
-                            waiters.remove(event)
+                            if _USE_ONCELOCK:
+                                ThreadOnceLock.acquire(event)
+                                try:
+                                    if waiters[0] is event:
+                                        waiters.remove(event)
+                                finally:
+                                    ThreadOnceLock.release(event)
+                            else:
+                                waiters.remove(event)
                     except ValueError:  # waiters does not contain event
                         continue
                     except IndexError:  # waiters is empty
@@ -353,7 +369,7 @@ class REvent(Event):
 
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._is_unset.get(default_factory=object),
                 self._timer(),
                 None,
@@ -396,7 +412,7 @@ class REvent(Event):
 
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._is_unset.get(default_factory=object),
                 self._timer(),
                 None,
@@ -483,7 +499,15 @@ class REvent(Event):
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty
@@ -626,7 +650,7 @@ class CountdownEvent:
 
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._get(default_factory=object),
                 self._timer(),
                 None,
@@ -669,7 +693,7 @@ class CountdownEvent:
 
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 marker := self._get(default_factory=object),
                 self._timer(),
                 None,
@@ -782,7 +806,15 @@ class CountdownEvent:
 
                 try:
                     if remove or waiters[0] is token:
-                        waiters.remove(token)
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
+                            try:
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
                 except ValueError:  # waiters does not contain token
                     continue
                 except IndexError:  # waiters is empty
