@@ -57,3 +57,12 @@ if not __import__("typing").TYPE_CHECKING:
                 pass
 
         del __value
+
+__import__("warnings").warn(
+    (
+        "aiologic.testing will soon be completely rewritten in an incompatible"
+        " manner. Please be careful and refrain from automatic updates!"
+    ),
+    DeprecationWarning,
+    stacklevel=2,
+)
