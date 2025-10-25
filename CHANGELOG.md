@@ -109,6 +109,26 @@ Commit messages are consistent with
   these methods have a slightly different meaning: they are intended to
   accompany `aiologic.lowlevel.shield()` calls to pre-check for cancellation,
   and do not guarantee actual checking.
+- `aiologic.lowlevel.green_clock()` and `aiologic.lowlevel.async_clock()` as a
+  way to get the current time according to the current library's internal
+  monotonic clock (useful for sleep-until functions).
+- `aiologic.lowlevel.green_sleep()` and `aiologic.lowlevel.async_sleep()` to
+  suspend the current task for the given number of seconds.
+- `aiologic.lowlevel.green_sleep_until()` and
+  `aiologic.lowlevel.async_sleep_until()` to suspend the current task until the
+  given deadline (relative to the current library's internal monotonic clock).
+- `aiologic.lowlevel.green_sleep_forever()` and
+  `aiologic.lowlevel.async_sleep_forever()` to suspend the current task until
+  an exception occurs.
+- `aiologic.lowlevel.green_seconds_per_sleep()` and
+  `aiologic.lowlevel.async_seconds_per_sleep()` as a way to get the number of
+  seconds during which sleep guarantees exactly one checkpoint. If sleep
+  exceeds this time, it will use multiple calls (to bypass library
+  limitations).
+- `aiologic.lowlevel.green_seconds_per_timeout()` and
+  `aiologic.lowlevel.async_seconds_per_timeout()` that are the same as their
+  sleep equivalents, but for timeouts (applies to low-level waiters/events, as
+  well as all high-level primitives).
 - `copy()` method to flags and queues as a way to create a shallow copy without
   additional imports.
 - `async_borrowed()` and `green_borrowed()` methods to capacity limiters,
@@ -206,6 +226,10 @@ Commit messages are consistent with
   identifiers), allowing both notifying and waiting to be performed safely from
   inside signal handlers and destructors (affects library detection and
   low-level waiters).
+- All timeouts now support the full range of int and float values, and
+  correctly handle NaN and infinity (in particular, `timeout=inf` is equivalent
+  to `timeout=None`). A side effect is that large timeouts (exceeding the
+  maximum) increase the number of checkpoints.
 - All primitives now use `aiologic.lowlevel.lazydeque` instead of
   `collections.deque` to reduce memory usage. This makes their memory usage a
   bit closer to `asyncio` primitives (more lightweight than some `threading`
@@ -458,6 +482,9 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `timeout<0` in all primitives, as they differ from the semantics of the
+  standard library, which could lead to their incorrect use (since they are
+  equivalent `timeout=0`, but not to no timeout).
 - `action` as a positional parameter in `aiologic.ResourceGuard` in favor of
   using it as a keyword-only parameter.
 - `maxsize<=0` in complex queue constructors in favor of `maxsize=None`:
@@ -530,6 +557,9 @@ Commit messages are consistent with
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been
   exceeded.
+- Blocking `eventlet` calls did not check the context, which could lead to
+  incorrect behavior when executing blocking calls in the hub context (as part
+  of scheduled calls).
 - The locks and semaphores (and the capacity limiters and simple queues based
   on them) did not handle exceptions at checkpoints, so that cancelling at
   checkpoints (`trio` case by default) did not release the primitive.

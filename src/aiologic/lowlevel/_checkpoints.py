@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from . import _threads, _time
 from ._libraries import current_async_library, current_green_library
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
@@ -532,6 +531,62 @@ def disable_checkpoints(wrapped=MISSING, /):
     return __disable_green_checkpoints(wrapped)
 
 
+def _threading_checkpoint() -> None:
+    global _threading_checkpoint
+
+    from . import _monkey
+
+    if hasattr(os, "sched_yield") and (
+        sys.version_info >= (3, 11, 1)  # python/cpython#96078
+        or (sys.version_info < (3, 11) and sys.version_info >= (3, 10, 8))
+    ):
+        _threading_checkpoint = _monkey._import_original("os", "sched_yield")
+    else:
+        _sleep = _monkey._import_original("time", "sleep")
+
+        @replaces(globals())
+        def _threading_checkpoint():
+            _sleep(0)
+
+    _threading_checkpoint()
+
+
+def _eventlet_checkpoint() -> None:
+    global _eventlet_checkpoint
+
+    from eventlet import sleep as _eventlet_checkpoint
+
+    _eventlet_checkpoint()
+
+
+def _gevent_checkpoint() -> None:
+    global _gevent_checkpoint
+
+    from gevent import sleep as _gevent_checkpoint
+
+    _gevent_checkpoint()
+
+
+async def _asyncio_checkpoint() -> None:
+    from types import coroutine
+
+    @coroutine
+    def _asyncio_checkpoint():
+        yield
+
+    await _asyncio_checkpoint()
+
+
+async def _curio_checkpoint() -> None:
+    from curio import sleep
+
+    @replaces(globals())
+    async def _curio_checkpoint():
+        await sleep(0)
+
+    await _curio_checkpoint()
+
+
 async def _trio_checkpoint() -> None:
     global _trio_checkpoint
 
@@ -565,19 +620,19 @@ def green_checkpoint(*, force: bool = False) -> None:
                 enabled = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                _threads._sched_yield()
+                _threading_checkpoint()
         elif library == "eventlet":
             if enabled is None:
                 enabled = _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                _time._eventlet_sleep()
+                _eventlet_checkpoint()
         elif library == "gevent":
             if enabled is None:
                 enabled = _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                _time._gevent_sleep()
+                _gevent_checkpoint()
 
 
 async def checkpoint(*, force: bool = False) -> None:
@@ -615,13 +670,13 @@ async def async_checkpoint(*, force: bool = False) -> None:
                 enabled = _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                await _time._asyncio_sleep(0)
+                await _asyncio_checkpoint()
         elif library == "curio":
             if enabled is None:
                 enabled = _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
             if enabled:
-                await _time._curio_sleep(0)
+                await _curio_checkpoint()
         elif library == "trio":
             if enabled is None:
                 enabled = _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT

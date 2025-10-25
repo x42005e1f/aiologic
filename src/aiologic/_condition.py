@@ -6,11 +6,12 @@
 from __future__ import annotations
 
 import sys
-import time
+import warnings
 
 from collections import defaultdict
 from itertools import count
 from logging import Logger, getLogger
+from math import inf, isnan
 from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
 
 from . import lowlevel
@@ -28,6 +29,7 @@ from .lowlevel import (
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
+    green_clock,
     lazydeque,
 )
 
@@ -509,10 +511,29 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
         while True:
             if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else 1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    warnings.warn(
+                        "Use timeout=max(0, timeout) instead",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                    timeout = 0
+
                 if deadline is None:
-                    deadline = time.monotonic() + timeout
+                    deadline = green_clock() + timeout
                 else:
-                    timeout = deadline - time.monotonic()
+                    timeout = deadline - green_clock()
 
                     if timeout < 0:
                         return result
@@ -1351,10 +1372,29 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
             while True:
                 if timeout is not None:
+                    if isinstance(timeout, int):
+                        try:
+                            timeout = float(timeout)
+                        except OverflowError:
+                            timeout = (-1 if timeout < 0 else 1) * inf
+
+                    if isnan(timeout):
+                        msg = "timeout must be non-NaN"
+                        raise ValueError(msg)
+
+                    if timeout < 0:
+                        warnings.warn(
+                            "Use timeout=max(0, timeout) instead",
+                            DeprecationWarning,
+                            stacklevel=2,
+                        )
+
+                        timeout = 0
+
                     if deadline is None:
-                        deadline = time.monotonic() + timeout
+                        deadline = green_clock() + timeout
                     else:
-                        timeout = deadline - time.monotonic()
+                        timeout = deadline - green_clock()
 
                         if timeout < 0:
                             return result

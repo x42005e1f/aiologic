@@ -449,6 +449,18 @@ Execution units
 Cancellation and timeouts
 +++++++++++++++++++++++++
 
+.. autofunction:: aiologic.lowlevel.async_clock
+.. autofunction:: aiologic.lowlevel.green_clock
+.. autofunction:: aiologic.lowlevel.async_sleep
+.. autofunction:: aiologic.lowlevel.green_sleep
+.. autofunction:: aiologic.lowlevel.async_sleep_until
+.. autofunction:: aiologic.lowlevel.green_sleep_until
+.. autofunction:: aiologic.lowlevel.async_sleep_forever
+.. autofunction:: aiologic.lowlevel.green_sleep_forever
+.. autofunction:: aiologic.lowlevel.async_seconds_per_sleep
+.. autofunction:: aiologic.lowlevel.green_seconds_per_sleep
+.. autofunction:: aiologic.lowlevel.async_seconds_per_timeout
+.. autofunction:: aiologic.lowlevel.green_seconds_per_timeout
 .. autofunction:: aiologic.lowlevel.shield
 
 Checkpoints and fairness

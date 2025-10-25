@@ -147,7 +147,7 @@ def _current_curio_task() -> object:
     @replaces(globals())
     def _current_curio_task():
         try:
-            _aiologic_task_cell = _locals._aiologic_task_cell
+            cell = _locals._aiologic_task_cell
         except AttributeError:
             kernel = getattr(_locals, "kernel", None)
 
@@ -155,17 +155,17 @@ def _current_curio_task() -> object:
                 msg = "no running kernel"
                 raise RuntimeError(msg) from None
 
-            _trap = kernel._traps["trap_get_current"]
+            trap = kernel._traps["trap_get_current"]
 
-            _cell_index = _trap.__code__.co_freevars.index("current")
-            _aiologic_task_cell = _trap.__closure__[_cell_index]
+            cell_index = trap.__code__.co_freevars.index("current")
+            cell = trap.__closure__[cell_index]
 
-            _locals._aiologic_task_cell = _aiologic_task_cell
-            _finalizer = partial(delattr, _locals, "_aiologic_task_cell")
+            _locals._aiologic_task_cell = cell
+            finalizer = partial(delattr, _locals, "_aiologic_task_cell")
 
-            kernel._call_at_shutdown(_finalizer)
+            kernel._call_at_shutdown(finalizer)
 
-        return _aiologic_task_cell.cell_contents
+        return cell.cell_contents
 
     return _current_curio_task()
 

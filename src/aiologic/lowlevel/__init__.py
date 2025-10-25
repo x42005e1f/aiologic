@@ -81,6 +81,20 @@ from ._threads import (
     current_thread as current_thread,
     current_thread_ident as current_thread_ident,
 )
+from ._time import (
+    async_clock as async_clock,
+    async_seconds_per_sleep as async_seconds_per_sleep,
+    async_seconds_per_timeout as async_seconds_per_timeout,
+    async_sleep as async_sleep,
+    async_sleep_forever as async_sleep_forever,
+    async_sleep_until as async_sleep_until,
+    green_clock as green_clock,
+    green_seconds_per_sleep as green_seconds_per_sleep,
+    green_seconds_per_timeout as green_seconds_per_timeout,
+    green_sleep as green_sleep,
+    green_sleep_forever as green_sleep_forever,
+    green_sleep_until as green_sleep_until,
+)
 from ._waiters import (
     AsyncWaiter as AsyncWaiter,
     GreenWaiter as GreenWaiter,
