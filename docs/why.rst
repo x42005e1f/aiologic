@@ -77,8 +77,8 @@ These situations have one thing in common: you may need a way to interact
 between threads, at least one of which may run an event loop. However, you
 cannot use primitives from the :mod:`threading` module because they block the
 event loop. You also cannot use primitives from the :mod:`asyncio` module
-because they `are not thread-safe/thread-aware <https://stackoverflow.com/a/
-79198672>`__.
+because they `are not thread-safe/thread-aware <https://docs.python.org/3/
+library/asyncio-sync.html>`__.
 
 Known solutions (only for some special cases) use one of the following ideas:
 
@@ -123,6 +123,15 @@ call and has issues with cancellation and timeouts:
     print("active threads:", threading.active_count())  # 9 - wow, thread leak!
 
     # program will hang until you press Control-C
+
+.. note::
+
+    You can learn a little more about the various solutions and their
+    limitations in `the related Stack Overflow answer <https://
+    stackoverflow.com/a/79198672>`__. Also, `a comment on a PR for
+    omnilib/aiomultiprocess <https://github.com/omnilib/aiomultiprocess/pull/
+    218#issuecomment-3417973089>`__ describes a problem that is virtually
+    impossible to solve using threads and/or polling.
 
 However, *aiologic* has none of these disadvantages. Using its approach based
 on low-level events, it gives you much more than you can get with alternatives.
