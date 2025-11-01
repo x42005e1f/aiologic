@@ -5,6 +5,7 @@
 
 from . import (  # noqa: F401
     lowlevel,
+    meta,
 )
 from ._barrier import (
     Barrier as Barrier,
@@ -56,13 +57,5 @@ from ._semaphore import (
     Semaphore as Semaphore,
 )
 
-# modify __module__ for shorter repr() and better pickle support
-if not __import__("typing").TYPE_CHECKING:
-    for __value in list(globals().values()):
-        if getattr(__value, "__module__", "").startswith(f"{__name__}."):
-            try:
-                __value.__module__ = __name__
-            except AttributeError:
-                pass
-
-        del __value
+# update .__module__ attributes for shorter representation and better pickling
+meta.update_metadata(globals())

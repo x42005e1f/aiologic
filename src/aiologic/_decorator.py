@@ -8,21 +8,17 @@ from __future__ import annotations
 import sys
 
 from inspect import iscoroutinefunction
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Protocol,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, Union
 
 from wrapt import FunctionWrapper, decorator
 
 from ._lock import RLock
 from ._semaphore import BinarySemaphore
-from .lowlevel._utils import _external as external
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -467,37 +463,30 @@ def __green_synchronized_wrapper(wrapped, instance, args, kwargs, /):
 
 
 @overload
-@external
 def synchronized(  # type: ignore[overload-overlap]
     wrapped: _AALock,
     /,
 ) -> _AASynchronizer: ...
 @overload
-@external
 def synchronized(  # type: ignore[overload-overlap]
     wrapped: _ASLock,
     /,
 ) -> _ASSynchronizer: ...
 @overload
-@external
 def synchronized(wrapped: _SSLock, /) -> _SSSynchronizer: ...
 @overload
-@external
 def synchronized(wrapped: _MMLock, /) -> _MMSynchronizer: ...
 @overload
-@external
 def synchronized(
     wrapped: _SynchronizedType[_LockT],
     /,
 ) -> _SynchronizedDecorator: ...
 @overload
-@external
 def synchronized(  # type: ignore[overload-overlap]
     wrapped: _CallableT,
     /,
 ) -> _CallableT: ...
 @overload
-@external
 def synchronized(wrapped: object, /) -> _SynchronizedDecorator: ...
 def synchronized(wrapped, /):
     """..."""

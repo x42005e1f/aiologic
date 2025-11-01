@@ -6,9 +6,14 @@
 import sys
 
 from types import TracebackType
-from typing import Final, Literal, NoReturn, TypeVar, final, overload
+from typing import Final, Literal, NoReturn, TypeVar, final
 
 from ._markers import MISSING, MissingType
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable

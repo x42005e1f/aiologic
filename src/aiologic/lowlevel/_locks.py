@@ -8,20 +8,16 @@ from __future__ import annotations
 import sys
 
 from functools import partial, wraps
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    NoReturn,
-    TypeVar,
-    final,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
 
 from . import _checkpoints, _monkey
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable

@@ -9,13 +9,18 @@ import sys
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator
 
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
-from ._utils import _external as external, _replaces as replaces
+from ._utils import _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -211,16 +216,13 @@ def __disable_green_signal_safety(wrapped, instance, args, kwargs, /):
 
 
 @overload
-@external
 def enable_signal_safety(
     wrapped: MissingType = MISSING,
     /,
 ) -> _SignalSafetyManager: ...
 @overload
-@external
 def enable_signal_safety(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def enable_signal_safety(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_signal_safety(wrapped=MISSING, /):
     """..."""
@@ -238,16 +240,13 @@ def enable_signal_safety(wrapped=MISSING, /):
 
 
 @overload
-@external
 def disable_signal_safety(
     wrapped: MissingType = MISSING,
     /,
 ) -> _NoSignalSafetyManager: ...
 @overload
-@external
 def disable_signal_safety(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def disable_signal_safety(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_signal_safety(wrapped=MISSING, /):
     """..."""

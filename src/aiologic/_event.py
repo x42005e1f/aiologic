@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 import os
+import sys
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Final, overload
+from typing import TYPE_CHECKING, Any, Final
 
 from ._flag import Flag
 from .lowlevel import (
@@ -25,9 +26,12 @@ from .lowlevel import (
 )
 from .lowlevel._utils import _copies as copies
 
-if TYPE_CHECKING:
-    import sys
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
+if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:

@@ -9,7 +9,7 @@ import sys
 import threading
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import (
     DEFAULT,
@@ -23,10 +23,10 @@ from ._executors import TaskExecutor, current_executor
 from ._tasks import Task, TaskCancelled, create_task as _create_task
 
 if sys.version_info >= (3, 11):
-    from typing import Self, TypeVarTuple, Unpack
+    from typing import Self, TypeVarTuple, Unpack, overload
 else:
     from exceptiongroup import BaseExceptionGroup
-    from typing_extensions import Self, TypeVarTuple, Unpack
+    from typing_extensions import Self, TypeVarTuple, Unpack, overload
 
 if TYPE_CHECKING:
     from concurrent.futures import Future

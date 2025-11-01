@@ -3,8 +3,15 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+import sys
+
 from types import ModuleType
-from typing import Any, overload
+from typing import Any
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 def _eventlet_patched(module_name: str, /) -> bool: ...
 def _gevent_patched(module_name: str, /) -> bool: ...

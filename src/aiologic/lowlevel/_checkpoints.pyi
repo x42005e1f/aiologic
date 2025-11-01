@@ -7,7 +7,7 @@ import sys
 
 from contextvars import ContextVar, Token
 from types import TracebackType
-from typing import Any, Final, Literal, TypeVar, overload
+from typing import Any, Final, Literal, TypeVar
 
 from ._markers import MISSING, MissingType
 
@@ -15,6 +15,11 @@ if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
     from typing_extensions import deprecated
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable

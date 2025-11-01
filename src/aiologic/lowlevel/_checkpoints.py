@@ -11,14 +11,19 @@ import warnings
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
 from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
-from ._utils import _external as external, _replaces as replaces
+from ._utils import _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -478,16 +483,13 @@ def __disable_green_checkpoints(wrapped, instance, args, kwargs, /):
 
 
 @overload
-@external
 def enable_checkpoints(
     wrapped: MissingType = MISSING,
     /,
 ) -> _CheckpointsManager: ...
 @overload
-@external
 def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_checkpoints(wrapped=MISSING, /):
     """..."""
@@ -505,16 +507,13 @@ def enable_checkpoints(wrapped=MISSING, /):
 
 
 @overload
-@external
 def disable_checkpoints(
     wrapped: MissingType = MISSING,
     /,
 ) -> _NoCheckpointsManager: ...
 @overload
-@external
 def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_checkpoints(wrapped=MISSING, /):
     """..."""

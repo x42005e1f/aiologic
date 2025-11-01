@@ -102,14 +102,3 @@ from ._waiters import (
     create_async_waiter as create_async_waiter,
     create_green_waiter as create_green_waiter,
 )
-
-# modify __module__ for shorter repr() and better pickle support
-if not __import__("typing").TYPE_CHECKING:
-    for __value in list(globals().values()):
-        if getattr(__value, "__module__", "").startswith(f"{__name__}."):
-            try:
-                __value.__module__ = __name__
-            except AttributeError:
-                pass
-
-        del __value

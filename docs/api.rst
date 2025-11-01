@@ -482,8 +482,11 @@ Safety and reentrancy
 .. autofunction:: aiologic.lowlevel.enable_signal_safety
 .. autofunction:: aiologic.lowlevel.disable_signal_safety
 
+Metaprogramming
+---------------
+
 Markers
--------
++++++++
 
 .. autoclass:: aiologic.lowlevel.MissingType
   :no-inherited-members:
@@ -505,3 +508,8 @@ Markers
 
   ...
 .. aiologic.lowlevel.DEFAULT-end-marker
+
+Exports
++++++++
+
+.. autofunction:: aiologic.meta.update_metadata

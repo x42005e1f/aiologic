@@ -5,14 +5,14 @@
 
 import sys
 
-from typing import Any, Generic, Protocol, TypeVar, overload
+from typing import Any, Generic, Protocol, TypeVar
 
 from .lowlevel import MISSING, Event, MissingType, lazydeque
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Iterable

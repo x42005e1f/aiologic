@@ -10,14 +10,14 @@ from abc import ABC, abstractmethod
 from concurrent.futures import Executor, Future
 from contextvars import Context
 from types import TracebackType
-from typing import Any, Generic, NoReturn, TypeVar, final, overload
+from typing import Any, Generic, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec

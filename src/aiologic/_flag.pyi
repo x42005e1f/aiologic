@@ -5,7 +5,7 @@
 
 import sys
 
-from typing import Any, Generic, overload
+from typing import Any, Generic
 
 from .lowlevel._markers import MISSING, MissingType
 
@@ -15,9 +15,9 @@ else:
     from typing_extensions import TypeVar
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable

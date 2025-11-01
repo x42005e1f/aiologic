@@ -8,12 +8,17 @@ from __future__ import annotations
 import sys
 
 from inspect import isawaitable, iscoroutinefunction
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
 from ._libraries import current_async_library, current_green_library
-from ._utils import _external as external, _replaces as replaces
+from ._utils import _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -360,10 +365,8 @@ class __ShieldedAwaitable(ObjectProxy):
 
 
 @overload
-@external
 def shield(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def shield(wrapped: _CallableT, /) -> _CallableT: ...
 def shield(wrapped, /):
     """..."""

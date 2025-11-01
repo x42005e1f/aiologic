@@ -12,7 +12,7 @@ from collections import defaultdict
 from itertools import count
 from logging import Logger, getLogger
 from math import inf, isnan
-from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, Union
 
 from . import lowlevel
 from ._guard import ResourceGuard
@@ -37,6 +37,11 @@ if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Generator

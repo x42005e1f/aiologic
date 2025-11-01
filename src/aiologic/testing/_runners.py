@@ -8,17 +8,16 @@ from __future__ import annotations
 import sys
 
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiologic.lowlevel import DEFAULT, DefaultType
-from aiologic.lowlevel._utils import _external as external
 
 from ._executors import create_executor
 
 if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
+    from typing import TypeVarTuple, Unpack, overload
 else:
-    from typing_extensions import TypeVarTuple, Unpack
+    from typing_extensions import TypeVarTuple, Unpack, overload
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
@@ -31,7 +30,6 @@ _Ts = TypeVarTuple("_Ts")
 
 
 @overload
-@external
 def run(
     func: Awaitable[_T],
     /,
@@ -41,7 +39,6 @@ def run(
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
-@external
 def run(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
@@ -51,7 +48,6 @@ def run(
     backend_options: dict[str, Any] | None = None,
 ) -> _T: ...
 @overload
-@external
 def run(
     func: Callable[[Unpack[_Ts]], _T],
     /,

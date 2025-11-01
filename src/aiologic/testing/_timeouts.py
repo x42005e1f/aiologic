@@ -8,21 +8,18 @@ from __future__ import annotations
 import sys
 
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiologic.lowlevel import DEFAULT, DefaultType
-from aiologic.lowlevel._utils import (
-    _external as external,
-    _replaces as replaces,
-)
+from aiologic.lowlevel._utils import _replaces as replaces
 
 from ._exceptions import get_cancelled_exc_class, get_timeout_exc_class
 from ._executors import TaskExecutor, current_executor
 
 if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
+    from typing import TypeVarTuple, Unpack, overload
 else:
-    from typing_extensions import TypeVarTuple, Unpack
+    from typing_extensions import TypeVarTuple, Unpack, overload
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
@@ -356,7 +353,6 @@ def _anyio_timeout_after(seconds, maybe_func, /, *args):
 
 
 @overload
-@external
 def timeout_after(
     seconds: float,
     maybe_func: Awaitable[_T],
@@ -365,7 +361,6 @@ def timeout_after(
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Coroutine[Any, Any, _T]: ...
 @overload
-@external
 def timeout_after(
     seconds: float,
     maybe_func: Callable[[Unpack[_Ts]], _T],

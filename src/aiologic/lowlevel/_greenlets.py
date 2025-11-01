@@ -5,13 +5,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, overload
+import sys
+
+from typing import TYPE_CHECKING, Any, Protocol
 
 from wrapt import when_imported
 
-if TYPE_CHECKING:
-    import sys
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
+if TYPE_CHECKING:
     from contextvars import Context
     from types import FrameType, TracebackType
 

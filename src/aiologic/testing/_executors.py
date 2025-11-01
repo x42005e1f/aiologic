@@ -18,19 +18,16 @@ from concurrent.futures import (
 from contextvars import Context, copy_context
 from functools import partial
 from inspect import isawaitable, iscoroutinefunction
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    NoReturn,
-    TypeVar,
-    final,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, NoReturn, TypeVar, final
 
 import aiologic
 
 from aiologic.lowlevel import DEFAULT, DefaultType, once
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec

@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from concurrent.futures import BrokenExecutor, Future
 from contextvars import copy_context
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final, overload
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import (
     DEFAULT,
@@ -22,7 +22,6 @@ from aiologic.lowlevel import (
     green_checkpoint,
     once,
 )
-from aiologic.lowlevel._utils import _external as external
 
 from ._exceptions import (
     _CancelledError,
@@ -34,9 +33,9 @@ from ._executors import TaskExecutor, current_executor
 from ._results import FALSE_RESULT, TRUE_RESULT, Result
 
 if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
+    from typing import TypeVarTuple, Unpack, overload
 else:
-    from typing_extensions import TypeVarTuple, Unpack
+    from typing_extensions import TypeVarTuple, Unpack, overload
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
@@ -901,7 +900,6 @@ def _create_anyio_task(func, /, *args, executor):
 
 
 @overload
-@external
 def create_task(
     func: Awaitable[_T],
     /,
@@ -909,7 +907,6 @@ def create_task(
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
-@external
 def create_task(
     func: Callable[[Unpack[_Ts]], Coroutine[Any, Any, _T]],
     /,
@@ -917,7 +914,6 @@ def create_task(
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 @overload
-@external
 def create_task(
     func: Callable[[Unpack[_Ts]], _T],
     /,

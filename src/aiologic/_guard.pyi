@@ -6,7 +6,7 @@
 import sys
 
 from types import TracebackType
-from typing import Any, Final, overload
+from typing import Any, Final
 
 from .lowlevel import DEFAULT, DefaultType
 
@@ -16,9 +16,9 @@ else:
     from typing_extensions import deprecated
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 _USE_DELATTR: Final[bool]
 

@@ -8,9 +8,14 @@ from __future__ import annotations
 import sys
 import warnings
 
-from typing import TYPE_CHECKING, Any, Final, overload
+from typing import TYPE_CHECKING, Any, Final
 
 from .lowlevel import DEFAULT, DefaultType
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType

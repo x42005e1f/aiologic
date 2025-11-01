@@ -5,16 +5,16 @@
 
 import sys
 
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar
 
 from aiologic.lowlevel import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor
 
 if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple, Unpack
+    from typing import TypeVarTuple, Unpack, overload
 else:
-    from typing_extensions import TypeVarTuple, Unpack
+    from typing_extensions import TypeVarTuple, Unpack, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable, Coroutine

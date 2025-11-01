@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from .lowlevel._markers import MISSING, MissingType
 
@@ -15,6 +15,11 @@ if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 11):

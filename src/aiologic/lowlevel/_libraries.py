@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, overload
+import sys
+
+from typing import TYPE_CHECKING, Literal
 
 from sniffio import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
@@ -15,7 +17,12 @@ from wrapt import when_imported
 
 from ._safety import signal_safety_enabled
 from ._threads import _local
-from ._utils import _external as external, _replaces as replaces
+from ._utils import _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from sniffio._impl import _ThreadLocal
@@ -135,10 +142,8 @@ def _(_):
 
 
 @overload
-@external
 def current_green_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
-@external
 def current_green_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_green_library(*, failsafe=False):
     """
@@ -187,10 +192,8 @@ def current_green_library(*, failsafe=False):
 
 
 @overload
-@external
 def current_async_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
-@external
 def current_async_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_async_library(*, failsafe=False):
     """

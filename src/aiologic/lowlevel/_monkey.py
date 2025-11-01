@@ -5,13 +5,20 @@
 
 from __future__ import annotations
 
+import sys
+
 from importlib import import_module
 from types import ModuleType
-from typing import Any, overload
+from typing import Any
 
 from wrapt import when_imported
 
 from ._utils import _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 
 def _eventlet_patched(module_name: str, /) -> bool:

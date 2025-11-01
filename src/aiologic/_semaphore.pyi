@@ -6,14 +6,14 @@
 import sys
 
 from types import TracebackType
-from typing import Any, Final, overload
+from typing import Any, Final
 
 from .lowlevel import DEFAULT, DefaultType, Event
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 _USE_DELATTR: Final[bool]
 _USE_BYTEARRAY: Final[bool]

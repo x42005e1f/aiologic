@@ -8,7 +8,7 @@ import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import Future
 from types import TracebackType
-from typing import Any, NoReturn, TypeVar, final, overload
+from typing import Any, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import DEFAULT, DefaultType
 
@@ -16,9 +16,9 @@ from ._executors import TaskExecutor
 from ._tasks import Task
 
 if sys.version_info >= (3, 11):
-    from typing import Self, TypeVarTuple, Unpack
+    from typing import Self, TypeVarTuple, Unpack, overload
 else:
-    from typing_extensions import Self, TypeVarTuple, Unpack
+    from typing_extensions import Self, TypeVarTuple, Unpack, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable, Coroutine

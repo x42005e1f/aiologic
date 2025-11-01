@@ -5,9 +5,14 @@
 
 import sys
 
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar
 
 from ._markers import MISSING, MissingType
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 10):
     from typing import ParamSpec
@@ -19,11 +24,9 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Callable
 
-_F = TypeVar("_F", bound=Callable[..., Any])
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
-def _external(func: _F, /) -> _F: ...
 @overload
 def _replaces(
     namespace: dict[str, Any],

@@ -9,7 +9,7 @@ import os
 import platform
 import sys
 
-from typing import TYPE_CHECKING, Any, Final, overload
+from typing import TYPE_CHECKING, Any, Final
 
 from .lowlevel import (
     DEFAULT,
@@ -23,6 +23,11 @@ from .lowlevel import (
     lazydeque,
 )
 from .lowlevel._utils import _copies as copies
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType

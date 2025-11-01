@@ -5,19 +5,12 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
 
 from copy import copy
 from heapq import heapify, heappop, heappush
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Protocol,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, Union
 
 from ._semaphore import Semaphore
 from .lowlevel import (
@@ -32,9 +25,12 @@ from .lowlevel import (
 )
 from .lowlevel._utils import _copies as copies
 
-if TYPE_CHECKING:
-    import sys
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
+if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
