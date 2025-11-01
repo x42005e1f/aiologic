@@ -16,7 +16,7 @@ else:
     from typing_extensions import get_overloads, overload
 
 
-def update_metadata(namespace: dict[str, Any], /) -> None:
+def export(namespace: dict[str, Any], /) -> None:
     """..."""
 
     if TYPE_CHECKING:
@@ -52,4 +52,4 @@ def update_metadata(namespace: dict[str, Any], /) -> None:
                 # skip indirect/private modules
                 continue
 
-            update_metadata(vars(value))
+            export(vars(value))

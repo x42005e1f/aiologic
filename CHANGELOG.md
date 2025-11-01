@@ -161,8 +161,8 @@ Commit messages are consistent with
   `aiologic.lowlevel.DUMMY_EVENT`, but to avoid confusion both variants will
   coexist (maybe temporarily, maybe not).
 - `aiologic.meta` subpackage for metaprogramming purposes.
-- `aiologic.meta.update_metadata()` to export all module content on behalf of
-  the module itself (by updating `__module__`).
+- `aiologic.meta.export()` to export all module content on behalf of the module
+  itself (by updating `__module__`).
 - `aiologic.testing` subpackage for testing purposes. It is intended to isolate
   complex `aiologic` testing logic (such as running tests on all supported
   libraries), but can also be used by users to create their own tests.

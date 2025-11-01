@@ -512,4 +512,4 @@ Markers
 Exports
 +++++++
 
-.. autofunction:: aiologic.meta.update_metadata
+.. autofunction:: aiologic.meta.export

@@ -4,5 +4,5 @@
 # SPDX-License-Identifier: ISC
 
 from ._exports import (
-    update_metadata as update_metadata,
+    export as export,
 )

@@ -58,4 +58,4 @@ from ._semaphore import (
 )
 
 # update .__module__ attributes for shorter representation and better pickling
-meta.update_metadata(globals())
+meta.export(globals())

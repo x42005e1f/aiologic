@@ -48,7 +48,7 @@ from ._timeouts import (
 )
 
 # update .__module__ attributes for shorter representation and better pickling
-__import__(__name__).meta.update_metadata(globals())
+__import__(__name__).meta.export(globals())
 __import__("warnings").warn(
     (
         "aiologic.testing will soon be completely rewritten in an incompatible"
