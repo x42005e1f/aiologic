@@ -329,7 +329,7 @@ some coincidence, each thread (except the first one) waited on the lock.
 
 Well, :math:`O(n^2)` again! And this is quite expected.
 
-On each pass of the scheduler, one :meth:`~threading.Lock.release()` call is
+On each pass of the scheduler, one :meth:`~threading.Lock.release` call is
 made. This means that on the next pass, the number of running threads will be
 increased by one. The remaining threads cannot wake up until future passes, as
 they are still queued. And at the same time, the operating system still

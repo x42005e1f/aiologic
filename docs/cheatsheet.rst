@@ -935,7 +935,7 @@ which works at the first level (shielding an awaitable object):
     finally:
         print(future.cancelled())  # False
 
-As you can see, using :func:`asyncio.shield()` only "undoes the chaining". The
+As you can see, using :func:`asyncio.shield` only "undoes the chaining". The
 asynchronous call will still be cancelled. The difference is that the future
 object will neither be cancelled nor waiting to be done when the current task
 is cancelled. Sadly, this difference in the levels is often misunderstood,
