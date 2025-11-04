@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+# third-party patchers can break the original objects from the threading
+# module, so we need to use the _thread module in the first place
 
 ThreadLock = _monkey._import_original("_thread", "LockType")
 
