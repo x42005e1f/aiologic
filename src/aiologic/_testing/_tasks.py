@@ -48,8 +48,6 @@ _Ts = TypeVarTuple("_Ts")
 
 
 class TaskCancelled(BaseException):
-    """..."""
-
     def __init__(self, /, task: Task[object]) -> None:
         super().__init__()
 
@@ -61,8 +59,6 @@ class TaskCancelled(BaseException):
 
 
 class Task(Result[_T], ABC):
-    """..."""
-
     __slots__ = (
         "_args",
         "_cancelled",
@@ -113,8 +109,6 @@ class Task(Result[_T], ABC):
         super().__init__(future)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         if cls.__module__ == __name__:
             cls = Task
@@ -152,13 +146,9 @@ class Task(Result[_T], ABC):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
-
         return self._future.running()
 
     def __await__(self) -> Generator[Any, Any, _T]:
-        """..."""
-
         if not self._future.done():
             event = create_async_event()
             self._future.add_done_callback(lambda _: event.set())
@@ -187,8 +177,6 @@ class Task(Result[_T], ABC):
             self = None  # noqa: PLW0642
 
     def wait(self, timeout: float | None = None) -> _T:
-        """..."""
-
         if not self._future.done():
             event = create_green_event()
             self._future.add_done_callback(lambda _: event.set())
@@ -217,8 +205,6 @@ class Task(Result[_T], ABC):
             self = None  # noqa: PLW0642
 
     def cancel(self, /) -> Result[bool]:
-        """..."""
-
         if self._future.cancel():
             return TRUE_RESULT
 
@@ -234,8 +220,6 @@ class Task(Result[_T], ABC):
             return self._cancelled
 
     def cancelled(self, /) -> Result[bool]:
-        """..."""
-
         if self._future.done():
             if self._cancelled_after_start or self._future.cancelled():
                 return TRUE_RESULT
@@ -245,8 +229,6 @@ class Task(Result[_T], ABC):
         return self._cancelled
 
     def running(self, /) -> Result[bool]:
-        """..."""
-
         if self._future.running():
             return TRUE_RESULT
 
@@ -256,8 +238,6 @@ class Task(Result[_T], ABC):
         return self._started
 
     def done(self, /) -> Result[bool]:
-        """..."""
-
         if self._future.done():
             return TRUE_RESULT
 
@@ -282,8 +262,6 @@ class Task(Result[_T], ABC):
 
     @property
     def executor(self, /) -> TaskExecutor:
-        """..."""
-
         return self._executor
 
 
@@ -921,8 +899,6 @@ def create_task(
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> Task[_T]: ...
 def create_task(func, /, *args, executor=DEFAULT):
-    """..."""
-
     if executor is DEFAULT:
         executor = current_executor()
 

@@ -18,7 +18,7 @@ import pytest
 from wrapt import decorator
 
 import aiologic
-import aiologic.testing
+import aiologic._testing
 
 if sys.version_info >= (3, 11):
     WaitTimeout = TimeoutError
@@ -50,8 +50,8 @@ def spawn(request):
     pytest.importorskip(backend)
     pytest.importorskip(library)
 
-    exec1 = aiologic.testing.create_executor(library, backend)
-    exec2 = aiologic.testing.create_executor(library, backend)
+    exec1 = aiologic._testing.create_executor(library, backend)
+    exec2 = aiologic._testing.create_executor(library, backend)
 
     with exec1, exec2:
 
@@ -61,7 +61,7 @@ def spawn(request):
             else:
                 future = exec2.submit(func, *args, **kwargs)
 
-            return aiologic.testing.Result(future)
+            return aiologic._testing.Result(future)
 
         _spawn.backend = backend
         _spawn.library = library
@@ -153,7 +153,7 @@ def _test_thread_safety_cm(event, *functions):
                 finally:
                     stopped.set()
 
-            yield aiologic.testing.Result(outer_future)
+            yield aiologic._testing.Result(outer_future)
         finally:
             sys.setswitchinterval(interval)
 
@@ -201,7 +201,7 @@ def pytest_generate_tests(metafunc):
                 "spawn",
                 [
                     "+".join(pair) if pair[0] != pair[1] else pair[0]
-                    for pair in aiologic.testing.ASYNC_PAIRS
+                    for pair in aiologic._testing.ASYNC_PAIRS
                 ],
                 indirect=True,
             )
@@ -210,7 +210,7 @@ def pytest_generate_tests(metafunc):
                 "spawn",
                 [
                     "+".join(pair) if pair[0] != pair[1] else pair[0]
-                    for pair in aiologic.testing.GREEN_PAIRS
+                    for pair in aiologic._testing.GREEN_PAIRS
                 ],
                 indirect=True,
             )

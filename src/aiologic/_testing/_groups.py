@@ -43,8 +43,6 @@ _Ts = TypeVarTuple("_Ts")
 
 
 class TaskGroup(ABC):
-    """..."""
-
     __slots__ = (
         "_active",
         "_active_lock",
@@ -61,8 +59,6 @@ class TaskGroup(ABC):
         self._executor = executor
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         if cls.__module__ == __name__:
             cls = TaskGroup
@@ -87,8 +83,6 @@ class TaskGroup(ABC):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     async def __aenter__(self, /) -> Self:
-        """..."""
-
         with self._active_lock:
             if self._active:
                 msg = "this task group is already active"
@@ -104,8 +98,6 @@ class TaskGroup(ABC):
         return self
 
     def __enter__(self, /) -> Self:
-        """..."""
-
         with self._active_lock:
             if self._active:
                 msg = "this task group is already active"
@@ -127,8 +119,6 @@ class TaskGroup(ABC):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool:
-        """..."""
-
         suppress = (
             exc_value is not None
             and isinstance(exc_value, TaskCancelled)
@@ -206,8 +196,6 @@ class TaskGroup(ABC):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool:
-        """..."""
-
         suppress = (
             exc_value is not None
             and isinstance(exc_value, TaskCancelled)
@@ -303,8 +291,6 @@ class TaskGroup(ABC):
         executor: TaskExecutor | DefaultType = DEFAULT,
     ) -> Task[_T]: ...
     def create_task(self, func, /, *args, executor=DEFAULT):
-        """..."""
-
         with self._active_lock:
             if not self._active:
                 msg = "this task group is not active"
@@ -316,8 +302,6 @@ class TaskGroup(ABC):
             return self.add_task(_create_task(func, *args, executor=executor))
 
     def add_task(self, /, task: _TaskT) -> _TaskT:
-        """..."""
-
         with self._active_lock:
             if not self._active:
                 msg = "this task group is not active"
@@ -339,8 +323,6 @@ class TaskGroup(ABC):
 
     @property
     def executor(self, /) -> TaskExecutor:
-        """..."""
-
         return self._executor
 
 
@@ -374,8 +356,6 @@ def create_task_group(
     *,
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> TaskGroup:
-    """..."""
-
     if executor is DEFAULT:
         executor = current_executor()
 

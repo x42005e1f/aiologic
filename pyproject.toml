@@ -62,7 +62,6 @@ keywords = [
     "trio",
 ]
 dependencies = [
-    "exceptiongroup>=1.0.2; python_version<'3.11'",
     "sniffio>=1.3.0",
     "typing-extensions>=4.5.0; python_version<'3.13'",
     "wrapt>=1.16.0",

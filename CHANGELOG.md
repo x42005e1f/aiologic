@@ -163,41 +163,6 @@ Commit messages are consistent with
 - `aiologic.meta` subpackage for metaprogramming purposes.
 - `aiologic.meta.export()` to export all module content on behalf of the module
   itself (by updating `__module__`).
-- `aiologic.testing` subpackage for testing purposes. It is intended to isolate
-  complex `aiologic` testing logic (such as running tests on all supported
-  libraries), but can also be used by users to create their own tests.
-- `aiologic.testing.GREEN_PAIRS` and `aiologic.testing.ASYNC_PAIRS`, which
-  represents a tuple of pairs - supported libraries and their backends.
-- `aiologic.testing.GREEN_LIBRARIES` and `aiologic.testing.ASYNC_LIBRARIES`,
-  which represents a tuple of strings - supported libraries.
-- `aiologic.testing.GREEN_BACKENDS` and `aiologic.testing.ASYNC_BACKENDS`,
-  which represents a tuple of strings - supported backends.
-- `aiologic.testing.Result` as a wrapper to `concurrent.futures.Future`,
-  allowing to wait for its result asynchronously.
-- `aiologic.testing.FALSE_RESULT` and `aiologic.testing.TRUE_RESULT` as
-  predefined results.
-- `aiologic.testing.Task`, `aiologic.testing.TaskExecutor`, and
-  `aiologic.testing.TaskGroup` abstract classes (for typing purposes).
-- `aiologic.testing.create_executor()` function to create an executor object
-  that executes tasks of the chosen library in a separate thread.
-- `aiologic.testing.current_executor()` function to get the executor object
-  that executes the current task.
-- `aiologic.testing.get_cancelled_exc_class()` function to get the current
-  cancelled exception class (for the current or passed executor).
-- `aiologic.testing.get_timeout_exc_class()` function to get the current
-  timeout exception class (for the current or passed executor).
-- `aiologic.testing.assert_checkpoints()` and
-  `aiologic.testing.assert_no_checkpoints()` context managers to check for
-  context switching.
-- `aiologic.testing.timeout_after()` function to wait with a timeout. Useful
-  for cancellation tests.
-- `aiologic.testing.create_task()` function to create a thread-aware task in
-  the current or passed executor.
-- `aiologic.testing.create_task_group()` function to create a thread-aware task
-  group that correctly handles cancellation and exceptions.
-- `aiologic.testing.run()` function as shorthand for
-  `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
-  result in place.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
@@ -466,9 +431,6 @@ Commit messages are consistent with
   `concurrent.futures.Future`. This makes the implementation of `curio` support
   completely non-blocking (like the rest of the concurrency libraries), which
   has a positive impact on performance.
-- `exceptiongroup` is now a required dependency on Python < 3.11. It is used by
-  `aiologic.testing.TaskGroup` to raise exceptions of all failed tasks at the
-  same time (a backport of `BaseExceptionGroup`).
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.

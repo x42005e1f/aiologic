@@ -161,8 +161,6 @@ def assert_checkpoints(
     *,
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]:
-    """..."""
-
     if executor is DEFAULT:
         executor = current_executor()
 
@@ -191,8 +189,6 @@ def assert_no_checkpoints(
     *,
     executor: TaskExecutor | DefaultType = DEFAULT,
 ) -> AbstractContextManager[None]:
-    """..."""
-
     if executor is DEFAULT:
         executor = current_executor()
 

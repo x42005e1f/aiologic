@@ -38,18 +38,12 @@ _T = TypeVar("_T")
 
 
 class Result(Generic[_T]):
-    """..."""
-
     __slots__ = ("_future",)
 
     def __init__(self, /, future: Future[_T]) -> None:
-        """..."""
-
         self._future = future
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -72,8 +66,6 @@ class Result(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """..."""
-
         if not self._future.done():
             return False
 
@@ -86,8 +78,6 @@ class Result(Generic[_T]):
         return bool(self._future.result())
 
     def __await__(self) -> Generator[Any, Any, _T]:
-        """..."""
-
         if not self._future.done():
             event = create_async_event()
             self._future.add_done_callback(lambda _: event.set())
@@ -106,8 +96,6 @@ class Result(Generic[_T]):
             raise
 
     def wait(self, timeout: float | None = None) -> _T:
-        """..."""
-
         if not self._future.done():
             event = create_green_event()
             self._future.add_done_callback(lambda _: event.set())
@@ -127,15 +115,11 @@ class Result(Generic[_T]):
 
     @property
     def future(self, /) -> Future[_T]:
-        """..."""
-
         return self._future
 
 
 @final
 class FalseResult(Result[Literal[False]]):
-    """..."""
-
     __slots__ = ()
 
     def __new__(cls, /) -> FalseResult:
@@ -179,8 +163,6 @@ class FalseResult(Result[Literal[False]]):
 
 @final
 class TrueResult(Result[Literal[True]]):
-    """..."""
-
     __slots__ = ()
 
     def __new__(cls, /) -> TrueResult:
