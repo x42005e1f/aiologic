@@ -10,9 +10,10 @@ import sys
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
 
+from aiologic._monkey import import_original
 from aiologic.meta import MISSING, MissingType
 
-from . import _checkpoints, _monkey
+from . import _checkpoints
 from ._threads import current_thread_ident
 
 if sys.version_info >= (3, 11):
@@ -33,10 +34,10 @@ _T = TypeVar("_T")
 # third-party patchers can break the original objects from the threading
 # module, so we need to use the _thread module in the first place
 
-ThreadLock = _monkey._import_original("_thread", "LockType")
+ThreadLock = import_original("_thread", "LockType")
 
 try:
-    ThreadRLock = _monkey._import_original("_thread", "RLock")
+    ThreadRLock = import_original("_thread", "RLock")
 except ImportError:
 
     @final
@@ -490,7 +491,7 @@ THREAD_DUMMY_LOCK: Final[ThreadDummyLock] = object.__new__(ThreadDummyLock)
 if sys.version_info >= (3, 13):
     __allocate_lock = ThreadLock
 else:
-    __allocate_lock = _monkey._import_original("_thread", "allocate_lock")
+    __allocate_lock = import_original("_thread", "allocate_lock")
 
 
 def create_thread_lock() -> ThreadLock:

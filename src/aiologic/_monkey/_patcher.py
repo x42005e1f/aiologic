@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 from wrapt import patch_function_wrapper
 
 
-def _patch_eventlet() -> None:
+def patch_eventlet() -> None:
     """
     Injects ``schedule_call_threadsafe()`` (a thread-safe variant of
     :meth:`~eventlet.hubs.hub.BaseHub.schedule_call_global`) into eventlet hubs

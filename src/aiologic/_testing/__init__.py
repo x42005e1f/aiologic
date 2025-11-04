@@ -46,6 +46,3 @@ from ._tasks import (
 from ._timeouts import (
     timeout_after as timeout_after,
 )
-
-# update .__module__ attributes for shorter representation and better pickling
-__import__(__name__).meta.export(globals())

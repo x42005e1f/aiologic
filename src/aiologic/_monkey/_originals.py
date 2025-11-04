@@ -62,7 +62,7 @@ def _(_):
         return _gevent_patched(module_name)
 
 
-def _patched(module_name: str, /) -> bool:
+def patched(module_name: str, /) -> bool:
     return _eventlet_patched(module_name) or _gevent_patched(module_name)
 
 
@@ -108,10 +108,10 @@ def _(_):
 
 
 @overload
-def _import_original(module_name: str, name: None = None, /) -> ModuleType: ...
+def import_original(module_name: str, name: None = None, /) -> ModuleType: ...
 @overload
-def _import_original(module_name: str, name: str, /) -> Any: ...
-def _import_original(module_name, name=None, /):
+def import_original(module_name: str, name: str, /) -> Any: ...
+def import_original(module_name, name=None, /):
     if name is None:
         if _eventlet_patched(module_name):
             return _import_eventlet_original(module_name)

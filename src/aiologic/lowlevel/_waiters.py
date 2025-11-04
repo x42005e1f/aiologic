@@ -165,9 +165,11 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
     from eventlet.hubs import _threadlocal, get_hub
     from greenlet import getcurrent
 
-    from . import _patcher, _tasks, _time
+    from aiologic._monkey import patch_eventlet
 
-    _patcher._patch_eventlet()
+    from . import _tasks, _time
+
+    patch_eventlet()
 
     @final
     class _EventletWaiter(GreenWaiter):

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
+from aiologic._monkey import import_original
 from aiologic.meta import MISSING, MissingType, replaces
 
 from ._libraries import current_async_library, current_green_library
@@ -532,15 +533,13 @@ def disable_checkpoints(wrapped=MISSING, /):
 def _threading_checkpoint() -> None:
     global _threading_checkpoint
 
-    from . import _monkey
-
     if hasattr(os, "sched_yield") and (
         sys.version_info >= (3, 11, 1)  # python/cpython#96078
         or (sys.version_info < (3, 11) and sys.version_info >= (3, 10, 8))
     ):
-        _threading_checkpoint = _monkey._import_original("os", "sched_yield")
+        _threading_checkpoint = import_original("os", "sched_yield")
     else:
-        _sleep = _monkey._import_original("time", "sleep")
+        _sleep = import_original("time", "sleep")
 
         @replaces(globals())
         def _threading_checkpoint():

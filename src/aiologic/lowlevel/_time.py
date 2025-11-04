@@ -12,9 +12,9 @@ from functools import partial
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Final, NoReturn, TypeVar
 
+from aiologic._monkey import import_original
 from aiologic.meta import replaces
 
-from . import _monkey
 from ._libraries import current_async_library, current_green_library
 
 if TYPE_CHECKING:
@@ -392,9 +392,9 @@ def _threading_clock() -> float:
     global _threading_clock
 
     if sys.version_info >= (3, 13) or platform.system() != "Windows":
-        _threading_clock = _monkey._import_original("time", "monotonic")
+        _threading_clock = import_original("time", "monotonic")
     else:  # see python/cpython#88494
-        _threading_clock = _monkey._import_original("time", "perf_counter")
+        _threading_clock = import_original("time", "perf_counter")
 
     return _threading_clock()
 
@@ -511,7 +511,7 @@ def async_clock() -> float:
 def _threading_sleep(seconds: float, /) -> None:
     global _threading_sleep
 
-    _threading_sleep = _monkey._import_original("time", "sleep")
+    _threading_sleep = import_original("time", "sleep")
 
     _threading_sleep(seconds)
 

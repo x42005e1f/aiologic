@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 
 from wrapt import when_imported
 
+from aiologic._monkey import import_original, patched
 from aiologic.meta import replaces
 
-from . import _greenlets, _monkey
+from . import _greenlets
 
 if TYPE_CHECKING:
     import sys
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
 try:
-    _get_main_thread_ident = _monkey._import_original(
+    _get_main_thread_ident = import_original(
         "_thread",
         "_get_main_thread_ident",
     )
@@ -65,7 +66,7 @@ else:
 
 
 def _current_python_thread() -> Thread | None:
-    threading = _monkey._import_python_original("threading")
+    import threading
 
     _DummyThread = threading._DummyThread
     _active = threading._active
@@ -92,7 +93,7 @@ def _current_python_thread() -> Thread | None:
             if isinstance(thread, (_DummyThread, threading._DummyThread)):
                 return None
 
-            if _monkey._patched("threading"):
+            if patched("threading"):
                 greenlet = _greenlets._current_greenlet()
 
                 if id(greenlet) == ident and greenlet.parent is not None:
@@ -111,7 +112,9 @@ def _current_eventlet_thread() -> Thread | None:
 def _(_):
     @replaces(globals())
     def _current_eventlet_thread():
-        threading = _monkey._import_eventlet_original("threading")
+        from eventlet.patcher import original
+
+        threading = original("threading")
 
         _DummyThread = threading._DummyThread
         _active = threading._active
@@ -163,10 +166,10 @@ def current_thread() -> Thread:
     return thread
 
 
-current_thread_ident = _monkey._import_original("_thread", "get_ident")
+current_thread_ident = import_original("_thread", "get_ident")
 
 try:
-    _local = _monkey._import_original("_thread", "_local")
+    _local = import_original("_thread", "_local")
 except ImportError:
     import weakref
 

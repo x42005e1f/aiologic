@@ -20,9 +20,9 @@ from typing import (
     TypeVar,
 )
 
+from aiologic._monkey import import_original
 from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
 
-from . import _monkey
 from ._locks import ThreadOnceLock
 
 if sys.version_info >= (3, 9):
@@ -37,8 +37,8 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
 try:
-    _Empty = _monkey._import_original("_queue", "Empty")
-    _SimpleQueue = _monkey._import_original("_queue", "SimpleQueue")
+    _Empty = import_original("_queue", "Empty")
+    _SimpleQueue = import_original("_queue", "SimpleQueue")
 except ImportError:
     __SIMPLEQUEUE_AVAILABLE: Final[bool] = False
 else:
