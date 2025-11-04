@@ -67,7 +67,10 @@ def export_deprecated(
             exc.name = name
             exc.obj = sys.modules[module_name]
 
-            raise exc
+            try:
+                raise exc
+            finally:
+                del exc
 
         namespace["__getattr__"] = __getattr__
 
