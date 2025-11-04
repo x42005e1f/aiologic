@@ -74,8 +74,21 @@ def _import_eventlet_original(module_name: str, /) -> ModuleType:
     return import_module(module_name)
 
 
-def _import_gevent_original(module_name: str, /) -> ModuleType:
-    return import_module(module_name)
+@overload
+def _import_gevent_original(
+    module_name: str,
+    name: None = None,
+    /,
+) -> ModuleType: ...
+@overload
+def _import_gevent_original(module_name: str, name: str, /) -> Any: ...
+def _import_gevent_original(module_name, name=None, /):
+    module = import_module(module_name)
+
+    if name is None:
+        return module
+
+    return getattr(module, name)
 
 
 @when_imported("eventlet.patcher")
@@ -92,11 +105,14 @@ def _(_):
 @when_imported("gevent.monkey")
 def _(_):
     @replaces(globals())
-    def _import_gevent_original(module_name, /):
+    def _import_gevent_original(module_name, name=None, /):
         from gevent.monkey import get_original
 
         @replaces(globals())
-        def _import_gevent_original(module_name, /):
+        def _import_gevent_original(module_name, name=None, /):
+            if name is not None:
+                return get_original(module_name, name)
+
             names = dir(import_module(module_name))
 
             module = ModuleType(module_name)
@@ -104,7 +120,7 @@ def _(_):
 
             return module
 
-        return _import_gevent_original(module_name)
+        return _import_gevent_original(module_name, name)
 
 
 @overload
@@ -126,7 +142,7 @@ def import_original(module_name, name=None, /):
             return getattr(_import_eventlet_original(module_name), name)
 
         if _gevent_patched(module_name):
-            return getattr(_import_gevent_original(module_name), name)
+            return _import_gevent_original(module_name, name)
 
         original = getattr(_import_python_original(module_name), name)
 
@@ -134,7 +150,7 @@ def import_original(module_name, name=None, /):
             return getattr(_import_eventlet_original(module_name), name)
 
         if _gevent_patched(module_name):
-            return getattr(_import_gevent_original(module_name), name)
+            return _import_gevent_original(module_name, name)
     except AttributeError as exc:
         if hasattr(exc, "obj"):
             module_path = getattr(exc.obj, "__file__", None)
