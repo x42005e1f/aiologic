@@ -390,6 +390,12 @@ Markers
   ...
 .. aiologic.meta.DEFAULT-end-marker
 
+Functions
++++++++++
+
+.. autofunction:: aiologic.meta.copies
+.. autofunction:: aiologic.meta.replaces
+
 Exports
 +++++++
 

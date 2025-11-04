@@ -12,9 +12,10 @@ from functools import partial
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Final, NoReturn, TypeVar
 
+from aiologic.meta import replaces
+
 from . import _monkey
 from ._libraries import current_async_library, current_green_library
-from ._utils import _replaces as replaces
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):

@@ -15,8 +15,7 @@ from .lowlevel import (
     current_green_task_ident,
     green_checkpoint,
 )
-from .lowlevel._utils import _copies as copies
-from .meta import DEFAULT, DefaultType
+from .meta import DEFAULT, DefaultType, copies
 
 if TYPE_CHECKING:
     import sys

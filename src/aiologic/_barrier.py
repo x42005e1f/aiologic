@@ -19,8 +19,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .lowlevel._utils import _copies as copies
-from .meta import DEFAULT, DefaultType
+from .meta import DEFAULT, DefaultType, copies
 
 if TYPE_CHECKING:
     import sys

@@ -7,6 +7,10 @@ from ._exports import (
     export as export,
     export_deprecated as export_deprecated,
 )
+from ._functions import (
+    copies as copies,
+    replaces as replaces,
+)
 from ._markers import (
     DEFAULT as DEFAULT,
     MISSING as MISSING,

@@ -163,6 +163,9 @@ Commit messages are consistent with
 - `aiologic.meta.MISSING` as a marker for parameters that, when not passed,
   specify special default behavior.
 - `aiologic.meta.DEFAULT` as a marker for parameters with default values.
+- `aiologic.meta.copies()` to replace a function with a copy of another.
+- `aiologic.meta.replaces()` to replace a function of the same name in a
+  certain namespace.
 - `aiologic.meta.export()` to export all module content on behalf of the module
   itself (by updating `__module__`).
 - `aiologic.meta.export_deprecated()` to export deprecated content via custom

@@ -20,7 +20,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .lowlevel._utils import _copies as copies
+from .meta import copies
 
 if TYPE_CHECKING:
     import sys

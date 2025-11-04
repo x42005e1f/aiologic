@@ -15,9 +15,10 @@ from sniffio import (
 )
 from wrapt import when_imported
 
+from aiologic.meta import replaces
+
 from ._safety import signal_safety_enabled
 from ._threads import _local
-from ._utils import _replaces as replaces
 
 if sys.version_info >= (3, 11):
     from typing import overload

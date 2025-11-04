@@ -12,8 +12,9 @@ from typing import Any, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
+from aiologic.meta import replaces
+
 from ._libraries import current_async_library, current_green_library
-from ._utils import _replaces as replaces
 
 if sys.version_info >= (3, 11):
     from typing import overload

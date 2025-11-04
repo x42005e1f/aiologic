@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, TypeVar
 
-from aiologic.meta import MISSING, MissingType
+from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -28,25 +28,25 @@ _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
 @overload
-def _replaces(
+def replaces(
     namespace: dict[str, Any],
     wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
-def _replaces(
+def replaces(
     namespace: dict[str, Any],
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
 @overload
-def _copies(
+def copies(
     original: Callable[_P, _T],
     wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
-def _copies(
+def copies(
     original: Callable[_P, _T],
     wrapper: Callable[_P, _T],
     /,

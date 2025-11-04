@@ -11,7 +11,7 @@ from functools import partial, update_wrapper
 from types import FunctionType
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from aiologic.meta import MISSING, MissingType
+from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -23,30 +23,33 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
+if TYPE_CHECKING:
+    if sys.version_info >= (3, 9):
+        from collections.abc import Callable
+    else:
+        from typing import Callable
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
 
 @overload
-def _replaces(
+def replaces(
     namespace: dict[str, Any],
     wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
-def _replaces(
+def replaces(
     namespace: dict[str, Any],
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
-def _replaces(namespace, wrapper=MISSING, /):
+def replaces(namespace, wrapper=MISSING, /):
+    """..."""
+
     if wrapper is MISSING:
-        return partial(_replaces, namespace)
+        return partial(replaces, namespace)
 
     wrapper = update_wrapper(wrapper, namespace[wrapper.__name__])
 
@@ -58,22 +61,24 @@ def _replaces(namespace, wrapper=MISSING, /):
 
 
 @overload
-def _copies(
+def copies(
     original: Callable[_P, _T],
     wrapper: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
-def _copies(
+def copies(
     original: Callable[_P, _T],
     wrapper: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
-def _copies(original, wrapper=MISSING, /):
-    if wrapper is MISSING:
-        return partial(_copies, original)
+def copies(original, wrapper=MISSING, /):
+    """..."""
 
-    if not TYPE_CHECKING:
+    if wrapper is MISSING:
+        return partial(copies, original)
+
+    if isinstance(original, FunctionType) and not TYPE_CHECKING:
         copy = FunctionType(
             original.__code__,
             original.__globals__,

@@ -13,7 +13,7 @@ from typing import Any
 
 from wrapt import when_imported
 
-from ._utils import _replaces as replaces
+from aiologic.meta import replaces
 
 if sys.version_info >= (3, 11):
     from typing import overload

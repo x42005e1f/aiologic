@@ -14,11 +14,10 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from aiologic.meta import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType, replaces
 
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread_ident
-from ._utils import _replaces as replaces
 
 if sys.version_info >= (3, 11):
     from typing import overload

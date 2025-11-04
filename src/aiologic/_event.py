@@ -20,8 +20,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .lowlevel._utils import _copies as copies
-from .meta import DEFAULT, MISSING, DefaultType, MissingType
+from .meta import DEFAULT, MISSING, DefaultType, MissingType, copies
 
 if sys.version_info >= (3, 11):
     from typing import overload

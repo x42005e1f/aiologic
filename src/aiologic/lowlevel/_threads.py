@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING
 
 from wrapt import when_imported
 
+from aiologic.meta import replaces
+
 from . import _greenlets, _monkey
-from ._utils import _replaces as replaces
 
 if TYPE_CHECKING:
     import sys

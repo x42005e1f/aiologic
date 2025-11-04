@@ -5,10 +5,11 @@
 
 from __future__ import annotations
 
+from aiologic.meta import replaces
+
 from ._greenlets import _current_greenlet
 from ._libraries import current_async_library, current_green_library
 from ._threads import _current_thread_or_main_greenlet, current_thread_ident
-from ._utils import _replaces as replaces
 
 
 def _current_eventlet_token() -> object:
