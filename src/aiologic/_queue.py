@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 import warnings
 
+from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, Union
@@ -90,9 +91,9 @@ class SimpleQueue(Generic[_T]):
         self = object.__new__(cls)
 
         if items is not MISSING:
-            self._data = lazydeque(items)
+            self._data = deque(items)
         else:
-            self._data = lazydeque()
+            self._data = deque()
 
         self._semaphore = Semaphore(len(self._data))
 
@@ -733,7 +734,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: lazydeque[Event],
+        waiters: deque[Event],
         *,
         blocking: bool = True,
     ) -> bool:
@@ -797,7 +798,7 @@ class Queue(Generic[_T]):
         self,
         /,
         acquire_nowait: Callable[[], bool],
-        waiters: lazydeque[Event],
+        waiters: deque[Event],
         *,
         blocking: bool = True,
         timeout: float | None = None,
@@ -972,7 +973,7 @@ class Queue(Generic[_T]):
                 break
 
     def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
-        self._data = lazydeque(items)
+        self._data = deque(items)
 
     def _put(self, /, item: _T) -> None:
         self._data.append(item)
