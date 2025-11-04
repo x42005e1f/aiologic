@@ -85,7 +85,6 @@ Changelog = "https://aiologic.readthedocs.io/latest/changelog.html"
 exclude = [".*"]
 
 [tool.hatch.version]
-fallback-version = "0.14.1.dev0"
 source = "vcs"
 
 [tool.ruff]
