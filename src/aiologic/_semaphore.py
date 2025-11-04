@@ -12,8 +12,6 @@ import sys
 from typing import TYPE_CHECKING, Any, Final
 
 from .lowlevel import (
-    DEFAULT,
-    DefaultType,
     Event,
     ThreadOnceLock,
     async_checkpoint,
@@ -23,6 +21,7 @@ from .lowlevel import (
     lazydeque,
 )
 from .lowlevel._utils import _copies as copies
+from .meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import overload

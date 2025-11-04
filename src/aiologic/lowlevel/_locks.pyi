@@ -8,7 +8,7 @@ import sys
 from types import TracebackType
 from typing import Final, Literal, NoReturn, TypeVar, final
 
-from ._markers import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload

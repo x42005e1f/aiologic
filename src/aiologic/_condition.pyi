@@ -12,7 +12,7 @@ from typing import Any, Final, Generic
 from . import lowlevel
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
-from .lowlevel import DEFAULT, DefaultType
+from .meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar

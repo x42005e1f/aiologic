@@ -10,8 +10,9 @@ import sys
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
 
+from aiologic.meta import MISSING, MissingType
+
 from . import _checkpoints, _monkey
-from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
 
 if sys.version_info >= (3, 11):

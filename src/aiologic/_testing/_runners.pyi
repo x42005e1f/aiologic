@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, TypeVar
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import TypeVarTuple, Unpack, overload

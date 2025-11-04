@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 import sys
-import warnings
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
@@ -15,8 +14,9 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
+from aiologic.meta import MISSING, MissingType
+
 from ._libraries import current_async_library, current_green_library
-from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
 from ._utils import _replaces as replaces
 
@@ -632,16 +632,6 @@ def green_checkpoint(*, force: bool = False) -> None:
 
             if enabled:
                 _gevent_checkpoint()
-
-
-async def checkpoint(*, force: bool = False) -> None:
-    warnings.warn(
-        "Use async_checkpoint() instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    await async_checkpoint(force=force)
 
 
 async def async_checkpoint(*, force: bool = False) -> None:

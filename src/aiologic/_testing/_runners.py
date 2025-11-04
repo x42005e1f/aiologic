@@ -10,7 +10,7 @@ import sys
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import create_executor
 

@@ -7,7 +7,8 @@ import sys
 
 from typing import Any, Generic, Protocol, TypeVar
 
-from .lowlevel import MISSING, Event, MissingType, lazydeque
+from .lowlevel import Event, lazydeque
+from .meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import Self, overload

@@ -8,7 +8,7 @@ import sys
 from types import TracebackType
 from typing import Any, Final
 
-from .lowlevel import DEFAULT, DefaultType
+from .meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import Self

@@ -20,9 +20,10 @@ from typing import (
     TypeVar,
 )
 
+from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
+
 from . import _monkey
 from ._locks import ThreadOnceLock
-from ._markers import DEFAULT, MISSING, DefaultType, MissingType
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterable, Iterator, MutableSequence

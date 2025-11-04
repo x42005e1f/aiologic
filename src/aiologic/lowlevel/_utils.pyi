@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, TypeVar
 
-from ._markers import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload

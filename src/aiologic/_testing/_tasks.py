@@ -14,14 +14,13 @@ from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import (
-    DEFAULT,
-    DefaultType,
     async_checkpoint,
     create_async_event,
     create_green_event,
     green_checkpoint,
     once,
 )
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._exceptions import (
     _CancelledError,

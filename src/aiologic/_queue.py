@@ -14,9 +14,7 @@ from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, Union
 
 from ._semaphore import Semaphore
 from .lowlevel import (
-    MISSING,
     Event,
-    MissingType,
     async_checkpoint,
     create_async_event,
     create_green_event,
@@ -24,6 +22,7 @@ from .lowlevel import (
     lazydeque,
 )
 from .lowlevel._utils import _copies as copies
+from .meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload

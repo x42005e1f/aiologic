@@ -74,7 +74,6 @@ Commit messages are consistent with
   `aiologic.lowlevel.lazydeque` in that it is more memory efficient at the cost
   of less functionality. Instead of 128 and 832 bytes, it takes up 120 and 200
   bytes on Python 3.13+.
-- `aiologic.lowlevel.DEFAULT` as a marker for parameters with default values.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
   i.e. new low-level primitives that encapsulate library-specific wait-wake
@@ -161,8 +160,13 @@ Commit messages are consistent with
   `aiologic.lowlevel.DUMMY_EVENT`, but to avoid confusion both variants will
   coexist (maybe temporarily, maybe not).
 - `aiologic.meta` subpackage for metaprogramming purposes.
+- `aiologic.meta.MISSING` as a marker for parameters that, when not passed,
+  specify special default behavior.
+- `aiologic.meta.DEFAULT` as a marker for parameters with default values.
 - `aiologic.meta.export()` to export all module content on behalf of the module
   itself (by updating `__module__`).
+- `aiologic.meta.export_deprecated()` to export deprecated content via custom
+  `__getattr__()`.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
@@ -220,15 +224,15 @@ Commit messages are consistent with
     default values.
   + The use of markers as default parameter values has been expanded. `None` is
     used when it disables a particular feature (e.g. timeouts or maxsize).
-    `aiologic.lowlevel.MISSING` is used when it specifies a special default
-    behavior. `aiologic.lowlevel.DEFAULT` is used when an existing value that
-    is compatible in type will be taken.
+    `aiologic.meta.MISSING` is used when it specifies a special default
+    behavior. `aiologic.meta.DEFAULT` is used when an existing value that is
+    compatible in type will be taken.
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
   + Calling `flag.set()` without arguments is now only allowed for
     `aiologic.lowlevel.Flag[object]`. Previously it ignored subscriptions.
-  + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static
-    analysis tools now correctly recognize `aiologic.lowlevel.MISSING` as a
+  + `aiologic.meta.MissingType` is now a subclass of `enum.Enum`, so static
+    analysis tools now correctly recognize `aiologic.meta.MISSING` as a
     singleton instance.
   + `aiologic.lowlevel.current_green_library()` and
     `aiologic.lowlevel.current_async_library()` now return `Optional[str]` when
@@ -459,6 +463,7 @@ Commit messages are consistent with
   `maxsize=0` may in the future be used to create special empty queues.
 - `aiologic.PLock` in favor of `aiologic.BinarySemaphore`.
 - `aiologic.RLock.level` in favor of `aiologic.RLock.count`.
+- `aiologic.lowlevel.MISSING` in favor of `aiologic.meta.MISSING`.
 - `aiologic.lowlevel.GreenEvent` and `aiologic.lowlevel.AsyncEvent` direct
   creation in favor of `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()`: they will become protocols in the

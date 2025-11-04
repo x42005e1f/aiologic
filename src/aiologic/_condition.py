@@ -19,9 +19,6 @@ from ._guard import ResourceGuard
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
 from .lowlevel import (
-    DEFAULT,
-    MISSING,
-    DefaultType,
     ThreadOnceLock,
     async_checkpoint,
     create_async_event,
@@ -32,6 +29,7 @@ from .lowlevel import (
     green_clock,
     lazydeque,
 )
+from .meta import DEFAULT, MISSING, DefaultType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar

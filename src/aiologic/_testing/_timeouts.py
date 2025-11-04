@@ -10,8 +10,8 @@ import sys
 from inspect import isawaitable, iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import _replaces as replaces
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._exceptions import get_cancelled_exc_class, get_timeout_exc_class
 from ._executors import TaskExecutor, current_executor

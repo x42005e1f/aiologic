@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, Generic
 
-from .lowlevel._markers import MISSING, MissingType
+from .meta import MISSING, MissingType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar

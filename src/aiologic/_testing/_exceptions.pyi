@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor
 

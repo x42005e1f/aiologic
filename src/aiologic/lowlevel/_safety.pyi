@@ -9,7 +9,7 @@ from contextvars import ContextVar, Token
 from types import TracebackType
 from typing import Any, Literal, TypeVar
 
-from ._markers import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload

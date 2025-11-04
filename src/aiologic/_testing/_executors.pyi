@@ -12,7 +12,7 @@ from contextvars import Context
 from types import TracebackType
 from typing import Any, Generic, NoReturn, TypeVar, final
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import Self, overload

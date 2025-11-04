@@ -7,7 +7,6 @@ from ._checkpoints import (
     async_checkpoint as async_checkpoint,
     async_checkpoint_enabled as async_checkpoint_enabled,
     async_checkpoint_if_cancelled as async_checkpoint_if_cancelled,
-    checkpoint as checkpoint,
     disable_checkpoints as disable_checkpoints,
     enable_checkpoints as enable_checkpoints,
     green_checkpoint as green_checkpoint,
@@ -26,9 +25,6 @@ from ._events import (
     SetEvent as SetEvent,
     create_async_event as create_async_event,
     create_green_event as create_green_event,
-)
-from ._flags import (
-    Flag as Flag,
 )
 from ._ident import (
     current_async_task as current_async_task,
@@ -58,12 +54,6 @@ from ._locks import (
     create_thread_oncelock as create_thread_oncelock,
     create_thread_rlock as create_thread_rlock,
     once as once,
-)
-from ._markers import (
-    DEFAULT as DEFAULT,
-    MISSING as MISSING,
-    DefaultType as DefaultType,
-    MissingType as MissingType,
 )
 from ._queues import (
     lazydeque as lazydeque,
@@ -102,3 +92,15 @@ from ._waiters import (
     create_async_waiter as create_async_waiter,
     create_green_waiter as create_green_waiter,
 )
+
+# register deprecated content to __getattr_()
+from aiologic.meta import export_deprecated  # isort: skip
+
+export_deprecated(globals(), "DEFAULT", "aiologic.meta.DEFAULT")
+export_deprecated(globals(), "MISSING", "aiologic.meta.MISSING")
+export_deprecated(globals(), "DefaultType", "aiologic.meta.DefaultType")
+export_deprecated(globals(), "Flag", "aiologic.Flag")
+export_deprecated(globals(), "MissingType", "aiologic.meta.MissingType")
+export_deprecated(globals(), "checkpoint", "async_checkpoint")
+
+del export_deprecated

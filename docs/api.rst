@@ -369,28 +369,29 @@ Metaprogramming
 Markers
 +++++++
 
-.. autoclass:: aiologic.lowlevel.MissingType
+.. autoclass:: aiologic.meta.MissingType
   :no-inherited-members:
-.. autoclass:: aiologic.lowlevel.DefaultType
+.. autoclass:: aiologic.meta.DefaultType
   :no-inherited-members:
 
-.. aiologic.lowlevel.MISSING-start-marker
-.. data:: aiologic.lowlevel.MISSING
+.. aiologic.meta.MISSING-start-marker
+.. data:: aiologic.meta.MISSING
   :type: MissingType
   :no-index:
 
   ...
-.. aiologic.lowlevel.MISSING-end-marker
+.. aiologic.meta.MISSING-end-marker
 
-.. aiologic.lowlevel.DEFAULT-start-marker
-.. data:: aiologic.lowlevel.DEFAULT
+.. aiologic.meta.DEFAULT-start-marker
+.. data:: aiologic.meta.DEFAULT
   :type: DefaultType
   :no-index:
 
   ...
-.. aiologic.lowlevel.DEFAULT-end-marker
+.. aiologic.meta.DEFAULT-end-marker
 
 Exports
 +++++++
 
 .. autofunction:: aiologic.meta.export
+.. autofunction:: aiologic.meta.export_deprecated

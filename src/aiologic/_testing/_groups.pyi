@@ -10,7 +10,7 @@ from concurrent.futures import Future
 from types import TracebackType
 from typing import Any, NoReturn, TypeVar, final
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor
 from ._tasks import Task

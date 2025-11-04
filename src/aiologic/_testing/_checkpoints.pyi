@@ -7,7 +7,7 @@ import sys
 
 from contextlib import contextmanager
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor
 

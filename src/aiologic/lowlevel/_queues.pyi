@@ -16,7 +16,7 @@ from typing import (
     TypeVar,
 )
 
-from ._markers import DEFAULT, MISSING, DefaultType, MissingType
+from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
 
 if sys.version_info >= (3, 9):
     from collections.abc import Iterable, Iterator, MutableSequence

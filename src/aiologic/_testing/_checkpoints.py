@@ -8,8 +8,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-from aiologic.lowlevel import DEFAULT, DefaultType
 from aiologic.lowlevel._utils import _replaces as replaces
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor, current_executor
 

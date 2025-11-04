@@ -13,10 +13,6 @@ from typing import TYPE_CHECKING, Any, Final
 
 from ._flag import Flag
 from .lowlevel import (
-    DEFAULT,
-    MISSING,
-    DefaultType,
-    MissingType,
     ThreadOnceLock,
     async_checkpoint,
     create_async_event,
@@ -25,6 +21,7 @@ from .lowlevel import (
     lazydeque,
 )
 from .lowlevel._utils import _copies as copies
+from .meta import DEFAULT, MISSING, DefaultType, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload

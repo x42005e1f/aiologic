@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, Final
 
-from .lowlevel import DEFAULT, MISSING, DefaultType, MissingType
+from .meta import DEFAULT, MISSING, DefaultType, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import Self, overload

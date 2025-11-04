@@ -7,7 +7,7 @@ import sys
 
 from typing import Any, TypeVar
 
-from aiologic.lowlevel import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor
 

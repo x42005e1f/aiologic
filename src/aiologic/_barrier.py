@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING, Any, Final
 
 from ._flag import Flag
 from .lowlevel import (
-    DEFAULT,
-    DefaultType,
     ThreadOnceLock,
     async_checkpoint,
     create_async_event,
@@ -22,6 +20,7 @@ from .lowlevel import (
     lazydeque,
 )
 from .lowlevel._utils import _copies as copies
+from .meta import DEFAULT, DefaultType
 
 if TYPE_CHECKING:
     import sys

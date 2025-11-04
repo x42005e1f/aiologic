@@ -22,7 +22,8 @@ from typing import TYPE_CHECKING, Any, Generic, NoReturn, TypeVar, final
 
 import aiologic
 
-from aiologic.lowlevel import DEFAULT, DefaultType, once
+from aiologic.lowlevel import once
+from aiologic.meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 11):
     from typing import overload

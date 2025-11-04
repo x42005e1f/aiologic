@@ -5,4 +5,11 @@
 
 from ._exports import (
     export as export,
+    export_deprecated as export_deprecated,
+)
+from ._markers import (
+    DEFAULT as DEFAULT,
+    MISSING as MISSING,
+    DefaultType as DefaultType,
+    MissingType as MissingType,
 )

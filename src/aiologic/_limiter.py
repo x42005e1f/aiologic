@@ -10,14 +10,13 @@ from typing import TYPE_CHECKING, Any
 
 from ._semaphore import BinarySemaphore, Semaphore
 from .lowlevel import (
-    DEFAULT,
-    DefaultType,
     async_checkpoint,
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
 )
 from .lowlevel._utils import _copies as copies
+from .meta import DEFAULT, DefaultType
 
 if TYPE_CHECKING:
     import sys

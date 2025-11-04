@@ -224,7 +224,7 @@ def pytest_collection_modifyitems(config, items):
             "test_builtins": defaultdict(list),
             "test_collections": defaultdict(list),
             "test_itertools": defaultdict(list),
-            "aiologic.lowlevel.test_markers": defaultdict(list),
+            "aiologic.meta.test_markers": defaultdict(list),
             "aiologic.lowlevel.test_threads": defaultdict(list),
             "aiologic.lowlevel.test_libraries": defaultdict(list),
             "aiologic.lowlevel.test_ident": defaultdict(list),

@@ -12,12 +12,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import (
-    DEFAULT,
     DUMMY_EVENT,
-    DefaultType,
     create_async_event,
     create_green_event,
 )
+from aiologic.meta import DEFAULT, DefaultType
 
 from ._executors import TaskExecutor, current_executor
 from ._tasks import Task, TaskCancelled, create_task as _create_task

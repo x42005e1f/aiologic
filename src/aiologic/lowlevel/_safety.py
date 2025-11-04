@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator
 
-from ._markers import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType
+
 from ._threads import current_thread_ident
 from ._utils import _replaces as replaces
 

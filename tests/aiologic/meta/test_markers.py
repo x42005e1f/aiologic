@@ -41,5 +41,5 @@ class TestNone(_TestMarker):
 
 
 class TestMissing(_TestMarker):  # like None
-    name = "aiologic.lowlevel.MISSING"
-    value = aiologic.lowlevel.MISSING
+    name = "aiologic.meta.MISSING"
+    value = aiologic.meta.MISSING
