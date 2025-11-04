@@ -27,7 +27,9 @@ def export_deprecated(
     target_name: str,
     /,
 ) -> None:
-    """..."""
+    """
+    Register a deprecated symbolic link in the specified module namespace.
+    """
 
     if "." not in target_name:
         target_name = f".{target_name}"
@@ -78,7 +80,11 @@ def export_deprecated(
 
 
 def export(namespace: dict[str, Any], /) -> None:
-    """..."""
+    """
+    Update the ``__module__`` attribute of all module namespace values as if
+    they were defined directly in it. If there are non-private submodules,
+    apply recursively to them as well.
+    """
 
     if TYPE_CHECKING:
         # sphinx.ext.autodoc does not support hacks below. In particular,

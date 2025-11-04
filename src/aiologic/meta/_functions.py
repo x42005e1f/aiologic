@@ -46,7 +46,27 @@ def replaces(
     /,
 ) -> Callable[_P, _T]: ...
 def replaces(namespace, wrapper=MISSING, /):
-    """..."""
+    """
+    Wrap and replace the function of the same name in *namespace*.
+
+    Used for global rebinding.
+
+    Unlike :func:`functools.wraps`, excludes the ``__wrapped__`` attribute to
+    avoid memory leaks in a multithreaded environment.
+
+    Example:
+      >>> def sketch():
+      ...     return 'parrot'
+      >>> def replace_sketch():
+      ...     @replaces(globals())
+      ...     def sketch():
+      ...         return 'ex-parrot'
+      >>> sketch()
+      'parrot'
+      >>> replace_sketch()
+      >>> sketch()
+      'ex-parrot'
+    """
 
     if wrapper is MISSING:
         return partial(replaces, namespace)
@@ -73,7 +93,28 @@ def copies(
     /,
 ) -> Callable[_P, _T]: ...
 def copies(original, wrapper=MISSING, /):
-    """..."""
+    """
+    Replace with a copy of *original* if that is a Python level function.
+
+    Used to optimize functions which delegate all the work to others.
+
+    Does nothing on type checking.
+
+    Example:
+      >>> def sig1():
+      ...     return 42
+      >>> @copies(sig1)
+      ... def sig2():
+      ...     return sig1()
+      >>> sig1()
+      42
+      >>> sig2()
+      42
+      >>> sig1 is sig2
+      False
+      >>> sig1.__code__ is sig2.__code__
+      True
+    """
 
     if wrapper is MISSING:
         return partial(copies, original)

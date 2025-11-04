@@ -26,7 +26,9 @@ class __DefaultMeta(enum.EnumMeta):
 
 @final
 class MissingType(enum.Enum, metaclass=__MissingMeta):
-    """..."""
+    """
+    A singleton class for :data:`MISSING`; mimics :class:`NoneType`.
+    """
 
     __slots__ = ()
 
@@ -61,7 +63,9 @@ class MissingType(enum.Enum, metaclass=__MissingMeta):
 
 @final
 class DefaultType(enum.Enum, metaclass=__DefaultMeta):
-    """..."""
+    """
+    A singleton class for :data:`DEFAULT`; mimics :class:`NoneType`.
+    """
 
     __slots__ = ()
 

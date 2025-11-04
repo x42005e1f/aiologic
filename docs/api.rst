@@ -379,7 +379,12 @@ Markers
   :type: MissingType
   :no-index:
 
-  ...
+  A singleton object for default values; mimics :data:`None`.
+
+  Used as a marker to indicate that some special behavior will be used by
+  default (cannot be achieved by passing any value).
+
+  Can also be used outside of parameters to indicate that there is no object.
 .. aiologic.meta.MISSING-end-marker
 
 .. aiologic.meta.DEFAULT-start-marker
@@ -387,7 +392,10 @@ Markers
   :type: DefaultType
   :no-index:
 
-  ...
+  A singleton object for default values; mimics :data:`None`.
+
+  Used as a marker to indicate that some object will be used by default
+  (without any special behavior).
 .. aiologic.meta.DEFAULT-end-marker
 
 Functions
