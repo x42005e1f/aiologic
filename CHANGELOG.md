@@ -16,8 +16,8 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-[Unreleased]
-------------
+[0.15.0] - 2025-11-05
+---------------------
 
 ### Added
 
@@ -955,7 +955,7 @@ Commit messages are consistent with
   + `aiologic.SimpleQueue` as a queue that works in a semaphore style
     (async-aware alternative to `queue.SimpleQueue`).
 
-[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.14.0...HEAD
+[0.15.0]: https://github.com/x42005e1f/aiologic/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/x42005e1f/aiologic/compare/0.13.1...0.14.0
 [0.13.1]: https://github.com/x42005e1f/aiologic/compare/0.13.0...0.13.1
 [0.13.0]: https://github.com/x42005e1f/aiologic/compare/0.12.0...0.13.0
