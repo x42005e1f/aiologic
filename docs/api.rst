@@ -412,3 +412,8 @@ Exports
 
 .. autofunction:: aiologic.meta.export
 .. autofunction:: aiologic.meta.export_deprecated
+
+Helpers
++++++++
+
+.. autofunction:: aiologic.meta.await_for

@@ -11,6 +11,9 @@ from ._functions import (
     copies as copies,
     replaces as replaces,
 )
+from ._helpers import (
+    await_for as await_for,
+)
 from ._markers import (
     DEFAULT as DEFAULT,
     MISSING as MISSING,

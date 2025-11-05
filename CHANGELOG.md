@@ -170,6 +170,8 @@ Commit messages are consistent with
   itself (by updating `__module__`).
 - `aiologic.meta.export_deprecated()` to export deprecated content via custom
   `__getattr__()`.
+- `aiologic.meta.await_for()` to use awaitable primitives via functions that
+  only accept asynchronous functions.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
