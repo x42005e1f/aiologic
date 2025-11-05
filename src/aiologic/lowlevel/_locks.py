@@ -495,19 +495,36 @@ else:
 
 
 def create_thread_lock() -> ThreadLock:
-    """..."""
+    """
+    Create a new instance of a primitive lock that blocks threads.
+
+    The same as :class:`threading.Lock`, but not affected by monkey patching.
+    """
 
     return __allocate_lock()
 
 
 def create_thread_rlock() -> ThreadRLock:
-    """..."""
+    """
+    Create a new instance of a reentrant lock that blocks threads.
+
+    The same as :class:`threading.RLock`, but not affected by monkey patching.
+    """
 
     return ThreadRLock()
 
 
 def create_thread_oncelock() -> ThreadOnceLock:
-    """..."""
+    """
+    Create a new instance of a once lock that mimics a reentrant lock but does
+    nothing after release (when the counter reaches zero).
+
+    It wakes up all threads at once, thereby solving the square problem, which
+    makes it suitable for creating thread-safe initialization (or any other
+    one-time actions).
+
+    Unlike :class:`threading.RLock`, it is signal-safe.
+    """
 
     return ThreadOnceLock()
 
@@ -522,7 +539,23 @@ def once(
 @overload
 def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]: ...
 def once(wrapped=MISSING, /, *, reentrant=False):
-    """..."""
+    """
+    Transform *wrapped* into a one-time function.
+
+    Blocks threads attempting to execute the function in parallel and wakes
+    them up at once upon completion. The result is stored in the closure of the
+    new function and is returned on each subsequent call.
+
+    Args:
+      reentrant:
+        Unless set to :data:`True`, recursive attempts to call the function
+        will raise the :exc:`RuntimeError` exception. Also affects signal
+        handlers and destructors.
+
+    Raises:
+      RuntimeError:
+        if called recursively and ``reentrant=False``.
+    """
 
     if wrapped is MISSING:
         return partial(once, reentrant=reentrant)

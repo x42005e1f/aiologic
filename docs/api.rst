@@ -143,7 +143,7 @@ Locks (low-level)
 
   Bases: :class:`object`
 
-  ...
+  The return type of :func:`~aiologic.lowlevel.create_thread_lock`.
 .. aiologic.lowlevel.ThreadLock-end-marker
 
 .. aiologic.lowlevel.ThreadRLock-start-marker
@@ -153,7 +153,7 @@ Locks (low-level)
 
   Bases: :class:`object`
 
-  ...
+  The return type of :func:`~aiologic.lowlevel.create_thread_rlock`.
 .. aiologic.lowlevel.ThreadRLock-end-marker
 
 .. aiologic.lowlevel.ThreadOnceLock-start-marker
@@ -163,7 +163,7 @@ Locks (low-level)
 
   Bases: :class:`object`
 
-  ...
+  The return type of :func:`~aiologic.lowlevel.create_thread_oncelock`.
 .. aiologic.lowlevel.ThreadOnceLock-end-marker
 
 .. aiologic.lowlevel.ThreadDummyLock-start-marker
@@ -173,7 +173,7 @@ Locks (low-level)
 
   Bases: :class:`object`
 
-  ...
+  A singleton class for :data:`~aiologic.lowlevel.THREAD_DUMMY_LOCK`.
 .. aiologic.lowlevel.ThreadDummyLock-end-marker
 
 .. aiologic.lowlevel.THREAD_DUMMY_LOCK-start-marker
@@ -181,7 +181,10 @@ Locks (low-level)
   :type: ThreadDummyLock
   :no-index:
 
-  ...
+  A singleton object that mimics a reentrant lock but does nothing.
+
+  Can be used as a replacement for a once lock after release (to reduce memory
+  usage).
 .. aiologic.lowlevel.THREAD_DUMMY_LOCK-end-marker
 
 .. autofunction:: aiologic.lowlevel.create_thread_lock() -> ThreadLock
