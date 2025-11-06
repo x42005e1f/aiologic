@@ -9,12 +9,6 @@ Since the documentation is currently still under development, here is a concise
 set of notes on the main features of aiologic. It is intended to be transformed
 into separate sections in the future.
 
-.. note::
-
-    All information presented here and in general in all documentation is
-    relevant for the latest (development) version. Make sure you install the
-    package from GitHub before we start.
-
 Synchronization primitives
 --------------------------
 
