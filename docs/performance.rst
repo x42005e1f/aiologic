@@ -923,6 +923,17 @@ multithreading performance issues:
    <threading.Condition.wait>` - well, this is a general problem with this
    primitive, and there is nothing we can do.
 
+.. admonition:: Do you need to go deeper?
+
+    We have covered far from all aspects of the GIL that affect performance;
+    there are others. If you want to learn more about the GIL and its effect on
+    multithreading, there is a good `Python behind the scenes <https://
+    tenthousandmeters.com/tag/python-behind-the-scenes/>`__ series by Victor
+    Skvortsov, which is a dive into the internals of CPython.
+
+    You may also be interested in `one faster-cpython/ideas discussion
+    <https://github.com/faster-cpython/ideas/discussions/328>`__.
+
 It is time to arm ourselves and take control of the square problem into our own
 hands.
 
