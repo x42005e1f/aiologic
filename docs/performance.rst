@@ -848,6 +848,18 @@ specified explicitly, or they can be a consequence of the internal structure of
 the scheduler (such as the use of red-black trees). This also helps mitigate
 the square problem.
 
+.. note::
+
+    `Free-threading <https://docs.python.org/3/howto/
+    free-threading-python.html>`__ execution is similar to process execution in
+    terms of scheduling, as it is also not affected by the GIL, and as a
+    result, it produces less convenient (and more chaotic) results for
+    interpretation. That is why we did not consider free-threading at all.
+
+    Nevertheless, based on the measurement results, you can see that
+    free-threading is also subject to the square problem, albeit to a lesser
+    extent.
+
 Let us repeat the measurements, but this time with SCHED_RR as the scheduling
 policy.
 
