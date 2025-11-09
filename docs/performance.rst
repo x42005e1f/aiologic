@@ -569,16 +569,16 @@ producer.
 These three scenarios are simple, but they have interesting consequences:
 
 1. If one :meth:`sem.release() <threading.Semaphore.release>` call is
-   interrupted at least once, this gives :math:`O((n+m)^2)`, where :math:`n` is
-   the number of waiting threads and :math:`m` is the number of threads that
-   have already completed the :meth:`sem.acquire()
-   <threading.Semaphore.acquire>` call.
-2. If two such calls are interrupted, the complexity is determined by the last
-   one (due to the non-decreasing nature of :math:`n+m` and the increasing
-   nature of :math:`m`).
-3. If not all of the threads under consideration have started the
-   :meth:`sem.acquire() <threading.Semaphore.acquire>` call, this leads to the
-   :math:`n` increasing, and consequently to the square growing.
+   interrupted, this gives :math:`O((k+m)^2-m^2)` :math:`=O(k^2+nm+m^2-m^2)`
+   :math:`=O(k^2+km)` :math:`≈O(n^2)`, where :math:`n` is the number of all
+   threads considered, :math:`k` is the number of waiting threads, and
+   :math:`m` is the number of threads that have already completed the
+   :meth:`sem.acquire() <threading.Semaphore.acquire>` call.
+2. If not all of the threads have started the :meth:`sem.acquire()
+   <threading.Semaphore.acquire>` call, this leads to the :math:`k` increasing,
+   and consequently to the square growing.
+3. The previous two points also apply to context switching between a-5 and a-6,
+   and therefore to the entire mutex case.
 
 Well, we have discovered a terrifying truth! Despite the seemingly low
 probability, just one context switch is enough to give us :math:`O(n^2)`.
