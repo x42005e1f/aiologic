@@ -708,8 +708,7 @@ process does not wait for each one to start, then it is :math:`O(n)`, otherwise
 :math:`O(n^2)`.
 
 So, what can we say about the notify case? If we start/wake up/notify :math:`n`
-execution units, and :math:`n` is greater than :math:`k` cores (while
-considering the GIL as a single-core environment), then:
+execution units, and :math:`n` is greater than :math:`k` cores, then:
 
 1. If the operation is free (does not require context switching), then we have
    amortized :math:`O(n)`.
