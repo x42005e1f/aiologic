@@ -173,7 +173,7 @@ class Latch:
 
         return not self._filling
 
-    def __await__(self, /) -> Generator[Any, Any, None]:
+    def __await__(self, /) -> Generator[Any, Any]:
         """..."""
 
         if not self._filling:
