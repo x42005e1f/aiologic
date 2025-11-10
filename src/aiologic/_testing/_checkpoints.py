@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 @contextmanager
 def _assert_threading_checkpoints(
     expected: bool,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     yield
 
 

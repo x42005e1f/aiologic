@@ -606,7 +606,6 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
 
 @once
 def _get_eventlet_executor_class() -> type[TaskExecutor]:
-    import eventlet
     import eventlet.greenpool
     import eventlet.hubs
 
