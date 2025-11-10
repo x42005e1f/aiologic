@@ -704,7 +704,7 @@ with :math:`n/k` processes, which is :math:`O(n^2/k)`. And since we consider
 What if we have a non-uniform distribution? Let us suppose that the main
 process runs on the 1st core, and all the others are distributed across
 :math:`k-1` cores. Then it depends on how each process is started: if the main
-thread does not wait for each one to start, then it is :math:`O(n)`, otherwise
+process does not wait for each one to start, then it is :math:`O(n)`, otherwise
 :math:`O(n^2)`.
 
 So, what can we say about the notify case? If we start/wake up/notify :math:`n`
