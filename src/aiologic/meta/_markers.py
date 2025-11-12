@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import enum
 
+from types import MemberDescriptorType
 from typing import Final, Literal, NoReturn, final
 
 # We have to use the enum module so that type checkers can understand that the
@@ -39,33 +40,46 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
     A base class for creating type-checker-friendly singleton classes whose
     instances will be defined at the module level.
 
-    Unlike :class:`enum.Enum`, it prohibits setting attributes.
+    Unlike :class:`enum.Enum`, it prohibits setting attributes that are not
+    explicitly declared (via :ref:`slots`).
 
     Example:
       >>> class SingletonType(SingletonEnum):
+      ...     __slots__ = ("_x",)
       ...     SINGLETON = "SINGLETON"
       >>> SINGLETON = SingletonType.SINGLETON
       >>> repr(SINGLETON) == f"{__name__}.SINGLETON"
       True
-      >>> SINGLETON.x = "y"
+      >>> SINGLETON._x = 1  # ok
+      >>> SINGLETON._y = 2
       Traceback (most recent call last):
-      AttributeError: 'SingletonType' object has no attribute 'x'
+      AttributeError: 'SingletonType' object has no attribute '_y'
     """
 
     __slots__ = ()
 
     def __setattr__(self, /, name: str, value: object) -> None:
         if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
-            return super().__setattr__(name, value)
+            super().__setattr__(name, value)
+            return
 
         cls = self.__class__
         cls_name = cls.__qualname__
 
-        # A singleton object should not provide mutable state, so we raise an
-        # `AttributeError` on any attempt to set an attribute, suppressing its
-        # hints (which would occur if we set the `name` and `obj` attributes of
-        # the exception object). Note, `enum.Enum` itself does not prohibit
-        # setting attributes!
+        # We allow setting attributes for user-defined slots to better match
+        # expected behavior. Although this goes against the concept in a sense
+        # (since data for an instance can be set at the class/module level
+        # instead), it may contribute to new usage scenarios.
+
+        if isinstance(getattr(cls, name, None), MemberDescriptorType):
+            super().__setattr__(name, value)
+            return
+
+        # A singleton object should not provide mutable public state, so we
+        # raise an `AttributeError` on any attempt to set an unknown attribute,
+        # suppressing its hints (which would occur if we set the `name` and
+        # `obj` attributes of the exception object). Note, `enum.Enum` itself
+        # does not prohibit setting attributes!
 
         msg = f"{cls_name!r} object has no attribute {name!r}"
         raise AttributeError(msg)
