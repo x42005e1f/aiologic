@@ -5,31 +5,32 @@
 
 import enum
 
-from typing import Any, Final, Literal, NoReturn, final
+from typing import Final, Literal, NoReturn, final
 
-@final
-class MissingType(enum.Enum):
+class SingletonEnum(enum.Enum):  # type: ignore[misc]
     __slots__ = ()
 
-    MISSING = "MISSING"
-
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
-    def __setattr__(self, /, name: str, value: Any) -> None: ...
+    def __setattr__(self, /, name: str, value: object) -> None: ...
     def __repr__(self, /) -> str: ...
     def __str__(self, /) -> str: ...
-    def __bool__(self, /) -> Literal[False]: ...
 
 @final
-class DefaultType(enum.Enum):
+class DefaultType(SingletonEnum):
     __slots__ = ()
 
     DEFAULT = "DEFAULT"
 
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
-    def __setattr__(self, /, name: str, value: Any) -> None: ...
-    def __repr__(self, /) -> str: ...
-    def __str__(self, /) -> str: ...
+    def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...
     def __bool__(self, /) -> Literal[False]: ...
 
-MISSING: Final[Literal[MissingType.MISSING]]
+@final
+class MissingType(SingletonEnum):
+    __slots__ = ()
+
+    MISSING = "MISSING"
+
+    def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...
+    def __bool__(self, /) -> Literal[False]: ...
+
 DEFAULT: Final[Literal[DefaultType.DEFAULT]]
+MISSING: Final[Literal[MissingType.MISSING]]

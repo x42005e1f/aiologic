@@ -19,4 +19,5 @@ from ._markers import (
     MISSING as MISSING,
     DefaultType as DefaultType,
     MissingType as MissingType,
+    SingletonEnum as SingletonEnum,
 )
