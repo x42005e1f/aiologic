@@ -206,6 +206,12 @@ GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
 
 You can also send an email to 0x42005e1f@gmail.com with any feedback.
 
+Dependents
+==========
+
+See `x42005e1f/aiologic#11 <https://github.com/x42005e1f/aiologic/discussions/
+11>`__.
+
 Support
 =======
 
