@@ -47,6 +47,7 @@ from ._queue import (
     Queue as Queue,
     QueueEmpty as QueueEmpty,
     QueueFull as QueueFull,
+    QueueShutdown as QueueShutdown,
     SimpleLifoQueue as SimpleLifoQueue,
     SimpleQueue as SimpleQueue,
 )

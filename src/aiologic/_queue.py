@@ -81,13 +81,11 @@ class QueueShutdown(Exception):
 
 
 class SimpleQueue(Generic[_T]):
-    __slots__ = ("__weakref__", "_data", "_semaphore", "_shutdown")
-    """..."""
-
     __slots__ = (
-        "__weakref__",
-        "_data",
-        "_semaphore",
+        "__weakref__", 
+        "_data", 
+        "_semaphore", 
+        "_shutdown"
     )
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
@@ -900,7 +898,7 @@ class Queue(Generic[_T]):
             self._getters.clear()
             self._putters.clear()
             self._putters_and_getters.clear()
-            raise QueueFull
+            raise QueueShutdown
 
         if not acquired:
             raise QueueFull
@@ -932,7 +930,7 @@ class Queue(Generic[_T]):
             self._getters.clear()
             self._putters.clear()
             self._putters_and_getters.clear()
-            raise QueueFull
+            raise QueueShutdown
 
         if not acquired:
             raise QueueFull
@@ -956,7 +954,7 @@ class Queue(Generic[_T]):
             self._getters.clear()
             self._putters.clear()
             self._putters_and_getters.clear()
-            raise QueueFull
+            raise QueueShutdown
 
         if not acquired:
             raise QueueEmpty
@@ -987,7 +985,7 @@ class Queue(Generic[_T]):
             self._getters.clear()
             self._putters.clear()
             self._putters_and_getters.clear()
-            raise QueueFull
+            raise QueueShutdown
 
         if not acquired:
             raise QueueEmpty
