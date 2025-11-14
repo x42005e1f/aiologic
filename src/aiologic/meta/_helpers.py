@@ -5,17 +5,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import sys
 
-    if sys.version_info >= (3, 9):
+    from typing import TypeVar
+
+    if sys.version_info >= (3, 9):  # PEP 585
         from collections.abc import Awaitable
     else:
         from typing import Awaitable
 
-_T = TypeVar("_T")
+    _T = TypeVar("_T")
 
 
 async def await_for(awaitable: Awaitable[_T], /) -> _T:

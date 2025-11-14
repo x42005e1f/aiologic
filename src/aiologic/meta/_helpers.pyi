@@ -7,7 +7,7 @@ import sys
 
 from typing import TypeVar
 
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9):  # PEP 585
     from collections.abc import Awaitable
 else:
     from typing import Awaitable
