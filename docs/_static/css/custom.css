@@ -11,11 +11,39 @@
     font-family: FontAwesome;
 }
 
-dl.py:has(dt.py.sig + dt.py.sig) {
+table.widetable {
+    width: 100%;
+}
+
+table.widetable th,
+table.widetable td {
+    text-align: center;
+}
+
+div.tab-set {
+    margin: 1px 0 24px;
+}
+
+div.tab-set > label.tab-label {
+    padding-top: 0;
+}
+
+div.tab-content > div[class^="highlight-"]:first-child,
+div.tab-content > div[class*=" highlight-"]:first-child {
+    border-top: none;
+    margin: 0;
+}
+
+div.tab-content table.widetable:first-child,
+div.tab-content table.widetable:first-child th {
+    border-top: none;
+}
+
+dl.py:not(.class):has(dt.py.sig + dt.py.sig) {
     display: inline-grid !important;
 }
 
-dl.py:has(dt.py.sig + dt.py.sig) > :last-child {
+dl.py:not(.class):has(dt.py.sig + dt.py.sig) > :last-child {
     margin-bottom: 0 !important;
 }
 
@@ -28,6 +56,10 @@ dl.py > dt.py.sig:not(:first-of-type) {
     border-top: none !important;
     padding-top: 0 !important;
     margin-top: 0 !important;
+}
+
+dl.py.property {
+    display: block !important;
 }
 
 dl.py.data dl.py.attribute span.sig-prename {

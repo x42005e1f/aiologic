@@ -3,12 +3,19 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-from typing import Literal, overload
+import sys
+
+from typing import Literal
 
 from sniffio import AsyncLibraryNotFoundError as AsyncLibraryNotFoundError
 from sniffio._impl import _ThreadLocal
 
 from ._threads import _local
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 class GreenLibraryNotFoundError(RuntimeError): ...
 

@@ -6,33 +6,40 @@
 from __future__ import annotations
 
 import sys
-import threading
-import time
+import warnings
 
-from collections import defaultdict, deque
+from collections import defaultdict
 from itertools import count
 from logging import Logger, getLogger
-from typing import TYPE_CHECKING, Any, Final, Generic, Union, overload
+from math import inf, isnan
+from typing import TYPE_CHECKING, Any, Final, Generic, Union
 
+from . import lowlevel
 from ._guard import ResourceGuard
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
 from .lowlevel import (
-    MISSING,
-    MissingType,
-    _thread,
+    ThreadOnceLock,
     async_checkpoint,
     create_async_event,
     create_green_event,
     current_async_task_ident,
     current_green_task_ident,
     green_checkpoint,
+    green_clock,
+    lazydeque,
 )
+from .meta import DEFAULT, MISSING, DefaultType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Generator
@@ -47,6 +54,15 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Self
 
+try:
+    from sys import _is_gil_enabled
+except ImportError:
+    __GIL_ENABLED: Final[bool] = True
+else:
+    __GIL_ENABLED: Final[bool] = _is_gil_enabled()
+
+_USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
+
 LOGGER: Final[Logger] = getLogger(__name__)
 
 _T = TypeVar("_T")
@@ -56,9 +72,8 @@ _T_co = TypeVar(
         Lock,
         PLock,
         BinarySemaphore,
-        threading.RLock,
-        threading.Lock,
-        _thread.LockType,
+        lowlevel.ThreadRLock,
+        lowlevel.ThreadLock,
         None,
     ],
     default=RLock,
@@ -73,6 +88,8 @@ _S_co = TypeVar(
 
 
 class Condition(Generic[_T_co, _S_co]):
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_impl",
@@ -82,14 +99,14 @@ class Condition(Generic[_T_co, _S_co]):
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
-        timer: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[RLock, Callable[[], int]]: ...
     @overload
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
         *,
         timer: _S_co,
     ) -> Condition[RLock, _S_co]: ...
@@ -98,15 +115,17 @@ class Condition(Generic[_T_co, _S_co]):
         cls,
         /,
         lock: _T_co,
-        timer: MissingType = MISSING,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[_T_co, Callable[[], int]]: ...
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
-    def __new__(cls, /, lock=MISSING, timer=MISSING):
-        if lock is MISSING:
+    def __new__(cls, /, lock=DEFAULT, timer=DEFAULT):
+        """..."""
+
+        if lock is DEFAULT:
             lock = RLock()
 
-        if timer is MISSING:
+        if timer is DEFAULT:
             timer = count().__next__
 
         if lock is None:
@@ -122,10 +141,10 @@ class Condition(Generic[_T_co, _S_co]):
             # aiologic.BoundedBinarySemaphore | aiologic.BinarySemaphore
             imp = _MixedCondition
         elif hasattr(lock, "_is_owned"):
-            # threading.RLock
+            # aiologic.lowlevel.ThreadRLock
             imp = _RSyncCondition
         else:
-            # threading.Lock | _thread.LockType
+            # aiologic.lowlevel.ThreadLock
             imp = _SyncCondition
 
         if cls is Condition:
@@ -138,6 +157,24 @@ class Condition(Generic[_T_co, _S_co]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
+
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = Condition()
+            >>> copy = Condition(*orig.__getnewargs__())
+            >>> copy.lock is orig.lock
+            True
+        """
+
         try:
             timer_is_count = self.timer.__self__.__class__ is count
         except AttributeError:
@@ -149,9 +186,28 @@ class Condition(Generic[_T_co, _S_co]):
         return (self.lock, self.timer)
 
     def __getstate__(self, /) -> None:
+        """
+        Disables the use of internal state for pickling and copying.
+        """
+
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            return self.__class__(self.lock)
+
+        return self.__class__(self.lock, self.timer)
+
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -176,12 +232,34 @@ class Condition(Generic[_T_co, _S_co]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """
+        Returns :data:`True` if the underlying lock is used by any task.
+
+        If there is no lock, returns :data:`False`.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
+        Example:
+            >>> accessing = Condition()
+            >>> bool(accessing)
+            False
+            >>> with accessing:  # condition variable is in use
+            ...     bool(accessing)
+            True
+            >>> bool(accessing)
+            False
+        """
+
         return bool(self._impl)
 
     async def __aenter__(self, /) -> Self:
+        """..."""
+
         return await self._impl.__aenter__()
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         return self._impl.__enter__()
 
     async def __aexit__(
@@ -191,6 +269,8 @@ class Condition(Generic[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         return await self._impl.__aexit__(exc_type, exc_value, traceback)
 
     def __exit__(
@@ -200,12 +280,18 @@ class Condition(Generic[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         return self._impl.__exit__(exc_type, exc_value, traceback)
 
     def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
         return (yield from self._impl.__await__())
 
     def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
         return self._impl.wait(timeout)
 
     async def for_(
@@ -215,6 +301,8 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         delegate: bool = True,
     ) -> _T:
+        """..."""
+
         return await self._impl.for_(predicate, delegate=delegate)
 
     def wait_for(
@@ -225,6 +313,8 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         delegate: bool = True,
     ) -> _T:
+        """..."""
+
         return self._impl.wait_for(predicate, timeout, delegate=delegate)
 
     def notify(
@@ -234,21 +324,40 @@ class Condition(Generic[_T_co, _S_co]):
         *,
         deadline: float | None = None,
     ) -> int:
+        """..."""
+
         return self._impl.notify(count, deadline=deadline)
 
     def notify_all(self, /, *, deadline: float | None = None) -> int:
+        """..."""
+
         return self._impl.notify_all(deadline=deadline)
 
     @property
     def lock(self, /) -> _T_co:
+        """
+        The underlying lock used by the condition variable.
+        """
+
         return self._impl.lock
 
     @property
     def timer(self, /) -> _S_co:
+        """
+        The callable object used by the condition variable.
+        """
+
         return self._impl.timer
 
     @property
     def waiting(self, /) -> int:
+        """
+        The current number of tasks waiting to be notified.
+
+        It represents the length of the waiting queue and thus changes
+        immediately.
+        """
+
         return self._impl.waiting
 
 
@@ -266,9 +375,9 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 
@@ -282,6 +391,17 @@ class _BaseCondition(Condition[_T_co, _S_co]):
             return (Condition, (self._lock,))
 
         return (Condition, (self._lock, self._timer))
+
+    def __copy__(self, /) -> Self:
+        try:
+            timer_is_count = self.timer.__self__.__class__ is count
+        except AttributeError:
+            timer_is_count = False
+
+        if timer_is_count:
+            return self.__class__(self.lock, count().__next__)
+
+        return self.__class__(self.lock, self.timer)
 
     def __repr__(self, /) -> str:
         cls = Condition
@@ -394,10 +514,29 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
         while True:
             if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else 1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    warnings.warn(
+                        "Use timeout=max(0, timeout) instead",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                    timeout = 0
+
                 if deadline is None:
-                    deadline = time.monotonic() + timeout
+                    deadline = green_clock() + timeout
                 else:
-                    timeout = deadline - time.monotonic()
+                    timeout = deadline - green_clock()
 
                     if timeout < 0:
                         return result
@@ -435,6 +574,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                 if time > deadline:
                     break
 
+                remove = True
                 rotate = False
 
                 if predicate is not None:
@@ -448,7 +588,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                         except Exception as exc:
                             token[4] = exc
 
-                            if event.set():
+                            if remove := event.set():
                                 notified += 1
                             else:
                                 LOGGER.exception(
@@ -464,22 +604,46 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                                 rotate = True
 
                 if not rotate:
-                    if event.set():
+                    if remove := event.set():
                         notified += 1
 
                 try:
-                    waiters.remove(token)
-                except ValueError:
-                    pass
-                else:
-                    if rotate:
-                        waiters.append(token)
-
-                        if event.is_set() or event.cancelled():
+                    if remove or waiters[0] is token:
+                        if _USE_ONCELOCK_FORCED:
+                            ThreadOnceLock.acquire(event)
                             try:
-                                waiters.remove(token)
-                            except ValueError:
-                                pass
+                                if waiters[0] is token:
+                                    waiters.remove(token)
+                            finally:
+                                ThreadOnceLock.release(event)
+                        else:
+                            waiters.remove(token)
+                except ValueError:  # waiters does not contain token
+                    continue
+                except IndexError:  # waiters is empty
+                    break
+                else:
+                    if not rotate:
+                        continue
+
+                    waiters.append(token)
+
+                    if event.is_set() or event.cancelled():
+                        try:
+                            if waiters[0] is token:
+                                if _USE_ONCELOCK_FORCED:
+                                    ThreadOnceLock.acquire(event)
+                                    try:
+                                        if waiters[0] is token:
+                                            waiters.remove(token)
+                                    finally:
+                                        ThreadOnceLock.release(event)
+                                else:
+                                    waiters.remove(token)
+                        except ValueError:  # waiters does not contain token
+                            continue
+                        except IndexError:  # waiters is empty
+                            break
 
         return notified
 
@@ -494,7 +658,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -504,7 +668,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -566,7 +730,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -576,7 +740,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -650,9 +814,9 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 
@@ -723,7 +887,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -733,7 +897,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -810,7 +974,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -820,7 +984,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -945,7 +1109,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -955,7 +1119,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_async_event(),
+                    event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -1022,7 +1186,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         if predicate is not None:
             self._waiters.append(
                 token := [
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     predicate,
                     self._timer(),
                     MISSING,  # predicate result
@@ -1032,7 +1196,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         else:
             self._waiters.append(
                 token := (
-                    event := create_green_event(),
+                    event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                     None,
                     self._timer(),
                 )
@@ -1099,9 +1263,9 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         self._lock = lock
         self._timer = timer
 
-        self._waiters = deque()
+        self._waiters = lazydeque()
 
-        self._notifying = ResourceGuard("notifying")
+        self._notifying = ResourceGuard(action="notifying")
 
         return self
 
@@ -1211,10 +1375,29 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
             while True:
                 if timeout is not None:
+                    if isinstance(timeout, int):
+                        try:
+                            timeout = float(timeout)
+                        except OverflowError:
+                            timeout = (-1 if timeout < 0 else 1) * inf
+
+                    if isnan(timeout):
+                        msg = "timeout must be non-NaN"
+                        raise ValueError(msg)
+
+                    if timeout < 0:
+                        warnings.warn(
+                            "Use timeout=max(0, timeout) instead",
+                            DeprecationWarning,
+                            stacklevel=2,
+                        )
+
+                        timeout = 0
+
                     if deadline is None:
-                        deadline = time.monotonic() + timeout
+                        deadline = green_clock() + timeout
                     else:
-                        timeout = deadline - time.monotonic()
+                        timeout = deadline - green_clock()
 
                         if timeout < 0:
                             return result
@@ -1256,6 +1439,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if time > deadline:
                         break
 
+                    remove = True
                     rotate = False
 
                     if predicate is not None:
@@ -1264,7 +1448,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                         except Exception as exc:
                             token[4] = exc
 
-                            if self._lock._park(token):
+                            if remove := self._lock._park(token):
                                 notified += 1
                             else:
                                 LOGGER.exception(
@@ -1280,22 +1464,46 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                                 rotate = True
 
                     if not rotate:
-                        if self._lock._park(token):
+                        if remove := self._lock._park(token):
                             notified += 1
 
                     try:
-                        waiters.remove(token)
-                    except ValueError:
-                        pass
-                    else:
-                        if rotate:
-                            waiters.append(token)
-
-                            if event.is_set() or event.cancelled():
+                        if remove or waiters[0] is token:
+                            if _USE_ONCELOCK_FORCED:
+                                ThreadOnceLock.acquire(event)
                                 try:
-                                    waiters.remove(token)
-                                except ValueError:
-                                    pass
+                                    if waiters[0] is token:
+                                        waiters.remove(token)
+                                finally:
+                                    ThreadOnceLock.release(event)
+                            else:
+                                waiters.remove(token)
+                    except ValueError:  # token not in waiters
+                        continue
+                    except IndexError:  # waiters is empty
+                        break
+                    else:
+                        if not rotate:
+                            continue
+
+                        waiters.append(token)
+
+                        if event.is_set() or event.cancelled():
+                            try:
+                                if waiters[0] is token:
+                                    if _USE_ONCELOCK_FORCED:
+                                        ThreadOnceLock.acquire(event)
+                                        try:
+                                            if waiters[0] is token:
+                                                waiters.remove(token)
+                                        finally:
+                                            ThreadOnceLock.release(event)
+                                    else:
+                                        waiters.remove(token)
+                            except ValueError:  # token not in waiters
+                                continue
+                            except IndexError:  # waiters is empty
+                                break
 
             return notified
 
@@ -1306,7 +1514,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
     async def _async_wait(self, /, predicate):
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1319,13 +1527,13 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
         try:
             if self._counts:
-                task = current_green_task_ident()
+                task = current_async_task_ident()
 
                 count = self._counts.pop(task, 0)
             else:
                 count = 0
 
-            self._lock.green_release()
+            self._lock.async_release()
 
             try:
                 success = await event
@@ -1334,9 +1542,9 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if token[5]:
                         self._lock._unpark(event)
 
-                    self._lock.green_acquire(_shield=True)
-                else:
-                    self._lock._after_park()
+                    await self._lock._async_acquire(_shield=True)
+
+                self._lock._after_park()
 
                 if count:
                     self._counts[task] = count
@@ -1390,7 +1598,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
     def _green_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1418,9 +1626,9 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                     if token[5]:
                         self._lock._unpark(event)
 
-                    self._lock.green_acquire(_shield=True)
-                else:
-                    self._lock._after_park()
+                    self._lock._green_acquire(_shield=True)
+
+                self._lock._after_park()
 
                 if count:
                     self._counts[task] = count
@@ -1522,7 +1730,7 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     async def _async_wait(self, /, predicate):
         self._waiters.append(
             token := [
-                event := create_async_event(),
+                event := create_async_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result
@@ -1603,7 +1811,7 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     def _green_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
-                event := create_green_event(),
+                event := create_green_event(locking=_USE_ONCELOCK_FORCED),
                 predicate,
                 self._timer(),
                 MISSING,  # predicate result

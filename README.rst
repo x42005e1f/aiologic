@@ -97,12 +97,13 @@ Features
 .. features-start-marker
 
 * Python 3.8+ support
-* `CPython <https://www.python.org/>`_ and `PyPy <https://pypy.org/>`_ support
-* `Pickling <https://docs.python.org/3/library/pickle.html>`_ and `weakrefing
-  <https://docs.python.org/3/library/weakref.html>`_ support
+* `CPython <https://www.python.org/>`__ and `PyPy <https://pypy.org/>`__
+  support
+* `Pickling <https://docs.python.org/3/library/pickle.html>`__ and `weakrefing
+  <https://docs.python.org/3/library/weakref.html>`__ support
 * Cancellation and timeouts support
 * Optional `Trio-style checkpoints <https://trio.readthedocs.io/en/stable/
-  reference-core.html#checkpoints>`_:
+  reference-core.html#checkpoints>`__:
 
   * enabled by default for Trio itself
   * disabled by default for all others
@@ -114,7 +115,7 @@ Features
 
 * Fairness wherever possible (with some caveats)
 * Thread-safety wherever possible
-* Lock-free implementation
+* Lock-free implementation (with some exceptions)
 * Bundled stub files
 
 Synchronization primitives:
@@ -125,7 +126,7 @@ Synchronization primitives:
 * Capacity limiters: borrowable, and reentrant
 * Locks: ownable, and reentrant
 * `Readers-writer locks (external) <https://gist.github.com/x42005e1f/
-  a50d0744013b7bbbd7ded608d6a3845b>`_
+  a50d0744013b7bbbd7ded608d6a3845b>`__
 * Condition variables
 
 Communication primitives:
@@ -157,12 +158,12 @@ Supported concurrency libraries:
 
 All synchronization, communication, and non-blocking primitives are implemented
 entirely on effectively atomic operations, which gives `an incredible speedup
-on PyPy <https://gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`_
+on PyPy <https://gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`__
 compared to alternatives from the :mod:`threading` module. All this works
 because of GIL, but per-object locks also ensure that `the same operations are
-still atomic <https://peps.python.org/pep-0703/#container-thread-safety>`_, so
+still atomic <https://peps.python.org/pep-0703/#container-thread-safety>`__, so
 aiologic also works when running in a `free-threaded mode <https://
-docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`_.
+docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>`__.
 
 .. features-end-marker
 
@@ -171,20 +172,20 @@ Installation
 
 .. installation-start-marker
 
-Install from `PyPI <https://pypi.org/project/aiologic/>`_ (stable):
+Install from `PyPI <https://pypi.org/project/aiologic/>`__ (stable):
 
 .. code:: console
 
     pip install aiologic
 
-Or from `GitHub <https://github.com/x42005e1f/aiologic>`_ (latest):
+Or from `GitHub <https://github.com/x42005e1f/aiologic>`__ (latest):
 
 .. code:: console
 
     pip install git+https://github.com/x42005e1f/aiologic.git
 
 You can also use other package managers, such as `uv <https://github.com/
-astral-sh/uv>`_.
+astral-sh/uv>`__.
 
 .. installation-end-marker
 
@@ -205,11 +206,17 @@ GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
 
 You can also send an email to 0x42005e1f@gmail.com with any feedback.
 
+Dependents
+==========
+
+See `x42005e1f/aiologic#11 <https://github.com/x42005e1f/aiologic/discussions/
+11>`__.
+
 Support
 =======
 
 If you like aiologic and want to support its development, please star `its
-repository on GitHub <https://github.com/x42005e1f/aiologic>`_.
+repository on GitHub <https://github.com/x42005e1f/aiologic>`__.
 
 .. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
   :target: https://starchart.cc/x42005e1f/aiologic
@@ -220,7 +227,7 @@ License
 .. license-start-marker
 
 The aiologic library is `REUSE-compliant <https://api.reuse.software/info/
-github.com/x42005e1f/aiologic>`_ and is offered under multiple licenses:
+github.com/x42005e1f/aiologic>`__ and is offered under multiple licenses:
 
 * All original source code is licensed under `ISC`_.
 * All original test code is licensed under `0BSD`_.

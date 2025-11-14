@@ -5,9 +5,9 @@
 
 import sys
 
-from typing import Any, Generic, overload
+from typing import Any, Generic
 
-from .lowlevel._markers import MISSING, MissingType
+from .meta import MISSING, MissingType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -15,9 +15,9 @@ else:
     from typing_extensions import TypeVar
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable
@@ -36,13 +36,15 @@ class Flag(Generic[_T]):
     def __new__(cls, /, marker: _T | MissingType = MISSING) -> Self: ...
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
+    def __copy__(self, /) -> Self: ...
     def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
+    def copy(self, /) -> Self: ...
     @overload
     def get(
         self,
         /,
-        default: _T | MissingType,
+        default: _T | MissingType = MISSING,
         *,
         default_factory: MissingType = MISSING,
     ) -> _T: ...

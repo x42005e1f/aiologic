@@ -4,15 +4,15 @@
 # SPDX-License-Identifier: ISC
 
 import sys
-import threading
 
 from logging import Logger
 from types import TracebackType
-from typing import Any, Final, Generic, overload
+from typing import Any, Final, Generic
 
+from . import lowlevel
 from ._lock import Lock, PLock, RLock
 from ._semaphore import BinarySemaphore
-from .lowlevel import MISSING, MissingType, _thread
+from .meta import DEFAULT, DefaultType
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -20,14 +20,16 @@ else:
     from typing_extensions import TypeVar
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, overload
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Callable, Generator
 else:
     from typing import Callable, Generator
+
+_USE_ONCELOCK_FORCED: Final[bool]
 
 LOGGER: Final[Logger]
 
@@ -38,9 +40,8 @@ _T_co = TypeVar(
         Lock
         | PLock
         | BinarySemaphore
-        | threading.RLock
-        | threading.Lock
-        | _thread.LockType
+        | lowlevel.ThreadRLock
+        | lowlevel.ThreadLock
         | None
     ),
     default=RLock,
@@ -63,14 +64,14 @@ class Condition(Generic[_T_co, _S_co]):
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
-        timer: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[RLock, Callable[[], int]]: ...
     @overload
     def __new__(
         cls,
         /,
-        lock: MissingType = MISSING,
+        lock: DefaultType = DEFAULT,
         *,
         timer: _S_co,
     ) -> Condition[RLock, _S_co]: ...
@@ -79,12 +80,13 @@ class Condition(Generic[_T_co, _S_co]):
         cls,
         /,
         lock: _T_co,
-        timer: MissingType = MISSING,
+        timer: DefaultType = DEFAULT,
     ) -> Condition[_T_co, Callable[[], int]]: ...
     @overload
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
+    def __copy__(self, /) -> Self: ...
     def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
     async def __aenter__(self, /) -> Self: ...
@@ -145,6 +147,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
     def __new__(cls, /, lock: _T_co, timer: _S_co) -> Self: ...
     def __reduce__(self, /) -> tuple[Any, ...]: ...
+    def __copy__(self, /) -> Self: ...
     def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
     async def __aenter__(self, /) -> Self: ...

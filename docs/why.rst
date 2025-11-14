@@ -71,14 +71,14 @@ situations (assuming that the primary multitasking style is cooperative):
 * Simultaneous use of incompatible concurrency libraries in different threads
   (e.g. due to legacy code).
 * `Accelerating asynchronous applications in a nogil world <https://
-  discuss.python.org/t/asyncio-in-a-nogil-world/30694>`_.
+  discuss.python.org/t/asyncio-in-a-nogil-world/30694>`__.
 
 These situations have one thing in common: you may need a way to interact
 between threads, at least one of which may run an event loop. However, you
 cannot use primitives from the :mod:`threading` module because they block the
 event loop. You also cannot use primitives from the :mod:`asyncio` module
-because they `are not thread-safe/thread-aware <https://stackoverflow.com/a/
-79198672>`_.
+because they `are not thread-safe/thread-aware <https://docs.python.org/3/
+library/asyncio-sync.html>`__.
 
 Known solutions (only for some special cases) use one of the following ideas:
 
@@ -124,6 +124,15 @@ call and has issues with cancellation and timeouts:
 
     # program will hang until you press Control-C
 
+.. note::
+
+    You can learn a little more about the various solutions and their
+    limitations in `the related Stack Overflow answer <https://
+    stackoverflow.com/a/79198672>`__. Also, `a comment on a PR for
+    omnilib/aiomultiprocess <https://github.com/omnilib/aiomultiprocess/pull/
+    218#issuecomment-3417973089>`__ describes a problem that is virtually
+    impossible to solve using threads and/or polling.
+
 However, *aiologic* has none of these disadvantages. Using its approach based
 on low-level events, it gives you much more than you can get with alternatives.
 That's why it's there.
@@ -142,19 +151,19 @@ the :mod:`asyncio` module in Python 3.4. These are questions about mixing
 greenlets and threads:
 
 * **(2012-03-09)** `Is it safe to mix green threads and native threads in a
-  single python process? <https://stackoverflow.com/q/9639466>`_
+  single python process? <https://stackoverflow.com/q/9639466>`__
 * **(2013-05-29)** `Can Gevent be used in combination with real threads in
-  CPython? <https://stackoverflow.com/q/16811982>`_
+  CPython? <https://stackoverflow.com/q/16811982>`__
 
 But none of these questions address the problem of interaction between threads.
 Such a question was only asked in 2014, a few weeks before `the Python 3.4
-release <https://www.python.org/downloads/release/python-340/>`_, and another
+release <https://www.python.org/downloads/release/python-340/>`__, and another
 question was asked the following year:
 
 * **(2014-03-01)** `Share gevent locks/semaphores between ThreadPool threads?
-  <https://stackoverflow.com/q/22108576>`_
+  <https://stackoverflow.com/q/22108576>`__
 * **(2015-02-13)** `How to combine python asyncio with threads? <https://
-  stackoverflow.com/q/28492103>`_
+  stackoverflow.com/q/28492103>`__
 
 And although they have such nice titles, the actual problems are unrelated: in
 the first case, importing the :mod:`logging` module before monkey patching is
@@ -162,48 +171,49 @@ enough to solve the problem, while in the second, interaction with asyncio is
 only required if the asker considers an implicit thread-safety issue.
 
 The really related questions started to be asked in 2015 after `the Python 3.5
-release <https://www.python.org/downloads/release/python-350/>`_. There were
+release <https://www.python.org/downloads/release/python-350/>`__. There were
 two questions that year, the first about a serial device and the second about a
 serial port:
 
 * **(2015-10-01)** `Is there a way to use asyncio.Queue in multiple threads?
-  <https://stackoverflow.com/q/32889527>`_
+  <https://stackoverflow.com/q/32889527>`__
 * **(2015-10-07)** `asyncio: Wait for event from other thread <https://
-  stackoverflow.com/q/33000200>`_
+  stackoverflow.com/q/33000200>`__
 
 So back in 2015, the real need for thread-safe primitives was visible.
-Curiously, the first `Janus <https://github.com/aio-libs/janus>`_ (thread-safe
+Curiously, the first `Janus <https://github.com/aio-libs/janus>`__ (thread-safe
 asyncio-aware queue) release, version `0.1.0 <https://github.com/aio-libs/
-janus/releases/tag/v0.1.0>`_, was published on June 11, 2015 - before October
+janus/releases/tag/v0.1.0>`__, was published on June 11, 2015 - before October
 1, 2015, when the related question was asked.
 
 Since then, more and more questions have appeared. Here are just some of them:
 
 * **(2016-05-14)** `Python asyncio wait for threads <https://stackoverflow.com/
-  q/37223846>`_
+  q/37223846>`__
 * **(2017-04-03)** `python asyncio: how to best use lock threads? <https://
-  stackoverflow.com/q/43195459>`_
+  stackoverflow.com/q/43195459>`__
 * **(2018-09-24)** `How can I share asyncio.Queue between multiple threads?
-  <https://stackoverflow.com/q/52474282>`_
+  <https://stackoverflow.com/q/52474282>`__
 * **(2018-11-05)** `How can I synchronize asyncio with other OS threads?
-  <https://stackoverflow.com/q/53158101>`_
+  <https://stackoverflow.com/q/53158101>`__
 * **(2019-04-24)** `How to communicate between traditional thread and asyncio
-  thread in Python? <https://stackoverflow.com/q/55829852>`_
+  thread in Python? <https://stackoverflow.com/q/55829852>`__
 * **(2019-07-16)** `Asyncio threadsafe primitives <https://stackoverflow.com/q/
-  57055384>`_
+  57055384>`__
 * **(2020-01-08)** `Communication between async tasks and synchronous threads
-  in python <https://stackoverflow.com/q/59650243>`_
+  in python <https://stackoverflow.com/q/59650243>`__
 * **(2020-08-14)** `How to use threading.Lock in async function while object
-  can be accessed from multiple thread <https://stackoverflow.com/q/63420413>`_
+  can be accessed from multiple thread <https://stackoverflow.com/q/
+  63420413>`__
 * **(2024-08-30)** `Python Async Thread-safe Semaphore <https://
-  stackoverflow.com/q/78932535>`_
+  stackoverflow.com/q/78932535>`__
 
 And outside of the asyncio ecosystem, too:
 
 * **(2018-09-23)** `Python: ways to synchronize trio tasks and regular threads
-  <https://stackoverflow.com/q/52468911>`_
+  <https://stackoverflow.com/q/52468911>`__
 * **(2022-12-23)** `How to receive data from python Thread in a greenlet
-  without blocking all greenlets? <https://stackoverflow.com/q/74903753>`_
+  without blocking all greenlets? <https://stackoverflow.com/q/74903753>`__
 
 Until now, there has been no universal library for all of these questions. Now
 there is.

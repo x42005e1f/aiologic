@@ -53,9 +53,9 @@ Why is AnyIO mentioned?
 
 While `anyio`_ runs on top of either `asyncio`_ or `trio`_, it implements
 trio-like `structured concurrency <https://en.wikipedia.org/wiki/
-Structured_concurrency>`_ with `a different cancellation semantics <https://
+Structured_concurrency>`__ with `a different cancellation semantics <https://
 anyio.readthedocs.io/en/stable/cancellation.html
-#differences-between-asyncio-and-anyio-cancellation-semantics>`_ than
+#differences-between-asyncio-and-anyio-cancellation-semantics>`__ than
 asyncio. Therefore, aiologic has to support both semantics for asyncio at the
 same time by using anyio features when they are available.
 
@@ -68,7 +68,7 @@ Why is Twisted not supported?
 
 While `twisted`_ has some features of newer concurrency libraries and even
 `supports asyncio via a separate reactor <https://meejah.ca/blog/
-python3-twisted-and-asyncio>`_, it lacks the concept of a current execution
+python3-twisted-and-asyncio>`__, it lacks the concept of a current execution
 unit, commonly called a *current task*.
 
 The problem can be illustrated most clearly with the example of
@@ -142,19 +142,19 @@ compatibility and usability, but has some non-trivial drawbacks:
    of ``wait()``-like methods).
 3. A more correct way is to check that functions are used from a coroutine,
    which is particularly `implemented by curio <https://curio.readthedocs.io/
-   en/stable/reference.html#asynchronous-metaprogramming>`_. This makes the
+   en/stable/reference.html#asynchronous-metaprogramming>`__. This makes the
    behavior less runtime dependent, but still has some nuances. First, it
    prevents calling the asynchronous version of a function from synchronous
    functions, making it incompatible with wrappers (such as
    :func:`functools.partial`, but in pure Python for curio implementation due
    to `special handling of list comprehensions and generator expressions
    <https://github.com/dabeaz/curio/blob/
-   98550b94055ccd98406105dd999973a2f2462ea4/curio/meta.py#L65-L75>`_). Second,
+   98550b94055ccd98406105dd999973a2f2462ea4/curio/meta.py#L65-L75>`__). Second,
    this check negatively affects performance, especially on PyPy, where the
    difference can be a hundredfold or more.
 
 The API separation has drawbacks too, but they are `related to the development
-process <https://discuss.python.org/t/15014>`_ rather than runtime specifics.
+process <https://discuss.python.org/t/15014>`__ rather than runtime specifics.
 
 Why are the release methods not asynchronous?
 +++++++++++++++++++++++++++++++++++++++++++++
@@ -163,8 +163,8 @@ Once we have dealt with the previous question, we are bound to come to the
 next, equally difficult question in software design: should we represent the
 entire asynchronous API as coroutine functions? It refers to one of the most
 important ideas from software architecture, called "`separation of concerns
-<https://en.wikipedia.org/wiki/Separation_of_concerns>`_", and is a strict form
-of API separation. It is the curio way, and it directly affects release
+<https://en.wikipedia.org/wiki/Separation_of_concerns>`__", and is a strict
+form of API separation. It is the curio way, and it directly affects release
 methods, such as ``release()``.
 
 Let's assume that we decided to make release methods as coroutine functions.
@@ -183,8 +183,8 @@ blocking. This is a strong advantage, but let's move on to the disadvantages:
    ``event.set()`` into ``event.green_set()`` and ``event.async_set()``, any
    code that used ``event.set()`` in an asynchronous environment must also
    become asynchronous. This problem has long been `a source of friction in
-   anyio <https://github.com/agronholm/anyio/issues/179>`_, resulting in its
-   `dropping curio support <https://github.com/agronholm/anyio/pull/182>`_.
+   anyio <https://github.com/agronholm/anyio/issues/179>`__, resulting in its
+   `dropping curio support <https://github.com/agronholm/anyio/pull/182>`__.
 3. Just lower performance. With checkpoints enabled, any code that uses several
    primitives in a row will switch context several times in a row even if there
    is no workload between context switches. For example, if ``acquire()`` comes
@@ -201,7 +201,7 @@ How does aiologic import libraries?
 
 aiologic is strong in that it efficiently supports the wide variety of
 concurrency libraries without depending on any of them. The techniques it uses
-for this purpose resemble `lazy imports <https://peps.python.org/pep-0690/>`_
+for this purpose resemble `lazy imports <https://peps.python.org/pep-0690/>`__
 in action, but differ from them in flexibility and higher efficiency.
 
 The first of them may have different names, but let us call it "global
@@ -232,7 +232,7 @@ Well, there are several ways to solve this problem.
 The naive one is to suppress the exception and return a default value instead.
 Despite its simplicity, it is very, very slow because each time it is called,
 it runs the complex `import system <https://docs.python.org/3/reference/
-import.html>`_ that can make a lot of file system calls.
+import.html>`__ that can make a lot of file system calls.
 
 .. code:: python
 
@@ -314,8 +314,8 @@ by many threads at a time.
 .. note::
 
     As a careful reader may notice, functions built on any of the techniques
-    cannot be imported directly, since they are only replaced at the level of
-    their module. In fact, aiologic uses such functions indirectly, to build
+    should not be imported directly, since they are only replaced at the level
+    of their module. In fact, aiologic uses such functions indirectly, to build
     more general abstractions based on them.
 
 .. hint::
@@ -335,20 +335,16 @@ functions, aiologic implements detection of the currently running library - the
 one whose API should be used to create a waiter or get the current task.
 
 .. autofunction:: aiologic.lowlevel.current_green_library
+  :no-index:
 .. autofunction:: aiologic.lowlevel.current_async_library
+  :no-index:
 
-.. py:exception:: aiologic.lowlevel.GreenLibraryNotFoundError
-
-  Bases: :exc:`RuntimeError`
-
-  Exception raised by the :func:`aiologic.lowlevel.current_green_library`
-  function if the current green library was not recognized.
-.. py:exception:: aiologic.lowlevel.AsyncLibraryNotFoundError
-
-  Bases: :exc:`RuntimeError`
-
-  Exception raised by the :func:`aiologic.lowlevel.current_async_library`
-  function if the current async library was not recognized.
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.GreenLibraryNotFoundError-start-marker
+  :end-before: .. aiologic.lowlevel.GreenLibraryNotFoundError-end-marker
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.AsyncLibraryNotFoundError-start-marker
+  :end-before: .. aiologic.lowlevel.AsyncLibraryNotFoundError-end-marker
 
 When are libraries counted as running?
 ++++++++++++++++++++++++++++++++++++++
@@ -426,59 +422,12 @@ between them. For these situations, aiologic provides thread-local objects with
 which you can explicitly set the name of any supported library for the current
 thread.
 
-.. py:data:: aiologic.lowlevel.current_green_library_tlocal
-  :type: threading.local
-
-  Thread-local data to control the return value of
-  :func:`aiologic.lowlevel.current_green_library`.
-
-  .. py:attribute:: aiologic.lowlevel.current_green_library_tlocal.name
-    :type: str | None
-    :value: None
-
-    Unless set to a non-:data:`None` object, the function detects the current
-    green library with its own algorithms. Otherwise the function returns
-    exactly the set object.
-
-  .. rubric:: Example
-
-  .. code:: python
-
-    library = aiologic.lowlevel.current_green_library_tlocal.name
-
-    aiologic.lowlevel.current_green_library_tlocal.name = "somelet"
-
-    try:
-        ...  # aiologic.lowlevel.current_green_library() == "somelet"
-    finally:
-        aiologic.lowlevel.current_green_library_tlocal.name = library
-
-.. py:data:: aiologic.lowlevel.current_async_library_tlocal
-  :type: threading.local
-
-  Thread-local data to control the return value of
-  :func:`aiologic.lowlevel.current_async_library`.
-
-  .. py:attribute:: aiologic.lowlevel.current_async_library_tlocal.name
-    :type: str | None
-    :value: None
-
-    Unless set to a non-:data:`None` object, the function detects the current
-    async library with its own algorithms. Otherwise the function returns
-    exactly the set object.
-
-  .. rubric:: Example
-
-  .. code:: python
-
-    library = aiologic.lowlevel.current_async_library_tlocal.name
-
-    aiologic.lowlevel.current_async_library_tlocal.name = "someio"
-
-    try:
-        ...  # aiologic.lowlevel.current_async_library() == "someio"
-    finally:
-        aiologic.lowlevel.current_async_library_tlocal.name = library
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.current_green_library_tlocal-start-marker
+  :end-before: .. aiologic.lowlevel.current_green_library_tlocal-end-marker
+.. include:: ../api.rst
+  :start-after: .. aiologic.lowlevel.current_async_library_tlocal-start-marker
+  :end-before: .. aiologic.lowlevel.current_async_library_tlocal-end-marker
 
 It is worth noting that
 :data:`aiologic.lowlevel.current_async_library_tlocal.name` is the same as
@@ -499,14 +448,14 @@ Is runtime installation supported?
 
 When it comes to user scripts, there are different approaches to dependency
 management. One of them is to install missing dependencies `straight within a
-script <https://stackoverflow.com/q/12332975>`_. But its ambiguous weakness is
+script <https://stackoverflow.com/q/12332975>`__. But its ambiguous weakness is
 that it requires a special approach to optional dependency management on the
 side of the packages being installed, depending on where it is applied.
 
 A good example would be the `httpx`_ package. It optionally supports decoding
 for "zstd" compressed responses via the `zstandard`_ package, `using the
 following module-level code <https://github.com/encode/httpx/blob/
-47f4a96ffaaaa07dca1614409549b5d7a6e7af49/httpx/_decoders.py#L29-L33>`_:
+47f4a96ffaaaa07dca1614409549b5d7a6e7af49/httpx/_decoders.py#L29-L33>`__:
 
 .. code:: python
 
@@ -522,7 +471,7 @@ be enabled.
 The problem is taken into account in the aiologic design. You can install it
 and its optional dependencies both before and after importing, and even in
 parallel during use, which is achieved by using `the techniques described above
-<#how-does-aiologic-import-libraries>`_.
+<#how-does-aiologic-import-libraries>`__.
 
 .. note::
 
@@ -530,8 +479,8 @@ parallel during use, which is achieved by using `the techniques described above
     module-level approach. If it tried to import all supported optional
     dependencies at initialization time, this could lead to either conflicts
     (such as `between eventlet and trio <https://github.com/python-trio/trio/
-    issues/3015>`_) or incompatibility with their unsupported versions, even if
-    they are not needed by the user.
+    issues/3015>`__) or incompatibility with their unsupported versions, even
+    if they are not needed by the user.
 
 .. _httpx: https://www.python-httpx.org/
 .. _zstandard: https://python-zstandard.readthedocs.io/en/stable/

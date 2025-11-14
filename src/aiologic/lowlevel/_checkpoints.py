@@ -7,19 +7,23 @@ from __future__ import annotations
 
 import os
 import sys
-import warnings
 
 from contextvars import ContextVar, Token
 from inspect import isawaitable, iscoroutinefunction
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from . import _time
+from aiologic._monkey import import_original
+from aiologic.meta import MISSING, MissingType, replaces
+
 from ._libraries import current_async_library, current_green_library
-from ._markers import MISSING, MissingType
 from ._threads import current_thread_ident
-from ._utils import _external as external, _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Callable
@@ -87,6 +91,84 @@ _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT: Final[bool] = bool(
     )
 )
 
+_green_checkpoints_enabled: bool = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+_async_checkpoints_enabled: bool = False
+_green_checkpoints_disabled: bool = not _green_checkpoints_enabled
+_async_checkpoints_disabled: bool = False
+_green_checkpoints_used: bool = False
+_async_checkpoints_used: bool = False
+
+
+@when_imported("eventlet")
+def _(_):
+    global _green_checkpoints_enabled
+    global _green_checkpoints_disabled
+
+    if _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT:
+        _green_checkpoints_enabled = True
+    else:
+        _green_checkpoints_disabled = True
+
+
+@when_imported("gevent")
+def _(_):
+    global _green_checkpoints_enabled
+    global _green_checkpoints_disabled
+
+    if _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT:
+        _green_checkpoints_enabled = True
+    else:
+        _green_checkpoints_disabled = True
+
+
+@when_imported("asyncio")
+def _(_):
+    global _async_checkpoints_enabled
+    global _async_checkpoints_disabled
+
+    if _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
+        _async_checkpoints_enabled = True
+    else:
+        _async_checkpoints_disabled = True
+
+
+@when_imported("curio")
+def _(_):
+    global _async_checkpoints_enabled
+    global _async_checkpoints_disabled
+
+    if _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
+        _async_checkpoints_enabled = True
+    else:
+        _async_checkpoints_disabled = True
+
+
+@when_imported("trio")
+def _(_):
+    global _async_checkpoints_enabled
+    global _async_checkpoints_disabled
+
+    if _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
+        _async_checkpoints_enabled = True
+    else:
+        _async_checkpoints_disabled = True
+
+
+_green_checkpoints_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
+    "_green_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
+)
+_async_checkpoints_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
+    "_async_checkpoints_cvar",
+    default=(
+        current_thread_ident(),
+        None,
+    ),
+)
+
 
 def _threading_checkpoints_enabled() -> bool:
     return _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
@@ -112,108 +194,6 @@ def _trio_checkpoints_enabled() -> bool:
     return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
 
-_green_checkpoints_enabled: bool = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
-_async_checkpoints_enabled: bool = False
-
-
-@when_imported("eventlet")
-def _(_):
-    global _green_checkpoints_enabled
-
-    if _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _green_checkpoints_enabled = True
-
-
-@when_imported("gevent")
-def _(_):
-    global _green_checkpoints_enabled
-
-    if _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _green_checkpoints_enabled = True
-
-
-@when_imported("asyncio")
-def _(_):
-    global _async_checkpoints_enabled
-
-    if _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
-
-
-@when_imported("curio")
-def _(_):
-    global _async_checkpoints_enabled
-
-    if _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
-
-
-@when_imported("trio")
-def _(_):
-    global _async_checkpoints_enabled
-
-    if _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT:
-        _async_checkpoints_enabled = True
-
-
-def green_checkpoint_enabled() -> bool:
-    if _green_checkpoints_enabled:
-        library = current_green_library(failsafe=True)
-
-        if library == "threading":
-            return _threading_checkpoints_enabled()
-
-        if library == "eventlet":
-            return _eventlet_checkpoints_enabled()
-
-        if library == "gevent":
-            return _gevent_checkpoints_enabled()
-
-    return False
-
-
-def async_checkpoint_enabled() -> bool:
-    if _async_checkpoints_enabled:
-        library = current_async_library(failsafe=True)
-
-        if library == "asyncio":
-            return _asyncio_checkpoints_enabled()
-
-        if library == "curio":
-            return _curio_checkpoints_enabled()
-
-        if library == "trio":
-            return _trio_checkpoints_enabled()
-
-    return False
-
-
-_green_checkpoints_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
-    "_green_checkpoints_cvar",
-    default=(
-        current_thread_ident(),
-        None,
-    ),
-)
-_async_checkpoints_cvar: ContextVar[tuple[int, bool | None]] = ContextVar(
-    "_async_checkpoints_cvar",
-    default=(
-        current_thread_ident(),
-        None,
-    ),
-)
-
-__green_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
-    _green_checkpoints_cvar.set(_green_checkpoints_cvar.get())
-)
-__async_checkpoints_cvar_default_token: Token[tuple[int, bool | None]] = (
-    _async_checkpoints_cvar.set(_async_checkpoints_cvar.get())
-)
-
-_green_checkpoints_cvar.reset(__green_checkpoints_cvar_default_token)
-_async_checkpoints_cvar.reset(__async_checkpoints_cvar_default_token)
-
-
 def _green_checkpoints_reset(token: Token[tuple[int, bool | None]], /) -> None:
     pass
 
@@ -223,117 +203,149 @@ def _async_checkpoints_reset(token: Token[tuple[int, bool | None]], /) -> None:
 
 
 def _green_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _green_checkpoints_enabled
-    global _green_checkpoints_reset
+    global _green_checkpoints_used
 
-    if enabled or _green_checkpoints_enabled:
+    @replaces(globals())
+    def _threading_checkpoints_enabled():
+        ident, maybe_enabled = _green_checkpoints_cvar.get()
 
-        @replaces(globals())
-        def _threading_checkpoints_enabled():
-            ident, enabled = _green_checkpoints_cvar.get()
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-            if enabled is None:
-                return _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+        return maybe_enabled
 
-            if ident != current_thread_ident():
-                return _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _eventlet_checkpoints_enabled():
+        ident, maybe_enabled = _green_checkpoints_cvar.get()
 
-            return enabled
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-        @replaces(globals())
-        def _eventlet_checkpoints_enabled():
-            ident, enabled = _green_checkpoints_cvar.get()
+        return maybe_enabled
 
-            if enabled is None:
-                return _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _gevent_checkpoints_enabled():
+        ident, maybe_enabled = _green_checkpoints_cvar.get()
 
-            if ident != current_thread_ident():
-                return _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-            return enabled
+        return maybe_enabled
 
-        @replaces(globals())
-        def _gevent_checkpoints_enabled():
-            ident, enabled = _green_checkpoints_cvar.get()
+    _green_checkpoints_used = True
 
-            if enabled is None:
-                return _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _green_checkpoints_reset(
+        token: Token[tuple[int, bool | None]],
+        /,
+    ) -> None:
+        _green_checkpoints_cvar.reset(token)
 
-            if ident != current_thread_ident():
-                return _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _green_checkpoints_set(enabled):
+        return _green_checkpoints_cvar.set((
+            current_thread_ident(),
+            enabled,
+        ))
 
-            return enabled
-
-        _green_checkpoints_enabled = True
-        _green_checkpoints_reset = _green_checkpoints_cvar.reset
-
-        @replaces(globals())
-        def _green_checkpoints_set(enabled):
-            return _green_checkpoints_cvar.set((
-                current_thread_ident(),
-                enabled,
-            ))
-
-        return _green_checkpoints_set(enabled)
-
-    return __green_checkpoints_cvar_default_token
+    return _green_checkpoints_set(enabled)
 
 
 def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
-    global _async_checkpoints_enabled
-    global _async_checkpoints_reset
+    global _async_checkpoints_used
 
-    if enabled or _async_checkpoints_enabled:
+    @replaces(globals())
+    def _asyncio_checkpoints_enabled():
+        ident, maybe_enabled = _async_checkpoints_cvar.get()
 
-        @replaces(globals())
-        def _asyncio_checkpoints_enabled():
-            ident, enabled = _async_checkpoints_cvar.get()
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-            if enabled is None:
-                return _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+        return maybe_enabled
 
-            if ident != current_thread_ident():
-                return _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _curio_checkpoints_enabled():
+        ident, maybe_enabled = _async_checkpoints_cvar.get()
 
-            return enabled
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-        @replaces(globals())
-        def _curio_checkpoints_enabled():
-            ident, enabled = _async_checkpoints_cvar.get()
+        return maybe_enabled
 
-            if enabled is None:
-                return _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _trio_checkpoints_enabled():
+        ident, maybe_enabled = _async_checkpoints_cvar.get()
 
-            if ident != current_thread_ident():
-                return _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+        if maybe_enabled is None or ident != current_thread_ident():
+            return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-            return enabled
+        return maybe_enabled
 
-        @replaces(globals())
-        def _trio_checkpoints_enabled():
-            ident, enabled = _async_checkpoints_cvar.get()
+    _async_checkpoints_used = True
 
-            if enabled is None:
-                return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _async_checkpoints_reset(
+        token: Token[tuple[int, bool | None]],
+        /,
+    ) -> None:
+        _async_checkpoints_cvar.reset(token)
 
-            if ident != current_thread_ident():
-                return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+    @replaces(globals())
+    def _async_checkpoints_set(enabled):
+        return _async_checkpoints_cvar.set((
+            current_thread_ident(),
+            enabled,
+        ))
 
-            return enabled
+    return _async_checkpoints_set(enabled)
 
-        _async_checkpoints_enabled = True
-        _async_checkpoints_reset = _async_checkpoints_cvar.reset
 
-        @replaces(globals())
-        def _async_checkpoints_set(enabled):
-            return _async_checkpoints_cvar.set((
-                current_thread_ident(),
-                enabled,
-            ))
+def green_checkpoint_enabled() -> bool:
+    """..."""
 
-        return _async_checkpoints_set(enabled)
+    if _green_checkpoints_used:
+        ident, maybe_enabled = _green_checkpoints_cvar.get()
 
-    return __async_checkpoints_cvar_default_token
+        if maybe_enabled is not None and ident == current_thread_ident():
+            return maybe_enabled
+
+    if _green_checkpoints_enabled and _green_checkpoints_disabled:
+        library = current_green_library(failsafe=True)
+
+        if library == "threading":
+            return _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+        if library == "eventlet":
+            return _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+        if library == "gevent":
+            return _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+    return _green_checkpoints_enabled
+
+
+def async_checkpoint_enabled() -> bool:
+    """..."""
+
+    if _async_checkpoints_used:
+        ident, maybe_enabled = _async_checkpoints_cvar.get()
+
+        if maybe_enabled is not None and ident == current_thread_ident():
+            return maybe_enabled
+
+    if _async_checkpoints_enabled and _async_checkpoints_disabled:
+        library = current_async_library(failsafe=True)
+
+        if library == "asyncio":
+            return _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+        if library == "curio":
+            return _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+        if library == "trio":
+            return _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+    return _async_checkpoints_enabled
 
 
 class _CheckpointsManager:
@@ -471,18 +483,17 @@ def __disable_green_checkpoints(wrapped, instance, args, kwargs, /):
 
 
 @overload
-@external
 def enable_checkpoints(
     wrapped: MissingType = MISSING,
     /,
 ) -> _CheckpointsManager: ...
 @overload
-@external
 def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_checkpoints(wrapped=MISSING, /):
+    """..."""
+
     if wrapped is MISSING:
         return _CheckpointsManager()
 
@@ -496,18 +507,17 @@ def enable_checkpoints(wrapped=MISSING, /):
 
 
 @overload
-@external
 def disable_checkpoints(
     wrapped: MissingType = MISSING,
     /,
 ) -> _NoCheckpointsManager: ...
 @overload
-@external
 def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
-@external
 def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_checkpoints(wrapped=MISSING, /):
+    """..."""
+
     if wrapped is MISSING:
         return _NoCheckpointsManager()
 
@@ -520,6 +530,60 @@ def disable_checkpoints(wrapped=MISSING, /):
     return __disable_green_checkpoints(wrapped)
 
 
+def _threading_checkpoint() -> None:
+    global _threading_checkpoint
+
+    if hasattr(os, "sched_yield") and (
+        sys.version_info >= (3, 11, 1)  # python/cpython#96078
+        or (sys.version_info < (3, 11) and sys.version_info >= (3, 10, 8))
+    ):
+        _threading_checkpoint = import_original("os", "sched_yield")
+    else:
+        _sleep = import_original("time", "sleep")
+
+        @replaces(globals())
+        def _threading_checkpoint():
+            _sleep(0)
+
+    _threading_checkpoint()
+
+
+def _eventlet_checkpoint() -> None:
+    global _eventlet_checkpoint
+
+    from eventlet import sleep as _eventlet_checkpoint
+
+    _eventlet_checkpoint()
+
+
+def _gevent_checkpoint() -> None:
+    global _gevent_checkpoint
+
+    from gevent import sleep as _gevent_checkpoint
+
+    _gevent_checkpoint()
+
+
+async def _asyncio_checkpoint() -> None:
+    from types import coroutine
+
+    @coroutine
+    def _asyncio_checkpoint():
+        yield
+
+    await _asyncio_checkpoint()
+
+
+async def _curio_checkpoint() -> None:
+    from curio import sleep
+
+    @replaces(globals())
+    async def _curio_checkpoint():
+        await sleep(0)
+
+    await _curio_checkpoint()
+
+
 async def _trio_checkpoint() -> None:
     global _trio_checkpoint
 
@@ -529,53 +593,82 @@ async def _trio_checkpoint() -> None:
 
 
 def green_checkpoint(*, force: bool = False) -> None:
-    if _green_checkpoints_enabled or force:
+    """..."""
+
+    if not force:
+        if _green_checkpoints_enabled and _green_checkpoints_disabled:
+            enabled = None
+        else:
+            enabled = _green_checkpoints_enabled
+
+        if _green_checkpoints_used:
+            ident, maybe_enabled = _green_checkpoints_cvar.get()
+
+            if maybe_enabled is not None and ident == current_thread_ident():
+                enabled = maybe_enabled
+    else:
+        enabled = True
+
+    if enabled is None or enabled:
         library = current_green_library(failsafe=True)
 
         if library == "threading":
-            if force or _threading_checkpoints_enabled():
-                _time._threading_sleep(0)
+            if enabled is None:
+                enabled = _THREADING_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
+                _threading_checkpoint()
         elif library == "eventlet":
-            if force or _eventlet_checkpoints_enabled():
-                _time._eventlet_sleep()
+            if enabled is None:
+                enabled = _EVENTLET_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
+                _eventlet_checkpoint()
         elif library == "gevent":
-            if force or _gevent_checkpoints_enabled():
-                _time._gevent_sleep()
+            if enabled is None:
+                enabled = _GEVENT_CHECKPOINTS_ENABLED_BY_DEFAULT
 
-
-async def checkpoint(*, force: bool = False) -> None:
-    warnings.warn(
-        "Use async_checkpoint() instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    if _async_checkpoints_enabled or force:
-        library = current_async_library(failsafe=True)
-
-        if library == "asyncio":
-            if force or _asyncio_checkpoints_enabled():
-                await _time._asyncio_sleep(0)
-        elif library == "curio":
-            if force or _curio_checkpoints_enabled():
-                await _time._curio_sleep(0)
-        elif library == "trio":
-            if force or _trio_checkpoints_enabled():
-                await _trio_checkpoint()
+            if enabled:
+                _gevent_checkpoint()
 
 
 async def async_checkpoint(*, force: bool = False) -> None:
-    if _async_checkpoints_enabled or force:
+    """..."""
+
+    if not force:
+        if _async_checkpoints_enabled and _async_checkpoints_disabled:
+            enabled = None
+        else:
+            enabled = _async_checkpoints_enabled
+
+        if _async_checkpoints_used:
+            ident, maybe_enabled = _async_checkpoints_cvar.get()
+
+            if maybe_enabled is not None and ident == current_thread_ident():
+                enabled = maybe_enabled
+    else:
+        enabled = True
+
+    if enabled is None or enabled:
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
-            if force or _asyncio_checkpoints_enabled():
-                await _time._asyncio_sleep(0)
+            if enabled is None:
+                enabled = _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
+                await _asyncio_checkpoint()
         elif library == "curio":
-            if force or _curio_checkpoints_enabled():
-                await _time._curio_sleep(0)
+            if enabled is None:
+                enabled = _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
+                await _curio_checkpoint()
         elif library == "trio":
-            if force or _trio_checkpoints_enabled():
+            if enabled is None:
+                enabled = _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
                 await _trio_checkpoint()
 
 
@@ -615,19 +708,44 @@ async def _trio_checkpoint_if_cancelled() -> None:
 
 
 def green_checkpoint_if_cancelled(*, force: bool = False) -> None:
-    pass
+    """..."""
 
 
 async def async_checkpoint_if_cancelled(*, force: bool = False) -> None:
-    if _async_checkpoints_enabled or force:
+    """..."""
+
+    if not force:
+        if _async_checkpoints_enabled and _async_checkpoints_disabled:
+            enabled = None
+        else:
+            enabled = _async_checkpoints_enabled
+
+        if _async_checkpoints_used:
+            ident, maybe_enabled = _async_checkpoints_cvar.get()
+
+            if maybe_enabled is not None and ident == current_thread_ident():
+                enabled = maybe_enabled
+    else:
+        enabled = True
+
+    if enabled is None or enabled:
         library = current_async_library(failsafe=True)
 
         if library == "asyncio":
-            if force or _asyncio_checkpoints_enabled():
+            if enabled is None:
+                enabled = _ASYNCIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
                 await _asyncio_checkpoint_if_cancelled()
         elif library == "curio":
-            if force or _curio_checkpoints_enabled():
+            if enabled is None:
+                enabled = _CURIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
                 await _curio_checkpoint_if_cancelled()
         elif library == "trio":
-            if force or _trio_checkpoints_enabled():
+            if enabled is None:
+                enabled = _TRIO_CHECKPOINTS_ENABLED_BY_DEFAULT
+
+            if enabled:
                 await _trio_checkpoint_if_cancelled()

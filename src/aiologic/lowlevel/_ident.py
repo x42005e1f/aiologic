@@ -5,10 +5,11 @@
 
 from __future__ import annotations
 
+from aiologic.meta import replaces
+
 from ._greenlets import _current_greenlet
 from ._libraries import current_async_library, current_green_library
 from ._threads import _current_thread_or_main_greenlet, current_thread_ident
-from ._utils import _replaces as replaces
 
 
 def _current_eventlet_token() -> object:
@@ -60,6 +61,8 @@ def _current_trio_token() -> object:
 
 
 def current_green_token() -> object:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -76,6 +79,8 @@ def current_green_token() -> object:
 
 
 def current_async_token() -> object:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":
@@ -92,6 +97,8 @@ def current_async_token() -> object:
 
 
 def current_green_token_ident() -> tuple[str, int]:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -108,6 +115,8 @@ def current_green_token_ident() -> tuple[str, int]:
 
 
 def current_async_token_ident() -> tuple[str, int]:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":
@@ -139,7 +148,7 @@ def _current_curio_task() -> object:
     @replaces(globals())
     def _current_curio_task():
         try:
-            _aiologic_task_cell = _locals._aiologic_task_cell
+            cell = _locals._aiologic_task_cell
         except AttributeError:
             kernel = getattr(_locals, "kernel", None)
 
@@ -147,17 +156,17 @@ def _current_curio_task() -> object:
                 msg = "no running kernel"
                 raise RuntimeError(msg) from None
 
-            _trap = kernel._traps["trap_get_current"]
+            trap = kernel._traps["trap_get_current"]
 
-            _cell_index = _trap.__code__.co_freevars.index("current")
-            _aiologic_task_cell = _trap.__closure__[_cell_index]
+            cell_index = trap.__code__.co_freevars.index("current")
+            cell = trap.__closure__[cell_index]
 
-            _locals._aiologic_task_cell = _aiologic_task_cell
-            _finalizer = partial(delattr, _locals, "_aiologic_task_cell")
+            _locals._aiologic_task_cell = cell
+            finalizer = partial(delattr, _locals, "_aiologic_task_cell")
 
-            kernel._call_at_shutdown(_finalizer)
+            kernel._call_at_shutdown(finalizer)
 
-        return _aiologic_task_cell.cell_contents
+        return cell.cell_contents
 
     return _current_curio_task()
 
@@ -171,6 +180,8 @@ def _current_trio_task() -> object:
 
 
 def current_green_task() -> object:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -187,6 +198,8 @@ def current_green_task() -> object:
 
 
 def current_async_task() -> object:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":
@@ -203,6 +216,8 @@ def current_async_task() -> object:
 
 
 def current_green_task_ident() -> tuple[str, int]:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -219,6 +234,8 @@ def current_green_task_ident() -> tuple[str, int]:
 
 
 def current_async_task_ident() -> tuple[str, int]:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":

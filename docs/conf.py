@@ -33,13 +33,15 @@ extensions = [
 if sys.version_info >= (3, 11):
     extensions.append("sphinxcontrib.autodoc_inherit_overload")
 
-toc_object_entries = False
-
 autodoc_class_signature = "separated"
 autodoc_inherit_docstrings = False
+autodoc_preserve_defaults = True
 autodoc_default_options = {
+    "exclude-members": "__init_subclass__,__class_getitem__,__weakref__",
+    "inherited-members": True,
     "member-order": "bysource",
     "show-inheritance": True,
+    "special-members": True,
 }
 
 intersphinx_mapping = {
@@ -48,6 +50,7 @@ intersphinx_mapping = {
     "curio": ("https://curio.readthedocs.io/en/stable/", None),
     "eventlet": ("https://eventlet.readthedocs.io/en/stable/", None),
     "gevent": ("https://www.gevent.org/", None),
+    "greenlet": ("https://greenlet.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "sniffio": ("https://sniffio.readthedocs.io/en/stable/", None),
     "trio": ("https://trio.readthedocs.io/en/stable/", None),
@@ -65,3 +68,12 @@ html_context = {
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
+
+
+def enable_api_index(app, docname, source):
+    if docname == "api":
+        source[0] = source[0].replace(":no-index:", "")
+
+
+def setup(app):
+    app.connect("source-read", enable_api_index)

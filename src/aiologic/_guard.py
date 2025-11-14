@@ -6,8 +6,16 @@
 from __future__ import annotations
 
 import sys
+import warnings
 
 from typing import TYPE_CHECKING, Any, Final
+
+from .meta import DEFAULT, DefaultType
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -30,17 +38,36 @@ _USE_DELATTR: Final[bool] = (
 
 
 class BusyResourceError(RuntimeError):
-    pass
+    """..."""
 
 
 class ResourceGuard:
+    """..."""
+
     __slots__ = (
         "__weakref__",
         "_action",
         "_unlocked",
     )
 
-    def __new__(cls, /, action: str = "using") -> Self:
+    @overload
+    def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
+    @overload
+    def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
+    def __new__(cls, maybe_action=DEFAULT, /, *, action=DEFAULT):
+        """..."""
+
+        if maybe_action is not DEFAULT:
+            warnings.warn(
+                "Use keyword-only parameter instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            action = maybe_action
+        elif action is DEFAULT:
+            action = "using"
+
         self = object.__new__(cls)
 
         self._action = action
@@ -53,15 +80,43 @@ class ResourceGuard:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        if (action := self._action) != "using":
-            return (action,)
+        """
+        Returns arguments that can be used to create new instances with the
+        same initial values.
 
-        return ()
+        Used by:
+
+        * The :mod:`pickle` module for pickling.
+        * The :mod:`copy` module for copying.
+
+        The current state does not affect the arguments.
+
+        Example:
+            >>> orig = ResourceGuard(action='waiting')
+            >>> orig.action
+            'waiting'
+            >>> copy = ResourceGuard(*orig.__getnewargs__())
+            >>> copy.action
+            'waiting'
+        """
+
+        return (self._action,)
 
     def __getstate__(self, /) -> None:
+        """
+        Disables the use of internal state for pickling and copying.
+        """
+
         return None
 
+    def __copy__(self, /) -> Self:
+        """..."""
+
+        return self.__class__(self._action)
+
     def __repr__(self, /) -> str:
+        """..."""
+
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -75,12 +130,30 @@ class ResourceGuard:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
+        """
+        Returns :data:`True` if the resource guard is used by any task.
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
+
+        Example:
+            >>> using = ResourceGuard()
+            >>> bool(using)
+            False
+            >>> with using:  # resource guard is in use
+            ...     bool(using)
+            True
+            >>> bool(using)
+            False
+        """
+
         try:
             return not self._unlocked
         except AttributeError:
             return True
 
     def __enter__(self, /) -> Self:
+        """..."""
+
         try:
             if _USE_DELATTR:
                 del self._unlocked
@@ -99,6 +172,8 @@ class ResourceGuard:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """..."""
+
         if _USE_DELATTR:
             self._unlocked = True
         else:
@@ -106,4 +181,8 @@ class ResourceGuard:
 
     @property
     def action(self, /) -> str:
+        """
+        The action to guard against.
+        """
+
         return self._action

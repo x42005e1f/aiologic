@@ -21,8 +21,18 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.meta.SingletonEnum` as a base class that encapsulates common logic
+  of all type-checker-friendly singleton classes (such as
+  `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).
+
+[0.15.0] - 2025-11-05
+---------------------
+
+### Added
+
 - `aiologic.synchronized()` as an async-aware alternative to
-  `wrapt.synchronized()`.
+  `wrapt.synchronized()`. Related: [GrahamDumpleton/wrapt#236](
+  https://github.com/GrahamDumpleton/wrapt/issues/236).
 - `aiologic.SimpleLifoQueue` as a simplified LIFO queue, i.e. a lightweight
   alternative to `aiologic.LifoQueue` without `maxsize` support.
 - `aiologic.BinarySemaphore` and `aiologic.BoundedBinarySemaphore` as binary
@@ -30,6 +40,50 @@ Commit messages are consistent with
   efficient implementation.
 - `aiologic.RBarrier` as a reusable barrier, i.e. a barrier that can be reset
   to its initial state (async-aware alternative to `threading.Barrier`).
+- `aiologic.lowlevel.ThreadLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_lock()` factory function as a new way to
+  obtain unpatched `threading.Lock`.
+- `aiologic.lowlevel.ThreadRLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_rlock()` factory function as a unique way to
+  obtain unpatched `threading.RLock`. Solves the problem of using reentrant
+  thread-level locks in the gevent-patched world (due to the fact that
+  `threading._PyRLock.__globals__` referenced the patched namespace, which made
+  it impossible to use the original object because it used the patched
+  `threading.Lock`). Note: like `threading._PyRLock`, the fallback pure Python
+  implementation is not signal-safe.
+- `aiologic.lowlevel.ThreadOnceLock` class (for typing purposes) and
+  `aiologic.lowlevel.create_thread_oncelock()` factory function as a way to
+  obtain a one-time reentrant lock. The interface mimics that of
+  `aiologic.lowlevel.ThreadRLock`, but the semantics are different: the first
+  successful `release()` call, which sets the internal counter to zero, wakes
+  up all threads at once (just like `aiologic.Event`), and all further
+  `acquire()` calls become no-ops, which effectively turns the lock into a
+  dummy primitive. And unlike `aiologic.lowlevel.ThreadRLock`, this primitive
+  is signal-safe, which, combined with the described semantics, makes the
+  primitive suitable for protecting initialization sections.
+- `aiologic.lowlevel.ThreadDummyLock` class (for typing purposes) and
+  `aiologic.lowlevel.THREAD_DUMMY_LOCK` singleton object as a way to obtain a
+  dummy lock.
+- `aiologic.lowlevel.once` decorator to ensure that a function is executed only
+  once (inspired by `std::sync::Once` from Rust). It uses
+  `aiologic.lowlevel.ThreadOnceLock` under the hood and stores the result in
+  the wrapper's closure, which makes the function both thread-safe and
+  signal-safe when `reentrant=True` is passed (note: this does not apply to
+  side effects!).
+- `aiologic.lowlevel.lazydeque` as a thread-safe/signal-safe wrapper for
+  `collections.deque` with lazy initialization. It solves the problem of
+  deques' high memory usage: one empty instance of `collections.deque` takes up
+  760 bytes on Python 3.11+ (for comparison, one empty list takes up only 56
+  bytes!). In contrast, one empty instance of `aiologic.lowlevel.lazydeque`
+  takes up 128 bytes in total, and after initialization (first addition) takes
+  up 832 bytes on Python 3.11+. Free-threading adds an additional 16 bytes in
+  all cases (due to the internal use of `aiologic.lowlevel.ThreadOnceLock`).
+- `aiologic.lowlevel.lazyqueue` as a thread-safe/signal-safe wrapper for
+  `_queue.SimpleQueue` (when available) or `collections.deque` with lazy
+  initialization. It provides a non-blocking queue and differs from
+  `aiologic.lowlevel.lazydeque` in that it is more memory efficient at the cost
+  of less functionality. Instead of 128 and 832 bytes, it takes up 120 and 200
+  bytes on Python 3.13+.
 - `aiologic.lowlevel.create_green_waiter()` and
   `aiologic.lowlevel.create_async_waiter()` as functions to create waiters,
   i.e. new low-level primitives that encapsulate library-specific wait-wake
@@ -38,6 +92,13 @@ Commit messages are consistent with
   regardless of whether the wait has been completed or not). And, of course,
   for the same reason, they are even less safe (they require more specific
   conditions for their correct operation).
+- `aiologic.lowlevel.enable_signal_safety()` and
+  `aiologic.lowlevel.disable_signal_safety()` universal decorators to enable
+  and disable signal-safety in the current thread's context. They support
+  awaitable objects, coroutine functions, and green functions, and can be used
+  directly as context managers.
+- `aiologic.lowlevel.signal_safety_enabled()` to determine if signal-safety is
+  enabled.
 - `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()` as a new way to create low-level
   events.
@@ -57,13 +118,35 @@ Commit messages are consistent with
   these methods have a slightly different meaning: they are intended to
   accompany `aiologic.lowlevel.shield()` calls to pre-check for cancellation,
   and do not guarantee actual checking.
+- `aiologic.lowlevel.green_clock()` and `aiologic.lowlevel.async_clock()` as a
+  way to get the current time according to the current library's internal
+  monotonic clock (useful for sleep-until functions).
+- `aiologic.lowlevel.green_sleep()` and `aiologic.lowlevel.async_sleep()` to
+  suspend the current task for the given number of seconds.
+- `aiologic.lowlevel.green_sleep_until()` and
+  `aiologic.lowlevel.async_sleep_until()` to suspend the current task until the
+  given deadline (relative to the current library's internal monotonic clock).
+- `aiologic.lowlevel.green_sleep_forever()` and
+  `aiologic.lowlevel.async_sleep_forever()` to suspend the current task until
+  an exception occurs.
+- `aiologic.lowlevel.green_seconds_per_sleep()` and
+  `aiologic.lowlevel.async_seconds_per_sleep()` as a way to get the number of
+  seconds during which sleep guarantees exactly one checkpoint. If sleep
+  exceeds this time, it will use multiple calls (to bypass library
+  limitations).
+- `aiologic.lowlevel.green_seconds_per_timeout()` and
+  `aiologic.lowlevel.async_seconds_per_timeout()` that are the same as their
+  sleep equivalents, but for timeouts (applies to low-level waiters/events, as
+  well as all high-level primitives).
+- `copy()` method to flags and queues as a way to create a shallow copy without
+  additional imports.
 - `async_borrowed()` and `green_borrowed()` methods to capacity limiters,
   `green_owned()` and `async_owned()` methods to locks. They allow to reliably
   check if the current task is holding the primitive (or any of its tokens)
   without importing additional functions.
-- `async_count()` and `green_count()` to reentrant capacity limiters for the
-  same purpose, but returning how many releases need to be made before the
-  token is actually released by the current task.
+- `async_count()` and `green_count()` to reentrant primitives for the same
+  purpose, but returning how many releases need to be made before the primitive
+  is actually released by the current task.
 - Reentrant primitives can now be acquired and released multiple times in a
   single call.
 - Multi-use barriers (cyclic and reusable) can now be used as context managers,
@@ -72,6 +155,9 @@ Commit messages are consistent with
 - Conditional variables now support user-defined timers. They can be passed to
   the constructor, called via the `timer` property, and used to pass the
   deadline to the notification methods.
+- Low-level events can now support `aiologic.lowlevel.ThreadOnceLock` methods
+  by passing `locking=True`. This allows to synchronize related one-time
+  operations with less memory overhead.
 - Low-level events can now be shielded from external cancellation by passing
   `shield=True`. This allows to implement efficient finalization strategies
   while preserving the one-time nature of low-level events.
@@ -83,41 +169,19 @@ Commit messages are consistent with
   event respectively. In fact, `aiologic.lowlevel.SET_EVENT` is just a copy of
   `aiologic.lowlevel.DUMMY_EVENT`, but to avoid confusion both variants will
   coexist (maybe temporarily, maybe not).
-- `aiologic.testing` subpackage for testing purposes. It is intended to isolate
-  complex `aiologic` testing logic (such as running tests on all supported
-  libraries), but can also be used by users to create their own tests.
-- `aiologic.testing.GREEN_PAIRS` and `aiologic.testing.ASYNC_PAIRS`, which
-  represents a tuple of pairs - supported libraries and their backends.
-- `aiologic.testing.GREEN_LIBRARIES` and `aiologic.testing.ASYNC_LIBRARIES`,
-  which represents a tuple of strings - supported libraries.
-- `aiologic.testing.GREEN_BACKENDS` and `aiologic.testing.ASYNC_BACKENDS`,
-  which represents a tuple of strings - supported backends.
-- `aiologic.testing.Result` as a wrapper to `concurrent.futures.Future`,
-  allowing to wait for its result asynchronously.
-- `aiologic.testing.FALSE_RESULT` and `aiologic.testing.TRUE_RESULT` as
-  predefined results.
-- `aiologic.testing.Task`, `aiologic.testing.TaskExecutor`, and
-  `aiologic.testing.TaskGroup` abstract classes (for typing purposes).
-- `aiologic.testing.create_executor()` function to create an executor object
-  that executes tasks of the chosen library in a separate thread.
-- `aiologic.testing.current_executor()` function to get the executor object
-  that executes the current task.
-- `aiologic.testing.get_cancelled_exc_class()` function to get the current
-  cancelled exception class (for the current or passed executor).
-- `aiologic.testing.get_timeout_exc_class()` function to get the current
-  timeout exception class (for the current or passed executor).
-- `aiologic.testing.assert_checkpoints()` and
-  `aiologic.testing.assert_no_checkpoints()` context managers to check for
-  context switching.
-- `aiologic.testing.timeout_after()` function to wait with a timeout. Useful
-  for cancellation tests.
-- `aiologic.testing.create_task()` function to create a thread-aware task in
-  the current or passed executor.
-- `aiologic.testing.create_task_group()` function to create a thread-aware task
-  group that correctly handles cancellation and exceptions.
-- `aiologic.testing.run()` function as shorthand for
-  `aiologic.testing.create_executor()` + `executor.submit()`, waiting for the
-  result in place.
+- `aiologic.meta` subpackage for metaprogramming purposes.
+- `aiologic.meta.MISSING` as a marker for parameters that, when not passed,
+  specify special default behavior.
+- `aiologic.meta.DEFAULT` as a marker for parameters with default values.
+- `aiologic.meta.copies()` to replace a function with a copy of another.
+- `aiologic.meta.replaces()` to replace a function of the same name in a
+  certain namespace.
+- `aiologic.meta.export()` to export all module content on behalf of the module
+  itself (by updating `__module__`).
+- `aiologic.meta.export_deprecated()` to export deprecated content via custom
+  `__getattr__()`.
+- `aiologic.meta.await_for()` to use awaitable primitives via functions that
+  only accept asynchronous functions.
 - `AIOLOGIC_GREEN_CHECKPOINTS` and `AIOLOGIC_ASYNC_CHECKPOINTS` environment
   variables.
 - `AIOLOGIC_PERFECT_FAIRNESS` environment variable.
@@ -139,6 +203,30 @@ Commit messages are consistent with
   implementation flaws, "perfect fairness" can still be useful, so since this
   version `aiologic` provides the `AIOLOGIC_PERFECT_FAIRNESS` environment
   variable to explicitly enable or disable it.
+- To avoid cubic complexity, token removal in perfect fairness style (cannot be
+  disabled in: multi-time events, multi-use barriers, and condition variables)
+  is now synchronized via `aiologic.lowlevel.ThreadOnceLock` methods in the
+  free-threaded mode.
+- Signal-safety is now also explicit and can be configured via the universal
+  decorators. When enabled, code behaves as if it were running outside the
+  context in the same thread (as in a separate thread but with the same thread
+  identifiers), allowing both notifying and waiting to be performed safely from
+  inside signal handlers and destructors (affects library detection and
+  low-level waiters).
+- All timeouts now support the full range of int and float values, and
+  correctly handle NaN and infinity (in particular, `timeout=inf` is equivalent
+  to `timeout=None`). A side effect is that large timeouts (exceeding the
+  maximum) increase the number of checkpoints.
+- All primitives now use `aiologic.lowlevel.lazydeque` instead of
+  `collections.deque` to reduce memory usage. This makes their memory usage a
+  bit closer to `asyncio` primitives (more lightweight than some `threading`
+  primitives!), and especially affects complex queues, which now consume only
+  ~0.5 KiB instead of ~3 KiB per instance. But the cost of this is
+  synchronization via `aiologic.lowlevel.ThreadOnceLock` at the first addition
+  to the queue in free-threading.
+- Shallow copying now relies on the `__copy__()` method instead of pickle
+  methods. This makes copying faster at the cost of additional overriding in
+  subclasses.
 - Flags are now a high-level primitive, available as `aiologic.Flag`, with
   `weakref` support.
 - Reentrant primitives now have checkpoints on reentrant acquires. This should
@@ -149,12 +237,17 @@ Commit messages are consistent with
     stubs but also at runtime, making it possible to use subscriptions on
     Python 3.8. Also, capacity limiters' and flags' type parameters now have
     default values.
+  + The use of markers as default parameter values has been expanded. `None` is
+    used when it disables a particular feature (e.g. timeouts or maxsize).
+    `aiologic.meta.MISSING` is used when it specifies a special default
+    behavior. `aiologic.meta.DEFAULT` is used when an existing value that is
+    compatible in type will be taken.
   + `aiologic.lowlevel.Event` is now a protocol not only in stubs but also at
     runtime.
   + Calling `flag.set()` without arguments is now only allowed for
     `aiologic.lowlevel.Flag[object]`. Previously it ignored subscriptions.
-  + `aiologic.lowlevel.MissingType` is now a subclass of `enum.Enum`, so static
-    analysis tools now correctly recognize `aiologic.lowlevel.MISSING` as a
+  + `aiologic.meta.MissingType` is now a subclass of `enum.Enum`, so static
+    analysis tools now correctly recognize `aiologic.meta.MISSING` as a
     singleton instance.
   + `aiologic.lowlevel.current_green_library()` and
     `aiologic.lowlevel.current_async_library()` now return `Optional[str]` when
@@ -168,6 +261,8 @@ Commit messages are consistent with
     information to be used in cases where stubs are not supported. In
     particular, for `sphinx.ext.autodoc`. Stubs are still preserved to reduce
     issues with type checkers.
+  + Overload introspection is now available at runtime on all supported
+    versions of Python.
 - Thread-related functions have been rewritten:
   + `aiologic.lowlevel.current_thread()` now raises `RuntimeError` for threads
     started outside of the `threading` module instead of returning `None`. This
@@ -184,10 +279,14 @@ Commit messages are consistent with
     shields both the called function and the calling task from being cancelled.
     It supports awaitable objects, coroutine functions, and green functions:
     timeouts are suppressed, and are re-raised after the call completes.
-  + They now skip the current library detection if they have not been enabled
-    for any imported libraries. This also affects checkpoints in low-level
-    events, which no longer access context variables before enabling
-    checkpoints, making them much faster.
+  + `threading` checkpoints now use `os.sched_yield()` (when available) as a
+    way to quickly switch the GIL. This makes them cheaper, but may slightly
+    alter their behavior in free-threading.
+  + They now skip the current library detection when it is not required (for
+    example, when checkpoints are not enabled for any of the imported
+    libraries). This also affects checkpoints in low-level events, which no
+    longer access context variables before using checkpoints, making them much
+    faster.
   + They can now only be enabled dynamically (without environment variables) at
     the thread level. This prevents checkpoints from being enabled in created
     worker threads.
@@ -218,8 +317,14 @@ Commit messages are consistent with
   + They now return `False` after waiting again if they were previously
     cancelled. Previously `True` was returned, which could be considered
     unexpected behavior.
+- Events have been rewritten:
+  + They no longer save their state when being pickled/copied. So they now
+    share the same behavior as the other synchronization primitives.
+  + The `value` parameter of `aiologic.CountdownEvent` has been renamed to
+    `initial_value`. Accordingly, a property with the same name has also been
+    added.
 - Barriers have been rewritten:
-  + The `parties` parameter now has a default value of `1`. This allows
+  + The `parties` parameter now has a default value of `0`. This allows
     barriers to be used directly as default factories.
   + They now allow passing `parties` equal to `0`, with which they ignore the
     waiting queue length (they only wake up tasks when `abort()` is called
@@ -258,15 +363,14 @@ Commit messages are consistent with
     cooperatively. Previously, it was not possible to determine the next lock
     owner after release in the same task (it was `None`).
 - Condition variables have been rewritten:
-  + They now only support passing locks from the `threading` module
-    (synchronous mode), binary semaphores and locks from the `aiologic` module
-    (mixed mode), and `None` (lockless mode). This change was made to simplify
-    their implementation. For special cases it is recommended to use low-level
-    events directly.
+  + They now only support passing low-level (thread-level) locks (synchronous
+    mode), binary semaphores and high-level locks (mixed mode), and `None`
+    (lockless mode). This change was made to simplify their implementation. For
+    special cases it is recommended to use low-level events directly.
   + Waiting for a predicate now supports delegating its checking to notifiers
     and is the default (`delegate=True`). This reduces the number of context
     switches to the minimum necessary.
-  + For `aiologic` primitives, all waits are now truly fair and always run with
+  + For high-level primitives, all waits are now truly fair and always run with
     exactly one checkpoint (exactly two in case of cancel), just like all other
     `aiologic` functions. This works by using a new reparking mechanism and
     solves the well-known [resource starvation
@@ -274,10 +378,10 @@ Commit messages are consistent with
   + They now count the number of lock acquires to avoid redundant `release()`
     calls when used as context managers. Because of this, they will now never
     throw a `RuntimeError` when a `wait()` call fails (e.g. due to a
-    `KeyboardInterrupt` while trying to reacquire `threading.Lock`) except in
-    the case of concurrent `notify()` calls. This makes it safe (with some
-    caveats) to use condition variables even when shielding from external
-    cancellation is not guaranteed.
+    `KeyboardInterrupt` while trying to reacquire
+    `aiologic.lowlevel.ThreadLock`) except in the case of concurrent `notify()`
+    calls. This makes it safe (with some caveats) to use condition variables
+    even when shielding from external cancellation is not guaranteed.
   + They now shield lock state restoring not only in async methods, but also in
     green methods. It is still not guaranteed that a `wait()` call cannot be
     cancelled in any unpredictable way (e.g. when a greenlet is killed by an
@@ -289,7 +393,7 @@ Commit messages are consistent with
     meaningful messages.
   + They now check that the current task is the owner of the lock before
     starting notification for predicates for all variations, and in general for
-    any calls for `aiologic` primitives. While this change reduces the number
+    any calls for high-level primitives. While this change reduces the number
     of scenarios in which condition variables can be used, it provides the
     thread-safety needed for the new features to work.
   + They now always yield themselves when used as context managers. This
@@ -346,9 +450,6 @@ Commit messages are consistent with
   `concurrent.futures.Future`. This makes the implementation of `curio` support
   completely non-blocking (like the rest of the concurrency libraries), which
   has a positive impact on performance.
-- `exceptiongroup` is now a required dependency on Python < 3.11. It is used by
-  `aiologic.testing.TaskGroup` to raise exceptions of all failed tasks at the
-  same time (a backport of `BaseExceptionGroup`).
 - `sniffio` is now a required dependency. This is done to simplify the code
   logic (which previously treated `sniffio` as an optional dependency) and
   should not introduce any additional complexity.
@@ -367,11 +468,17 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `timeout<0` in all primitives, as they differ from the semantics of the
+  standard library, which could lead to their incorrect use (since they are
+  equivalent `timeout=0`, but not to no timeout).
+- `action` as a positional parameter in `aiologic.ResourceGuard` in favor of
+  using it as a keyword-only parameter.
 - `maxsize<=0` in complex queue constructors in favor of `maxsize=None`:
   support for `maxsize<0` is not pythonic, goes against common style, and
   `maxsize=0` may in the future be used to create special empty queues.
 - `aiologic.PLock` in favor of `aiologic.BinarySemaphore`.
 - `aiologic.RLock.level` in favor of `aiologic.RLock.count`.
+- `aiologic.lowlevel.MISSING` in favor of `aiologic.meta.MISSING`.
 - `aiologic.lowlevel.GreenEvent` and `aiologic.lowlevel.AsyncEvent` direct
   creation in favor of `aiologic.lowlevel.create_green_event()` and
   `aiologic.lowlevel.create_async_event()`: they will become protocols in the
@@ -387,6 +494,8 @@ Commit messages are consistent with
   proper thread-safety level (capacity limiters need to be higher-level
   primitives for this), but also made the implementation more complex and thus
   degraded performance.
+- `is_set` parameter from one-time and reusable events (`aiologic.Event` and
+  `aiologic.REvent`).
 - `aiologic.lowlevel.<library>_running()`: these functions have not been used
   and could be misleading.
 - `aiologic.lowlevel.checkpoint_if_cancelled()` and
@@ -422,10 +531,22 @@ Commit messages are consistent with
     with `gevent` (now the same as from `threading.main_thread()`).
   + green thread objects for dummy threads whose identifier matched the running
     greenlets (now raises an exception according to the new behavior).
+- The initialization of low-level waiter classes was protected from concurrent
+  execution using a mutex, which could lead to deadlock if it was interrupted
+  and retried in the same thread. Now, `aiologic.lowlevel.ThreadOnceLock` is
+  used for this (via `aiologic.lowlevel.once()`), which ensures signal-safety.
+- Using `aiologic.RLock` from inside a signal handler or destructor could
+  result in a false release if the execution occurred inside an `*_acquire()`
+  call after setting the `owner` property but before setting the `count`
+  property. The order of operations is now inverted. This makes
+  `aiologic.RLock` a bit more signal-safe than `threading._PyRLock`.
 - Using checkpoints for `threading` could cause hub spawning in worker threads
   when `aiologic` is imported after monkey patching the `time` module with
   `eventlet` or `gevent`. As a result, the open files limit could have been
   exceeded.
+- Blocking `eventlet` calls did not check the context, which could lead to
+  incorrect behavior when executing blocking calls in the hub context (as part
+  of scheduled calls).
 - The locks and semaphores (and the capacity limiters and simple queues based
   on them) did not handle exceptions at checkpoints, so that cancelling at
   checkpoints (`trio` case by default) did not release the primitive.
@@ -844,7 +965,8 @@ Commit messages are consistent with
   + `aiologic.SimpleQueue` as a queue that works in a semaphore style
     (async-aware alternative to `queue.SimpleQueue`).
 
-[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.14.0...HEAD
+[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.15.0...HEAD
+[0.15.0]: https://github.com/x42005e1f/aiologic/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/x42005e1f/aiologic/compare/0.13.1...0.14.0
 [0.13.1]: https://github.com/x42005e1f/aiologic/compare/0.13.0...0.13.1
 [0.13.0]: https://github.com/x42005e1f/aiologic/compare/0.12.0...0.13.0

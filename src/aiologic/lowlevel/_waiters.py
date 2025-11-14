@@ -5,14 +5,17 @@
 
 from __future__ import annotations
 
+import sys
+import warnings
+
+from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
 from ._libraries import current_async_library, current_green_library
-from ._threads import _once as once
+from ._locks import once
+from ._safety import signal_safety_enabled
 
 if TYPE_CHECKING:
-    import sys
-
     if sys.version_info >= (3, 9):
         from collections.abc import Callable, Generator
     else:
@@ -20,36 +23,64 @@ if TYPE_CHECKING:
 
 
 class Waiter(Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def wake(self, /) -> None: ...
+    def wake(self, /) -> None:
+        """..."""
 
 
 class GreenWaiter(Waiter, Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def __init__(self, /, *, shield: bool = False) -> None: ...
-    def wait(self, /, timeout: float | None = None) -> bool: ...
+    def __init__(self, /, *, shield: bool = False) -> None:
+        """..."""
+
+    def wait(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+    def wake(self, /) -> None:
+        """..."""
+
     @property
-    def shield(self, /) -> bool: ...
+    def shield(self, /) -> bool:
+        """..."""
+
     @shield.setter
-    def shield(self, /, value: bool) -> None: ...
+    def shield(self, /, value: bool) -> None:
+        """..."""
 
 
 class AsyncWaiter(Waiter, Protocol):
+    """..."""
+
     __slots__ = ()
 
-    def __init__(self, /, *, shield: bool = False) -> None: ...
-    def __await__(self, /) -> Generator[Any, Any, bool]: ...
+    def __init__(self, /, *, shield: bool = False) -> None:
+        """..."""
+
+    def __await__(self, /) -> Generator[Any, Any, bool]:
+        """..."""
+
+    def wake(self, /) -> None:
+        """..."""
+
     @property
-    def shield(self, /) -> bool: ...
+    def shield(self, /) -> bool:
+        """..."""
+
     @shield.setter
-    def shield(self, /, value: bool) -> None: ...
+    def shield(self, /, value: bool) -> None:
+        """..."""
 
 
-@once
+@once(reentrant=True)
 def _get_threading_waiter_class() -> type[GreenWaiter]:
-    from ._thread import allocate_lock
+    from . import _time
+    from ._locks import create_thread_lock
 
     @final
     class _ThreadingWaiter(GreenWaiter):
@@ -61,7 +92,7 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
         shield: bool
 
         def __init__(self, /, shield: bool = False) -> None:
-            self.__lock = allocate_lock()
+            self.__lock = create_thread_lock()
             self.__lock.acquire()
 
             self.shield = shield
@@ -78,12 +109,47 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
             raise TypeError(msg)
 
         def wait(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else 1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    warnings.warn(
+                        "Use timeout=max(0, timeout) instead",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                    timeout = 0
+
+                if isinf(timeout):
+                    timeout = None
+
             if timeout is None or self.shield:
                 return self.__lock.acquire()
-            elif timeout > 0:
-                return self.__lock.acquire(True, timeout)
+            elif timeout:
+                return _time._green_long_sleep(
+                    self.__wait_with_timeout,
+                    timeout,
+                    _time._threading_seconds_per_timeout(),
+                    clock=_time._threading_clock,
+                    check=True,
+                )
             else:
-                return self.__lock.acquire(False)
+                return self.__wait_with_zero()
+
+        def __wait_with_timeout(self, /, timeout: float) -> bool:
+            return self.__lock.acquire(True, timeout)
+
+        def __wait_with_zero(self, /) -> bool:
+            return self.__lock.acquire(False)
 
         def wake(self, /) -> None:
             try:
@@ -99,9 +165,11 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
     from eventlet.hubs import _threadlocal, get_hub
     from greenlet import getcurrent
 
-    from . import _patcher, _tasks
+    from aiologic._monkey import patch_eventlet
 
-    _patcher._patch_eventlet()
+    from . import _tasks, _time
+
+    patch_eventlet()
 
     @final
     class _EventletWaiter(GreenWaiter):
@@ -131,25 +199,37 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
             raise TypeError(msg)
 
         def wait(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else 1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    warnings.warn(
+                        "Use timeout=max(0, timeout) instead",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                    timeout = 0
+
+                if isinf(timeout):
+                    timeout = None
+
             self.__greenlet = getcurrent()
 
             try:
-                if timeout is None or self.shield:
-                    timer = None
-                elif timeout > 0:
-                    timer = self.__hub.schedule_call_local(
-                        timeout,
-                        self.__greenlet.switch,
-                        False,
-                    )
-                else:
-                    timer = self.__hub.schedule_call_local(
-                        0,
-                        self.__greenlet.switch,
-                        False,
-                    )
+                if self.__hub.greenlet is self.__greenlet:
+                    msg = "do not call blocking functions from the mainloop"
+                    raise RuntimeError(msg)
 
-                try:
+                if timeout is None or self.shield:
                     if self.shield:
                         return _tasks._eventlet_shielded_call(
                             self.__hub.switch,
@@ -158,20 +238,47 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
                         )
                     else:
                         return self.__hub.switch()
-                finally:
-                    if timer is not None:
-                        timer.cancel()
+                elif timeout:
+                    return _time._green_long_sleep(
+                        self.__wait_with_timeout,
+                        timeout,
+                        _time._eventlet_seconds_per_timeout(),
+                        clock=_time._eventlet_clock,
+                        check=True,
+                    )
+                else:
+                    return self.__wait_with_zero()
             finally:
                 self.__greenlet = None
 
-        def __notify(self, /) -> None:
+        def __wait_with_timeout(self, /, timeout: float) -> bool:
+            timer = self.__hub.schedule_call_global(
+                timeout,
+                self.__notify,
+                False,
+            )
+
+            try:
+                return self.__hub.switch()
+            finally:
+                timer.cancel()
+
+        def __wait_with_zero(self, /) -> bool:
+            timer = self.__hub.schedule_call_global(0, self.__notify, False)
+
+            try:
+                return self.__hub.switch()
+            finally:
+                timer.cancel()
+
+        def __notify(self, /, result: bool = True) -> None:
             if self.__greenlet is not None:
-                self.__greenlet.switch(True)
+                self.__greenlet.switch(result)
 
         def wake(self, /) -> None:
             current_hub = getattr(_threadlocal, "hub", None)
 
-            if current_hub is self.__hub:
+            if current_hub is self.__hub and not signal_safety_enabled():
                 self.__hub.schedule_call_global(0, self.__notify)
             else:
                 self.__hub.schedule_call_threadsafe(0, self.__notify)
@@ -185,7 +292,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
     from gevent._hub_local import get_hub_if_exists
     from greenlet import getcurrent
 
-    from . import _tasks
+    from . import _tasks, _time
 
     def _noop() -> None:
         pass
@@ -218,20 +325,37 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
             raise TypeError(msg)
 
         def wait(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else 1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    warnings.warn(
+                        "Use timeout=max(0, timeout) instead",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                    timeout = 0
+
+                if isinf(timeout):
+                    timeout = None
+
             self.__greenlet = getcurrent()
 
             try:
+                if self.__hub is self.__greenlet:
+                    msg = "do not call blocking functions from the mainloop"
+                    raise RuntimeError(msg)
+
                 if timeout is None or self.shield:
-                    timer = None
-                else:
-                    if timeout > 0:
-                        timer = self.__hub.loop.timer(timeout)
-                    else:
-                        timer = self.__hub.loop.timer(0)
-
-                    timer.start(self.__greenlet.switch, False, update=True)
-
-                try:
                     watcher = self.__hub.loop.async_()
                     watcher.start(_noop)  # avoid LoopExit
 
@@ -246,21 +370,50 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
                             return self.__hub.switch()
                     finally:
                         watcher.close()
-                finally:
-                    if timer is not None:
-                        timer.close()
+                elif timeout:
+                    return _time._green_long_sleep(
+                        self.__wait_with_timeout,
+                        timeout,
+                        _time._gevent_seconds_per_timeout(),
+                        clock=_time._gevent_clock,
+                        check=True,
+                    )
+                else:
+                    return self.__wait_with_zero()
             finally:
                 self.__greenlet = None
 
-        def __notify(self, /) -> None:
+        def __wait_with_timeout(self, /, timeout: float) -> bool:
+            timer = self.__hub.loop.timer(timeout)
+            timer.start(self.__notify, False, update=True)
+
+            try:
+                return self.__hub.switch()
+            finally:
+                timer.close()
+
+        def __wait_with_zero(self, /) -> bool:
+            callback = self.__hub.loop.run_callback(self.__notify, False)
+
+            try:
+                return self.__hub.switch()
+            finally:
+                callback.close()
+
+        def __notify(self, /, result: bool = True) -> None:
             if self.__greenlet is not None:
-                self.__greenlet.switch(True)
+                switch = self.__greenlet.switch
+
+                try:
+                    switch(result)
+                except BaseException:  # noqa: BLE001
+                    self.__hub.handle_error(switch, *sys.exc_info())
 
         def wake(self, /) -> None:
             current_hub = get_hub_if_exists()
 
             try:
-                if current_hub is self.__hub:
+                if current_hub is self.__hub and not signal_safety_enabled():
                     self.__hub.loop.run_callback(self.__notify)
                 else:
                     self.__hub.loop.run_callback_threadsafe(self.__notify)
@@ -334,7 +487,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
         def wake(self, /) -> None:
             current_loop = get_running_loop_if_exists()
 
-            if current_loop is self.__loop:
+            if current_loop is self.__loop and not signal_safety_enabled():
                 self.__notify()
             else:
                 try:
@@ -621,7 +774,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             except RuntimeError:  # no called trio.run()
                 current_token = None
 
-            if current_token is self.__token:
+            if current_token is self.__token and not signal_safety_enabled():
                 self.__notify()
             else:
                 try:
@@ -681,6 +834,8 @@ def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
 
 
 def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
+    """..."""
+
     library = current_green_library()
 
     if library == "threading":
@@ -697,6 +852,8 @@ def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
 
 
 def create_async_waiter(*, shield: bool = False) -> AsyncWaiter:
+    """..."""
+
     library = current_async_library()
 
     if library == "asyncio":

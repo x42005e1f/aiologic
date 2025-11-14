@@ -5,16 +5,15 @@
 
 from __future__ import annotations
 
-from functools import wraps
 from threading import main_thread
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from wrapt import when_imported
 
-from . import _greenlets, _monkey
-from ._markers import MISSING
-from ._thread import allocate_lock, get_ident
-from ._utils import _replaces as replaces
+from aiologic._monkey import import_original, patched
+from aiologic.meta import replaces
+
+from . import _greenlets
 
 if TYPE_CHECKING:
     import sys
@@ -29,19 +28,15 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Self
 
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
-
-_T = TypeVar("_T")
-
 try:
-    from ._thread import _get_main_thread_ident
+    _get_main_thread_ident = import_original(
+        "_thread",
+        "_get_main_thread_ident",
+    )
 except ImportError:
 
     def _is_main_thread() -> bool:
-        return get_ident() == main_thread().ident
+        return current_thread_ident() == main_thread().ident
 
     @when_imported("gevent.monkey")
     def _(_):
@@ -58,27 +53,27 @@ except ImportError:
                     answer = _greenlets._main_greenlet() is thread_greenlet
 
                     if answer:
-                        thread._gevent_real_ident = get_ident()
+                        thread._gevent_real_ident = current_thread_ident()
 
                     return answer
 
-            return get_ident() == thread_ident
+            return current_thread_ident() == thread_ident
 
 else:
 
     def _is_main_thread() -> bool:
-        return get_ident() == _get_main_thread_ident()
+        return current_thread_ident() == _get_main_thread_ident()
 
 
 def _current_python_thread() -> Thread | None:
-    threading = _monkey._import_python_original("threading")
+    import threading
 
     _DummyThread = threading._DummyThread
     _active = threading._active
 
     @replaces(globals())
     def _current_python_thread():
-        thread = _active.get(get_ident())
+        thread = _active.get(current_thread_ident())
 
         if isinstance(thread, _DummyThread):
             return None
@@ -90,7 +85,7 @@ def _current_python_thread() -> Thread | None:
     def _(_):
         @replaces(globals())
         def _current_python_thread():
-            thread = _active.get(ident := get_ident())
+            thread = _active.get(ident := current_thread_ident())
 
             if thread is None:
                 return None
@@ -98,7 +93,7 @@ def _current_python_thread() -> Thread | None:
             if isinstance(thread, (_DummyThread, threading._DummyThread)):
                 return None
 
-            if _monkey._patched("threading"):
+            if patched("threading"):
                 greenlet = _greenlets._current_greenlet()
 
                 if id(greenlet) == ident and greenlet.parent is not None:
@@ -117,14 +112,16 @@ def _current_eventlet_thread() -> Thread | None:
 def _(_):
     @replaces(globals())
     def _current_eventlet_thread():
-        threading = _monkey._import_eventlet_original("threading")
+        from eventlet.patcher import original
+
+        threading = original("threading")
 
         _DummyThread = threading._DummyThread
         _active = threading._active
 
         @replaces(globals())
         def _current_eventlet_thread():
-            thread = _active.get(get_ident())
+            thread = _active.get(current_thread_ident())
 
             if isinstance(thread, _DummyThread):
                 return None
@@ -169,10 +166,10 @@ def current_thread() -> Thread:
     return thread
 
 
-current_thread_ident = get_ident
+current_thread_ident = import_original("_thread", "get_ident")
 
 try:
-    from ._thread import _local as _local
+    _local = import_original("_thread", "_local")
 except ImportError:
     import weakref
 
@@ -289,21 +286,3 @@ except ImportError:
                     return
 
             object___delattr__(self, name)
-
-
-def _once(func: Callable[[], _T], /) -> Callable[[], _T]:
-    lock = allocate_lock()
-    result = MISSING
-
-    @wraps(func)
-    def wrapper() -> _T:
-        nonlocal result
-
-        if result is MISSING:
-            with lock:
-                if result is MISSING:
-                    result = func()
-
-        return result
-
-    return wrapper

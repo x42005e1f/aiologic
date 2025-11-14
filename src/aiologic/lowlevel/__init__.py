@@ -7,7 +7,6 @@ from ._checkpoints import (
     async_checkpoint as async_checkpoint,
     async_checkpoint_enabled as async_checkpoint_enabled,
     async_checkpoint_if_cancelled as async_checkpoint_if_cancelled,
-    checkpoint as checkpoint,
     disable_checkpoints as disable_checkpoints,
     enable_checkpoints as enable_checkpoints,
     green_checkpoint as green_checkpoint,
@@ -27,9 +26,6 @@ from ._events import (
     create_async_event as create_async_event,
     create_green_event as create_green_event,
 )
-from ._flags import (
-    Flag as Flag,
-)
 from ._ident import (
     current_async_task as current_async_task,
     current_async_task_ident as current_async_task_ident,
@@ -48,9 +44,25 @@ from ._libraries import (
     current_green_library as current_green_library,
     current_green_library_tlocal as current_green_library_tlocal,
 )
-from ._markers import (
-    MISSING as MISSING,
-    MissingType as MissingType,
+from ._locks import (
+    THREAD_DUMMY_LOCK as THREAD_DUMMY_LOCK,
+    ThreadDummyLock as ThreadDummyLock,
+    ThreadLock as ThreadLock,
+    ThreadOnceLock as ThreadOnceLock,
+    ThreadRLock as ThreadRLock,
+    create_thread_lock as create_thread_lock,
+    create_thread_oncelock as create_thread_oncelock,
+    create_thread_rlock as create_thread_rlock,
+    once as once,
+)
+from ._queues import (
+    lazydeque as lazydeque,
+    lazyqueue as lazyqueue,
+)
+from ._safety import (
+    disable_signal_safety as disable_signal_safety,
+    enable_signal_safety as enable_signal_safety,
+    signal_safety_enabled as signal_safety_enabled,
 )
 from ._tasks import (
     shield as shield,
@@ -58,6 +70,20 @@ from ._tasks import (
 from ._threads import (
     current_thread as current_thread,
     current_thread_ident as current_thread_ident,
+)
+from ._time import (
+    async_clock as async_clock,
+    async_seconds_per_sleep as async_seconds_per_sleep,
+    async_seconds_per_timeout as async_seconds_per_timeout,
+    async_sleep as async_sleep,
+    async_sleep_forever as async_sleep_forever,
+    async_sleep_until as async_sleep_until,
+    green_clock as green_clock,
+    green_seconds_per_sleep as green_seconds_per_sleep,
+    green_seconds_per_timeout as green_seconds_per_timeout,
+    green_sleep as green_sleep,
+    green_sleep_forever as green_sleep_forever,
+    green_sleep_until as green_sleep_until,
 )
 from ._waiters import (
     AsyncWaiter as AsyncWaiter,
@@ -67,13 +93,14 @@ from ._waiters import (
     create_green_waiter as create_green_waiter,
 )
 
-# modify __module__ for shorter repr() and better pickle support
-if not __import__("typing").TYPE_CHECKING:
-    for __value in list(globals().values()):
-        if getattr(__value, "__module__", "").startswith(f"{__name__}."):
-            try:
-                __value.__module__ = __name__
-            except AttributeError:
-                pass
+# register deprecated content to __getattr_()
+from aiologic.meta import export_deprecated  # isort: skip
 
-        del __value
+export_deprecated(globals(), "DEFAULT", "aiologic.meta.DEFAULT")
+export_deprecated(globals(), "MISSING", "aiologic.meta.MISSING")
+export_deprecated(globals(), "DefaultType", "aiologic.meta.DefaultType")
+export_deprecated(globals(), "Flag", "aiologic.Flag")
+export_deprecated(globals(), "MissingType", "aiologic.meta.MissingType")
+export_deprecated(globals(), "checkpoint", "async_checkpoint")
+
+del export_deprecated

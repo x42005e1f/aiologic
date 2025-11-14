@@ -31,26 +31,27 @@ Features
 
 .. toctree::
   :caption: Quickstart
-  :maxdepth: 2
+  :maxdepth: 3
   :hidden:
 
   installation
   overview
   cheatsheet
+  api
 
 .. toctree::
   :caption: Advanced topics
-  :maxdepth: 2
+  :maxdepth: 3
   :hidden:
 
   advanced-topics/libraries
-  advanced-topics/execution-units
 
 .. toctree::
   :caption: Meta
   :maxdepth: 1
   :hidden:
 
+  performance
   changelog
   license
 

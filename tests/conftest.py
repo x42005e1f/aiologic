@@ -18,42 +18,12 @@ import pytest
 from wrapt import decorator
 
 import aiologic
-import aiologic.testing
+import aiologic._testing
 
 if sys.version_info >= (3, 11):
     WaitTimeout = TimeoutError
 else:
     from concurrent.futures import TimeoutError as WaitTimeout
-
-GREEN_LIBRARIES = ("threading", "eventlet", "gevent")
-ASYNC_LIBRARIES = ("asyncio", "curio", "trio", "anyio+asyncio", "anyio+trio")
-
-
-class _AsyncResult:
-    def __init__(self, future):
-        self._future = future
-
-        self._async_event = aiologic.lowlevel.create_async_event()
-        self._green_event = aiologic.lowlevel.create_green_event()
-
-        self._future.add_done_callback(lambda _: self._async_event.set())
-        self._future.add_done_callback(lambda _: self._green_event.set())
-
-    def __await__(self):
-        success = yield from self._async_event.__await__()
-
-        if not success:
-            raise WaitTimeout
-
-        return self._future.result()
-
-    def wait(self, timeout=None):
-        success = self._green_event.wait(timeout)
-
-        if not success:
-            raise WaitTimeout
-
-        return self._future.result()
 
 
 def _spawn_decorator(func):
@@ -80,8 +50,8 @@ def spawn(request):
     pytest.importorskip(backend)
     pytest.importorskip(library)
 
-    exec1 = aiologic.testing.create_executor(library, backend)
-    exec2 = aiologic.testing.create_executor(library, backend)
+    exec1 = aiologic._testing.create_executor(library, backend)
+    exec2 = aiologic._testing.create_executor(library, backend)
 
     with exec1, exec2:
 
@@ -91,7 +61,7 @@ def spawn(request):
             else:
                 future = exec2.submit(func, *args, **kwargs)
 
-            return _AsyncResult(future)
+            return aiologic._testing.Result(future)
 
         _spawn.backend = backend
         _spawn.library = library
@@ -183,7 +153,7 @@ def _test_thread_safety_cm(event, *functions):
                 finally:
                     stopped.set()
 
-            yield _AsyncResult(outer_future)
+            yield aiologic._testing.Result(outer_future)
         finally:
             sys.setswitchinterval(interval)
 
@@ -227,9 +197,23 @@ def pytest_configure(config):
 def pytest_generate_tests(metafunc):
     if "spawn" in metafunc.fixturenames:
         if inspect.iscoroutinefunction(metafunc.function):
-            metafunc.parametrize("spawn", ASYNC_LIBRARIES, indirect=True)
+            metafunc.parametrize(
+                "spawn",
+                [
+                    "+".join(pair) if pair[0] != pair[1] else pair[0]
+                    for pair in aiologic._testing.ASYNC_PAIRS
+                ],
+                indirect=True,
+            )
         else:
-            metafunc.parametrize("spawn", GREEN_LIBRARIES, indirect=True)
+            metafunc.parametrize(
+                "spawn",
+                [
+                    "+".join(pair) if pair[0] != pair[1] else pair[0]
+                    for pair in aiologic._testing.GREEN_PAIRS
+                ],
+                indirect=True,
+            )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -240,7 +224,7 @@ def pytest_collection_modifyitems(config, items):
             "test_builtins": defaultdict(list),
             "test_collections": defaultdict(list),
             "test_itertools": defaultdict(list),
-            "aiologic.lowlevel.test_markers": defaultdict(list),
+            "aiologic.meta.test_markers": defaultdict(list),
             "aiologic.lowlevel.test_threads": defaultdict(list),
             "aiologic.lowlevel.test_libraries": defaultdict(list),
             "aiologic.lowlevel.test_ident": defaultdict(list),

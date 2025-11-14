@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, overload
+import sys
+
+from typing import TYPE_CHECKING, Literal
 
 from sniffio import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
@@ -13,8 +15,15 @@ from sniffio import (
 )
 from wrapt import when_imported
 
+from aiologic.meta import replaces
+
+from ._safety import signal_safety_enabled
 from ._threads import _local
-from ._utils import _external as external, _replaces as replaces
+
+if sys.version_info >= (3, 11):
+    from typing import overload
+else:
+    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from sniffio._impl import _ThreadLocal
@@ -134,10 +143,8 @@ def _(_):
 
 
 @overload
-@external
 def current_green_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
-@external
 def current_green_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_green_library(*, failsafe=False):
     """
@@ -157,7 +164,6 @@ def current_green_library(*, failsafe=False):
         if the current green library was not recognized.
 
     Example:
-
       .. code:: python
 
         def green_sleep(seconds: float) -> None:
@@ -173,23 +179,22 @@ def current_green_library(*, failsafe=False):
                     raise RuntimeError(msg)
     """
 
-    if (name := current_green_library_tlocal.name) is not None:
-        return name
+    if not signal_safety_enabled():
+        if (name := current_green_library_tlocal.name) is not None:
+            return name
 
-    if _gevent_running():
-        return "gevent"
+        if _gevent_running():
+            return "gevent"
 
-    if _eventlet_running():
-        return "eventlet"
+        if _eventlet_running():
+            return "eventlet"
 
     return "threading"
 
 
 @overload
-@external
 def current_async_library(*, failsafe: Literal[False] = False) -> str: ...
 @overload
-@external
 def current_async_library(*, failsafe: Literal[True]) -> str | None: ...
 def current_async_library(*, failsafe=False):
     """
@@ -209,7 +214,6 @@ def current_async_library(*, failsafe=False):
         if the current async library was not recognized.
 
     Example:
-
       .. code:: python
 
         async def async_sleep(seconds: float) -> None:
@@ -225,16 +229,17 @@ def current_async_library(*, failsafe=False):
                     raise RuntimeError(msg)
     """
 
-    if (name := current_async_library_tlocal.name) is not None:
-        return name
+    if not signal_safety_enabled():
+        if (name := current_async_library_tlocal.name) is not None:
+            return name
 
-    # trio is detected via current_async_library_tlocal.name
+        # trio is detected via current_async_library_tlocal.name
 
-    if _curio_running():
-        return "curio"
+        if _curio_running():
+            return "curio"
 
-    if _asyncio_running():
-        return "asyncio"
+        if _asyncio_running():
+            return "asyncio"
 
     if failsafe:
         return None
