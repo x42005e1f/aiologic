@@ -81,12 +81,7 @@ class QueueShutdown(Exception):
 
 
 class SimpleQueue(Generic[_T]):
-    __slots__ = (
-        "__weakref__", 
-        "_data", 
-        "_semaphore", 
-        "_shutdown"
-    )
+    __slots__ = ("__weakref__", "_data", "_semaphore", "_shutdown")
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
         """..."""
