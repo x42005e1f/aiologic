@@ -1,16 +1,32 @@
-from aiologic import Queue, SimpleQueue, PriorityQueue, LifoQueue, QueueShutdown
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
+# SPDX-License-Identifier: 0BSD
+
+from __future__ import annotations
+
 import asyncio
-from typing import Union
 
 import pytest
 
-@pytest.fixture(params=(Queue, SimpleQueue, PriorityQueue, LifoQueue), ids=str)
-def queue_type(request:pytest.FixtureRequest) -> Union[type[SimpleQueue], type[Queue]]:
-    return request.param # type: ignore[no-any-return]
+from aiologic import (
+    LifoQueue,
+    PriorityQueue,
+    Queue,
+    QueueShutdown,
+    SimpleQueue,
+)
 
-def test_shutdown(queue_type: Union[type[SimpleQueue], type[Queue]]):
-    
-    async def handler(q: Union[type[SimpleQueue], type[Queue]]):
+
+@pytest.fixture(params=(Queue, SimpleQueue, PriorityQueue, LifoQueue), ids=str)
+def queue_type(
+    request: pytest.FixtureRequest,
+) -> type[SimpleQueue | Queue]:
+    return request.param  # type: ignore[no-any-return]
+
+
+def test_shutdown(queue_type: type[SimpleQueue | Queue]) -> None:
+    async def handler(q: type[SimpleQueue | Queue]) -> bool:
         try:
             while True:
                 await q.async_get()
@@ -23,7 +39,6 @@ def test_shutdown(queue_type: Union[type[SimpleQueue], type[Queue]]):
         await q.async_put(1)
         await q.async_put(2)
         q.shutdown()
-        await asyncio.wait_for(task, 2)
+        assert await asyncio.wait_for(task, 2)
 
     asyncio.run(main())
-
