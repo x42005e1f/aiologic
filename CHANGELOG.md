@@ -24,6 +24,8 @@ Commit messages are consistent with
 - `aiologic.meta.SingletonEnum` as a base class that encapsulates common logic
   of all type-checker-friendly singleton classes (such as
   `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).
+- Some final classes now support runtime introspection via the `__final__`
+  attribute on all supported versions of Python.
 
 [0.15.0] - 2025-11-05
 ---------------------

@@ -4,20 +4,27 @@
 # SPDX-License-Identifier: ISC
 
 import enum
+import sys
 
-from typing import Final, Literal, NoReturn, final
+from typing import Final, NoReturn
+
+if sys.version_info >= (3, 11):  # a caching bug fix
+    from typing import Literal
+else:  # typing-extensions>=4.6.0
+    from typing_extensions import Literal
+
+if sys.version_info >= (3, 11):  # runtime introspection support
+    from typing import final
+else:  # typing-extensions>=4.1.0
+    from typing_extensions import final
 
 class SingletonEnum(enum.Enum):  # type: ignore[misc]
-    __slots__ = ()
-
     def __setattr__(self, /, name: str, value: object) -> None: ...
     def __repr__(self, /) -> str: ...
     def __str__(self, /) -> str: ...
 
 @final
 class DefaultType(SingletonEnum):
-    __slots__ = ()
-
     DEFAULT = "DEFAULT"
 
     def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...
@@ -25,8 +32,6 @@ class DefaultType(SingletonEnum):
 
 @final
 class MissingType(SingletonEnum):
-    __slots__ = ()
-
     MISSING = "MISSING"
 
     def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...

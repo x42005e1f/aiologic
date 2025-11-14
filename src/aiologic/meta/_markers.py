@@ -6,20 +6,38 @@
 from __future__ import annotations
 
 import enum
+import sys
 
 from types import MemberDescriptorType
-from typing import Final, Literal, NoReturn, final
+from typing import TYPE_CHECKING
 
-# We have to use the enum module so that type checkers can understand that the
-# instance is a singleton object. Otherwise, they will not be able to narrow
-# the type of a parameter that has the default value when `object is SINGLETON`
-# returns `False` (see enum literal expansion, aka exhaustiveness checking, or
-# https://peps.python.org/pep-0484/#support-for-singleton-types-in-unions).
+if sys.version_info >= (3, 11):  # `EnumMeta` has been renamed to `EnumType`
+    from enum import EnumType
+else:
+    from enum import EnumMeta as EnumType
+
+if TYPE_CHECKING:
+    from typing import Final, NoReturn
+
+    if sys.version_info >= (3, 11):  # a caching bug fix
+        from typing import Literal
+    else:  # typing-extensions>=4.6.0
+        from typing_extensions import Literal
+
+if sys.version_info >= (3, 11):  # runtime introspection support
+    from typing import final
+else:  # typing-extensions>=4.1.0
+    from typing_extensions import final
+
+# We have to use the `enum` module so that type checkers can understand that
+# the instance is a singleton object. Otherwise, they will not be able to
+# narrow the type of a parameter that has the default value when
+# `object is SINGLETON` returns `False` (see enum literal expansion, aka
+# exhaustiveness checking, or the "Support for singleton types in unions"
+# section in PEP 484).
 
 
-class __SingletonMeta(enum.EnumMeta):
-    __slots__ = ()
-
+class __SingletonMeta(EnumType):
     __DEFAULT = object()
 
     # to allow `type(SINGLETON)() is SINGLETON`
@@ -56,8 +74,6 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
       AttributeError: 'SingletonType' object has no attribute '_y'
     """
 
-    __slots__ = ()
-
     def __setattr__(self, /, name: str, value: object) -> None:
         if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
             super().__setattr__(name, value)
@@ -79,7 +95,7 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
         # raise an `AttributeError` on any attempt to set an unknown attribute,
         # suppressing its hints (which would occur if we set the `name` and
         # `obj` attributes of the exception object). Note, `enum.Enum` itself
-        # does not prohibit setting attributes!
+        # does not prohibit setting attributes (see python/cpython#90290)!
 
         msg = f"{cls_name!r} object has no attribute {name!r}"
         raise AttributeError(msg)
@@ -96,8 +112,6 @@ class DefaultType(SingletonEnum):
     """
     A singleton class for :data:`DEFAULT`; mimics :class:`NoneType`.
     """
-
-    __slots__ = ()
 
     DEFAULT = "DEFAULT"
 
@@ -120,8 +134,6 @@ class MissingType(SingletonEnum):
     """
     A singleton class for :data:`MISSING`; mimics :class:`NoneType`.
     """
-
-    __slots__ = ()
 
     MISSING = "MISSING"
 
