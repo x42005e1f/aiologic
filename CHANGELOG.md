@@ -27,6 +27,21 @@ Commit messages are consistent with
 - Some final classes now support runtime introspection via the `__final__`
   attribute on all supported versions of Python.
 
+### Fixed
+
+- `aiologic.meta.replaces()` performed replacement by the name of the replaced
+  function, which could lead to replacing an arbitrary object in the case of a
+  different `__name__` attribute value.
+- `aiologic.meta.replaces()` did not handle cases of parallel application to
+  the same function, which could lead to an `AttributeError` being raised in
+  such cases.
+- `aiologic.meta.copies()` used a function copying technique that was
+  incompatible with [Nuitka](https://github.com/Nuitka/Nuitka), resulting in a
+  `RuntimeError` when attempting to call the copied function after compilation.
+- `aiologic.meta.copies()` used the default keyword argument values of the
+  replaced function, which could lead to unexpected behavior when the default
+  values were different.
+
 [0.15.0] - 2025-11-05
 ---------------------
 

@@ -5,49 +5,49 @@
 
 import sys
 
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from ._markers import MISSING, MissingType
 
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
-
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9):  # PEP 585
     from collections.abc import Callable
 else:
     from typing import Callable
+
+if sys.version_info >= (3, 10):  # PEP 612
+    from typing import ParamSpec
+else:  # typing-extensions>=3.10.0
+    from typing_extensions import ParamSpec
+
+if sys.version_info >= (3, 11):  # runtime introspection support
+    from typing import overload
+else:  # typing-extensions>=4.2.0
+    from typing_extensions import overload
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
 @overload
 def replaces(
-    namespace: dict[str, Any],
-    wrapper: MissingType = MISSING,
+    namespace: dict[str, object],
+    replacer: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
 def replaces(
-    namespace: dict[str, Any],
-    wrapper: Callable[_P, _T],
+    namespace: dict[str, object],
+    replacer: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
 @overload
 def copies(
     original: Callable[_P, _T],
-    wrapper: MissingType = MISSING,
+    replaced: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
 def copies(
     original: Callable[_P, _T],
-    wrapper: Callable[_P, _T],
+    replaced: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...

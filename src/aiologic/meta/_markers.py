@@ -11,14 +11,15 @@ import sys
 from types import MemberDescriptorType
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from typing import Final, NoReturn
+
 if sys.version_info >= (3, 11):  # `EnumMeta` has been renamed to `EnumType`
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
 
 if TYPE_CHECKING:
-    from typing import Final, NoReturn
-
     if sys.version_info >= (3, 11):  # a caching bug fix
         from typing import Literal
     else:  # typing-extensions>=4.6.0
