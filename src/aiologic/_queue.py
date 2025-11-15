@@ -76,14 +76,12 @@ class QueueFull(Exception):
     """..."""
 
 
-class SimpleQueue(Generic[_T]):
-    """..."""
+class QueueShutdown(Exception):
+    pass
 
-    __slots__ = (
-        "__weakref__",
-        "_data",
-        "_semaphore",
-    )
+
+class SimpleQueue(Generic[_T]):
+    __slots__ = ("__weakref__", "_data", "_semaphore", "_shutdown")
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
         """..."""
@@ -96,7 +94,7 @@ class SimpleQueue(Generic[_T]):
             self._data = deque()
 
         self._semaphore = Semaphore(len(self._data))
-
+        self._shutdown = False
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
@@ -247,6 +245,9 @@ class SimpleQueue(Generic[_T]):
 
         success = await self._semaphore.async_acquire(blocking=blocking)
 
+        if self._shutdown:
+            raise QueueShutdown
+
         if not success:
             raise QueueEmpty
 
@@ -265,6 +266,11 @@ class SimpleQueue(Generic[_T]):
             blocking=blocking,
             timeout=timeout,
         )
+
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
 
         if not success:
             raise QueueEmpty
@@ -301,6 +307,10 @@ class SimpleQueue(Generic[_T]):
         """
 
         return self._semaphore.waiting
+
+    def shutdown(self) -> None:
+        self._shutdown = True
+        self._semaphore.release(self._semaphore.waiting)
 
 
 class SimpleLifoQueue(SimpleQueue[_T]):
@@ -449,6 +459,11 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         success = await self._semaphore.async_acquire(blocking=blocking)
 
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
+
         if not success:
             raise QueueEmpty
 
@@ -467,6 +482,11 @@ class SimpleLifoQueue(SimpleQueue[_T]):
             blocking=blocking,
             timeout=timeout,
         )
+
+        if self._shutdown:
+            if self._data:
+                self._data.clear()
+            raise QueueShutdown
 
         if not success:
             raise QueueEmpty
@@ -518,6 +538,7 @@ class Queue(Generic[_T]):
         "_maxsize",
         "_putters",
         "_putters_and_getters",
+        "_shutdown",
         "_unlocked",
         "_waiters",
     )
@@ -560,7 +581,7 @@ class Queue(Generic[_T]):
         self._getters = lazydeque()
 
         self._maxsize = maxsize
-
+        self._shutdown = False
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
@@ -867,6 +888,12 @@ class Queue(Generic[_T]):
             self._putters,
             blocking=blocking,
         )
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueShutdown
 
         if not acquired:
             raise QueueFull
@@ -893,6 +920,13 @@ class Queue(Generic[_T]):
             timeout=timeout,
         )
 
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueShutdown
+
         if not acquired:
             raise QueueFull
 
@@ -909,6 +943,13 @@ class Queue(Generic[_T]):
             self._getters,
             blocking=blocking,
         )
+
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueShutdown
 
         if not acquired:
             raise QueueEmpty
@@ -933,6 +974,13 @@ class Queue(Generic[_T]):
             blocking=blocking,
             timeout=timeout,
         )
+
+        if self._shutdown:
+            self._data.clear()
+            self._getters.clear()
+            self._putters.clear()
+            self._putters_and_getters.clear()
+            raise QueueShutdown
 
         if not acquired:
             raise QueueEmpty
@@ -1022,6 +1070,10 @@ class Queue(Generic[_T]):
         """
 
         return len(self._putters_and_getters)
+
+    def shutdown(self) -> None:
+        self._shutdown = True
+        self._release()
 
 
 class LifoQueue(Queue[_T]):
