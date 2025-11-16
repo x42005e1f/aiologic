@@ -10,15 +10,10 @@ from typing import Any, Final
 
 from .meta import DEFAULT, DefaultType
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
-
 if sys.version_info >= (3, 11):
-    from typing import Self, overload
+    from typing import Self
 else:
-    from typing_extensions import Self, overload
+    from typing_extensions import Self
 
 _USE_DELATTR: Final[bool]
 
@@ -31,11 +26,12 @@ class ResourceGuard:
         "_unlocked",
     )
 
-    @overload
-    @deprecated("Use keyword-only parameter instead")
-    def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
-    @overload
-    def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
+    def __new__(
+        cls,
+        _: DefaultType = DEFAULT,
+        /,
+        action: str | DefaultType = DEFAULT,
+    ) -> Self: ...
     def __getnewargs__(self, /) -> tuple[Any, ...]: ...
     def __getstate__(self, /) -> None: ...
     def __copy__(self, /) -> Self: ...

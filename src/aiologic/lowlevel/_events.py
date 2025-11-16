@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from abc import ABC, abstractmethod
 from typing import (
@@ -24,11 +23,6 @@ from ._locks import ThreadOnceLock
 from ._waiters import create_async_waiter, create_green_waiter
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
-
     if sys.version_info >= (3, 9):
         from collections.abc import Generator
     else:
@@ -84,18 +78,6 @@ class GreenEvent(ABC, Event):
     """..."""
 
     __slots__ = ()
-
-    def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
-        warnings.warn(
-            "Use create_green_event() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if cls is GreenEvent:
-            return _GreenEventImpl.__new__(_GreenEventImpl)
-
-        return object.__new__(cls)
 
     @abstractmethod
     def wait(self, /, timeout: float | None = None) -> bool:
@@ -160,18 +142,6 @@ class AsyncEvent(ABC, Event):
     """..."""
 
     __slots__ = ()
-
-    def __new__(cls, /, *, shield: bool = False, force: bool = False) -> Self:
-        warnings.warn(
-            "Use create_async_event() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if cls is AsyncEvent:
-            return _AsyncEventImpl.__new__(_AsyncEventImpl)
-
-        return object.__new__(cls)
 
     @abstractmethod
     def __await__(self, /) -> Generator[Any, Any, bool]:

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
@@ -121,13 +120,8 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
                     raise ValueError(msg)
 
                 if timeout < 0:
-                    warnings.warn(
-                        "Use timeout=max(0, timeout) instead",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-
-                    timeout = 0
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
 
                 if isinf(timeout):
                     timeout = None
@@ -211,13 +205,8 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
                     raise ValueError(msg)
 
                 if timeout < 0:
-                    warnings.warn(
-                        "Use timeout=max(0, timeout) instead",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-
-                    timeout = 0
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
 
                 if isinf(timeout):
                     timeout = None
@@ -337,13 +326,8 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
                     raise ValueError(msg)
 
                 if timeout < 0:
-                    warnings.warn(
-                        "Use timeout=max(0, timeout) instead",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-
-                    timeout = 0
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
 
                 if isinf(timeout):
                     timeout = None

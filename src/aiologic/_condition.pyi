@@ -10,7 +10,7 @@ from types import TracebackType
 from typing import Any, Final, Generic
 
 from . import lowlevel
-from ._lock import Lock, PLock, RLock
+from ._lock import Lock, RLock
 from ._semaphore import BinarySemaphore
 from .meta import DEFAULT, DefaultType
 
@@ -38,7 +38,6 @@ _T_co = TypeVar(
     "_T_co",
     bound=(
         Lock
-        | PLock
         | BinarySemaphore
         | lowlevel.ThreadRLock
         | lowlevel.ThreadLock
@@ -362,13 +361,6 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         predicate: None,
         timeout: float | None,
     ) -> bool: ...
-    def _async_owned(self, /) -> bool: ...
-    def _green_owned(self, /) -> bool: ...
-
-class _DMixedCondition(_MixedCondition[_T_co, _S_co]):
-    __slots__ = ()
-
-    def __bool__(self, /) -> bool: ...
     def _async_owned(self, /) -> bool: ...
     def _green_owned(self, /) -> bool: ...
 

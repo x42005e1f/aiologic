@@ -8,16 +8,6 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Any, Final, Literal, NoReturn, Protocol, final
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated
-else:
-    from typing_extensions import deprecated
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 if sys.version_info >= (3, 9):
     from collections.abc import Generator
 else:
@@ -44,14 +34,6 @@ class Event(Protocol):
 class GreenEvent(ABC, Event):
     __slots__ = ()
 
-    @deprecated("Use create_green_event() instead")
-    def __new__(
-        cls,
-        /,
-        *,
-        shield: bool = False,
-        force: bool = False,
-    ) -> Self: ...
     @abstractmethod
     def wait(self, /, timeout: float | None = None) -> bool: ...
     @abstractmethod
@@ -78,14 +60,6 @@ class GreenEvent(ABC, Event):
 class AsyncEvent(ABC, Event):
     __slots__ = ()
 
-    @deprecated("Use create_async_event() instead")
-    def __new__(
-        cls,
-        /,
-        *,
-        shield: bool = False,
-        force: bool = False,
-    ) -> Self: ...
     @abstractmethod
     def __await__(self, /) -> Generator[Any, Any, bool]: ...
     @abstractmethod

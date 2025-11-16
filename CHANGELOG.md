@@ -27,6 +27,16 @@ Commit messages are consistent with
 - Some final classes now support runtime introspection via the `__final__`
   attribute on all supported versions of Python.
 
+### Changed
+
+- `aiologic.Queue` and its derivatives now raise a `ValueError` when attempting
+  to pass a `maxsize` less than 1.
+- All timeouts now raise a `ValueError` for values less than zero.
+
+### Removed
+
+- All deprecated features (see `0.15.0`).
+
 ### Fixed
 
 - `aiologic.meta.replaces()` performed replacement by the name of the replaced

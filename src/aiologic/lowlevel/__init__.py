@@ -92,15 +92,3 @@ from ._waiters import (
     create_async_waiter as create_async_waiter,
     create_green_waiter as create_green_waiter,
 )
-
-# register deprecated content to __getattr_()
-from aiologic.meta import export_deprecated  # isort: skip
-
-export_deprecated(globals(), "DEFAULT", "aiologic.meta.DEFAULT")
-export_deprecated(globals(), "MISSING", "aiologic.meta.MISSING")
-export_deprecated(globals(), "DefaultType", "aiologic.meta.DefaultType")
-export_deprecated(globals(), "Flag", "aiologic.Flag")
-export_deprecated(globals(), "MissingType", "aiologic.meta.MissingType")
-export_deprecated(globals(), "checkpoint", "async_checkpoint")
-
-del export_deprecated
