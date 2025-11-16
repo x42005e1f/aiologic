@@ -111,7 +111,7 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
 @final
 class DefaultType(SingletonEnum):
     """
-    A singleton class for :data:`DEFAULT`; mimics :class:`NoneType`.
+    A singleton class for :data:`DEFAULT`; mimics :data:`~types.NoneType`.
     """
 
     DEFAULT = "DEFAULT"
@@ -133,7 +133,7 @@ class DefaultType(SingletonEnum):
 @final
 class MissingType(SingletonEnum):
     """
-    A singleton class for :data:`MISSING`; mimics :class:`NoneType`.
+    A singleton class for :data:`MISSING`; mimics :data:`~types.NoneType`.
     """
 
     MISSING = "MISSING"
