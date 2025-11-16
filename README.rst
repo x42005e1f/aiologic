@@ -99,6 +99,7 @@ Features
 * Python 3.8+ support
 * `CPython <https://www.python.org/>`__ and `PyPy <https://pypy.org/>`__
   support
+* Experimental `Nuitka <https://nuitka.net/>`__ support
 * `Pickling <https://docs.python.org/3/library/pickle.html>`__ and `weakrefing
   <https://docs.python.org/3/library/weakref.html>`__ support
 * Cancellation and timeouts support
