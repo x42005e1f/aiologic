@@ -14,10 +14,17 @@ from ._functions import (
 from ._helpers import (
     await_for as await_for,
 )
+from ._imports import (
+    import_from as import_from,
+    import_module as import_module,
+)
 from ._markers import (
     DEFAULT as DEFAULT,
     MISSING as MISSING,
     DefaultType as DefaultType,
     MissingType as MissingType,
     SingletonEnum as SingletonEnum,
+)
+from ._modules import (
+    resolve_name as resolve_name,
 )

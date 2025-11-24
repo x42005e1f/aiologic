@@ -409,6 +409,17 @@ Functions
 .. autofunction:: aiologic.meta.copies
 .. autofunction:: aiologic.meta.replaces
 
+Modules
++++++++
+
+.. autofunction:: aiologic.meta.resolve_name
+
+Imports
++++++++
+
+.. autofunction:: aiologic.meta.import_module
+.. autofunction:: aiologic.meta.import_from
+
 Exports
 +++++++
 

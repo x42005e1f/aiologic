@@ -26,6 +26,14 @@ Commit messages are consistent with
   `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).
 - Some final classes now support runtime introspection via the `__final__`
   attribute on all supported versions of Python.
+- `aiologic.meta.resolve_name()` as an alternative to
+  `importlib.util.resolve_name()` with more consistent behavior.
+- `aiologic.meta.import_module()` as an alternative to
+  `importlib.import_module()` with more consistent behavior.
+- `aiologic.meta.import_from()` as a way to import attributes from modules. It
+  differs from more naive solutions in that it raises an `ImportError` instead
+  of an `AttributeError`, while not allowing names like `*`, and also in that
+  it attempts to import submodules to achieve the expected behavior.
 
 ### Changed
 
