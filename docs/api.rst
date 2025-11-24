@@ -406,8 +406,8 @@ Singletons and markers
 Functions
 +++++++++
 
-.. autofunction:: aiologic.meta.copies
 .. autofunction:: aiologic.meta.replaces
+.. autofunction:: aiologic.meta.copies
 
 Modules
 +++++++

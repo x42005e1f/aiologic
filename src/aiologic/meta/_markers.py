@@ -64,8 +64,8 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
 
     Example:
       >>> class SingletonType(SingletonEnum):
-      ...     __slots__ = ("_x",)
-      ...     SINGLETON = "SINGLETON"
+      ...     __slots__ = ('_x',)
+      ...     SINGLETON = 'SINGLETON'
       >>> SINGLETON = SingletonType.SINGLETON
       >>> repr(SINGLETON) == f"{__name__}.SINGLETON"
       True
@@ -81,7 +81,7 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
             return
 
         cls = self.__class__
-        cls_name = cls.__qualname__
+        cls_qualname = cls.__qualname__
 
         # We allow setting attributes for user-defined slots to better match
         # expected behavior. Although this goes against the concept in a sense
@@ -98,7 +98,7 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
         # `obj` attributes of the exception object). Note, `enum.Enum` itself
         # does not prohibit setting attributes (see python/cpython#90290)!
 
-        msg = f"{cls_name!r} object has no attribute {name!r}"
+        msg = f"{cls_qualname!r} object has no attribute {name!r}"
         raise AttributeError(msg)
 
     def __repr__(self, /) -> str:

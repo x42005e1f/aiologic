@@ -86,7 +86,7 @@ def replaces(namespace, replacer=MISSING, /):
     # parallel calls) on the same namespace to functions of the same name, they
     # will refer to each other via the `__wrapped__` attribute, which will
     # prevent them from being deleted from memory. Therefore, we delete the
-    # attribute after the call to eliminate the reference chain.
+    # attribute after the call to break the reference chain.
 
     update_wrapper(replacer, namespace[name])
 
@@ -150,8 +150,8 @@ def copies(original, replaced=MISSING, /):
     # checking to speed up initialization and prevent possible type errors.
 
     if isinstance(original, FunctionType) and not TYPE_CHECKING:
-        if (clone := getattr(original, "clone", None)) is not None:  # Nuitka
-            copy = clone()
+        if hasattr(original, "clone"):  # Nuitka
+            copy = original.clone()
         else:
             copy = FunctionType(
                 original.__code__,
