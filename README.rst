@@ -10,8 +10,6 @@
 aiologic
 ========
 
-.. badges-start-marker
-
 |pypi-dw| |pypi-impl| |pypi-pyv| |pypi-types|
 
 .. |pypi-dw| image:: https://img.shields.io/pypi/dw/aiologic
@@ -26,8 +24,6 @@ aiologic
 .. |pypi-types| image:: https://img.shields.io/pypi/types/aiologic
   :target: #features
   :alt:
-
-.. badges-end-marker
 
 .. description-start-marker
 
