@@ -92,19 +92,25 @@ def _import_one(module: ModuleType, name: str, /) -> object:
     module_name = module.__name__
     module_path = getattr(module, "__file__", "")
 
-    submodule_name = f"{module_name}.{name}"
+    # Not all module objects are "real". For example,
+    # `eventlet.patcher.original()` returns a module that is an unpatched
+    # version of an existing one, but exists separately, and thus imports of
+    # submodules have no effect on it.
 
-    # to mimic the `from` clause's behavior (see the `import` statement)
-    try:
-        import_module(submodule_name)
-    except ModuleNotFoundError as exc:
-        if exc.name != submodule_name:
-            raise  # a side import
-    else:
+    if sys.modules.get(module_name) is module:
+        submodule_name = f"{module_name}.{name}"
+
+        # to mimic the `from` clause's behavior (see the `import` statement)
         try:
-            return getattr(module, name)
-        except AttributeError:
-            pass
+            import_module(submodule_name)
+        except ModuleNotFoundError as exc:
+            if exc.name != submodule_name:
+                raise  # a side import
+        else:
+            try:
+                return getattr(module, name)
+            except AttributeError:
+                pass
 
     msg = (
         f"cannot import name {name!r}"
