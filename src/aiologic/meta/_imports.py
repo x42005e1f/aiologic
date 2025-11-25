@@ -27,9 +27,9 @@ if sys.version_info >= (3, 9):
         """
         Import a module by *name* (absolute or relative to *package*).
 
-        The same as :func:`importlib.import_module`, but raises
-        :exc:`ImportError` instead of :exc:`ValueError` on Python <3.9 to
-        achieve consistent behavior across all supported versions of Python.
+        Like :func:`importlib.import_module`, but raises :exc:`ImportError`
+        instead of :exc:`ValueError` on Python <3.9 to achieve consistent
+        behavior across all supported versions of Python.
 
         Example:
           >>> import_module('sys')
@@ -52,9 +52,9 @@ else:
         """
         Import a module by *name* (absolute or relative to *package*).
 
-        The same as :func:`importlib.import_module`, but raises
-        :exc:`ImportError` instead of :exc:`ValueError` on Python <3.9 to
-        achieve consistent behavior across all supported versions of Python.
+        Like :func:`importlib.import_module`, but raises :exc:`ImportError`
+        instead of :exc:`ValueError` on Python <3.9 to achieve consistent
+        behavior across all supported versions of Python.
 
         Example:
           >>> import_module('sys')

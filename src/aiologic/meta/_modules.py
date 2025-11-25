@@ -14,12 +14,6 @@ def resolve_name(name: str, package: str | None) -> str:
     instead of :exc:`ImportError` on Python ≥3.9 to achieve consistent
     behavior across all supported versions of Python.
 
-    Raises:
-      ValueError:
-        if *name* is a relative module name but *package* cannot contain *name*
-        (e.g., requesting ``..bacon`` from within the ``spam`` package) or is a
-        false value (e.g., :data:`None` or the empty string).
-
     Example:
       >>> resolve_name('.', 'a.b')
       'a.b'
