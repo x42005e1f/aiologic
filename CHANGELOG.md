@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.__version__` and `aiologic.__version_tuple__` as a way to retrieve
+  the package version at runtime.
 - `aiologic.meta.SingletonEnum` as a base class that encapsulates common logic
   of all type-checker-friendly singleton classes (such as
   `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).

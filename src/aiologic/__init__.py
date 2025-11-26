@@ -3,6 +3,11 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+from __future__ import annotations
+
+__version__: str
+__version_tuple__: tuple[int | str, ...]
+
 from . import (  # noqa: F401
     lowlevel,
     meta,
@@ -57,3 +62,5 @@ from ._semaphore import (
 
 # prepare for external use
 meta.export(globals())
+meta.export_dynamic(globals(), "__version__", "._version.version")
+meta.export_dynamic(globals(), "__version_tuple__", "._version.version_tuple")
