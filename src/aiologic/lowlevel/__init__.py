@@ -3,6 +3,14 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+"""
+This package implements building blocks for top-level primitives, specifically
+low-level primitives, and a number of important mechanisms such as checkpoints.
+
+You can use its contents to create your own primitives or fine-tune existing
+ones. In addition, it also provides features that are useful on their own.
+"""
+
 from ._checkpoints import (
     async_checkpoint as async_checkpoint,
     async_checkpoint_enabled as async_checkpoint_enabled,

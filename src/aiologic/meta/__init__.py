@@ -3,6 +3,12 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+"""
+This package implements some metaprogramming techniques and concepts that are
+used for the library's own needs. Although many of them are designed for
+internal use, you can also use them for your own purposes.
+"""
+
 from ._exports import (
     export as export,
     export_deprecated as export_deprecated,
