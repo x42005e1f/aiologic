@@ -55,5 +55,5 @@ from ._semaphore import (
     Semaphore as Semaphore,
 )
 
-# update .__module__ attributes for shorter representation and better pickling
+# prepare for external use
 meta.export(globals())

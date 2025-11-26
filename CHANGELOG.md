@@ -24,8 +24,6 @@ Commit messages are consistent with
 - `aiologic.meta.SingletonEnum` as a base class that encapsulates common logic
   of all type-checker-friendly singleton classes (such as
   `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).
-- Some final classes now support runtime introspection via the `__final__`
-  attribute on all supported versions of Python.
 - `aiologic.meta.resolve_name()` as an alternative to
   `importlib.util.resolve_name()` with more consistent behavior.
 - `aiologic.meta.import_module()` as an alternative to
@@ -34,9 +32,37 @@ Commit messages are consistent with
   differs from more naive solutions in that it raises an `ImportError` instead
   of an `AttributeError`, while not allowing names like `*`, and also in that
   it attempts to import submodules to achieve the expected behavior.
+- `aiologic.meta.export_dynamic()` as an alternative to
+  `aiologic.meta.export_deprecated()` that does not raise a
+  `DeprecationWarning`. Useful for optional features that may be missing at
+  runtime but should be available at the package level.
+- `aiologic.meta.export()` and `aiologic.meta.export_deprecated()` now support
+  passing module objects, which should simplify their use for manually created
+  module objects.
+- Final classes from `aiologic.meta` now support runtime introspection via the
+  `__final__` attribute on all supported versions of Python.
 
 ### Changed
 
+- `aiologic.meta.export()` has been redesigned:
+  + It now updates not only the `__module__` attribute, but also name-related
+    attributes. This provides the expected representation in cases where
+    functions are created dynamically in a different context with a different
+    name.
+  + Attributes are only updated if the object type matches one of the supported
+    types, which protects against undefined behavior due to problematic types
+    (such as singletons that provide a read-only `__module__` attribute).
+  + When a class is encountered, its members are also updated (recursively).
+    This allows its functions to be referenced safely. In addition, properties
+    and class/static methods are now also processed.
+  + All non-public attributes are now skipped, which should reduce the number
+    of operations performed.
+  + For each package, it now builds a human-readable `__all__`, which gives the
+    expected behavior of `from package import *` (in particular, public
+    subpackages are now excluded) and also simplifies analysis.
+- `aiologic.meta.export_deprecated()` now does additional checks before
+  registering a link, and also relies on the new `importlib`-like functions,
+  which should make it safer to use.
 - `aiologic.Queue` and its derivatives now raise a `ValueError` when attempting
   to pass a `maxsize` less than 1.
 - All timeouts now raise a `ValueError` for values less than zero.

@@ -424,6 +424,7 @@ Exports
 +++++++
 
 .. autofunction:: aiologic.meta.export
+.. autofunction:: aiologic.meta.export_dynamic
 .. autofunction:: aiologic.meta.export_deprecated
 
 Helpers

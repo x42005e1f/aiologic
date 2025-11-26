@@ -72,7 +72,6 @@ else:
         # raises a `TypeError` for a relative name when the package is `None`
         # (or the empty string). We are preserving this behavior to avoid
         # redefining the function on Python ≥3.9.
-
         if name.startswith(".") and package:
             try:
                 name = _resolve_name_impl(name, package)
@@ -96,7 +95,6 @@ def _import_one(module: ModuleType, name: str, /) -> object:
     # `eventlet.patcher.original()` returns a module that is an unpatched
     # version of an existing one, but exists separately, and thus imports of
     # submodules have no effect on it.
-
     if sys.modules.get(module_name) is module:
         submodule_name = f"{module_name}.{name}"
 

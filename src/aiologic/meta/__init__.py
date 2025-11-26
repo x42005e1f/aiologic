@@ -6,6 +6,7 @@
 from ._exports import (
     export as export,
     export_deprecated as export_deprecated,
+    export_dynamic as export_dynamic,
 )
 from ._functions import (
     copies as copies,

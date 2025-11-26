@@ -79,7 +79,6 @@ def replaces(namespace, replacer=MISSING, /):
     # The replaced function may have a different `__name__` attribute value
     # than the replacer, so we must always use the name obtained before
     # wrapping.
-
     name = replacer.__name__
 
     # When `update_wrapper()` is applied sequentially (a special case of
@@ -87,13 +86,11 @@ def replaces(namespace, replacer=MISSING, /):
     # will refer to each other via the `__wrapped__` attribute, which will
     # prevent them from being deleted from memory. Therefore, we delete the
     # attribute after the call to break the reference chain.
-
     update_wrapper(replacer, namespace[name])
 
     # Usually, the decorator is called for a newly defined function, but it can
     # also be used in parallel for older ones, so we have to handle concurrent
     # attempts to delete the attribute.
-
     try:
         del replacer.__wrapped__
     except AttributeError:  # already deleted
@@ -148,7 +145,6 @@ def copies(original, replaced=MISSING, /):
     # this is possible, but it makes less sense there), so we ignore anything
     # that is not a user-defined function. We also skip the function on type
     # checking to speed up initialization and prevent possible type errors.
-
     if isinstance(original, FunctionType) and not TYPE_CHECKING:
         if hasattr(original, "clone"):  # Nuitka
             copy = original.clone()

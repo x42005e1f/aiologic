@@ -87,7 +87,6 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
         # expected behavior. Although this goes against the concept in a sense
         # (since data for an instance can be set at the class/module level
         # instead), it may contribute to new usage scenarios.
-
         if isinstance(getattr(cls, name, None), MemberDescriptorType):
             super().__setattr__(name, value)
             return
@@ -97,7 +96,6 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
         # suppressing its hints (which would occur if we set the `name` and
         # `obj` attributes of the exception object). Note, `enum.Enum` itself
         # does not prohibit setting attributes (see python/cpython#90290)!
-
         msg = f"{cls_qualname!r} object has no attribute {name!r}"
         raise AttributeError(msg)
 
