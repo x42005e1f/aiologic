@@ -19,6 +19,11 @@ from ._modules import resolve_name
 if TYPE_CHECKING:
     from ._markers import DefaultType
 
+    if sys.version_info >= (3, 9):  # PEP 585
+        from collections.abc import MutableMapping
+    else:
+        from typing import MutableMapping
+
 if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import get_overloads, overload
 else:  # typing-extensions>=4.2.0
@@ -141,7 +146,10 @@ def _export_one(
             value.__name__ = name
 
 
-def export(package_namespace: ModuleType | dict[str, object], /) -> None:
+def export(
+    package_namespace: ModuleType | MutableMapping[str, object],
+    /,
+) -> None:
     """
     Prepare *package_namespace* for external use.
 
@@ -219,7 +227,7 @@ def export(package_namespace: ModuleType | dict[str, object], /) -> None:
 
 
 def _register(
-    module_namespace: ModuleType | dict[str, object],
+    module_namespace: ModuleType | MutableMapping[str, object],
     link_name: str,
     target: str,
     /,
@@ -367,7 +375,7 @@ def _register(
 
 
 def export_dynamic(
-    module_namespace: ModuleType | dict[str, object],
+    module_namespace: ModuleType | MutableMapping[str, object],
     link_name: str,
     target: str,
     /,
@@ -401,7 +409,7 @@ def export_dynamic(
 
 
 def export_deprecated(
-    module_namespace: ModuleType | dict[str, object],
+    module_namespace: ModuleType | MutableMapping[str, object],
     link_name: str,
     target: str,
     /,

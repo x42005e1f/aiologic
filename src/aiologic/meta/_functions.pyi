@@ -10,9 +10,9 @@ from typing import TypeVar
 from ._markers import MISSING, MissingType
 
 if sys.version_info >= (3, 9):  # PEP 585
-    from collections.abc import Callable
+    from collections.abc import Callable, MutableMapping
 else:
-    from typing import Callable
+    from typing import Callable, MutableMapping
 
 if sys.version_info >= (3, 10):  # PEP 612
     from typing import ParamSpec
@@ -29,13 +29,13 @@ _P = ParamSpec("_P")
 
 @overload
 def replaces(
-    namespace: dict[str, object],
+    namespace: MutableMapping[str, object],
     replacer: MissingType = MISSING,
     /,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 @overload
 def replaces(
-    namespace: dict[str, object],
+    namespace: MutableMapping[str, object],
     replacer: Callable[_P, _T],
     /,
 ) -> Callable[_P, _T]: ...
