@@ -65,6 +65,9 @@ Commit messages are consistent with
 - `aiologic.meta.export_deprecated()` now does additional checks before
   registering a link, and also relies on the new `importlib`-like functions,
   which should make it safer to use.
+- Non-public functions for importing original objects now implement
+  `aiologic.meta.import_from()`-like behavior, making them more predictable
+  (relevant for a green-patched world).
 - `aiologic.Queue` and its derivatives now raise a `ValueError` when attempting
   to pass a `maxsize` less than 1.
 - All timeouts now raise a `ValueError` for values less than zero.

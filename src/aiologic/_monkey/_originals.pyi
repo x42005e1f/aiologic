@@ -6,27 +6,48 @@
 import sys
 
 from types import ModuleType
-from typing import Any
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import overload
-else:
+else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 def _eventlet_patched(module_name: str, /) -> bool: ...
 def _gevent_patched(module_name: str, /) -> bool: ...
 def patched(module_name: str, /) -> bool: ...
-def _import_python_original(module_name: str, /) -> ModuleType: ...
+@overload
 def _import_eventlet_original(module_name: str, /) -> ModuleType: ...
+@overload
+def _import_eventlet_original(module_name: str, name0: str, /) -> object: ...
+@overload
+def _import_eventlet_original(
+    module_name: str,
+    name0: str,
+    name1: str,
+    /,
+    *names: str,
+) -> tuple[object, ...]: ...
+@overload
+def _import_gevent_original(module_name: str, /) -> ModuleType: ...
+@overload
+def _import_gevent_original(module_name: str, name0: str, /) -> object: ...
 @overload
 def _import_gevent_original(
     module_name: str,
-    name: None = None,
+    name0: str,
+    name1: str,
     /,
-) -> ModuleType: ...
+    *names: str,
+) -> tuple[object, ...]: ...
 @overload
-def _import_gevent_original(module_name: str, name: str, /) -> Any: ...
+def import_original(module_name: str, /) -> ModuleType: ...
 @overload
-def import_original(module_name: str, name: None = None, /) -> ModuleType: ...
+def import_original(module_name: str, name0: str, /) -> object: ...
 @overload
-def import_original(module_name: str, name: str, /) -> Any: ...
+def import_original(
+    module_name: str,
+    name0: str,
+    name1: str,
+    /,
+    *names: str,
+) -> tuple[object, ...]: ...
