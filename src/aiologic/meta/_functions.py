@@ -93,7 +93,7 @@ def replaces(namespace, replacer=MISSING, /):
     # attempts to delete the attribute.
     try:
         del replacer.__wrapped__
-    except AttributeError:  # already deleted
+    except AttributeError:
         pass
 
     namespace[name] = replacer
