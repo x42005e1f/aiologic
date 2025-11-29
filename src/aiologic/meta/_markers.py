@@ -115,7 +115,7 @@ class DefaultType(SingletonEnum):
     DEFAULT = "DEFAULT"
 
     def __init_subclass__(cls, /, **kwargs: object) -> NoReturn:
-        bcs = DefaultType
+        bcs = __class__  # an implicit closure reference
         bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
 
         # Although enum classes with defined members cannot be subclassed in
@@ -137,7 +137,7 @@ class MissingType(SingletonEnum):
     MISSING = "MISSING"
 
     def __init_subclass__(cls, /, **kwargs: object) -> NoReturn:
-        bcs = MissingType
+        bcs = __class__  # an implicit closure reference
         bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
 
         # Although enum classes with defined members cannot be subclassed in
