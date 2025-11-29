@@ -191,7 +191,7 @@ Documentation
 
 Read the Docs: https://aiologic.readthedocs.io (official)
 
-DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated)
+DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated; lying!)
 
 Communication channels
 ======================

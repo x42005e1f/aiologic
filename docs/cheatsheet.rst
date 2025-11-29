@@ -1091,29 +1091,29 @@ documentation is gradually increasing, describing more and more details. But if
 you want to get the information right now, there are several ways:
 
 0. Open the rest of the documentation if you have not already done so.
-1. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`__ or ask
-   Devin there as well. The information there is generated from both the source
-   code and the documentation you are reading right now. Although Devin may lie
-   sometimes (because it is an AI) or not know about some things (especially
-   complex concurrent things), it gets smarter with every documentation update
-   and can tell you what to do in your particular case.
-2. Read `the author's answers on Stack Overflow <https://stackoverflow.com/
+1. Read `the author's answers on Stack Overflow <https://stackoverflow.com/
    users/27526808/ilya-egorov?tab=answers>`__. Many of them reveal the use of
    aiologic in specific use cases and even contain unique information that you
    may not find within the documentation.
-3. Check out `the changelog <./changelog.html>`__. It has information about
+2. Check out `the changelog <./changelog.html>`__. It has information about
    some non-trivial things.
-4. Look at `the source code <https://github.com/x42005e1f/aiologic>`__. Stub
+3. Look at `the source code <https://github.com/x42005e1f/aiologic>`__. Stub
    files (``.pyi`` files) can serve as a good guide to the interfaces, and you
    can also learn a lot just by reading the implementation code. Note, however,
    that understanding some behaviors requires more than just being able to read
    source code.
-5. Ask your question on `GitHub Discussions <https://github.com/x42005e1f/
+4. Ask your question on `GitHub Discussions <https://github.com/x42005e1f/
    aiologic/discussions>`__ or `write to the author
    <mailto:0x42005e1f@gmail.com>`__. Response times vary, but you can expect a
    quality answer. Moreover, this way you will show your interest in the
    project, and thus give the author extra motivation to keep working on it. Do
    not be afraid to give feedback.
+5. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`__ or ask
+   Devin there as well. The information there is generated from both the source
+   code and the documentation you are reading right now. Although Devin may lie
+   sometimes (because it is an AI; and lies a lot) or not know about some
+   things (especially complex concurrent things)... it can tell you what to do
+   in your particular case. But be extremely skeptical!
 
 .. note::
 
