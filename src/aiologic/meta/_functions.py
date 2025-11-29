@@ -54,10 +54,10 @@ def replaces(namespace, replacer=MISSING, /):
     """
     Wrap and replace the function of the same name in *namespace*.
 
-    Used for global rebinding.
-
     Unlike :func:`functools.wraps`, excludes the ``__wrapped__`` attribute to
     avoid memory leaks in a multithreaded environment.
+
+    Used for global rebinding.
 
     Example:
       >>> def sketch():
@@ -118,9 +118,15 @@ def copies(original, replaced=MISSING, /):
     Replace with a copy of *original* if that is a user-defined function, and
     make the copy look like *replaced* function.
 
+    If *original* and *replaced* are the same function, it forces copying
+    (``copies(func, func)`` is always a new copy of ``func``). Otherwise, does
+    nothing on type checking to prevent type errors.
+
     Used to optimize functions which delegate all the work to others.
 
-    Does nothing on type checking.
+    Raises:
+      TypeError:
+        if copying is forced and *original* is not a user-defined function.
 
     Example:
       >>> def sig1():
@@ -141,24 +147,33 @@ def copies(original, replaced=MISSING, /):
     if replaced is MISSING:
         return partial(copies, original)
 
-    # We cannot copy built-in functions (at least on CPython; on PyPy, however,
-    # this is possible, but it makes less sense there), so we ignore anything
-    # that is not a user-defined function. We also skip the function on type
-    # checking to speed up initialization and prevent possible type errors.
-    if isinstance(original, FunctionType) and not TYPE_CHECKING:
-        if hasattr(original, "clone"):  # Nuitka
-            copy = original.clone()
-        else:
-            copy = FunctionType(
-                original.__code__,
-                original.__globals__,
-                original.__name__,
-                original.__defaults__,
-                original.__closure__,
-            )
-            # python/cpython#112640
-            copy.__kwdefaults__ = original.__kwdefaults__
+    # We skip the function on type checking to speed up initialization and
+    # prevent possible type errors.
+    if TYPE_CHECKING:
+        if replaced is not original:
+            return replaced
 
-        return update_wrapper(copy, replaced)
+    # We also cannot copy built-in functions (at least on CPython; on PyPy,
+    # however, this is possible, but it makes less sense there), so we ignore
+    # anything that is not a user-defined function.
+    if not isinstance(original, FunctionType):
+        if replaced is not original:
+            return replaced
 
-    return replaced
+        msg = "cannot copy non-user-defined functions"
+        raise TypeError(msg)
+
+    if hasattr(original, "clone"):  # Nuitka
+        copy = original.clone()
+    else:
+        copy = FunctionType(
+            original.__code__,
+            original.__globals__,
+            original.__name__,
+            original.__defaults__,
+            original.__closure__,
+        )
+        # python/cpython#112640
+        copy.__kwdefaults__ = original.__kwdefaults__
+
+    return update_wrapper(copy, replaced)
