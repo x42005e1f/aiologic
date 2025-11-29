@@ -21,6 +21,9 @@ Commit messages are consistent with
 
 ### Changed
 
+- `aiologic.meta.replaces()` now raises a `LookupError` with an informative
+  message instead of a `KeyError` if there is no function of the same name in
+  the namespace, which should make debugging easier.
 - `aiologic.meta.copies()` now forces copying when both functions are the same
   object, which increases its scope of application.
 

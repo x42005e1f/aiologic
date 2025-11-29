@@ -59,6 +59,10 @@ def replaces(namespace, replacer=MISSING, /):
 
     Used for global rebinding.
 
+    Raises:
+      LookupError:
+        if there is no function of the same name in *namespace*.
+
     Example:
       >>> def sketch():
       ...     return 'parrot'
@@ -86,7 +90,21 @@ def replaces(namespace, replacer=MISSING, /):
     # will refer to each other via the `__wrapped__` attribute, which will
     # prevent them from being deleted from memory. Therefore, we delete the
     # attribute after the call to break the reference chain.
-    update_wrapper(replacer, namespace[name])
+
+    # The `KeyError` when the retrieval fails is not informative enough, so it
+    # is replaced with a `LookupError` with a more informative error message.
+    try:
+        wrapped = namespace[name]
+    except KeyError:
+        if "__spec__" in namespace:  # a module namespace
+            namespace_repr = f"module {namespace['__name__']!r}"
+        else:
+            namespace_repr = "`namespace`"
+
+        msg = f"{namespace_repr} has no function {name!r}"
+        raise LookupError(msg) from None
+    else:
+        update_wrapper(replacer, wrapped)
 
     # Usually, the decorator is called for a newly defined function, but it can
     # also be used in parallel for older ones, so we have to handle concurrent
