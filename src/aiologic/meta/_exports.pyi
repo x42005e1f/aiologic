@@ -6,6 +6,7 @@
 import sys
 
 from types import ModuleType
+from typing import Any
 
 from ._markers import DEFAULT, DefaultType
 
@@ -14,6 +15,16 @@ if sys.version_info >= (3, 9):  # PEP 585
 else:
     from typing import MutableMapping
 
+if sys.version_info >= (3, 13):  # PEP 742
+    from typing import TypeIs
+else:  # typing-extensions>=4.10.0
+    from typing_extensions import TypeIs
+
+def _isbuiltindescriptor(
+    value: object,
+    /,
+) -> TypeIs[classmethod[Any, Any, Any] | staticmethod[Any, Any]]: ...
+def _isproperty(value: object, /) -> TypeIs[property]: ...
 def _issubmodule(module_name: str | None, package_name: str, /) -> bool: ...
 def _export_one(
     package_name: str,

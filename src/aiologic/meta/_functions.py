@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 
 from functools import partial, update_wrapper
+from inspect import isfunction
 from types import FunctionType
 from typing import TYPE_CHECKING
 
@@ -174,7 +175,7 @@ def copies(original, replaced=MISSING, /):
     # We also cannot copy built-in functions (at least on CPython; on PyPy,
     # however, this is possible, but it makes less sense there), so we ignore
     # anything that is not a user-defined function.
-    if not isinstance(original, FunctionType):
+    if not isfunction(original):
         if replaced is not original:
             return replaced
 

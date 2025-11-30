@@ -9,7 +9,7 @@ import sys
 import warnings
 import weakref
 
-from types import FunctionType, ModuleType
+from inspect import isclass, isfunction, ismodule
 from typing import TYPE_CHECKING
 
 from ._imports import import_from
@@ -17,6 +17,9 @@ from ._markers import DEFAULT
 from ._modules import resolve_name
 
 if TYPE_CHECKING:
+    from types import ModuleType
+    from typing import Any
+
     from ._markers import DefaultType
 
     if sys.version_info >= (3, 9):  # PEP 585
@@ -24,10 +27,26 @@ if TYPE_CHECKING:
     else:
         from typing import MutableMapping
 
+    if sys.version_info >= (3, 13):  # PEP 742
+        from typing import TypeIs
+    else:  # typing-extensions>=4.10.0
+        from typing_extensions import TypeIs
+
 if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import get_overloads, overload
 else:  # typing-extensions>=4.2.0
     from typing_extensions import get_overloads, overload
+
+
+def _isbuiltindescriptor(
+    value: object,
+    /,
+) -> TypeIs[classmethod[Any, Any, Any] | staticmethod[Any, Any]]:
+    return isinstance(value, (classmethod, staticmethod))
+
+
+def _isproperty(value: object, /) -> TypeIs[property]:
+    return isinstance(value, property)
 
 
 def _issubmodule(module_name: str | None, package_name: str, /) -> bool:
@@ -51,7 +70,7 @@ def _export_one(
     # other problematic objects that provide a read-only `__module__`
     # attribute.
 
-    if isinstance(value, type):
+    if isclass(value):
         # When we encounter a class, we apply the function not only to it, but
         # also recursively to its members. This allows the user to safely
         # reference class functions during pickling.
@@ -100,7 +119,7 @@ def _export_one(
         value.__name__ = name
         value.__qualname__ = qualname
         value.__module__ = package_name
-    elif isinstance(value, FunctionType):
+    elif isfunction(value):
         # To avoid changing attributes of objects that are not under our
         # control, we explicitly check whether the function belongs to our
         # package. However, keep in mind that this does not eliminate
@@ -122,7 +141,7 @@ def _export_one(
         value.__name__ = name
         value.__qualname__ = qualname
         value.__module__ = package_name
-    elif isinstance(value, (classmethod, staticmethod)):
+    elif _isbuiltindescriptor(value):
         # We cannot reliably check whether the `classmethod`/`staticmethod`
         # instance belongs to the package, so we always assume that it does.
 
@@ -132,7 +151,7 @@ def _export_one(
             value.__name__ = name
             value.__qualname__ = qualname
             value.__module__ = package_name
-    elif isinstance(value, property):
+    elif _isproperty(value):
         # We cannot reliably check whether the `property` instance belongs to
         # the package, so we always assume that it does.
 
@@ -191,7 +210,7 @@ def export(
         # `SPHINX_AUTODOC_RELOAD_MODULES=1`).
         return
 
-    if isinstance(package_namespace, ModuleType):
+    if ismodule(package_namespace):
         package_name = package_namespace.__name__
         package_namespace = vars(package_namespace)
     else:
@@ -204,7 +223,7 @@ def export(
         if name.startswith("_"):
             continue  # skip non-public ones
 
-        if isinstance(value, ModuleType):
+        if ismodule(value):
             # When we encounter another public package (we require all modules
             # to be non-public to avoid redundant operations), we apply the
             # function recursively to it. This allows us to avoid manually
@@ -234,7 +253,7 @@ def _register(
     *,
     deprecated: bool,
 ) -> None:
-    if isinstance(module_namespace, ModuleType):
+    if ismodule(module_namespace):
         module = module_namespace
         module_name = module_namespace.__name__
         module_namespace = vars(module_namespace)
@@ -315,7 +334,7 @@ def _register(
                         )
                     elif not name.startswith("_"):
                         # see the `export()` function
-                        if not isinstance(value, ModuleType):
+                        if not ismodule(value):
                             _export_one(module_name, name, name, value)
                         elif value.__name__.rpartition(".")[0] == module_name:
                             export(value)

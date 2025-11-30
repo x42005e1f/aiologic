@@ -8,7 +8,7 @@ from __future__ import annotations
 import enum
 import sys
 
-from types import MemberDescriptorType
+from inspect import ismemberdescriptor
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ class SingletonEnum(enum.Enum, metaclass=__SingletonMeta):
         # expected behavior. Although this goes against the concept in a sense
         # (since data for an instance can be set at the class/module level
         # instead), it may contribute to new usage scenarios.
-        if isinstance(getattr(cls, name, None), MemberDescriptorType):
+        if ismemberdescriptor(getattr(cls, name, None)):
             super().__setattr__(name, value)
             return
 

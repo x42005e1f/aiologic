@@ -63,7 +63,7 @@ keywords = [
 ]
 dependencies = [
     "sniffio>=1.3.0",
-    "typing-extensions>=4.6.0; python_version<'3.13'",
+    "typing-extensions>=4.10.0; python_version<'3.13'",
     "wrapt>=1.16.0",
 ]
 
