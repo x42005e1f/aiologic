@@ -219,7 +219,15 @@ def export(
     public_names = []
 
     # copy the namespace so that it works in case of parallel calls
-    for name, value in {**package_namespace}.items():
+    copied_namespace = {**package_namespace}
+
+    if copied_namespace.get("TYPE_CHECKING") is TYPE_CHECKING:
+        del copied_namespace["TYPE_CHECKING"]  # skip `typing.TYPE_CHECKING`
+
+    if copied_namespace.get("annotations") is annotations:
+        del copied_namespace["annotations"]  # skip `__future__.annotations`
+
+    for name, value in copied_namespace.items():
         if name.startswith("_"):
             continue  # skip non-public ones
 

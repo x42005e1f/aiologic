@@ -31,6 +31,13 @@ Commit messages are consistent with
 - `aiologic.meta.copies()` now forces copying when both functions are the same
   object, which increases its scope of application.
 
+### Fixed
+
+- Since `aiologic.meta.export()` includes all public names in `__all__`,
+  `__future__.annotations` and `typing.TYPE_CHECKING` were also included (as
+  'annotations' and 'TYPE_CHECKING', respectively) if they were imported in
+  `__init__.py`.
+
 [0.16.0] - 2025-11-27
 ---------------------
 
