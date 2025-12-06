@@ -43,13 +43,17 @@ class __SingletonMeta(EnumType):
 
     # to allow `type(SINGLETON)() is SINGLETON`
     def __call__(cls, /, value=__DEFAULT, *args, **kwargs):
-        DEFAULT = cls.__DEFAULT
+        if value is cls.__DEFAULT:
+            # If more than one member (or none members) is defined, it is
+            # unknown which one the user wants to receive. Also, if additional
+            # parameters are passed, the action is aimed at creating a new
+            # instance rather than looking up an existing one. Therefore, in
+            # such cases, we fall back to the parent implementation, which will
+            # raise a `TypeError`.
+            if len(cls) != 1 or args or kwargs:
+                return super().__call__(*args, **kwargs)
 
-        if value is DEFAULT:
-            if (member := next(iter(cls), DEFAULT)) is not DEFAULT:
-                return super().__call__(member.value, *args, **kwargs)
-
-            return super().__call__(*args, **kwargs)
+            return super().__call__(next(iter(cls)).value, *args, **kwargs)
 
         return super().__call__(value, *args, **kwargs)
 

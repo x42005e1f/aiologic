@@ -21,6 +21,9 @@ Commit messages are consistent with
 
 ### Changed
 
+- The `aiologic.meta.SingletonEnum` constructor now reverts to the original
+  behavior if there are zero or more than one members, or if additional
+  parameters are passed, which should make it safer.
 - `aiologic.meta.replaces()` now raises a `LookupError` with an informative
   message instead of a `KeyError` if there is no function of the same name in
   the namespace, which should make debugging easier.
