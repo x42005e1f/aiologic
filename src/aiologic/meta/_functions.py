@@ -199,6 +199,14 @@ def copies(original, replaced=MISSING, /):
         msg = "cannot copy non-user-defined functions"
         raise TypeError(msg)
 
+    # A well-known method of "deep" (actually not) copying of functions is to
+    # create a new instance of `FunctionType` with the same parameters as the
+    # original function. Here are some related links:
+    # * https://stackoverflow.com/q/6527633
+    # * https://stackoverflow.com/q/13503079
+    # * https://github.com/Nuitka/Nuitka/commit/bdfad66
+    # Note that functions compiled by Cython have a different type and
+    # therefore will not reach the following code section.
     if hasattr(original, "clone"):  # Nuitka
         copy = original.clone()
     else:

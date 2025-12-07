@@ -19,7 +19,7 @@ else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9):  # python/cpython#81625
     from ._functions import copies
 
     @copies(_import_module_impl)
