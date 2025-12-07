@@ -203,11 +203,11 @@ def export(
       ways.
     """
 
+    # `sphinx.ext.autodoc` does not support the `__module__` hacks. In
+    # particular, 'bysource' ordering will not work, nor will some
+    # cross-references. So we skip all on type checking (implied by
+    # `SPHINX_AUTODOC_RELOAD_MODULES=1`).
     if TYPE_CHECKING:
-        # `sphinx.ext.autodoc` does not support the `__module__` hacks. In
-        # particular, 'bysource' ordering will not work, nor will some
-        # cross-references. So we skip all on type checking (implied by
-        # `SPHINX_AUTODOC_RELOAD_MODULES=1`).
         return
 
     if ismodule(package_namespace):

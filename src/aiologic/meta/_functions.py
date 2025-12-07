@@ -35,17 +35,16 @@ else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 if TYPE_CHECKING:
-    _T = TypeVar("_T")
-    _P = ParamSpec("_P")
 
     @type_check_only
     class _NamedCallable(Protocol):
-        # see the "callback protocols" section in PEP 544
         def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
         @property
         def __name__(self, /) -> str: ...  # noqa: PLW3201
 
+    _T = TypeVar("_T")
     _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
+    _P = ParamSpec("_P")
 
 
 @overload
@@ -107,7 +106,12 @@ def replaces(namespace, replacer=MISSING, /):
         wrapped = namespace[name]
     except KeyError:
         if "__spec__" in namespace:  # a module namespace
-            namespace_repr = f"module {namespace['__name__']!r}"
+            module_name = namespace.get("__name__")
+        else:
+            module_name = None
+
+        if module_name is not None:
+            namespace_repr = f"module {module_name!r}"
         else:
             namespace_repr = "`namespace`"
 
@@ -211,13 +215,12 @@ def copies(original, replaced=MISSING, /):
         copy = original.clone()
     else:
         copy = FunctionType(
-            original.__code__,
-            original.__globals__,
-            original.__name__,
-            original.__defaults__,
-            original.__closure__,
+            code=original.__code__,
+            closure=original.__closure__,
+            globals=original.__globals__,
+            name=original.__name__,
         )
-        # python/cpython#112640
-        copy.__kwdefaults__ = original.__kwdefaults__
+        copy.__defaults__ = original.__defaults__
+        copy.__kwdefaults__ = original.__kwdefaults__  # python/cpython#112640
 
     return update_wrapper(copy, replaced)

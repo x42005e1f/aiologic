@@ -24,17 +24,15 @@ if sys.version_info >= (3, 11):  # runtime introspection support
 else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
-_T = TypeVar("_T")
-_P = ParamSpec("_P")
-
 @type_check_only
 class _NamedCallable(Protocol):
-    # see the "callback protocols" section in PEP 544
     def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
     @property
     def __name__(self, /) -> str: ...
 
+_T = TypeVar("_T")
 _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
+_P = ParamSpec("_P")
 
 @overload
 def replaces(
@@ -48,15 +46,6 @@ def replaces(
     replacer: _NamedCallableT,
     /,
 ) -> _NamedCallableT: ...
-
-# Until python/typing#548 is resolved, we can only go one of two ways (not
-# both):
-# * require the parameter lists of both functions to match (via `ParamSpec`)
-# * support callable subtypes, such as user-defined protocols (via `TypeVar`)
-# Here, we choose the first way to prevent obvious type errors when applying
-# the decorator to regular functions. This is not very suitable for forced
-# copying, as it will require the user to use `cast()` to preserve the original
-# type, but for lack of a better option...
 @overload
 def copies(
     original: Callable[_P, _T],
