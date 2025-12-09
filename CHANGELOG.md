@@ -16,6 +16,106 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
+[Unreleased]
+------------
+
+### Changed
+
+- The `aiologic.meta.SingletonEnum` constructor now reverts to the original
+  behavior if there are zero or more than one members, or if additional
+  parameters are passed, which should make it safer.
+- `aiologic.meta.replaces()` now raises a `LookupError` with an informative
+  message instead of a `KeyError` if there is no function of the same name in
+  the namespace, which should make debugging easier.
+- `aiologic.meta.replaces()` now preserves the original function type in
+  annotations, while requiring the `__name__` attribute to be present in the
+  passed function, which should make it more convenient and safer to use for
+  custom callable objects.
+- `aiologic.meta.copies()` now forces copying when both functions are the same
+  object, which increases its scope of application.
+
+### Fixed
+
+- Since `aiologic.meta.export()` includes all public names in `__all__`,
+  `__future__.annotations` and `typing.TYPE_CHECKING` were also included (as
+  'annotations' and 'TYPE_CHECKING', respectively) if they were imported in
+  `__init__.py`.
+
+[0.16.0] - 2025-11-27
+---------------------
+
+### Added
+
+- `aiologic.__version__` and `aiologic.__version_tuple__` as a way to retrieve
+  the package version at runtime.
+- `aiologic.meta.SingletonEnum` as a base class that encapsulates common logic
+  of all type-checker-friendly singleton classes (such as
+  `aiologic.meta.DefaultType` and `aiologic.meta.MissingType`).
+- `aiologic.meta.resolve_name()` as an alternative to
+  `importlib.util.resolve_name()` with more consistent behavior.
+- `aiologic.meta.import_module()` as an alternative to
+  `importlib.import_module()` with more consistent behavior.
+- `aiologic.meta.import_from()` as a way to import attributes from modules. It
+  differs from more naive solutions in that it raises an `ImportError` instead
+  of an `AttributeError`, while not allowing names like `*`, and also in that
+  it attempts to import submodules to achieve the expected behavior.
+- `aiologic.meta.export_dynamic()` as an alternative to
+  `aiologic.meta.export_deprecated()` that does not raise a
+  `DeprecationWarning`. Useful for optional features that may be missing at
+  runtime but should be available at the package level.
+- `aiologic.meta.export()` and `aiologic.meta.export_deprecated()` now support
+  passing module objects, which should simplify their use for manually created
+  module objects.
+- Final classes from `aiologic.meta` now support runtime introspection via the
+  `__final__` attribute on all supported versions of Python.
+
+### Changed
+
+- `aiologic.meta.export()` has been redesigned:
+  + It now updates not only the `__module__` attribute, but also name-related
+    attributes. This provides the expected representation in cases where
+    functions are created dynamically in a different context with a different
+    name.
+  + Attributes are only updated if the object type matches one of the supported
+    types, which protects against undefined behavior due to problematic types
+    (such as singletons that provide a read-only `__module__` attribute).
+  + When a class is encountered, its members are also updated (recursively).
+    This allows its functions to be referenced safely. In addition, properties
+    and class/static methods are now also processed.
+  + All non-public attributes are now skipped, which should reduce the number
+    of operations performed.
+  + For each package, it now builds a human-readable `__all__`, which gives the
+    expected behavior of `from package import *` (in particular, public
+    subpackages are now excluded) and also simplifies analysis.
+- `aiologic.meta.export_deprecated()` now does additional checks before
+  registering a link, and also relies on the new `importlib`-like functions,
+  which should make it safer to use.
+- Non-public functions for importing original objects now implement
+  `aiologic.meta.import_from()`-like behavior, making them more predictable
+  (relevant for a green-patched world).
+- `aiologic.Queue` and its derivatives now raise a `ValueError` when attempting
+  to pass a `maxsize` less than 1.
+- All timeouts now raise a `ValueError` for values less than zero.
+
+### Removed
+
+- All deprecated features (see `0.15.0`).
+
+### Fixed
+
+- `aiologic.meta.replaces()` performed replacement by the name of the replaced
+  function, which could lead to replacing an arbitrary object in the case of a
+  different `__name__` attribute value.
+- `aiologic.meta.replaces()` did not handle cases of parallel application to
+  the same function, which could lead to an `AttributeError` being raised in
+  such cases.
+- `aiologic.meta.copies()` used a function copying technique that was
+  incompatible with [Nuitka](https://github.com/Nuitka/Nuitka), resulting in a
+  `RuntimeError` when attempting to call the copied function after compilation.
+- `aiologic.meta.copies()` used the default keyword argument values of the
+  replaced function, which could lead to unexpected behavior when the default
+  values were different.
+
 [0.15.0] - 2025-11-05
 ---------------------
 
@@ -956,6 +1056,8 @@ Commit messages are consistent with
   + `aiologic.SimpleQueue` as a queue that works in a semaphore style
     (async-aware alternative to `queue.SimpleQueue`).
 
+[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.16.0...HEAD
+[0.16.0]: https://github.com/x42005e1f/aiologic/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/x42005e1f/aiologic/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/x42005e1f/aiologic/compare/0.13.1...0.14.0
 [0.13.1]: https://github.com/x42005e1f/aiologic/compare/0.13.0...0.13.1

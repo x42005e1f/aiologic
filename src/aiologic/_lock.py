@@ -5,11 +5,8 @@
 
 from __future__ import annotations
 
-import warnings
-
 from typing import TYPE_CHECKING, Any
 
-from ._semaphore import BinarySemaphore
 from .lowlevel import (
     Event,
     async_checkpoint,
@@ -33,159 +30,11 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
 
-class PLock:
-    __slots__ = (
-        "__weakref__",
-        "_impl",
-    )
-
-    def __new__(cls, /) -> Self:
-        warnings.warn(
-            "Use BinarySemaphore instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        self = object.__new__(cls)
-
-        self._impl = BinarySemaphore()
-
-        return self
-
-    def __init_subclass__(cls, /, **kwargs: Any) -> None:
-        if cls.__module__ != __name__:
-            warnings.warn(
-                "Use BinarySemaphore instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-        super().__init_subclass__(**kwargs)
-
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        return ()
-
-    def __getstate__(self, /) -> None:
-        return None
-
-    def __copy__(self, /) -> Self:
-        return self.__class__()
-
-    def __repr__(self, /) -> str:
-        cls = self.__class__
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
-
-        object_repr = f"{cls_repr}()"
-
-        if self._impl.value > 0:
-            extra = "unlocked"
-        else:
-            extra = f"locked, waiting={self._impl.waiting}"
-
-        return f"<{object_repr} at {id(self):#x} [{extra}]>"
-
-    def __bool__(self, /) -> bool:
-        return not self._impl.value
-
-    async def __aenter__(self, /) -> Self:
-        await self.async_acquire()
-
-        return self
-
-    def __enter__(self, /) -> Self:
-        self.green_acquire()
-
-        return self
-
-    async def __aexit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        self.async_release()
-
-    def __exit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        self.green_release()
-
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
-        return await self._impl.async_acquire(blocking=blocking)
-
-    def green_acquire(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> bool:
-        return self._impl.green_acquire(blocking=blocking, timeout=timeout)
-
-    def _release(self, /) -> None:
-        return self._impl.release()
-
-    _async_acquire = async_acquire
-    _green_acquire = green_acquire
-
-    async_release = _release
-    green_release = _release
-
-    def locked(self, /) -> bool:
-        return not self._impl.value
-
-    @property
-    def waiting(self, /) -> int:
-        return self._impl.waiting
-
-    # Internal methods used by condition variables
-
-    def _park(self, /, token: list[Any]) -> bool:
-        return self._impl._park(token)
-
-    def _unpark(self, /, event: Event) -> None:
-        return self._impl._unpark(event)
-
-    def _after_park(self, /) -> None:
-        return self._impl._after_park()
-
-
-class BLock(PLock):
-    __slots__ = ()
-
-    def __new__(cls, /) -> Self:
-        warnings.warn(
-            "Use BoundedBinarySemaphore instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        self = object.__new__(cls)
-
-        self._impl = BinarySemaphore(max_value=1)
-
-        return self
-
-    def __init_subclass__(cls, /, **kwargs: Any) -> None:
-        warnings.warn(
-            "Use BoundedBinarySemaphore instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        super().__init_subclass__(**kwargs)
-
-
-class Lock(PLock):
+class Lock:
     """..."""
 
     __slots__ = (
-        # "__weakref__",
+        "__weakref__",
         "_owner",
         "_releasing",
         "_unlocked",
@@ -1162,12 +1011,6 @@ class RLock(Lock):
             return 0
 
         return count
-
-    @property
-    def level(self, /) -> int:
-        warnings.warn("Use 'count' instead", DeprecationWarning, stacklevel=2)
-
-        return self.count
 
     @property
     @copies(Lock.waiting.fget)

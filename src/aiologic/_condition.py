@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from collections import defaultdict
 from itertools import count
@@ -16,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Final, Generic, Union
 
 from . import lowlevel
 from ._guard import ResourceGuard
-from ._lock import Lock, PLock, RLock
+from ._lock import Lock, RLock
 from ._semaphore import BinarySemaphore
 from .lowlevel import (
     ThreadOnceLock,
@@ -70,7 +69,6 @@ _T_co = TypeVar(
     "_T_co",
     bound=Union[
         Lock,
-        PLock,
         BinarySemaphore,
         lowlevel.ThreadRLock,
         lowlevel.ThreadLock,
@@ -134,9 +132,6 @@ class Condition(Generic[_T_co, _S_co]):
         elif isinstance(lock, Lock):
             # aiologic.RLock | aiologic.Lock
             imp = _RMixedCondition
-        elif isinstance(lock, PLock):
-            # aiologic.BLock | aiologic.PLock
-            imp = _DMixedCondition
         elif isinstance(lock, BinarySemaphore):
             # aiologic.BoundedBinarySemaphore | aiologic.BinarySemaphore
             imp = _MixedCondition
@@ -525,13 +520,8 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                     raise ValueError(msg)
 
                 if timeout < 0:
-                    warnings.warn(
-                        "Use timeout=max(0, timeout) instead",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-
-                    timeout = 0
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
 
                 if deadline is None:
                     deadline = green_clock() + timeout
@@ -1386,13 +1376,8 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                         raise ValueError(msg)
 
                     if timeout < 0:
-                        warnings.warn(
-                            "Use timeout=max(0, timeout) instead",
-                            DeprecationWarning,
-                            stacklevel=2,
-                        )
-
-                        timeout = 0
+                        msg = "timeout must be non-negative"
+                        raise ValueError(msg)
 
                     if deadline is None:
                         deadline = green_clock() + timeout
@@ -1670,19 +1655,6 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
 
     def _green_owned(self, /) -> bool:
         return not self._lock.value
-
-
-class _DMixedCondition(_MixedCondition[_T_co, _S_co]):
-    __slots__ = ()
-
-    def __bool__(self, /) -> bool:
-        return self._lock.locked()
-
-    def _async_owned(self, /) -> bool:
-        return self._lock.locked()
-
-    def _green_owned(self, /) -> bool:
-        return self._lock.locked()
 
 
 class _RMixedCondition(_BaseCondition[_T_co, _S_co]):

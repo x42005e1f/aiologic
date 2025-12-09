@@ -10,8 +10,6 @@
 aiologic
 ========
 
-.. badges-start-marker
-
 |pypi-dw| |pypi-impl| |pypi-pyv| |pypi-types|
 
 .. |pypi-dw| image:: https://img.shields.io/pypi/dw/aiologic
@@ -26,8 +24,6 @@ aiologic
 .. |pypi-types| image:: https://img.shields.io/pypi/types/aiologic
   :target: #features
   :alt:
-
-.. badges-end-marker
 
 .. description-start-marker
 
@@ -99,6 +95,7 @@ Features
 * Python 3.8+ support
 * `CPython <https://www.python.org/>`__ and `PyPy <https://pypy.org/>`__
   support
+* Experimental `Nuitka <https://nuitka.net/>`__ support
 * `Pickling <https://docs.python.org/3/library/pickle.html>`__ and `weakrefing
   <https://docs.python.org/3/library/weakref.html>`__ support
 * Cancellation and timeouts support
@@ -194,7 +191,7 @@ Documentation
 
 Read the Docs: https://aiologic.readthedocs.io (official)
 
-DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated)
+DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated; lying!)
 
 Communication channels
 ======================
@@ -205,6 +202,12 @@ questions)
 GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
 
 You can also send an email to 0x42005e1f@gmail.com with any feedback.
+
+Dependents
+==========
+
+See `x42005e1f/aiologic#11 <https://github.com/x42005e1f/aiologic/discussions/
+11>`__.
 
 Support
 =======

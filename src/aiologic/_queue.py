@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from collections import deque
 from copy import copy
@@ -540,11 +539,8 @@ class Queue(Generic[_T]):
         if maxsize is None:
             maxsize = 0
         elif maxsize <= 0:
-            warnings.warn(
-                "Use maxsize=None instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+            msg = "maxsize must be >= 1 or None"
+            raise ValueError(msg)
 
         self = object.__new__(cls)
 

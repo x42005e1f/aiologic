@@ -9,27 +9,20 @@ from wrapt import patch_function_wrapper
 
 
 def patch_eventlet() -> None:
-    """
-    Injects ``schedule_call_threadsafe()`` (a thread-safe variant of
-    :meth:`~eventlet.hubs.hub.BaseHub.schedule_call_global`) into eventlet hubs
-    to schedule calls from other threads.
+    # Injects `schedule_call_threadsafe()` (a thread-safe variant of
+    # `schedule_call_global()`) into eventlet hubs to schedule calls from other
+    # threads.
 
-    .. code:: python
+    # >>> from threading import Timer
+    # >>> from eventlet.event import Event
+    # >>> from eventlet.hubs import get_hub
+    # >>> patch_eventlet()
+    # >>> event = Event()
+    # >>> Timer(1, get_hub().schedule_call_threadsafe, [0, event.send]).start()
+    # >>> event.wait()  # will take 1 second
 
-        from threading import Timer
-
-        from eventlet.event import Event
-        from eventlet.hubs import get_hub
-
-        event = Event()
-
-        Timer(1, get_hub().schedule_call_threadsafe, [0, event.send]).start()
-
-        event.wait()  # will take 1 second
-
-    Also supports ``destroy()`` injected by `a separate patch <https://
-    gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe>`__.
-    """
+    # Also supports `destroy()` injected by a separate patch
+    # (https://gist.github.com/x42005e1f/e50cc904867f2458a546c9e2f51128fe).
 
     from eventlet.hubs.asyncio import Hub as AsyncioHub
     from eventlet.hubs.hub import BaseHub

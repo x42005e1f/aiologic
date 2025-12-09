@@ -6,16 +6,10 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from typing import TYPE_CHECKING, Any, Final
 
 from .meta import DEFAULT, DefaultType
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -50,22 +44,19 @@ class ResourceGuard:
         "_unlocked",
     )
 
-    @overload
-    def __new__(cls, maybe_action: str | DefaultType = DEFAULT, /) -> Self: ...
-    @overload
-    def __new__(cls, /, *, action: str | DefaultType = DEFAULT) -> Self: ...
-    def __new__(cls, maybe_action=DEFAULT, /, *, action=DEFAULT):
+    def __new__(
+        cls,
+        _: DefaultType = DEFAULT,
+        /,
+        action: str | DefaultType = DEFAULT,
+    ) -> Self:
         """..."""
 
-        if maybe_action is not DEFAULT:
-            warnings.warn(
-                "Use keyword-only parameter instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+        if _ is not DEFAULT:
+            msg = "the first argument should not have been passed"
+            raise ValueError(msg)
 
-            action = maybe_action
-        elif action is DEFAULT:
+        if action is DEFAULT:
             action = "using"
 
         self = object.__new__(cls)
@@ -100,7 +91,7 @@ class ResourceGuard:
             'waiting'
         """
 
-        return (self._action,)
+        return (DEFAULT, self._action)
 
     def __getstate__(self, /) -> None:
         """

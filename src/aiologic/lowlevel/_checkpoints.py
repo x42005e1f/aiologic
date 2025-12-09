@@ -301,7 +301,10 @@ def _async_checkpoints_set(enabled: bool) -> Token[tuple[int, bool | None]]:
 
 
 def green_checkpoint_enabled() -> bool:
-    """..."""
+    """
+    Return :data:`True` if green checkpoints are enabled in the current
+    context, :data:`False` otherwise.
+    """
 
     if _green_checkpoints_used:
         ident, maybe_enabled = _green_checkpoints_cvar.get()
@@ -325,7 +328,10 @@ def green_checkpoint_enabled() -> bool:
 
 
 def async_checkpoint_enabled() -> bool:
-    """..."""
+    """
+    Return :data:`True` if async checkpoints are enabled in the current
+    context, :data:`False` otherwise.
+    """
 
     if _async_checkpoints_used:
         ident, maybe_enabled = _async_checkpoints_cvar.get()
@@ -492,7 +498,38 @@ def enable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
 def enable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def enable_checkpoints(wrapped=MISSING, /):
-    """..."""
+    """
+    Enable checkpoints in the current context.
+
+    If a callable object is passed, it is wrapped with a universal decorator
+    and a callable proxy is returned. If an awaitable object is passed, it is
+    also wrapped and an awaitable proxy is returned. If nothing is passed, a
+    sync/async context manager is returned.
+
+    To distinguish between green and async functions,
+    :func:`inspect.iscoroutinefunction` is used. Therefore, if you implement
+    your own callable object that returns a coroutine object, consider using
+    :func:`inspect.markcoroutinefunction`.
+
+    Example:
+      >>> async_checkpoint_enabled()
+      False
+      >>> async with enable_checkpoints():
+      ...     async_checkpoint_enabled()
+      True
+      >>> async_checkpoint_enabled()
+      False
+      >>> async def test():
+      ...     return async_checkpoint_enabled()
+      >>> await test()
+      False
+      >>> await enable_checkpoints(test)()  # for a callable object
+      True
+      >>> await enable_checkpoints(test())  # for an awaitable object
+      True
+      >>> await test()
+      False
+    """
 
     if wrapped is MISSING:
         return _CheckpointsManager()
@@ -516,7 +553,21 @@ def disable_checkpoints(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
 def disable_checkpoints(wrapped: _CallableT, /) -> _CallableT: ...
 def disable_checkpoints(wrapped=MISSING, /):
-    """..."""
+    """
+    Disable checkpoints in the current context.
+
+    Like :func:`enable_checkpoints`, but with the opposite effect.
+
+    Example:
+      >>> with enable_checkpoints():
+      ...     green_checkpoint_enabled()
+      ...     with disable_checkpoints():
+      ...         green_checkpoint_enabled()
+      ...     green_checkpoint_enabled()
+      True
+      False
+      True
+    """
 
     if wrapped is MISSING:
         return _NoCheckpointsManager()
@@ -593,7 +644,49 @@ async def _trio_checkpoint() -> None:
 
 
 def green_checkpoint(*, force: bool = False) -> None:
-    """..."""
+    """
+    A pure green :ref:`checkpoint <checkpoints>`.
+
+    It checks for cancellation and allows the scheduler to switch to another
+    task. In many ways, it is similar to :func:`green_sleep(0) <green_sleep>`,
+    but has the following differences:
+
+    * It can have a more efficient implementation.
+    * It can be enabled/disabled in the current context.
+
+    The latter distinguishes aiologic checkpoints from Trio/AnyIO checkpoints.
+    You can control whether checkpoints are enabled or not in the following
+    ways (in order of priority):
+
+    * Set ``AIOLOGIC_GREEN_CHECKPOINTS`` environment variable to any non-empty
+      value. This will enable green checkpoints for all green libraries (in all
+      threads). The empty value has the opposite effect.
+    * Set ``AIOLOGIC_<GREEN_LIBRARY>_CHECKPOINTS`` environment variable to any
+      non-empty value. This will enable green checkpoints for the specified
+      green library (in all threads). The empty value has the opposite effect.
+    * Use :func:`enable_checkpoints`/:func:`disable_checkpoints` to control the
+      state of checkpoints in the current context.
+    * Pass ``force=True`` to force a checkpoint.
+
+    .. note::
+
+      High-level primitives (and some low-level ones) implement checkpoints for
+      all blocking calls (regardless of whether waiting is required or not),
+      and enabling/disabling checkpoints also affects them, so you can use
+      checkpoints even without checkpoint functions if there are blocking calls
+      (it is enough to explicitly enable checkpoints).
+
+      .. code:: python
+
+        with lock:  # a green checkpoint (if enabled)
+            # ...exclusive access...
+
+      Furthermore, the library implements a "one blocking call, one checkpoint"
+      concept, which gives a predictable number of context switches per call
+      (zero or one if disabled, exactly one if enabled).
+
+    By default, green checkpoints are not enabled for any library.
+    """
 
     if not force:
         if _green_checkpoints_enabled and _green_checkpoints_disabled:
@@ -633,7 +726,49 @@ def green_checkpoint(*, force: bool = False) -> None:
 
 
 async def async_checkpoint(*, force: bool = False) -> None:
-    """..."""
+    """
+    A pure async :ref:`checkpoint <checkpoints>`.
+
+    It checks for cancellation and allows the scheduler to switch to another
+    task. In many ways, it is similar to :func:`async_sleep(0) <async_sleep>`,
+    but has the following differences:
+
+    * It can have a more efficient implementation.
+    * It can be enabled/disabled in the current context.
+
+    The latter distinguishes aiologic checkpoints from Trio/AnyIO checkpoints.
+    You can control whether checkpoints are enabled or not in the following
+    ways (in order of priority):
+
+    * Set ``AIOLOGIC_ASYNC_CHECKPOINTS`` environment variable to any non-empty
+      value. This will enable async checkpoints for all async libraries (in all
+      threads). The empty value has the opposite effect.
+    * Set ``AIOLOGIC_<ASYNC_LIBRARY>_CHECKPOINTS`` environment variable to any
+      non-empty value. This will enable async checkpoints for the specified
+      async library (in all threads). The empty value has the opposite effect.
+    * Use :func:`enable_checkpoints`/:func:`disable_checkpoints` to control the
+      state of checkpoints in the current context.
+    * Pass ``force=True`` to force a checkpoint.
+
+    .. note::
+
+      High-level primitives (and some low-level ones) implement checkpoints for
+      all blocking calls (regardless of whether waiting is required or not),
+      and enabling/disabling checkpoints also affects them, so you can use
+      checkpoints even without checkpoint functions if there are blocking calls
+      (it is enough to explicitly enable checkpoints).
+
+      .. code:: python
+
+        async with lock:  # an async checkpoint (if enabled)
+            # ...exclusive access...
+
+      Furthermore, the library implements a "one blocking call, one checkpoint"
+      concept, which gives a predictable number of context switches per call
+      (zero or one if disabled, exactly one if enabled).
+
+    By default, async checkpoints are enabled for Trio only.
+    """
 
     if not force:
         if _async_checkpoints_enabled and _async_checkpoints_disabled:
@@ -708,11 +843,26 @@ async def _trio_checkpoint_if_cancelled() -> None:
 
 
 def green_checkpoint_if_cancelled(*, force: bool = False) -> None:
-    """..."""
+    """
+    Issue a green :ref:`checkpoint <checkpoints>` if the calling context has
+    been cancelled.
+
+    Used in conjunction with :func:`shield` to check for cancellation before
+    shielding, and is not suitable for any other use case.
+    """
+
+    # Since no green library implements level cancellation, it actually does
+    # nothing.
 
 
 async def async_checkpoint_if_cancelled(*, force: bool = False) -> None:
-    """..."""
+    """
+    Issue an async :ref:`checkpoint <checkpoints>` if the calling context has
+    been cancelled.
+
+    Used in conjunction with :func:`shield` to check for cancellation before
+    shielding, and is not suitable for any other use case.
+    """
 
     if not force:
         if _async_checkpoints_enabled and _async_checkpoints_disabled:

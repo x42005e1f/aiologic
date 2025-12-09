@@ -4,32 +4,38 @@
 # SPDX-License-Identifier: ISC
 
 import enum
+import sys
 
-from typing import Any, Final, Literal, NoReturn, final
+from typing import Final, NoReturn
 
-@final
-class MissingType(enum.Enum):
-    __slots__ = ()
+if sys.version_info >= (3, 11):  # a caching bug fix
+    from typing import Literal
+else:  # typing-extensions>=4.6.0
+    from typing_extensions import Literal
 
-    MISSING = "MISSING"
+if sys.version_info >= (3, 11):  # runtime introspection support
+    from typing import final
+else:  # typing-extensions>=4.1.0
+    from typing_extensions import final
 
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
-    def __setattr__(self, /, name: str, value: Any) -> None: ...
+class SingletonEnum(enum.Enum):  # type: ignore[misc]
+    def __setattr__(self, /, name: str, value: object) -> None: ...
     def __repr__(self, /) -> str: ...
     def __str__(self, /) -> str: ...
-    def __bool__(self, /) -> Literal[False]: ...
 
 @final
-class DefaultType(enum.Enum):
-    __slots__ = ()
-
+class DefaultType(SingletonEnum):
     DEFAULT = "DEFAULT"
 
-    def __init_subclass__(cls, /, **kwargs: Any) -> NoReturn: ...
-    def __setattr__(self, /, name: str, value: Any) -> None: ...
-    def __repr__(self, /) -> str: ...
-    def __str__(self, /) -> str: ...
+    def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...
     def __bool__(self, /) -> Literal[False]: ...
 
-MISSING: Final[Literal[MissingType.MISSING]]
+@final
+class MissingType(SingletonEnum):
+    MISSING = "MISSING"
+
+    def __init_subclass__(cls, /, **kwargs: object) -> NoReturn: ...
+    def __bool__(self, /) -> Literal[False]: ...
+
 DEFAULT: Final[Literal[DefaultType.DEFAULT]]
+MISSING: Final[Literal[MissingType.MISSING]]

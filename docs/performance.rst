@@ -951,4 +951,56 @@ hands.
 Kill the square
 +++++++++++++++
 
-Check back later!
+.. note::
+
+    Writing of this section has been temporarily suspended due to upcoming
+    major changes. Here is a brief summary of what could be included here:
+
+    1. Since we are not OS-level programmers, we are doomed. And even they are
+       unable to completely solve the square problem (can you think of a
+       scheduler that does not suffer from the mutex case in a single-core
+       system, but also does not lead to resource starvation?).
+    2. The simplest way to avoid the square problem is to simply not use
+       mutexes (applicable to the notify case only partially). By using
+       effectively atomic operations, which are even used in standard CPython
+       tests, you can achieve a lockless design that is less affected by the
+       square problem. However, not all code can be written this way, since
+       atomic programming at the pure Python level is very limited (and impure
+       is inconvenient on PyPy and especially on Pyodide).
+    3. For the notify case, it may be enough to simply not wait for each
+       thread, but this cannot always be achieved. In particular, interaction
+       with foreign event loops is performed via sockets, which are system
+       calls, meaning context switches with all the consequences that entails.
+       But there is one clever technique that can be used: force the threads to
+       wake up all the others. This way, no matter which thread takes control,
+       the wake-up process will continue outside the main wake-up thread after
+       each context switch, which will "kill" the square. But, spoiler alert,
+       the resulting :math:`O(\log{n})` scheduler passes will have a
+       non-trivial effect, which will be described in the next part of the
+       "Performance" section.
+    4. If you already have the notify case with a known number of threads and
+       you cannot directly influence it, a good workaround may be to use
+       :class:`aiologic.Latch`. It is implemented according to points 2 and 3,
+       so if you use it to synchronize threads after the operation, you will
+       solve the problem (short execution time + waking up at once).
+    5. If you already have the mutex case with an unknown number of threads and
+       you cannot directly influence it, you could try
+       :class:`aiologic.CountdownEvent`. Increase its value before the
+       operation, decrease it after, and wait. It is also implemented according
+       to the points above, and thus will solve the problem locally for each
+       batch of threads using the mutex concurrently.
+    6. For some use cases, there are specialized primitives. For example, once
+       locks, such as :class:`aiologic.lowlevel.ThreadOnceLock`. It is also
+       implemented according to the points above and allows you to avoid the
+       square problem for one-time operations.
+
+    There are other topics worth considering, such as the impact of the square
+    problem and resource starvation on timeouts (in fact, it is timeouts that
+    are a powerful motivation for using lockless design, rather than the square
+    problem itself), progress conditions (see `one article <https://
+    concurrencyfreaks.blogspot.com/2013/05/
+    lock-free-and-wait-free-definition-and.html>`__ as a quick introduction),
+    the convoy effect and fairness (why they are not as bad as they seem, and
+    also how to derive the formula used in the classic benchmark), and so on.
+    But these are all part of the next pieces of this still small "Performance"
+    section, which will be written someday.

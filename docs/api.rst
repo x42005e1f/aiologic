@@ -369,13 +369,26 @@ Safety and reentrancy
 Metaprogramming
 ---------------
 
-Markers
-+++++++
+Singletons and markers
+++++++++++++++++++++++
 
-.. autoclass:: aiologic.meta.MissingType
+.. autoclass:: aiologic.meta.SingletonEnum
   :no-inherited-members:
 .. autoclass:: aiologic.meta.DefaultType
   :no-inherited-members:
+.. autoclass:: aiologic.meta.MissingType
+  :no-inherited-members:
+
+.. aiologic.meta.DEFAULT-start-marker
+.. data:: aiologic.meta.DEFAULT
+  :type: DefaultType
+  :no-index:
+
+  A singleton object for default values; mimics :data:`None`.
+
+  Used as a marker to indicate that some object will be used by default
+  (without any special behavior).
+.. aiologic.meta.DEFAULT-end-marker
 
 .. aiologic.meta.MISSING-start-marker
 .. data:: aiologic.meta.MISSING
@@ -390,27 +403,28 @@ Markers
   Can also be used outside of parameters to indicate that there is no object.
 .. aiologic.meta.MISSING-end-marker
 
-.. aiologic.meta.DEFAULT-start-marker
-.. data:: aiologic.meta.DEFAULT
-  :type: DefaultType
-  :no-index:
-
-  A singleton object for default values; mimics :data:`None`.
-
-  Used as a marker to indicate that some object will be used by default
-  (without any special behavior).
-.. aiologic.meta.DEFAULT-end-marker
-
 Functions
 +++++++++
 
-.. autofunction:: aiologic.meta.copies
 .. autofunction:: aiologic.meta.replaces
+.. autofunction:: aiologic.meta.copies
+
+Modules
++++++++
+
+.. autofunction:: aiologic.meta.resolve_name
+
+Imports
++++++++
+
+.. autofunction:: aiologic.meta.import_module
+.. autofunction:: aiologic.meta.import_from
 
 Exports
 +++++++
 
 .. autofunction:: aiologic.meta.export
+.. autofunction:: aiologic.meta.export_dynamic
 .. autofunction:: aiologic.meta.export_deprecated
 
 Helpers

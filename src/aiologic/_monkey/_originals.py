@@ -7,25 +7,19 @@ from __future__ import annotations
 
 import sys
 
-from importlib import import_module
 from types import ModuleType
-from typing import Any
 
 from wrapt import when_imported
 
-from aiologic.meta import replaces
+from aiologic.meta import import_from, import_module, replaces
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import overload
-else:
+else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 
 def _eventlet_patched(module_name: str, /) -> bool:
-    return False
-
-
-def _gevent_patched(module_name: str, /) -> bool:
     return False
 
 
@@ -51,6 +45,10 @@ def _(_):
         return _eventlet_patched(module_name)
 
 
+def _gevent_patched(module_name: str, /) -> bool:
+    return False
+
+
 @when_imported("gevent.monkey")
 def _(_):
     @replaces(globals())
@@ -63,55 +61,89 @@ def _(_):
 
 
 def patched(module_name: str, /) -> bool:
-    return _eventlet_patched(module_name) or _gevent_patched(module_name)
-
-
-def _import_python_original(module_name: str, /) -> ModuleType:
-    return import_module(module_name)
-
-
-def _import_eventlet_original(module_name: str, /) -> ModuleType:
-    return import_module(module_name)
+    return _gevent_patched(module_name) or _eventlet_patched(module_name)
 
 
 @overload
-def _import_gevent_original(
+def _import_eventlet_original(module_name: str, /) -> ModuleType: ...
+@overload
+def _import_eventlet_original(module_name: str, name0: str, /) -> object: ...
+@overload
+def _import_eventlet_original(
     module_name: str,
-    name: None = None,
+    name0: str,
+    name1: str,
     /,
-) -> ModuleType: ...
-@overload
-def _import_gevent_original(module_name: str, name: str, /) -> Any: ...
-def _import_gevent_original(module_name, name=None, /):
+    *names: str,
+) -> tuple[object, ...]: ...
+def _import_eventlet_original(module_name, /, *names):
     module = import_module(module_name)
 
-    if name is None:
-        return module
+    if names:
+        return import_from(module, *names)
 
-    return getattr(module, name)
+    return module
 
 
 @when_imported("eventlet.patcher")
 def _(_):
     @replaces(globals())
-    def _import_eventlet_original(module_name, /):
-        global _import_eventlet_original
+    def _import_eventlet_original(module_name, /, *names):
+        from eventlet.patcher import original
 
-        from eventlet.patcher import original as _import_eventlet_original
+        @replaces(globals())
+        def _import_eventlet_original(module_name, /, *names):
+            module = original(module_name)
 
-        return _import_eventlet_original(module_name)
+            if names:
+                return import_from(module, *names)
+
+            return module
+
+        return _import_eventlet_original(module_name, *names)
+
+
+@overload
+def _import_gevent_original(module_name: str, /) -> ModuleType: ...
+@overload
+def _import_gevent_original(module_name: str, name0: str, /) -> object: ...
+@overload
+def _import_gevent_original(
+    module_name: str,
+    name0: str,
+    name1: str,
+    /,
+    *names: str,
+) -> tuple[object, ...]: ...
+def _import_gevent_original(module_name, /, *names):
+    module = import_module(module_name)
+
+    if names:
+        return import_from(module, *names)
+
+    return module
 
 
 @when_imported("gevent.monkey")
 def _(_):
     @replaces(globals())
-    def _import_gevent_original(module_name, name=None, /):
-        from gevent.monkey import get_original
+    def _import_gevent_original(module_name, /, *names):
+        from gevent.monkey import get_original, is_object_patched
 
         @replaces(globals())
-        def _import_gevent_original(module_name, name=None, /):
-            if name is not None:
-                return get_original(module_name, name)
+        def _import_gevent_original(module_name, /, *names):
+            if names:
+                values = tuple(
+                    get_original(module_name, name)
+                    if is_object_patched(module_name, name)
+                    else import_from(module_name, name)
+                    for name in names
+                )
+
+                if len(values) > 1:
+                    return values
+
+                return values[0]
 
             names = dir(import_module(module_name))
 
@@ -120,57 +152,37 @@ def _(_):
 
             return module
 
-        return _import_gevent_original(module_name, name)
+        return _import_gevent_original(module_name, *names)
 
 
 @overload
-def import_original(module_name: str, name: None = None, /) -> ModuleType: ...
+def import_original(module_name: str, /) -> ModuleType: ...
 @overload
-def import_original(module_name: str, name: str, /) -> Any: ...
-def import_original(module_name, name=None, /):
-    if name is None:
-        if _eventlet_patched(module_name):
-            return _import_eventlet_original(module_name)
+def import_original(module_name: str, name0: str, /) -> object: ...
+@overload
+def import_original(
+    module_name: str,
+    name0: str,
+    name1: str,
+    /,
+    *names: str,
+) -> tuple[object, ...]: ...
+def import_original(module_name, /, *names):
+    if _eventlet_patched(module_name):
+        return _import_eventlet_original(module_name, *names)
 
-        if _gevent_patched(module_name):
-            return _import_gevent_original(module_name)
+    if _gevent_patched(module_name):
+        return _import_gevent_original(module_name, *names)
 
-        return _import_python_original(module_name)
+    if names:
+        result = import_from(module_name, *names)
+    else:
+        result = import_module(module_name)
 
-    try:
-        if _eventlet_patched(module_name):
-            return getattr(_import_eventlet_original(module_name), name)
+    if _eventlet_patched(module_name):
+        return _import_eventlet_original(module_name, *names)
 
-        if _gevent_patched(module_name):
-            return _import_gevent_original(module_name, name)
+    if _gevent_patched(module_name):
+        return _import_gevent_original(module_name, *names)
 
-        original = getattr(_import_python_original(module_name), name)
-
-        if _eventlet_patched(module_name):
-            return getattr(_import_eventlet_original(module_name), name)
-
-        if _gevent_patched(module_name):
-            return _import_gevent_original(module_name, name)
-    except AttributeError as exc:
-        if hasattr(exc, "obj"):
-            module_path = getattr(exc.obj, "__file__", None)
-            msg = (
-                f"cannot import name {name!r}"
-                f" from {module_name!r}"
-                f" ({module_path or 'unknown location'})"
-            )
-        else:
-            module_path = None
-            msg = f"cannot import name {name!r} from {module_name!r}"
-
-        import_exc = ImportError(msg)
-        import_exc.name = module_name
-        import_exc.name_from = name
-        import_exc.path = module_path
-
-        try:
-            raise import_exc from None
-        finally:
-            del import_exc
-
-    return original
+    return result

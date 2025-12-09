@@ -3,6 +3,29 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+"""
+GIL-powered* locking library for Python
+
+This package is a locking library for tasks synchronization and their
+communication. It provides primitives that are both *async-aware* and
+*thread-aware*, and can be used for interaction between:
+
+* async codes (async <-> async) in one thread as regular async primitives
+* async codes (async <-> async) in multiple threads (!)
+* async code and sync one (async <-> sync) in one thread (!)
+* async code and sync one (async <-> sync) in multiple threads (!)
+* sync codes (sync <-> sync) in one thread as regular sync primitives
+* sync codes (sync <-> sync) in multiple threads as regular sync primitives
+
+If you want to know more, visit https://aiologic.readthedocs.io.
+"""
+
+from __future__ import annotations
+
+__author__: str = "Ilya Egorov <0x42005e1f@gmail.com>"
+__version__: str  # dynamic
+__version_tuple__: tuple[int | str, ...]  # dynamic
+
 from . import (  # noqa: F401
     lowlevel,
     meta,
@@ -36,9 +59,7 @@ from ._limiter import (
     RCapacityLimiter as RCapacityLimiter,
 )
 from ._lock import (
-    BLock as BLock,
     Lock as Lock,
-    PLock as PLock,
     RLock as RLock,
 )
 from ._queue import (
@@ -57,5 +78,7 @@ from ._semaphore import (
     Semaphore as Semaphore,
 )
 
-# update .__module__ attributes for shorter representation and better pickling
+# prepare for external use
 meta.export(globals())
+meta.export_dynamic(globals(), "__version__", "._version.version")
+meta.export_dynamic(globals(), "__version_tuple__", "._version.version_tuple")

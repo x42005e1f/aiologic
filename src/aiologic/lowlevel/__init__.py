@@ -3,6 +3,14 @@
 # SPDX-FileCopyrightText: 2024 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
+"""
+This package implements building blocks for top-level primitives, specifically
+low-level primitives, and a number of important mechanisms such as checkpoints.
+
+You can use its contents to create your own primitives or fine-tune existing
+ones. In addition, it also provides features that are useful on their own.
+"""
+
 from ._checkpoints import (
     async_checkpoint as async_checkpoint,
     async_checkpoint_enabled as async_checkpoint_enabled,
@@ -92,15 +100,3 @@ from ._waiters import (
     create_async_waiter as create_async_waiter,
     create_green_waiter as create_green_waiter,
 )
-
-# register deprecated content to __getattr_()
-from aiologic.meta import export_deprecated  # isort: skip
-
-export_deprecated(globals(), "DEFAULT", "aiologic.meta.DEFAULT")
-export_deprecated(globals(), "MISSING", "aiologic.meta.MISSING")
-export_deprecated(globals(), "DefaultType", "aiologic.meta.DefaultType")
-export_deprecated(globals(), "Flag", "aiologic.Flag")
-export_deprecated(globals(), "MissingType", "aiologic.meta.MissingType")
-export_deprecated(globals(), "checkpoint", "async_checkpoint")
-
-del export_deprecated

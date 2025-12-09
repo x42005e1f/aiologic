@@ -6,12 +6,6 @@
 aiologic
 ========
 
-.. only:: html
-
-    .. include:: ../README.rst
-      :start-after: .. badges-start-marker
-      :end-before: .. badges-end-marker
-
 .. include:: ../README.rst
   :start-after: .. description-start-marker
   :end-before: .. description-end-marker
