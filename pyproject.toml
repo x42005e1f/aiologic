@@ -185,6 +185,7 @@ ignore = [
     # flake8-bandit
     "S101",  # assert
     # flake8-bugbear
+    "B901",  # return-in-generator
     "B905",  # zip-without-explicit-strict
     "B911",  # batched-without-explicit-strict
     # flake8-commas
