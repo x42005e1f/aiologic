@@ -25,6 +25,17 @@ from ._imports import (
     import_from as import_from,
     import_module as import_module,
 )
+from ._inspect import (
+    isasyncgenfactory as isasyncgenfactory,
+    isasyncgenlike as isasyncgenlike,
+    iscoroutinefactory as iscoroutinefactory,
+    iscoroutinelike as iscoroutinelike,
+    isgeneratorfactory as isgeneratorfactory,
+    isgeneratorlike as isgeneratorlike,
+    markasyncgenfactory as markasyncgenfactory,
+    markcoroutinefactory as markcoroutinefactory,
+    markgeneratorfactory as markgeneratorfactory,
+)
 from ._markers import (
     DEFAULT as DEFAULT,
     MISSING as MISSING,

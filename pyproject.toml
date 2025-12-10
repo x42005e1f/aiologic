@@ -185,6 +185,7 @@ ignore = [
     # flake8-bandit
     "S101",  # assert
     # flake8-bugbear
+    "B004",  # unreliable-callable-check
     "B901",  # return-in-generator
     "B905",  # zip-without-explicit-strict
     "B911",  # batched-without-explicit-strict
@@ -198,6 +199,7 @@ ignore = [
     "ISC002",  # multi-line-implicit-string-concatenation
     # flake8-pyi
     "PYI011",  # typed-argument-default-in-stub
+    "PYI015",  # assignment-default-in-stub
     "PYI029",  # str-or-repr-defined-in-stub
     "PYI053",  # string-or-bytes-too-long
     "PYI054",  # numeric-literal-too-long

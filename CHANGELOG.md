@@ -19,6 +19,21 @@ Commit messages are consistent with
 [Unreleased]
 ------------
 
+### Added
+
+- `aiologic.meta.isgeneratorlike()`, `aiologic.meta.iscoroutinelike()`, and
+  `aiologic.meta.isasyncgenlike()` as `inspect`-like functions that check
+  whether an object implements a certain interface (corresponding to the
+  function name).
+- `aiologic.meta.isgeneratorfactory()`, `aiologic.meta.iscoroutinefactory()`,
+  and `aiologic.meta.isasyncgenfactory()` as functions that differ from
+  `inspect.is*function()` in that they have broader semantics and more flexible
+  checks.
+- `aiologic.meta.markgeneratorfactory()`,
+  `aiologic.meta.markcoroutinefactory()`, and
+  `aiologic.meta.markasyncgenfactory()` as a way to fine-tune the above (and
+  some standard) functions regardless of the Python version.
+
 ### Changed
 
 - The `aiologic.meta.SingletonEnum` constructor now reverts to the original

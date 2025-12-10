@@ -403,6 +403,19 @@ Singletons and markers
   Can also be used outside of parameters to indicate that there is no object.
 .. aiologic.meta.MISSING-end-marker
 
+Introspecting
++++++++++++++
+
+.. autofunction:: aiologic.meta.isgeneratorlike
+.. autofunction:: aiologic.meta.iscoroutinelike
+.. autofunction:: aiologic.meta.isasyncgenlike
+.. autofunction:: aiologic.meta.isgeneratorfactory
+.. autofunction:: aiologic.meta.iscoroutinefactory
+.. autofunction:: aiologic.meta.isasyncgenfactory
+.. autofunction:: aiologic.meta.markgeneratorfactory
+.. autofunction:: aiologic.meta.markcoroutinefactory
+.. autofunction:: aiologic.meta.markasyncgenfactory
+
 Functions
 +++++++++
 

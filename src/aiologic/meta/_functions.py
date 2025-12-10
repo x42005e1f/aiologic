@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from ._markers import MISSING
 
 if TYPE_CHECKING:
-    from typing import Any, Protocol, TypeVar, type_check_only
+    from typing import Any, TypeVar, type_check_only
 
     from ._markers import MissingType
 
@@ -28,6 +28,11 @@ if TYPE_CHECKING:
         from typing import ParamSpec
     else:  # typing-extensions>=3.10.0
         from typing_extensions import ParamSpec
+
+    if sys.version_info >= (3, 13):  # various fixes and improvements
+        from typing import Protocol
+    else:  # typing-extensions>=4.10.0
+        from typing_extensions import Protocol
 
 if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import overload
