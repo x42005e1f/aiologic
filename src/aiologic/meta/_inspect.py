@@ -19,7 +19,12 @@ from inspect import (
     isfunction,
     ismethod,
 )
-from types import AsyncGeneratorType, CoroutineType, GeneratorType
+from types import (
+    AsyncGeneratorType,
+    CoroutineType,
+    FunctionType,
+    GeneratorType,
+)
 from typing import TYPE_CHECKING
 
 from ._markers import DEFAULT, MISSING
@@ -321,7 +326,7 @@ else:
     _partialmethod_attribute_name: str = "_partialmethod"
 
 
-def _isfunctionlike(obj: object) -> TypeIs[_FunctionLike]:
+def _isfunctionlike(obj: object, /) -> TypeIs[_FunctionLike]:
     return isfunction(obj) or (
         # callable(obj)
         # and not isclass(obj)
@@ -340,6 +345,13 @@ def _isfunctionlike(obj: object) -> TypeIs[_FunctionLike]:
             getattr(obj, "__kwdefaults__", MISSING),
             (NoneType, dict),
         )
+    )
+
+
+def _iscallwrapper(obj: object, /) -> bool:
+    return ismethodwrapper(obj) and (
+        not ismethod(obj)  # CPython
+        or obj.__func__ is FunctionType.__call__  # PyPy
     )
 
 
@@ -380,7 +392,7 @@ def _unwrap_and_check(
         if call is MISSING:
             return False
 
-        if ismethodwrapper(call) and call.__self__ is obj:
+        if _iscallwrapper(call) and call.__self__ is obj:
             return _isfunctionlike(obj) and bool(obj.__code__.co_flags & flag)
 
         obj = call
