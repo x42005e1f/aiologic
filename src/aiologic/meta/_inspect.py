@@ -14,6 +14,7 @@ from inspect import (
     CO_ASYNC_GENERATOR,
     CO_COROUTINE,
     CO_GENERATOR,
+    isawaitable,
     isclass,
     iscode,
     isfunction,
@@ -159,11 +160,22 @@ def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]:
       >>> iscoroutinelike(SimpleCoroutine())
       True
       >>> await coro  # to avoid `RuntimeWarning`
+
+    .. caution::
+
+        Some objects, such as generator-based coroutines (see
+        :func:`types.coroutine`), may not have the :meth:`~object.__await__`
+        method but still behave like coroutine objects. They are also treated
+        as coroutine-like objects. So if you want to get an :term:`iterator`
+        for such an object, consider using :func:`await_for(obj).__await__()
+        <await_for>`.
     """
 
     # the native type is already registered as a subclass of the abstract
     # class, but we still pass it explicitly to speed up the fast path
-    return isinstance(obj, (CoroutineType, Coroutine))
+    return isinstance(obj, (CoroutineType, Coroutine)) or (
+        isawaitable(obj) and isgeneratorlike(obj)  # generator-based
+    )
 
 
 def isasyncgenlike(obj: object, /) -> TypeIs[AsyncGenerator[Any, Any]]:
@@ -256,11 +268,46 @@ def _catch_generatorfactory_marker() -> _MarkerInfo:
     return _generatorfactory_marker
 
 
-def _catch_coroutinefactory_marker() -> _MarkerInfo:
-    if _coroutinefactory_marker.value is MISSING:
-        _coroutinefactory_marker.value = _coroutinefactory_marker.default
+if sys.version_info >= (3, 12):  # python/cpython#99247
 
-    return _coroutinefactory_marker
+    def _catch_coroutinefactory_marker() -> _MarkerInfo:
+        if _coroutinefactory_marker.value is MISSING:
+            _coroutinefactory_marker.value = _coroutinefactory_marker.default
+
+        return _coroutinefactory_marker
+
+else:
+    from wrapt import when_imported
+
+    def _catch_coroutinefactory_marker() -> _MarkerInfo:
+        if _coroutinefactory_marker.value is MISSING:
+            try:
+                from asyncio.coroutines import _is_coroutine
+
+                _coroutinefactory_marker.name = "_is_coroutine"
+                _coroutinefactory_marker.value = _is_coroutine
+            except ImportError:
+                warnings.warn(
+                    (
+                        "Unable to obtain the standard marker; manually marked"
+                        " functions using standard library tools will not be"
+                        " recognized; `markcoroutinefactory(native=False)`"
+                        " will also not affect `asyncio.iscoroutinefunction()`"
+                    ),
+                    RuntimeWarning,
+                    stacklevel=3,
+                )
+                _coroutinefactory_marker.value = (
+                    _coroutinefactory_marker.default
+                )
+
+        return _coroutinefactory_marker
+
+    @when_imported("asyncio")
+    def _(_):
+        global _get_coroutinefactory_marker
+
+        _get_coroutinefactory_marker = _catch_coroutinefactory_marker
 
 
 def _catch_asyncgenfactory_marker() -> _MarkerInfo:
@@ -344,37 +391,12 @@ if sys.version_info >= (3, 12):  # python/cpython#99247
 
     _get_coroutinefunction_marker = _catch_coroutinefunction_marker
 else:
-    from wrapt import when_imported
 
     def _catch_coroutinefunction_marker() -> _MarkerInfo:
         if _coroutinefunction_marker.value is MISSING:
-            try:
-                from asyncio.coroutines import _is_coroutine
-
-                _coroutinefunction_marker.name = "_is_coroutine"
-                _coroutinefunction_marker.value = _is_coroutine
-            except ImportError:
-                warnings.warn(
-                    (
-                        "Unable to obtain the standard marker; manually marked"
-                        " functions using standard library tools will not be"
-                        " recognized; `markcoroutinefactory(native=True)` will"
-                        " also not affect `asyncio.iscoroutinefunction()`"
-                    ),
-                    RuntimeWarning,
-                    stacklevel=3,
-                )
-                _coroutinefunction_marker.value = (
-                    _coroutinefunction_marker.default
-                )
+            _coroutinefunction_marker.value = _coroutinefunction_marker.default
 
         return _coroutinefunction_marker
-
-    @when_imported("asyncio")
-    def _(_):
-        global _get_coroutinefunction_marker
-
-        _get_coroutinefunction_marker = _catch_coroutinefunction_marker
 
 
 def _catch_asyncgenfunction_marker() -> _MarkerInfo:
