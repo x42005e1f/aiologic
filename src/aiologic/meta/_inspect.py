@@ -108,7 +108,28 @@ if TYPE_CHECKING:
 
 
 def isgeneratorlike(obj: object, /) -> TypeIs[Generator[Any, Any, Any]]:
-    """..."""
+    """
+    Return :data:`True` if the object looks like a :term:`generator iterator`,
+    that is, implements :class:`collections.abc.Generator`, and :data:`False`
+    otherwise.
+
+    Example:
+      >>> from collections.abc import Generator
+      >>> class SimpleGenerator(Generator):
+      ...     def send(self, value):
+      ...         return super().send(value)
+      ...     def throw(self, typ, val=None, tb=None):
+      ...         return super().throw(typ, val, tb)
+      >>> def generator_function():
+      ...     return
+      ...     yield
+      >>> isgeneratorlike(object())
+      False
+      >>> isgeneratorlike(gen := generator_function())
+      True
+      >>> isgeneratorlike(SimpleGenerator())
+      True
+    """
 
     # the native type is already registered as a subclass of the abstract
     # class, but we still pass it explicitly to speed up the fast path
@@ -116,7 +137,29 @@ def isgeneratorlike(obj: object, /) -> TypeIs[Generator[Any, Any, Any]]:
 
 
 def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]:
-    """..."""
+    """
+    Return :data:`True` if the object looks like a :term:`coroutine`, that is,
+    implements :class:`collections.abc.Coroutine`, and :data:`False` otherwise.
+
+    Example:
+      >>> from collections.abc import Coroutine, Generator
+      >>> class SimpleCoroutine(Coroutine, Generator):
+      ...     def __await__(self):
+      ...         return self
+      ...     def send(self, value):
+      ...         return super().send(value)
+      ...     def throw(self, typ, val=None, tb=None):
+      ...         return super().throw(typ, val, tb)
+      >>> async def coroutine_function():
+      ...     pass
+      >>> iscoroutinelike(object())
+      False
+      >>> iscoroutinelike(coro := coroutine_function())
+      True
+      >>> iscoroutinelike(SimpleCoroutine())
+      True
+      >>> await coro  # to avoid `RuntimeWarning`
+    """
 
     # the native type is already registered as a subclass of the abstract
     # class, but we still pass it explicitly to speed up the fast path
@@ -124,7 +167,28 @@ def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]:
 
 
 def isasyncgenlike(obj: object, /) -> TypeIs[AsyncGenerator[Any, Any]]:
-    """..."""
+    """
+    Return :data:`True` if the object looks like an :term:`asynchronous
+    generator iterator`, that is, implements
+    :class:`collections.abc.AsyncGenerator`, and :data:`False` otherwise.
+
+    Example:
+      >>> from collections.abc import AsyncGenerator
+      >>> class SimpleAsyncGenerator(AsyncGenerator):
+      ...     async def asend(self, value):
+      ...         return await super().send(value)
+      ...     async def athrow(self, typ, val=None, tb=None):
+      ...         return await super().throw(typ, val, tb)
+      >>> async def asyncgen_function():
+      ...     return
+      ...     yield
+      >>> isasyncgenlike(object())
+      False
+      >>> isasyncgenlike(asyncgen := asyncgen_function())
+      True
+      >>> isasyncgenlike(SimpleAsyncGenerator())
+      True
+    """
 
     # the native type is already registered as a subclass of the abstract
     # class, but we still pass it explicitly to speed up the fast path
@@ -448,7 +512,77 @@ def isgeneratorfactory(
     native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Generator[Any, Any, Any]]]: ...
 def isgeneratorfactory(obj, /, *, native=DEFAULT):
-    """..."""
+    """
+    Return :data:`True` if the object returns a :term:`generator iterator` when
+    called, :data:`False` otherwise.
+
+    The following objects are treated as generator factories by default:
+
+    1. A :term:`generator function <generator>`. This is true for both
+       user-defined functions and some compiled functions that look like such
+       functions (for example, functions compiled via Cython).
+    2. A generator type (a class whose instances look like generator iterators;
+       see :func:`isgeneratorlike`).
+    3. An object manually marked with :func:`markgeneratorfactory`.
+
+    Example:
+      >>> from collections.abc import Generator
+      >>> class SimpleGenerator(Generator):
+      ...     def send(self, value):
+      ...         return super().send(value)
+      ...     def throw(self, typ, val=None, tb=None):
+      ...         return super().throw(typ, val, tb)
+      >>> def generator_function():
+      ...     return
+      ...     yield
+      >>> isgeneratorfactory(lambda: None)
+      False
+      >>> isgeneratorfactory(generator_function)
+      True
+      >>> isgeneratorfactory(SimpleGenerator)
+      True
+
+    For all others, to determine whether an object is a generator factory, a
+    recursive algorithm is used that handles at least the following cases:
+
+    1. If it is a function defined by :class:`functools.partialmethod` for some
+       object, the latter is checked.
+    2. If it is a partial object (an instance of :func:`functools.partial`),
+       the object it wraps (:attr:`functools.partial.func`) is checked.
+    3. If it is a bound method, the corresponding object
+       (:attr:`method.__func__`) is checked.
+    4. If it is a callable object, its :meth:`~object.__call__` method is
+       checked.
+
+    Example:
+      >>> from functools import partial, partialmethod
+      >>> class CustomGeneratorCallable:
+      ...     def __call__(self):
+      ...         return
+      ...         yield
+      ...     get = partialmethod(__call__)
+      >>> class ComplexGeneratorCallable:
+      ...     __call__ = CustomGeneratorCallable()
+      >>> isgeneratorfactory(CustomGeneratorCallable())
+      True
+      >>> isgeneratorfactory(CustomGeneratorCallable().get)
+      True
+      >>> isgeneratorfactory(CustomGeneratorCallable().__call__)
+      True
+      >>> isgeneratorfactory(partial(CustomGeneratorCallable()))
+      True
+      >>> isgeneratorfactory(ComplexGeneratorCallable())
+      True
+
+    Args:
+      native:
+        If set to :data:`True`, only objects that return a native generator
+        iterator (see :func:`inspect.isgenerator`/:data:`types.GeneratorType`)
+        when called are treated as generator factories, which corresponds to
+        the standard :func:`inspect.isgeneratorfunction`. Typically, you do not
+        need to set this parameter unless you want to perform more detailed
+        introspection, e.g. using :func:`inspect.getgeneratorstate`.
+    """
 
     if native is DEFAULT:
         native = False
@@ -520,7 +654,83 @@ def iscoroutinefactory(
     native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Coroutine[Any, Any, Any]]]: ...
 def iscoroutinefactory(obj, /, *, native=DEFAULT):
-    """..."""
+    """
+    Return :data:`True` if the object returns a :term:`coroutine` when called,
+    :data:`False` otherwise.
+
+    The following objects are treated as coroutine factories by default:
+
+    1. A :term:`coroutine function` (a function defined with an :keyword:`async
+       def` syntax). This is true for both user-defined functions and some
+       compiled functions that look like such functions (for example, functions
+       compiled via Cython).
+    2. A coroutine type (a class whose instances look like coroutines; see
+       :func:`iscoroutinelike`).
+    3. A generator-based coroutine function marked with
+       :func:`asyncio.coroutine` or the corresponding standard marker (on
+       Python <3.12).
+    4. An object manually marked with :func:`inspect.markcoroutinefunction` or
+       the corresponding standard marker (on Python ≥3.12).
+    5. An object manually marked with :func:`markcoroutinefactory`.
+
+    Example:
+      >>> from collections.abc import Coroutine, Generator
+      >>> class SimpleCoroutine(Coroutine, Generator):
+      ...     def __await__(self):
+      ...         return self
+      ...     def send(self, value):
+      ...         return super().send(value)
+      ...     def throw(self, typ, val=None, tb=None):
+      ...         return super().throw(typ, val, tb)
+      >>> async def coroutine_function():
+      ...     pass
+      >>> iscoroutinefactory(lambda: None)
+      False
+      >>> iscoroutinefactory(coroutine_function)
+      True
+      >>> iscoroutinefactory(SimpleCoroutine)
+      True
+
+    For all others, to determine whether an object is a coroutine factory, a
+    recursive algorithm is used that handles at least the following cases:
+
+    1. If it is a function defined by :class:`functools.partialmethod` for some
+       object, the latter is checked.
+    2. If it is a partial object (an instance of :func:`functools.partial`),
+       the object it wraps (:attr:`functools.partial.func`) is checked.
+    3. If it is a bound method, the corresponding object
+       (:attr:`method.__func__`) is checked.
+    4. If it is a callable object, its :meth:`~object.__call__` method is
+       checked.
+
+    Example:
+      >>> from functools import partial, partialmethod
+      >>> class CustomCoroutineCallable:
+      ...     async def __call__(self):
+      ...         pass
+      ...     get = partialmethod(__call__)
+      >>> class ComplexCoroutineCallable:
+      ...     __call__ = CustomCoroutineCallable()
+      >>> iscoroutinefactory(CustomCoroutineCallable())
+      True
+      >>> iscoroutinefactory(CustomCoroutineCallable().get)
+      True
+      >>> iscoroutinefactory(CustomCoroutineCallable().__call__)
+      True
+      >>> iscoroutinefactory(partial(CustomCoroutineCallable()))
+      True
+      >>> iscoroutinefactory(ComplexCoroutineCallable())
+      True
+
+    Args:
+      native:
+        If set to :data:`True`, only objects that return a native coroutine
+        (see :func:`inspect.iscoroutine`/:data:`types.CoroutineType`) when
+        called are treated as coroutine factories, which corresponds to the
+        standard :func:`inspect.iscoroutinefunction`. Typically, you do not
+        need to set this parameter unless you want to perform more detailed
+        introspection, e.g. using :func:`inspect.getcoroutinestate`.
+    """
 
     if native is DEFAULT:
         native = False
@@ -578,7 +788,82 @@ def isasyncgenfactory(
     native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., AsyncGenerator[Any, Any]]]: ...
 def isasyncgenfactory(obj, /, *, native=DEFAULT):
-    """..."""
+    """
+    Return :data:`True` if the object returns an :term:`asynchronous generator
+    iterator` when called, :data:`False` otherwise.
+
+    The following objects are treated as asynchronous generator factories by
+    default:
+
+    1. An :term:`asynchronous generator function <asynchronous generator>`.
+       This is true for both user-defined functions and some compiled functions
+       that look like such functions (for example, functions compiled via
+       Cython).
+    2. An asynchronous generator type (a class whose instances look like
+       asynchronous generator iterators; see :func:`isasyncgenlike`).
+    3. An object manually marked with :func:`markasyncgenfactory`.
+
+    Example:
+      >>> from collections.abc import AsyncGenerator
+      >>> class SimpleAsyncGenerator(AsyncGenerator):
+      ...     async def asend(self, value):
+      ...         return await super().send(value)
+      ...     async def athrow(self, typ, val=None, tb=None):
+      ...         return await super().throw(typ, val, tb)
+      >>> async def asyncgen_function():
+      ...     return
+      ...     yield
+      >>> isasyncgenfactory(lambda: None)
+      False
+      >>> isasyncgenfactory(asyncgen_function)
+      True
+      >>> isasyncgenfactory(SimpleAsyncGenerator)
+      True
+
+    For all others, to determine whether an object is an asynchronous generator
+    factory, a recursive algorithm is used that handles at least the following
+    cases:
+
+    1. If it is a function defined by :class:`functools.partialmethod` for some
+       object, the latter is checked.
+    2. If it is a partial object (an instance of :func:`functools.partial`),
+       the object it wraps (:attr:`functools.partial.func`) is checked.
+    3. If it is a bound method, the corresponding object
+       (:attr:`method.__func__`) is checked.
+    4. If it is a callable object, its :meth:`~object.__call__` method is
+       checked.
+
+    Example:
+      >>> from functools import partial, partialmethod
+      >>> class CustomAsyncGeneratorCallable:
+      ...     async def __call__(self):
+      ...         return
+      ...         yield
+      ...     get = partialmethod(__call__)
+      >>> class ComplexAsyncGeneratorCallable:
+      ...     __call__ = CustomAsyncGeneratorCallable()
+      >>> isasyncgenfactory(CustomAsyncGeneratorCallable())
+      True
+      >>> isasyncgenfactory(CustomAsyncGeneratorCallable().get)
+      True
+      >>> isasyncgenfactory(CustomAsyncGeneratorCallable().__call__)
+      True
+      >>> isasyncgenfactory(partial(CustomAsyncGeneratorCallable()))
+      True
+      >>> isasyncgenfactory(ComplexAsyncGeneratorCallable())
+      True
+
+    Args:
+      native:
+        If set to :data:`True`, only objects that return a native asynchronous
+        generator iterator (see
+        :func:`inspect.isasyncgen`/:data:`types.AsyncGeneratorType`) when
+        called are treated as asynchronous generator factories, which
+        corresponds to the standard :func:`inspect.isasyncgenfunction`.
+        Typically, you do not need to set this parameter unless you want to
+        perform more detailed introspection, e.g. using
+        :func:`inspect.getasyncgenstate`.
+    """
 
     if native is DEFAULT:
         native = False

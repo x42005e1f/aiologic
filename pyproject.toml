@@ -80,6 +80,11 @@ Homepage = "https://github.com/x42005e1f/aiologic"
 Documentation = "https://aiologic.readthedocs.io"
 Changelog = "https://aiologic.readthedocs.io/latest/changelog.html"
 
+[tool.codespell]
+ignore-words-list = [
+    "asend",
+]
+
 [tool.hatch.build.hooks.vcs]
 version-file = "src/aiologic/_version.py"
 
