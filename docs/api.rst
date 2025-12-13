@@ -416,6 +416,12 @@ Introspecting
 .. autofunction:: aiologic.meta.markcoroutinefactory
 .. autofunction:: aiologic.meta.markasyncgenfactory
 
+Transformers
+++++++++++++
+
+.. autofunction:: aiologic.meta.generator
+.. autofunction:: aiologic.meta.coroutine
+
 Functions
 +++++++++
 

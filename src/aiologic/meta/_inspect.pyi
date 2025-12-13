@@ -71,6 +71,10 @@ _T = TypeVar("_T")
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 _P = ParamSpec("_P")
 
+_generator_types: tuple[type, ...]
+_coroutine_types: tuple[type, ...]
+_asyncgen_types: tuple[type, ...]
+
 def isgeneratorlike(obj: object, /) -> TypeIs[Generator[Any, Any, Any]]: ...
 def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]: ...
 def isasyncgenlike(obj: object, /) -> TypeIs[AsyncGenerator[Any, Any]]: ...
@@ -115,7 +119,7 @@ def _unwrap_and_check(
     markers: list[_MarkerInfo],
 ) -> bool: ...
 @overload
-def isgeneratorfactory(
+def isgeneratorfactory(  # pyright: ignore[reportOverlappingOverload]
     obj: Callable[..., Generator[Any, Any, Any]],
     /,
     *,
@@ -164,7 +168,7 @@ def isgeneratorfactory(
     native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Generator[Any, Any, Any]]]: ...
 @overload
-def iscoroutinefactory(
+def iscoroutinefactory(  # pyright: ignore[reportOverlappingOverload]
     obj: Callable[..., Coroutine[Any, Any, Any]],
     /,
     *,
@@ -213,7 +217,7 @@ def iscoroutinefactory(
     native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Coroutine[Any, Any, Any]]]: ...
 @overload
-def isasyncgenfactory(
+def isasyncgenfactory(  # pyright: ignore[reportOverlappingOverload]
     obj: Callable[..., AsyncGenerator[Any, Any]],
     /,
     *,

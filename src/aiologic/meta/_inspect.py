@@ -14,6 +14,7 @@ from inspect import (
     CO_ASYNC_GENERATOR,
     CO_COROUTINE,
     CO_GENERATOR,
+    CO_ITERABLE_COROUTINE,
     isawaitable,
     isclass,
     iscode,
@@ -107,6 +108,12 @@ if TYPE_CHECKING:
     _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
     _P = ParamSpec("_P")
 
+# the native type is already registered as a subclass of the abstract class,
+# but we still specify it explicitly to speed up the fast path
+_generator_types: tuple[type, ...] = (GeneratorType, Generator)
+_coroutine_types: tuple[type, ...] = (CoroutineType, Coroutine)
+_asyncgen_types: tuple[type, ...] = (AsyncGeneratorType, AsyncGenerator)
+
 
 def isgeneratorlike(obj: object, /) -> TypeIs[Generator[Any, Any, Any]]:
     """
@@ -132,9 +139,7 @@ def isgeneratorlike(obj: object, /) -> TypeIs[Generator[Any, Any, Any]]:
       True
     """
 
-    # the native type is already registered as a subclass of the abstract
-    # class, but we still pass it explicitly to speed up the fast path
-    return isinstance(obj, (GeneratorType, Generator))
+    return isinstance(obj, _generator_types)
 
 
 def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]:
@@ -171,9 +176,7 @@ def iscoroutinelike(obj: object, /) -> TypeIs[Coroutine[Any, Any, Any]]:
         <await_for>`.
     """
 
-    # the native type is already registered as a subclass of the abstract
-    # class, but we still pass it explicitly to speed up the fast path
-    return isinstance(obj, (CoroutineType, Coroutine)) or (
+    return isinstance(obj, _coroutine_types) or (
         isawaitable(obj) and isgeneratorlike(obj)  # generator-based
     )
 
@@ -202,9 +205,7 @@ def isasyncgenlike(obj: object, /) -> TypeIs[AsyncGenerator[Any, Any]]:
       True
     """
 
-    # the native type is already registered as a subclass of the abstract
-    # class, but we still pass it explicitly to speed up the fast path
-    return isinstance(obj, (AsyncGeneratorType, AsyncGenerator))
+    return isinstance(obj, _asyncgen_types)
 
 
 @dataclass
@@ -414,9 +415,9 @@ else:
 
 def _isfunctionlike(obj: object, /) -> TypeIs[_FunctionLike]:
     return isfunction(obj) or (
-        # callable(obj)
-        # and not isclass(obj)
-        iscode(
+        callable(obj)
+        and not isclass(obj)
+        and iscode(
             getattr(obj, "__code__", MISSING),
         )
         and isinstance(
@@ -621,7 +622,7 @@ def isgeneratorfactory(obj, /, *, native=DEFAULT):
     return _unwrap_and_check(
         obj,
         CO_GENERATOR,
-        GeneratorType if native else Generator,
+        GeneratorType if native else _generator_types,
         markers,
     )
 
@@ -768,8 +769,8 @@ def iscoroutinefactory(obj, /, *, native=DEFAULT):
 
     return _unwrap_and_check(
         obj,
-        CO_COROUTINE,
-        CoroutineType if native else Coroutine,
+        CO_COROUTINE if native else CO_COROUTINE | CO_ITERABLE_COROUTINE,
+        CoroutineType if native else _coroutine_types,
         markers,
     )
 
@@ -902,7 +903,7 @@ def isasyncgenfactory(obj, /, *, native=DEFAULT):
     return _unwrap_and_check(
         obj,
         CO_ASYNC_GENERATOR,
-        AsyncGeneratorType if native else AsyncGenerator,
+        AsyncGeneratorType if native else _asyncgen_types,
         markers,
     )
 
@@ -929,6 +930,10 @@ def markgeneratorfactory(factory=MISSING, /, *, native=DEFAULT):
 
     if native is DEFAULT:
         native = False
+
+    if not callable(factory):
+        msg = "the first argument must be callable"
+        raise TypeError(msg)
 
     obj = factory
 
@@ -968,6 +973,10 @@ def markcoroutinefactory(factory=MISSING, /, *, native=DEFAULT):
     if native is DEFAULT:
         native = False
 
+    if not callable(factory):
+        msg = "the first argument must be callable"
+        raise TypeError(msg)
+
     obj = factory
 
     while ismethod(obj):
@@ -1005,6 +1014,10 @@ def markasyncgenfactory(factory=MISSING, /, *, native=DEFAULT):
 
     if native is DEFAULT:
         native = False
+
+    if not callable(factory):
+        msg = "the first argument must be callable"
+        raise TypeError(msg)
 
     obj = factory
 

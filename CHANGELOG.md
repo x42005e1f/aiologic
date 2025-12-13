@@ -33,6 +33,13 @@ Commit messages are consistent with
   `aiologic.meta.markcoroutinefactory()`, and
   `aiologic.meta.markasyncgenfactory()` as a way to fine-tune the above (and
   some standard) functions regardless of the Python version.
+- `aiologic.meta.generator()` and `aiologic.meta.coroutine()` functions for
+  transforming generator/coroutine factories into the corresponding object
+  functions. Unlike `types.coroutine()`, they always return a new function, and
+  it is always a native object function. Mainly added to define the
+  `__await__()` method via an asynchronous function (and subsequent
+  transformation into a generator function) with no overhead when calling, with
+  annotation updates (for `sphinx.ext.autodoc`).
 
 ### Changed
 
