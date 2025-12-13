@@ -20,7 +20,7 @@ from aiologic.lowlevel import (
     green_checkpoint,
     once,
 )
-from aiologic.meta import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType, generator
 
 from ._exceptions import (
     _CancelledError,
@@ -38,9 +38,9 @@ else:
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable, Callable, Coroutine, Generator
+        from collections.abc import Awaitable, Callable, Coroutine
     else:
-        from typing import Awaitable, Callable, Coroutine, Generator
+        from typing import Awaitable, Callable, Coroutine
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
@@ -147,13 +147,14 @@ class Task(Result[_T], ABC):
     def __bool__(self, /) -> bool:
         return self._future.running()
 
-    def __await__(self) -> Generator[Any, Any, _T]:
+    @generator
+    async def __await__(self, /) -> _T:
         if not self._future.done():
             event = create_async_event()
             self._future.add_done_callback(lambda _: event.set())
 
             try:
-                success = yield from event.__await__()
+                success = await event
             finally:
                 if event.cancelled():
                     event = create_async_event(shield=True)
@@ -161,12 +162,12 @@ class Task(Result[_T], ABC):
                     if not self._future.done():
                         self.cancel()
 
-                        yield from event.__await__()
+                        await event
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
         else:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
         try:
             return self._future.result()

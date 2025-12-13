@@ -177,7 +177,7 @@ class DefaultType(SingletonEnum):
     A singleton class for :data:`DEFAULT`; mimics :data:`~types.NoneType`.
     """
 
-    DEFAULT = object()
+    DEFAULT = "DEFAULT"
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
         bcs = __class__  # an implicit closure reference
@@ -199,7 +199,7 @@ class MissingType(SingletonEnum):
     A singleton class for :data:`MISSING`; mimics :data:`~types.NoneType`.
     """
 
-    MISSING = object()
+    MISSING = "MISSING"
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
         bcs = __class__  # an implicit closure reference

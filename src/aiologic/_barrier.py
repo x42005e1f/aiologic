@@ -19,7 +19,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .meta import DEFAULT, DefaultType, copies
+from .meta import DEFAULT, DefaultType, copies, generator
 
 if TYPE_CHECKING:
     import sys
@@ -30,11 +30,6 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Generator
-    else:
-        from typing import Generator
 
 try:
     from sys import _is_gil_enabled
@@ -173,13 +168,14 @@ class Latch:
 
         return not self._filling
 
-    def __await__(self, /) -> Generator[Any, Any]:
+    @generator
+    async def __await__(self, /) -> None:
         """..."""
 
         if not self._filling:
             unbroken = self._unbroken
 
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup(unbroken)
 
@@ -207,7 +203,7 @@ class Latch:
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 self.abort()
@@ -485,11 +481,12 @@ class Barrier:
         if exc_value is not None:
             self.abort()
 
-    def __await__(self, /) -> Generator[Any, Any, int]:
+    @generator
+    async def __await__(self, /) -> int:
         """..."""
 
         if not self._unbroken:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup_on_breaking()
 
@@ -515,7 +512,7 @@ class Barrier:
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 self.abort()
@@ -907,11 +904,12 @@ class RBarrier(Barrier):
 
         return Barrier.__exit__(self, exc_type, exc_value, traceback)
 
-    def __await__(self, /) -> Generator[Any, Any, int]:
+    @generator
+    async def __await__(self, /) -> int:
         """..."""
 
         if not self._unbroken:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup_on_breaking()
 
@@ -939,7 +937,7 @@ class RBarrier(Barrier):
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 self.abort()

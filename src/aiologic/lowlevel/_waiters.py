@@ -10,15 +10,17 @@ import sys
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
+from aiologic.meta import generator
+
 from ._libraries import current_async_library, current_green_library
 from ._locks import once
 from ._safety import signal_safety_enabled
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Generator
+        from collections.abc import Callable
     else:
-        from typing import Callable, Generator
+        from typing import Callable
 
 
 class Waiter(Protocol):
@@ -61,7 +63,8 @@ class AsyncWaiter(Waiter, Protocol):
     def __init__(self, /, *, shield: bool = False) -> None:
         """..."""
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
     def wake(self, /) -> None:
@@ -444,18 +447,19 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        def __await__(self, /) -> Generator[Any, Any, bool]:
+        @generator
+        async def __await__(self, /) -> bool:
             self.__future = self.__loop.create_future()
 
             try:
                 if self.shield:
-                    yield from _tasks._asyncio_shielded_call(
+                    await _tasks._asyncio_shielded_call(
                         self.__future,
                         None,
                         None,
-                    ).__await__()
+                    )
                 else:
-                    yield from self.__future.__await__()
+                    await self.__future
             finally:
                 self.__future = None
 
@@ -666,16 +670,17 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        def __await__(self, /) -> Generator[Any, Any, bool]:
+        @generator
+        async def __await__(self, /) -> bool:
             if self.shield:
-                yield from _tasks._curio_shielded_call(
+                await _tasks._curio_shielded_call(
                     _future_wait,
                     [self.__future],
                     {},
-                ).__await__()
-                yield from check_cancellation().__await__()
+                )
+                await check_cancellation()
             else:
-                yield from _future_wait(self.__future).__await__()
+                await _future_wait(self.__future)
 
             return True
 
@@ -731,18 +736,19 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        def __await__(self, /) -> Generator[Any, Any, bool]:
+        @generator
+        async def __await__(self, /) -> bool:
             self.__task = current_task()
 
             try:
                 if self.shield:
-                    yield from _tasks._trio_shielded_call(
+                    await _tasks._trio_shielded_call(
                         wait_task_rescheduled,
                         [_abort],
                         {},
-                    ).__await__()
+                    )
                 else:
-                    yield from wait_task_rescheduled(_abort).__await__()
+                    await wait_task_rescheduled(_abort)
             finally:
                 self.__task = None
 

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from concurrent.futures import Future
 from typing import Any, TypeVar
 
-from aiologic.meta import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType, generator
 
 from ._executors import TaskExecutor
 from ._results import Result
@@ -20,9 +20,9 @@ else:
     from typing_extensions import TypeVarTuple, Unpack, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable, Callable, Coroutine, Generator
+    from collections.abc import Awaitable, Callable, Coroutine
 else:
-    from typing import Awaitable, Callable, Coroutine, Generator
+    from typing import Awaitable, Callable, Coroutine
 
 _T = TypeVar("_T")
 _Ts = TypeVarTuple("_Ts")
@@ -69,7 +69,8 @@ class Task(Result[_T], ABC):
     ) -> None: ...
     def __repr__(self, /) -> str: ...
     def __bool__(self, /) -> bool: ...
-    def __await__(self) -> Generator[Any, Any, _T]: ...
+    @generator
+    async def __await__(self, /) -> _T: ...
     def wait(self, timeout: float | None = None) -> _T: ...
     def cancel(self, /) -> Result[bool]: ...
     def cancelled(self, /) -> Result[bool]: ...

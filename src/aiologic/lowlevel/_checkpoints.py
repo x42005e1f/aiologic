@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 from wrapt import ObjectProxy, decorator, when_imported
 
 from aiologic._monkey import import_original
-from aiologic.meta import MISSING, MissingType, replaces
+from aiologic.meta import MISSING, MissingType, generator, replaces
 
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread_ident
@@ -421,11 +421,12 @@ class _NoCheckpointsManager:
 class __AwaitableWithCheckpoints(ObjectProxy):
     __slots__ = ()
 
-    def __await__(self, /):
+    @generator
+    async def __await__(self, /):
         token = _async_checkpoints_set(True)
 
         try:
-            return (yield from self.__wrapped__.__await__())
+            return await self.__wrapped__
         except BaseException:
             self = None  # noqa: PLW0642
             raise
@@ -436,11 +437,12 @@ class __AwaitableWithCheckpoints(ObjectProxy):
 class __AwaitableWithNoCheckpoints(ObjectProxy):
     __slots__ = ()
 
-    def __await__(self, /):
+    @generator
+    async def __await__(self, /):
         token = _async_checkpoints_set(False)
 
         try:
-            return (yield from self.__wrapped__.__await__())
+            return await self.__wrapped__
         except BaseException:
             self = None  # noqa: PLW0642
             raise

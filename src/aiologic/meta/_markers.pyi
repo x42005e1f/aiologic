@@ -38,14 +38,14 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]
 
 @final
 class DefaultType(SingletonEnum):
-    DEFAULT = object()
+    DEFAULT = "DEFAULT"
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn: ...
     def __bool__(self, /) -> Literal[False]: ...
 
 @final
 class MissingType(SingletonEnum):
-    MISSING = object()
+    MISSING = "MISSING"
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn: ...
     def __bool__(self, /) -> Literal[False]: ...

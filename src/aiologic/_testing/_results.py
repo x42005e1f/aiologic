@@ -6,16 +6,7 @@
 from __future__ import annotations
 
 from concurrent.futures import BrokenExecutor, Future
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Generic,
-    Literal,
-    NoReturn,
-    TypeVar,
-    final,
-)
+from typing import Any, Final, Generic, Literal, NoReturn, TypeVar, final
 
 from aiologic.lowlevel import (
     async_checkpoint,
@@ -23,16 +14,9 @@ from aiologic.lowlevel import (
     create_green_event,
     green_checkpoint,
 )
+from aiologic.meta import generator
 
 from ._exceptions import _CancelledError, _TimeoutError, get_timeout_exc_class
-
-if TYPE_CHECKING:
-    import sys
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Generator
-    else:
-        from typing import Generator
 
 _T = TypeVar("_T")
 
@@ -77,17 +61,18 @@ class Result(Generic[_T]):
 
         return bool(self._future.result())
 
-    def __await__(self) -> Generator[Any, Any, _T]:
+    @generator
+    async def __await__(self, /) -> _T:
         if not self._future.done():
             event = create_async_event()
             self._future.add_done_callback(lambda _: event.set())
 
-            success = yield from event.__await__()
+            success = await event
 
             if not success:
                 raise get_timeout_exc_class(failback=_TimeoutError)
         else:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
         try:
             return self._future.result()
@@ -150,8 +135,9 @@ class FalseResult(Result[Literal[False]]):
     def __bool__(self, /) -> bool:
         return False
 
-    def __await__(self) -> Generator[Any, Any, Literal[False]]:
-        yield from async_checkpoint().__await__()
+    @generator
+    async def __await__(self, /) -> Literal[False]:
+        await async_checkpoint()
 
         return False
 
@@ -193,8 +179,9 @@ class TrueResult(Result[Literal[True]]):
     def __bool__(self, /) -> bool:
         return True
 
-    def __await__(self) -> Generator[Any, Any, Literal[True]]:
-        yield from async_checkpoint().__await__()
+    @generator
+    async def __await__(self, /) -> Literal[True]:
+        await async_checkpoint()
 
         return True
 

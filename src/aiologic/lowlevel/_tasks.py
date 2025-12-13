@@ -12,7 +12,7 @@ from typing import Any, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from aiologic.meta import replaces
+from aiologic.meta import generator, replaces
 
 from ._libraries import current_async_library, current_green_library
 
@@ -345,7 +345,8 @@ async def __async_shield(wrapped, instance, args, kwargs, /):
 class __ShieldedAwaitable(ObjectProxy):
     __slots__ = ()
 
-    def __await__(self, /):
+    @generator
+    async def __await__(self, /):
         library = current_async_library()
 
         if library == "asyncio":
@@ -359,7 +360,7 @@ class __ShieldedAwaitable(ObjectProxy):
             raise RuntimeError(msg)
 
         try:
-            return (yield from coro.__await__())
+            return await coro
         except BaseException:
             self = None  # noqa: PLW0642
             raise

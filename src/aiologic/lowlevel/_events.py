@@ -8,25 +8,13 @@ from __future__ import annotations
 import sys
 
 from abc import ABC, abstractmethod
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    NoReturn,
-    Protocol,
-    final,
-)
+from typing import Any, Final, Literal, NoReturn, Protocol, final
+
+from aiologic.meta import generator
 
 from ._checkpoints import async_checkpoint, green_checkpoint
 from ._locks import ThreadOnceLock
 from ._waiters import create_async_waiter, create_green_waiter
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Generator
-    else:
-        from typing import Generator
 
 try:
     from sys import _is_gil_enabled
@@ -144,7 +132,8 @@ class AsyncEvent(ABC, Event):
     __slots__ = ()
 
     @abstractmethod
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
         raise NotImplementedError
@@ -230,8 +219,9 @@ class SetEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[True]:
         return True
 
-    def __await__(self, /) -> Generator[Any, Any, Literal[True]]:
-        yield from async_checkpoint().__await__()
+    @generator
+    async def __await__(self, /) -> Literal[True]:
+        await async_checkpoint()
 
         return True
 
@@ -302,8 +292,9 @@ class DummyEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[True]:
         return True
 
-    def __await__(self, /) -> Generator[Any, Any, Literal[True]]:
-        yield from async_checkpoint().__await__()
+    @generator
+    async def __await__(self, /) -> Literal[True]:
+        await async_checkpoint()
 
         return True
 
@@ -374,8 +365,9 @@ class CancelledEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[False]:
         return False
 
-    def __await__(self, /) -> Generator[Any, Any, Literal[False]]:
-        yield from async_checkpoint().__await__()
+    @generator
+    async def __await__(self, /) -> Literal[False]:
+        await async_checkpoint()
 
         return False
 
@@ -573,14 +565,15 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
 
         return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         if self._is_set:
-            yield from async_checkpoint(force=self.force).__await__()
+            await async_checkpoint(force=self.force)
 
             return True
 
         if self._is_cancelled:
-            yield from async_checkpoint(force=self.force).__await__()
+            await async_checkpoint(force=self.force)
 
             return False
 
@@ -597,12 +590,12 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
 
         try:
             if self._is_set:
-                yield from async_checkpoint(force=self.force).__await__()
+                await async_checkpoint(force=self.force)
 
                 return True
 
             try:
-                return (yield from self._waiter.__await__())
+                return await self._waiter
             finally:
                 if not self._is_set:
                     try:

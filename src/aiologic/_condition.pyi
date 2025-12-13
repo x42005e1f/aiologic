@@ -12,7 +12,7 @@ from typing import Any, Final, Generic
 from . import lowlevel
 from ._lock import Lock, RLock
 from ._semaphore import BinarySemaphore
-from .meta import DEFAULT, DefaultType
+from .meta import DEFAULT, DefaultType, generator
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -25,9 +25,9 @@ else:
     from typing_extensions import Self, overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
 else:
-    from typing import Callable, Generator
+    from typing import Callable
 
 _USE_ONCELOCK_FORCED: Final[bool]
 
@@ -104,7 +104,8 @@ class Condition(Generic[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    def __await__(self, /) -> Generator[Any, Any, bool]: ...
+    @generator
+    async def __await__(self, /) -> bool: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
     async def for_(
         self,
@@ -165,7 +166,8 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    def __await__(self, /) -> Generator[Any, Any, bool]: ...
+    @generator
+    async def __await__(self, /) -> bool: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
     async def for_(
         self,

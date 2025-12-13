@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator
 
-from aiologic.meta import MISSING, MissingType, replaces
+from aiologic.meta import MISSING, MissingType, generator, replaces
 
 from ._threads import current_thread_ident
 
@@ -151,11 +151,12 @@ class _NoSignalSafetyManager:
 class __AwaitableWithSignalSafety(ObjectProxy):
     __slots__ = ()
 
-    def __await__(self, /):
+    @generator
+    async def __await__(self, /):
         token = _signal_safety_set(True)
 
         try:
-            return (yield from self.__wrapped__.__await__())
+            return await self.__wrapped__
         except BaseException:
             self = None  # noqa: PLW0642
             raise
@@ -166,11 +167,12 @@ class __AwaitableWithSignalSafety(ObjectProxy):
 class __AwaitableWithNoSignalSafety(ObjectProxy):
     __slots__ = ()
 
-    def __await__(self, /):
+    @generator
+    async def __await__(self, /):
         token = _signal_safety_set(False)
 
         try:
-            return (yield from self.__wrapped__.__await__())
+            return await self.__wrapped__
         except BaseException:
             self = None  # noqa: PLW0642
             raise

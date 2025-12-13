@@ -20,7 +20,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .meta import DEFAULT, MISSING, DefaultType, MissingType, copies
+from .meta import DEFAULT, MISSING, DefaultType, MissingType, copies, generator
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -34,9 +34,9 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
     if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Generator
+        from collections.abc import Callable
     else:
-        from typing import Callable, Generator
+        from typing import Callable
 
 try:
     from sys import _is_gil_enabled
@@ -138,11 +138,12 @@ class Event:
 
         return not self._is_unset
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
         if not self._is_unset:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup()
 
@@ -162,7 +163,7 @@ class Event:
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 if event.cancelled():
@@ -357,11 +358,12 @@ class REvent(Event):
 
         return Event.__bool__(self)
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
         if not self._is_unset:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup()
 
@@ -386,7 +388,7 @@ class REvent(Event):
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 if event.cancelled():
@@ -638,11 +640,12 @@ class CountdownEvent:
 
         return not self._is_unset
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
         if not self._is_unset:
-            yield from async_checkpoint().__await__()
+            await async_checkpoint()
 
             self._wakeup()
 
@@ -667,7 +670,7 @@ class CountdownEvent:
         success = False
 
         try:
-            success = yield from event.__await__()
+            success = await event
         finally:
             if not success:
                 if event.cancelled():

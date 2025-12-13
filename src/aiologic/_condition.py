@@ -28,7 +28,7 @@ from .lowlevel import (
     green_clock,
     lazydeque,
 )
-from .meta import DEFAULT, MISSING, DefaultType
+from .meta import DEFAULT, MISSING, DefaultType, generator
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -41,9 +41,9 @@ else:
     from typing_extensions import overload
 
 if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
 else:
-    from typing import Callable, Generator
+    from typing import Callable
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -279,10 +279,11 @@ class Condition(Generic[_T_co, _S_co]):
 
         return self._impl.__exit__(exc_type, exc_value, traceback)
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         """..."""
 
-        return (yield from self._impl.__await__())
+        return await self._impl
 
     def wait(self, /, timeout: float | None = None) -> bool:
         """..."""
@@ -449,12 +450,13 @@ class _BaseCondition(Condition[_T_co, _S_co]):
     ) -> None:
         return None
 
-    def __await__(self, /) -> Generator[Any, Any, bool]:
+    @generator
+    async def __await__(self, /) -> bool:
         if not self._async_owned():
             msg = "cannot wait on un-acquired lock"
             raise RuntimeError(msg)
 
-        return (yield from self._async_wait(None).__await__())
+        return await self._async_wait(None)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         if not self._green_owned():
