@@ -16,9 +16,10 @@ from inspect import (
     isfunction,
 )
 from types import CoroutineType, GeneratorType
-from typing import TYPE_CHECKING, Any, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args, get_origin
 
 from ._functions import copies
+from ._helpers import await_for
 from ._inspect import (
     _isfunctionlike,
     isasyncgenfactory,
@@ -27,7 +28,7 @@ from ._inspect import (
 )
 
 if TYPE_CHECKING:
-    from typing import Final, TypeVar
+    from typing import Final
 
     if sys.version_info >= (3, 9):  # PEP 585
         from collections.abc import Awaitable, Callable
@@ -35,9 +36,9 @@ if TYPE_CHECKING:
         from typing import Awaitable, Callable
 
 if sys.version_info >= (3, 9):  # PEP 585
-    from collections.abc import Coroutine, Generator
+    from collections.abc import Coroutine, Generator, Iterator
 else:
-    from typing import Coroutine, Generator
+    from typing import Coroutine, Generator, Iterator
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):  # PEP 612
@@ -53,6 +54,10 @@ else:  # typing-extensions>=4.2.0
 if TYPE_CHECKING:
     _T = TypeVar("_T")
     _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+
+_IteratorT = TypeVar("_IteratorT", bound=Iterator[Any])
+
+if TYPE_CHECKING:
     _ReturnT = TypeVar("_ReturnT")
     _SendT = TypeVar("_SendT")
     _YieldT = TypeVar("_YieldT")
@@ -196,6 +201,16 @@ def _update_returntype(
     return func
 
 
+class _AwaitableWrapper(Generic[_IteratorT]):
+    __slots__ = ("__it",)
+
+    def __init__(self, iterator: _IteratorT, /) -> None:
+        self.__it = iterator
+
+    def __await__(self) -> _IteratorT:
+        return self.__it
+
+
 @overload
 def _generator(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
@@ -226,7 +241,7 @@ def _generator(func, /):
         msg = "the first argument must be callable"
         raise TypeError(msg)
 
-    if isfunction(func):
+    if isfunction(func) and not hasattr(func, "__compiled__"):  # non-Nuitka
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
@@ -263,11 +278,23 @@ def _generator(func, /):
         return wrapper
 
     if iscoroutinefactory(func):
+        if hasattr(_generator, "__compiled__"):  # Nuitka
 
-        @wraps(func)
-        @_generator
-        async def wrapper(*args, **kwargs):
-            return await func(*args, **kwargs)
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                coro = func(*args, **kwargs)
+
+                if hasattr(coro, "__await__"):
+                    return (yield from coro.__await__())
+
+                return (yield from await_for(coro).__await__())
+
+        else:
+
+            @wraps(func)
+            @_generator
+            async def wrapper(*args, **kwargs):
+                return await func(*args, **kwargs)
 
         return wrapper
 
@@ -315,7 +342,7 @@ def _coroutine(func, /):
         msg = "the first argument must be callable"
         raise TypeError(msg)
 
-    if isfunction(func):
+    if isfunction(func) and not hasattr(func, "__compiled__"):  # non-Nuitka
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
@@ -340,11 +367,18 @@ def _coroutine(func, /):
             raise TypeError(msg)
 
     if isgeneratorfactory(func):
+        if hasattr(_coroutine, "__compiled__"):  # Nuitka
 
-        @wraps(func)
-        @_coroutine
-        def wrapper(*args, **kwargs):
-            return (yield from func(*args, **kwargs))
+            @wraps(func)
+            async def wrapper(*args, **kwargs):
+                return await _AwaitableWrapper(func(*args, **kwargs))
+
+        else:
+
+            @wraps(func)
+            @_coroutine
+            def wrapper(*args, **kwargs):
+                return (yield from func(*args, **kwargs))
 
         return wrapper
 

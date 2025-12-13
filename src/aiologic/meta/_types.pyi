@@ -6,12 +6,24 @@
 import sys
 
 from types import CoroutineType, GeneratorType
-from typing import Any, Final, TypeVar
+from typing import Any, Final, Generic, TypeVar
 
 if sys.version_info >= (3, 9):  # PEP 585
-    from collections.abc import Awaitable, Callable, Coroutine, Generator
+    from collections.abc import (
+        Awaitable,
+        Callable,
+        Coroutine,
+        Generator,
+        Iterator,
+    )
 else:
-    from typing import Awaitable, Callable, Coroutine, Generator
+    from typing import (
+        Awaitable,
+        Callable,
+        Coroutine,
+        Generator,
+        Iterator,
+    )
 
 if sys.version_info >= (3, 10):  # PEP 612
     from typing import ParamSpec
@@ -25,6 +37,7 @@ else:  # typing-extensions>=4.2.0
 
 _T = TypeVar("_T")
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+_IteratorT = TypeVar("_IteratorT", bound=Iterator[Any])
 _ReturnT = TypeVar("_ReturnT")
 _SendT = TypeVar("_SendT")
 _YieldT = TypeVar("_YieldT")
@@ -68,6 +81,13 @@ def _update_returntype(
     /,
     transform: Callable[[Any], Any],
 ) -> _CallableT: ...
+
+class _AwaitableWrapper(Generic[_IteratorT]):
+    __slots__ = ("__it",)
+
+    def __init__(self, iterator: _IteratorT, /) -> None: ...
+    def __await__(self) -> _IteratorT: ...
+
 @overload
 def _generator(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
