@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 
-from functools import wraps
+from functools import update_wrapper, wraps
 from inspect import (
     CO_ASYNC_GENERATOR,
     CO_COROUTINE,
@@ -15,10 +15,9 @@ from inspect import (
     CO_ITERABLE_COROUTINE,
     isfunction,
 )
-from types import CoroutineType, GeneratorType
+from types import CoroutineType, FunctionType, GeneratorType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args, get_origin
 
-from ._functions import copies
 from ._helpers import await_for
 from ._inspect import (
     _isfunctionlike,
@@ -201,6 +200,19 @@ def _update_returntype(
     return func
 
 
+def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
+    copy = FunctionType(
+        code=func.__code__.replace(co_flags=flags),
+        closure=func.__closure__,
+        globals=func.__globals__,
+        name=func.__name__,
+    )
+    copy.__defaults__ = func.__defaults__
+    copy.__kwdefaults__ = func.__kwdefaults__  # python/cpython#112640
+
+    return update_wrapper(copy, func)
+
+
 class _AwaitableWrapper(Generic[_IteratorT]):
     __slots__ = ("__it",)
 
@@ -245,22 +257,10 @@ def _generator(func, /):
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
-            copy = copies(func, func)
-
-            if flags & CO_ITERABLE_COROUTINE:
-                copy.__code__ = copy.__code__.replace(
-                    co_flags=(flags & ~CO_ITERABLE_COROUTINE)
-                )
-
-            return copy
+            return _copy_with_flags(func, flags & ~CO_ITERABLE_COROUTINE)
 
         if flags & CO_COROUTINE:
-            copy = copies(func, func)
-            copy.__code__ = copy.__code__.replace(
-                co_flags=(flags & ~CO_COROUTINE | CO_GENERATOR)
-            )
-
-            return copy
+            return _copy_with_flags(func, flags & ~CO_COROUTINE | CO_GENERATOR)
 
         if flags & CO_ASYNC_GENERATOR:
             msg = (
@@ -346,18 +346,13 @@ def _coroutine(func, /):
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
-            copy = copies(func, func)
-            copy.__code__ = copy.__code__.replace(
-                co_flags=(
-                    flags & ~(CO_GENERATOR | CO_ITERABLE_COROUTINE)
-                    | CO_COROUTINE
-                )
+            return _copy_with_flags(
+                func,
+                flags & ~(CO_GENERATOR | CO_ITERABLE_COROUTINE) | CO_COROUTINE,
             )
 
-            return copy
-
         if flags & CO_COROUTINE:
-            return copies(func, func)
+            return _copy_with_flags(func, flags)
 
         if flags & CO_ASYNC_GENERATOR:
             msg = (

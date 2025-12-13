@@ -81,6 +81,7 @@ def _update_returntype(
     /,
     transform: Callable[[Any], Any],
 ) -> _CallableT: ...
+def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT: ...
 
 class _AwaitableWrapper(Generic[_IteratorT]):
     __slots__ = ("__it",)
