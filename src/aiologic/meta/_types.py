@@ -366,6 +366,14 @@ def _coroutine(func, /):
             )
             raise TypeError(msg)
 
+    if iscoroutinefactory(func):
+
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapper
+
     if isgeneratorfactory(func):
         if hasattr(_coroutine, "__compiled__"):  # Nuitka
 
@@ -379,14 +387,6 @@ def _coroutine(func, /):
             @_coroutine
             def wrapper(*args, **kwargs):
                 return (yield from func(*args, **kwargs))
-
-        return wrapper
-
-    if iscoroutinefactory(func):
-
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            return await func(*args, **kwargs)
 
         return wrapper
 
