@@ -197,6 +197,11 @@ def _update_returntype(
 
                 func.__annotations__ = annotations
 
+    try:
+        del func.__wrapped__  # avoid unwrapping to preserve annotations
+    except AttributeError:
+        pass
+
     return func
 
 
