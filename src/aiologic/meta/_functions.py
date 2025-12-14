@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 
 from functools import partial, update_wrapper
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING
 from ._markers import MISSING
 
 if TYPE_CHECKING:
-    from typing import Any, TypeVar, type_check_only
+    from typing import Any, Final, TypeVar, type_check_only
 
     from ._markers import MissingType
 
@@ -50,6 +51,13 @@ if TYPE_CHECKING:
     _T = TypeVar("_T")
     _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
     _P = ParamSpec("_P")
+
+_SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
+    os.getenv(
+        "SPHINX_AUTODOC_RELOAD_MODULES",
+        "",
+    )
+)
 
 
 @overload
@@ -194,7 +202,7 @@ def copies(original, replaced=MISSING, /):
 
     # We skip the function on type checking to speed up initialization and
     # prevent possible type errors.
-    if TYPE_CHECKING:
+    if TYPE_CHECKING or _SPHINX_AUTODOC_RELOAD_MODULES:
         if replaced is not original:
             return replaced
 

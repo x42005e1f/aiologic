@@ -5,7 +5,7 @@
 
 import sys
 
-from typing import Any, TypeVar, type_check_only
+from typing import Any, Final, TypeVar, type_check_only
 
 from ._markers import MISSING, MissingType
 
@@ -38,6 +38,8 @@ class _NamedCallable(Protocol):
 _T = TypeVar("_T")
 _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
 _P = ParamSpec("_P")
+
+_SPHINX_AUTODOC_RELOAD_MODULES: Final[bool]
 
 @overload
 def replaces(

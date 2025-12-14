@@ -6,7 +6,7 @@
 import sys
 
 from types import ModuleType
-from typing import Any
+from typing import Any, Final
 
 from ._markers import DEFAULT, DefaultType
 
@@ -19,6 +19,8 @@ if sys.version_info >= (3, 13):  # PEP 742
     from typing import TypeIs
 else:  # typing-extensions>=4.10.0
     from typing_extensions import TypeIs
+
+_SPHINX_AUTODOC_RELOAD_MODULES: Final[bool]
 
 def _isbuiltindescriptor(
     value: object,

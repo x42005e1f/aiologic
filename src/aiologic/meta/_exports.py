@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import warnings
 import weakref
@@ -18,7 +19,7 @@ from ._modules import resolve_name
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Any
+    from typing import Any, Final
 
     from ._markers import DefaultType
 
@@ -36,6 +37,13 @@ if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import get_overloads, overload
 else:  # typing-extensions>=4.2.0
     from typing_extensions import get_overloads, overload
+
+_SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
+    os.getenv(
+        "SPHINX_AUTODOC_RELOAD_MODULES",
+        "",
+    )
+)
 
 
 def _isbuiltindescriptor(
@@ -207,7 +215,7 @@ def export(
     # particular, 'bysource' ordering will not work, nor will some
     # cross-references. So we skip all on type checking (implied by
     # `SPHINX_AUTODOC_RELOAD_MODULES=1`).
-    if TYPE_CHECKING:
+    if TYPE_CHECKING or _SPHINX_AUTODOC_RELOAD_MODULES:
         return
 
     if ismodule(package_namespace):

@@ -58,6 +58,9 @@ Commit messages are consistent with
 
 ### Fixed
 
+- Functions with `sphinx.ext.autodoc`-specific paths did not have the expected
+  behavior due to a peculiarity of module reloading. Now they also check
+  environment variables.
 - Since `aiologic.meta.export()` includes all public names in `__all__`,
   `__future__.annotations` and `typing.TYPE_CHECKING` were also included (as
   'annotations' and 'TYPE_CHECKING', respectively) if they were imported in
