@@ -43,6 +43,10 @@ Commit messages are consistent with
 
 ### Changed
 
+- All functions that previously used `inspect.iscoroutinefunction()` now rely
+  on `aiologic.meta.iscoroutinefactory()`. This makes detecting asynchronous
+  functions (coroutine factories) more accurate and also allows them to be
+  marked on any version of Python.
 - The `aiologic.meta.SingletonEnum` constructor now reverts to the original
   behavior if there are zero or more than one members, or if additional
   parameters are passed, which should make it safer.

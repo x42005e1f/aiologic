@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import sys
 
-from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, Union
 
 from wrapt import FunctionWrapper, decorator
 
 from ._lock import RLock
 from ._semaphore import BinarySemaphore
+from .meta import iscoroutinefactory
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -174,7 +174,7 @@ class _AASynchronizer:
         await self._async_release()
 
     def __call__(self, wrapped: _CallableT, /) -> _CallableT:
-        if not iscoroutinefunction(wrapped):
+        if not iscoroutinefactory(wrapped):
             msg = f"a coroutine function was expected, got {wrapped!r}"
             raise TypeError(msg)
 
@@ -218,7 +218,7 @@ class _ASSynchronizer:
         self._async_release()
 
     def __call__(self, wrapped: _CallableT, /) -> _CallableT:
-        if not iscoroutinefunction(wrapped):
+        if not iscoroutinefactory(wrapped):
             msg = f"a coroutine function was expected, got {wrapped!r}"
             raise TypeError(msg)
 
@@ -287,7 +287,7 @@ class _SSSynchronizer:
         self._green_release()
 
     def __call__(self, wrapped: _CallableT, /) -> _CallableT:
-        if iscoroutinefunction(wrapped):
+        if iscoroutinefactory(wrapped):
             return self._async_synchronized(wrapped)
         else:
             return self._green_synchronized(wrapped)
@@ -360,7 +360,7 @@ class _MMSynchronizer:
         self._green_release()
 
     def __call__(self, wrapped: _CallableT, /) -> _CallableT:
-        if iscoroutinefunction(wrapped):
+        if iscoroutinefactory(wrapped):
             return self._async_synchronized(wrapped)
         else:
             return self._green_synchronized(wrapped)
@@ -492,8 +492,8 @@ def synchronized(wrapped, /):
     """..."""
 
     if hasattr(wrapped, "acquire") and hasattr(wrapped, "release"):
-        if iscoroutinefunction(wrapped.acquire):
-            if iscoroutinefunction(wrapped.release):
+        if iscoroutinefactory(wrapped.acquire):
+            if iscoroutinefactory(wrapped.release):
                 return _AASynchronizer(wrapped)
 
             return _ASSynchronizer(wrapped)
@@ -511,7 +511,7 @@ def synchronized(wrapped, /):
     ):
         return _MMSynchronizer(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __SynchronizedDecoratorImpl(
             wrapped=wrapped,
             wrapper=__async_synchronized_wrapper,

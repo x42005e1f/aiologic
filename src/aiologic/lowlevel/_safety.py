@@ -8,12 +8,18 @@ from __future__ import annotations
 import sys
 
 from contextvars import ContextVar, Token
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator
 
-from aiologic.meta import MISSING, MissingType, generator, replaces
+from aiologic.meta import (
+    MISSING,
+    MissingType,
+    generator,
+    iscoroutinefactory,
+    replaces,
+)
 
 from ._threads import current_thread_ident
 
@@ -239,9 +245,9 @@ def enable_signal_safety(wrapped=MISSING, /):
     sync/async context manager is returned.
 
     To distinguish between green and async functions,
-    :func:`inspect.iscoroutinefunction` is used. Therefore, if you implement
-    your own callable object that returns a coroutine object, consider using
-    :func:`inspect.markcoroutinefunction`.
+    :func:`aiologic.meta.iscoroutinefactory` is used. Therefore, if you
+    implement your own callable object that returns a coroutine object,
+    consider using :func:`aiologic.meta.markcoroutinefactory`.
 
     Example:
       >>> signal_safety_enabled()
@@ -269,7 +275,7 @@ def enable_signal_safety(wrapped=MISSING, /):
     if isawaitable(wrapped):
         return __AwaitableWithSignalSafety(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __enable_async_signal_safety(wrapped)
 
     return __enable_green_signal_safety(wrapped)
@@ -307,7 +313,7 @@ def disable_signal_safety(wrapped=MISSING, /):
     if isawaitable(wrapped):
         return __AwaitableWithNoSignalSafety(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __disable_async_signal_safety(wrapped)
 
     return __disable_green_signal_safety(wrapped)

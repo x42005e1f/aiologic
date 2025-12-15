@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import sys
 
-from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from aiologic.meta import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType, iscoroutinefactory
 
 from ._executors import create_executor
 
@@ -66,7 +65,7 @@ def run(
 ):
     if library is DEFAULT:
         if backend is DEFAULT:
-            if iscoroutinefunction(func):
+            if iscoroutinefactory(func):
                 library = backend = "asyncio"
             else:
                 library = backend = "threading"

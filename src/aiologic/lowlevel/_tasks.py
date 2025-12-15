@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import sys
 
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable
 from typing import Any, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from aiologic.meta import generator, replaces
+from aiologic.meta import generator, iscoroutinefactory, replaces
 
 from ._libraries import current_async_library, current_green_library
 
@@ -376,7 +376,7 @@ def shield(wrapped, /):
     if isawaitable(wrapped):
         return __ShieldedAwaitable(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __async_shield(wrapped)
 
     return __green_shield(wrapped)

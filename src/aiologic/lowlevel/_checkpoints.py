@@ -9,13 +9,19 @@ import os
 import sys
 
 from contextvars import ContextVar, Token
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
 from aiologic._monkey import import_original
-from aiologic.meta import MISSING, MissingType, generator, replaces
+from aiologic.meta import (
+    MISSING,
+    MissingType,
+    generator,
+    iscoroutinefactory,
+    replaces,
+)
 
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread_ident
@@ -509,9 +515,9 @@ def enable_checkpoints(wrapped=MISSING, /):
     sync/async context manager is returned.
 
     To distinguish between green and async functions,
-    :func:`inspect.iscoroutinefunction` is used. Therefore, if you implement
-    your own callable object that returns a coroutine object, consider using
-    :func:`inspect.markcoroutinefunction`.
+    :func:`aiologic.meta.iscoroutinefactory` is used. Therefore, if you
+    implement your own callable object that returns a coroutine object,
+    consider using :func:`aiologic.meta.markcoroutinefactory`.
 
     Example:
       >>> async_checkpoint_enabled()
@@ -539,7 +545,7 @@ def enable_checkpoints(wrapped=MISSING, /):
     if isawaitable(wrapped):
         return __AwaitableWithCheckpoints(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __enable_async_checkpoints(wrapped)
 
     return __enable_green_checkpoints(wrapped)
@@ -577,7 +583,7 @@ def disable_checkpoints(wrapped=MISSING, /):
     if isawaitable(wrapped):
         return __AwaitableWithNoCheckpoints(wrapped)
 
-    if iscoroutinefunction(wrapped):
+    if iscoroutinefactory(wrapped):
         return __disable_async_checkpoints(wrapped)
 
     return __disable_green_checkpoints(wrapped)

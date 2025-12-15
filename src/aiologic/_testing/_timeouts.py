@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import sys
 
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from aiologic.meta import DEFAULT, DefaultType, replaces
+from aiologic.meta import DEFAULT, DefaultType, iscoroutinefactory, replaces
 
 from ._exceptions import get_cancelled_exc_class, get_timeout_exc_class
 from ._executors import TaskExecutor, current_executor
@@ -44,7 +44,7 @@ def _threading_timeout_after(
     *args: Unpack[_Ts],
 ) -> _T: ...
 def _threading_timeout_after(seconds, maybe_func, /, *args):
-    if not callable(maybe_func) or iscoroutinefunction(maybe_func):
+    if not callable(maybe_func) or iscoroutinefactory(maybe_func):
         msg = f"a green function was expected, got {maybe_func!r}"
         raise TypeError(msg)
 
@@ -69,7 +69,7 @@ def _eventlet_timeout_after(seconds, maybe_func, /, *args):
 
     @replaces(globals())
     def _eventlet_timeout_after(seconds, maybe_func, /, *args):
-        if not callable(maybe_func) or iscoroutinefunction(maybe_func):
+        if not callable(maybe_func) or iscoroutinefactory(maybe_func):
             msg = f"a green function was expected, got {maybe_func!r}"
             raise TypeError(msg)
 
@@ -96,7 +96,7 @@ def _gevent_timeout_after(seconds, maybe_func, /, *args):
 
     @replaces(globals())
     def _gevent_timeout_after(seconds, maybe_func, /, *args):
-        if not callable(maybe_func) or iscoroutinefunction(maybe_func):
+        if not callable(maybe_func) or iscoroutinefactory(maybe_func):
             msg = f"a green function was expected, got {maybe_func!r}"
             raise TypeError(msg)
 
@@ -168,7 +168,7 @@ def _asyncio_timeout_after(seconds, maybe_func, /, *args):
         if isawaitable(maybe_func):
             return wait_for(maybe_func, seconds)
 
-        if iscoroutinefunction(maybe_func):
+        if iscoroutinefactory(maybe_func):
             return _asyncio_timeout_after_for_coroutine_function(
                 seconds,
                 maybe_func,
@@ -227,7 +227,7 @@ def _curio_timeout_after(seconds, maybe_func, /, *args):
         if isawaitable(maybe_func):
             return _curio_timeout_after_for_awaitable(seconds, maybe_func)
 
-        if iscoroutinefunction(maybe_func):
+        if iscoroutinefactory(maybe_func):
             return _curio_timeout_after_for_coroutine_function(
                 seconds,
                 maybe_func,
@@ -281,7 +281,7 @@ def _trio_timeout_after(seconds, maybe_func, /, *args):
         if isawaitable(maybe_func):
             return _trio_timeout_after_for_awaitable(seconds, maybe_func)
 
-        if iscoroutinefunction(maybe_func):
+        if iscoroutinefactory(maybe_func):
             return _trio_timeout_after_for_coroutine_function(
                 seconds,
                 maybe_func,
@@ -335,7 +335,7 @@ def _anyio_timeout_after(seconds, maybe_func, /, *args):
         if isawaitable(maybe_func):
             return _anyio_timeout_after_for_awaitable(seconds, maybe_func)
 
-        if iscoroutinefunction(maybe_func):
+        if iscoroutinefactory(maybe_func):
             return _anyio_timeout_after_for_coroutine_function(
                 seconds,
                 maybe_func,

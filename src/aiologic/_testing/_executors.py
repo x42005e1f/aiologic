@@ -17,13 +17,13 @@ from concurrent.futures import (
 )
 from contextvars import Context, copy_context
 from functools import partial
-from inspect import isawaitable, iscoroutinefunction
+from inspect import isawaitable
 from typing import TYPE_CHECKING, Any, Generic, NoReturn, TypeVar, final
 
 import aiologic
 
 from aiologic.lowlevel import once
-from aiologic.meta import DEFAULT, DefaultType
+from aiologic.meta import DEFAULT, DefaultType, iscoroutinefactory
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -121,7 +121,7 @@ class _WorkItem(Generic[_T]):
             else:
                 result = self._func(*self._args, **self._kwargs)
 
-                if iscoroutinefunction(self._func):
+                if iscoroutinefactory(self._func):
                     result = await result
         except BaseException as exc:
             try:
@@ -147,7 +147,7 @@ class _WorkItem(Generic[_T]):
             _executor_tlocal.executor = executor
 
         try:
-            if isawaitable(self._func) or iscoroutinefunction(self._func):
+            if isawaitable(self._func) or iscoroutinefactory(self._func):
                 msg = f"a green function was expected, got {self._func!r}"
                 raise TypeError(msg)
 
