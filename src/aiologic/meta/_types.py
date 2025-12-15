@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 
-from functools import update_wrapper, wraps
+from functools import update_wrapper
 from inspect import (
     CO_ASYNC_GENERATOR,
     CO_COROUTINE,
@@ -190,7 +190,6 @@ def _update_returntype(
 
     if callable(annotate):
 
-        @wraps(annotate)
         def annotate_wrapper(format):
             annotations = annotate(format)
 
@@ -199,7 +198,7 @@ def _update_returntype(
 
             return annotations
 
-        func.__annotate__ = annotate_wrapper
+        func.__annotate__ = update_wrapper(annotate_wrapper, annotate)
     else:
         annotations = getattr(func, "__annotations__", None)
 
@@ -227,13 +226,12 @@ def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
         name=func.__name__,
     )
     copy.__defaults__ = func.__defaults__
-    copy.__kwdefaults__ = (
-        kwdefaults.copy()
-        if isinstance(kwdefaults := func.__kwdefaults__, dict)
-        else kwdefaults
-    )
+    copy.__kwdefaults__ = func.__kwdefaults__  # python/cpython#112640
 
     update_wrapper(copy, func, updated=())
+
+    if isinstance(copy.__kwdefaults__, dict):
+        copy.__kwdefaults__ = copy.__kwdefaults__.copy()
 
     if _COPY_ANNOTATIONS:
         copy.__annotations__ = copy.__annotations__.copy()
@@ -301,23 +299,18 @@ def _generator(func, /):
 
     if isgeneratorfactory(func):
 
-        @wraps(func, updated=())
         def wrapper(*args, **kwargs):
             return (yield from func(*args, **kwargs))
 
-        return wrapper
-
-    if iscoroutinefactory(func):
+    elif iscoroutinefactory(func):
         if isfunction(_generator) and not hasattr(_generator, "__compiled__"):
 
-            @wraps(func, updated=())
             @_generator
             async def wrapper(*args, **kwargs):
                 return await func(*args, **kwargs)
 
         else:
 
-            @wraps(func, updated=())
             def wrapper(*args, **kwargs):
                 coro = func(*args, **kwargs)
 
@@ -326,20 +319,20 @@ def _generator(func, /):
 
                 return (yield from await_for(coro).__await__())
 
-        return wrapper
-
-    if isasyncgenfactory(func):
+    elif isasyncgenfactory(func):
         msg = (
             "cannot transform an asynchronous generator factory into a"
             " generator function"
         )
         raise TypeError(msg)
+    else:
+        msg = (
+            "cannot transform an unknown object into a generator function. Did"
+            " you forget to mark the object?"
+        )
+        raise TypeError(msg)
 
-    msg = (
-        "cannot transform an unknown object into a generator function. Did you"
-        " forget to mark the object?"
-    )
-    raise TypeError(msg)
+    return update_wrapper(wrapper, func, updated=())
 
 
 @overload
@@ -393,40 +386,35 @@ def _coroutine(func, /):
 
     if iscoroutinefactory(func):
 
-        @wraps(func, updated=())
         async def wrapper(*args, **kwargs):
             return await func(*args, **kwargs)
 
-        return wrapper
-
-    if isgeneratorfactory(func):
+    elif isgeneratorfactory(func):
         if isfunction(_coroutine) and not hasattr(_coroutine, "__compiled__"):
 
-            @wraps(func, updated=())
             @_coroutine
             def wrapper(*args, **kwargs):
                 return (yield from func(*args, **kwargs))
 
         else:
 
-            @wraps(func, updated=())
             async def wrapper(*args, **kwargs):
                 return await _AwaitableWrapper(func(*args, **kwargs))
 
-        return wrapper
-
-    if isasyncgenfactory(func):
+    elif isasyncgenfactory(func):
         msg = (
             "cannot transform an asynchronous generator factory into a"
             " coroutine function"
         )
         raise TypeError(msg)
+    else:
+        msg = (
+            "cannot transform an unknown object into a coroutine function. Did"
+            " you forget to mark the object?"
+        )
+        raise TypeError(msg)
 
-    msg = (
-        "cannot transform an unknown object into a coroutine function. Did you"
-        " forget to mark the object?"
-    )
-    raise TypeError(msg)
+    return update_wrapper(wrapper, func, updated=())
 
 
 @overload

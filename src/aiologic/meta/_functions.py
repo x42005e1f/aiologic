@@ -233,15 +233,17 @@ def copies(original, replaced=MISSING, /):
             globals=original.__globals__,
             name=original.__name__,
         )
-
-    copy.__defaults__ = original.__defaults__
-    copy.__kwdefaults__ = (
-        kwdefaults.copy()
-        if isinstance(kwdefaults := original.__kwdefaults__, dict)
-        else kwdefaults
-    )
+        copy.__defaults__ = original.__defaults__
+        copy.__kwdefaults__ = original.__kwdefaults__  # python/cpython#112640
 
     update_wrapper(copy, replaced)
+
+    # Note, Nuitka≥2.0 already copies the following objects, but it is unknown
+    # how the `functools.update_wrapper()` behavior might change in the context
+    # of python/cpython#85403 and python/cpython#85404, so we copy them anyway.
+
+    if isinstance(copy.__kwdefaults__, dict):
+        copy.__kwdefaults__ = copy.__kwdefaults__.copy()
 
     if _COPY_ANNOTATIONS:
         copy.__annotations__ = copy.__annotations__.copy()
