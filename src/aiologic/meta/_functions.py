@@ -10,7 +10,6 @@ import sys
 
 from functools import partial, update_wrapper
 from inspect import isfunction
-from types import FunctionType
 from typing import TYPE_CHECKING
 
 from ._markers import MISSING
@@ -52,6 +51,7 @@ if TYPE_CHECKING:
     _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
     _P = ParamSpec("_P")
 
+_COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)  # PEP 649
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
     os.getenv(
         "SPHINX_AUTODOC_RELOAD_MODULES",
@@ -217,8 +217,8 @@ def copies(original, replaced=MISSING, /):
         raise TypeError(msg)
 
     # A well-known method of "deep" (actually not) copying of functions is to
-    # create a new instance of `FunctionType` with the same parameters as the
-    # original function. Here are some related links:
+    # create a new instance of the function type with the same parameters as
+    # the original function. Here are some related links:
     # * https://stackoverflow.com/q/6527633
     # * https://stackoverflow.com/q/13503079
     # * https://github.com/Nuitka/Nuitka/commit/bdfad66
@@ -227,13 +227,29 @@ def copies(original, replaced=MISSING, /):
     if hasattr(original, "clone"):  # Nuitka
         copy = original.clone()
     else:
-        copy = FunctionType(
+        copy = original.__class__(
             code=original.__code__,
             closure=original.__closure__,
             globals=original.__globals__,
             name=original.__name__,
         )
-        copy.__defaults__ = original.__defaults__
-        copy.__kwdefaults__ = original.__kwdefaults__  # python/cpython#112640
 
-    return update_wrapper(copy, replaced)
+    copy.__defaults__ = original.__defaults__
+    copy.__kwdefaults__ = (
+        kwdefaults.copy()
+        if isinstance(kwdefaults := original.__kwdefaults__, dict)
+        else kwdefaults
+    )
+
+    update_wrapper(copy, replaced)
+
+    if _COPY_ANNOTATIONS:
+        copy.__annotations__ = copy.__annotations__.copy()
+
+    # to preserve the signature
+    if (wrapped := getattr(replaced, "__wrapped__", MISSING)) is not MISSING:
+        copy.__wrapped__ = wrapped
+    else:
+        del copy.__wrapped__
+
+    return copy

@@ -39,6 +39,7 @@ _T = TypeVar("_T")
 _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
 _P = ParamSpec("_P")
 
+_COPY_ANNOTATIONS: Final[bool]
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool]
 
 @overload

@@ -57,6 +57,9 @@ Commit messages are consistent with
   annotations, while requiring the `__name__` attribute to be present in the
   passed function, which should make it more convenient and safer to use for
   custom callable objects.
+- `aiologic.meta.copies()` now performs shallow copying of mutable objects such
+  as `__kwdefaults__` and `__annotations__` to avoid propagating changes to the
+  copy's signature when the original function's signature changes.
 - `aiologic.meta.copies()` now forces copying when both functions are the same
   object, which increases its scope of application.
 

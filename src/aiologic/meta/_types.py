@@ -15,7 +15,7 @@ from inspect import (
     CO_ITERABLE_COROUTINE,
     isfunction,
 )
-from types import CoroutineType, FunctionType, GeneratorType
+from types import CoroutineType, GeneratorType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args, get_origin
 
 from ._helpers import await_for
@@ -64,6 +64,7 @@ if TYPE_CHECKING:
 
 # python/cpython#110209
 _USE_NATIVE_TYPES: Final[bool] = sys.version_info >= (3, 13)
+_COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)  # PEP 649
 
 _generator_origins: tuple[type, ...] = (
     GeneratorType,
@@ -211,7 +212,7 @@ def _update_returntype(
                 func.__annotations__ = annotations
 
     try:
-        del func.__wrapped__  # avoid unwrapping to preserve annotations
+        del func.__wrapped__  # avoid unwrapping to preserve the signature
     except AttributeError:
         pass
 
@@ -219,16 +220,27 @@ def _update_returntype(
 
 
 def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
-    copy = FunctionType(
+    copy = func.__class__(
         code=func.__code__.replace(co_flags=flags),
         closure=func.__closure__,
         globals=func.__globals__,
         name=func.__name__,
     )
     copy.__defaults__ = func.__defaults__
-    copy.__kwdefaults__ = func.__kwdefaults__  # python/cpython#112640
+    copy.__kwdefaults__ = (
+        kwdefaults.copy()
+        if isinstance(kwdefaults := func.__kwdefaults__, dict)
+        else kwdefaults
+    )
 
-    return update_wrapper(copy, func)
+    update_wrapper(copy, func)
+
+    if _COPY_ANNOTATIONS:
+        copy.__annotations__ = copy.__annotations__.copy()
+
+    del copy.__wrapped__  # avoid unwrapping to preserve the signature
+
+    return copy
 
 
 class _AwaitableWrapper(Generic[_IteratorT]):

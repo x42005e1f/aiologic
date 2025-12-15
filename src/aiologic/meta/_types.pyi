@@ -43,6 +43,7 @@ _SendT = TypeVar("_SendT")
 _YieldT = TypeVar("_YieldT")
 _P = ParamSpec("_P")
 
+_COPY_ANNOTATIONS: Final[bool]
 _USE_NATIVE_TYPES: Final[bool]
 
 _generator_origins: tuple[type, ...]
