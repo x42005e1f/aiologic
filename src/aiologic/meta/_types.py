@@ -233,7 +233,7 @@ def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
         else kwdefaults
     )
 
-    update_wrapper(copy, func)
+    update_wrapper(copy, func, updated=())
 
     if _COPY_ANNOTATIONS:
         copy.__annotations__ = copy.__annotations__.copy()
@@ -301,16 +301,23 @@ def _generator(func, /):
 
     if isgeneratorfactory(func):
 
-        @wraps(func)
+        @wraps(func, updated=())
         def wrapper(*args, **kwargs):
             return (yield from func(*args, **kwargs))
 
         return wrapper
 
     if iscoroutinefactory(func):
-        if hasattr(_generator, "__compiled__"):  # Nuitka
+        if isfunction(_generator) and not hasattr(_generator, "__compiled__"):
 
-            @wraps(func)
+            @wraps(func, updated=())
+            @_generator
+            async def wrapper(*args, **kwargs):
+                return await func(*args, **kwargs)
+
+        else:
+
+            @wraps(func, updated=())
             def wrapper(*args, **kwargs):
                 coro = func(*args, **kwargs)
 
@@ -318,13 +325,6 @@ def _generator(func, /):
                     return (yield from coro.__await__())
 
                 return (yield from await_for(coro).__await__())
-
-        else:
-
-            @wraps(func)
-            @_generator
-            async def wrapper(*args, **kwargs):
-                return await func(*args, **kwargs)
 
         return wrapper
 
@@ -393,25 +393,25 @@ def _coroutine(func, /):
 
     if iscoroutinefactory(func):
 
-        @wraps(func)
+        @wraps(func, updated=())
         async def wrapper(*args, **kwargs):
             return await func(*args, **kwargs)
 
         return wrapper
 
     if isgeneratorfactory(func):
-        if hasattr(_coroutine, "__compiled__"):  # Nuitka
+        if isfunction(_coroutine) and not hasattr(_coroutine, "__compiled__"):
 
-            @wraps(func)
-            async def wrapper(*args, **kwargs):
-                return await _AwaitableWrapper(func(*args, **kwargs))
-
-        else:
-
-            @wraps(func)
+            @wraps(func, updated=())
             @_coroutine
             def wrapper(*args, **kwargs):
                 return (yield from func(*args, **kwargs))
+
+        else:
+
+            @wraps(func, updated=())
+            async def wrapper(*args, **kwargs):
+                return await _AwaitableWrapper(func(*args, **kwargs))
 
         return wrapper
 
