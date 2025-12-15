@@ -115,30 +115,43 @@ def _get_generictype_args(
 ) -> tuple[Any, ...]: ...
 def _get_generictype_args(annotation, /, origins, prefixes, length):
     if isinstance(annotation, str):
-        if annotation.endswith("]"):
-            if annotation.startswith(prefixes):
-                args_string = annotation.partition("[")[2][:-1]
+        default_args = ("Any",) * length
 
-                if args_string.count("[") == args_string.count("]"):
-                    args = args_string.split(",")
+        if not annotation.endswith("]"):
+            return default_args
 
-                    for i, arg in enumerate(args):
-                        while arg.count("[") != arg.count("]"):
-                            arg = ",".join(args[i : i + 2])  # noqa: PLW2901
-                            args[i : i + 2] = [arg]  # noqa: B909
+        if not annotation.startswith(prefixes):
+            return default_args
 
-                    return (
-                        *(arg.strip() or "Any" for arg in args),
-                        *(["Any"] * length),
-                    )[:length]
+        args_string = annotation.partition("[")[2][:-1]
 
-        return ("Any",) * length
+        if args_string.count("[") != args_string.count("]"):
+            return default_args
 
-    if isinstance(origin := get_origin(annotation), type):
-        if issubclass(origin, origins):
-            return (*get_args(annotation), *([Any] * length))[:length]
+        if args_string.find("[") > args_string.find("]"):  # a union type
+            return default_args
 
-    return (Any,) * length
+        args = args_string.split(",")
+
+        for i, arg in enumerate(args):
+            while arg.count("[") != arg.count("]"):
+                arg = ",".join(args[i : i + 2])  # noqa: PLW2901
+                args[i : i + 2] = [arg]  # noqa: B909
+
+        return (
+            *(arg.strip() or "Any" for arg in args),
+            *(["Any"] * length),
+        )[:length]
+    else:
+        default_args = (Any,) * length
+
+        if not isinstance(origin := get_origin(annotation), type):
+            return default_args
+
+        if not issubclass(origin, origins):
+            return default_args
+
+        return (*get_args(annotation), *([Any] * length))[:length]
 
 
 @overload
