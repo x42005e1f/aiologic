@@ -29,6 +29,7 @@ __version_tuple__: tuple[int | str, ...]  # dynamic
 from . import (  # noqa: F401
     lowlevel,
     meta,
+    thread,
 )
 from ._barrier import (
     Barrier as Barrier,

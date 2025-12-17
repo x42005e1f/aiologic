@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.thread` subpackage for encapsulating thread-level features (since
+  `aiologic.lowlevel` no longer seems like the right place for this).
 - `aiologic.meta.isgeneratorlike()`, `aiologic.meta.iscoroutinelike()`, and
   `aiologic.meta.isasyncgenlike()` as `inspect`-like functions that check
   whether an object implements a certain interface (corresponding to the
