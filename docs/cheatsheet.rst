@@ -1105,9 +1105,7 @@ you want to get the information right now, there are several ways:
 4. Ask your question on `GitHub Discussions <https://github.com/x42005e1f/
    aiologic/discussions>`__ or `write to the author
    <mailto:0x42005e1f@gmail.com>`__. Response times vary, but you can expect a
-   quality answer. Moreover, this way you will show your interest in the
-   project, and thus give the author extra motivation to keep working on it. Do
-   not be afraid to give feedback.
+   quality answer. Do not be afraid to give feedback.
 5. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`__ or ask
    Devin there as well. The information there is generated from both the source
    code and the documentation you are reading right now. Although Devin may lie
