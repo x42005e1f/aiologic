@@ -209,15 +209,6 @@ Dependents
 See `x42005e1f/aiologic#11 <https://github.com/x42005e1f/aiologic/discussions/
 11>`__.
 
-Support
-=======
-
-If you like aiologic and want to support its development, please star `its
-repository on GitHub <https://github.com/x42005e1f/aiologic>`__.
-
-.. image:: https://starchart.cc/x42005e1f/aiologic.svg?variant=adaptive
-  :target: https://starchart.cc/x42005e1f/aiologic
-
 License
 =======
 
