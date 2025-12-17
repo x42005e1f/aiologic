@@ -1113,14 +1113,6 @@ you want to get the information right now, there are several ways:
    things (especially complex concurrent things)... it can tell you what to do
    in your particular case. But be extremely skeptical!
 
-.. note::
-
-    Due to the lack of feedback, priorities in developing the latest version
-    (including where and when to update the documentation) are set freely and
-    thus chaotically. If you are interested in a particular topic, feel free to
-    express your interest by `voting on GitHub Discussions <https://github.com/
-    x42005e1f/aiologic/discussions/9>`__.
-
 Perhaps, even with all the answers, you still will not know the spirit of
 aiologic. Well, that is okay, because few people actually do. But the more you
 know, the closer you are to the truth.
