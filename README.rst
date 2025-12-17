@@ -203,11 +203,30 @@ GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
 
 You can also send an email to 0x42005e1f@gmail.com with any feedback.
 
-Dependents
-==========
+Project status
+==============
 
-See `x42005e1f/aiologic#11 <https://github.com/x42005e1f/aiologic/discussions/
-11>`__.
+The project is developed and maintained by one person in his spare time and is
+not a commercial product. The author is not a professional programmer, but has
+been programming for over a decade as a hobby with almost no publicity (you may
+be able to find some contributions if you try hard, but it will be just a drop
+in the ocean). Therefore, if you encounter any misunderstandings, please excuse
+him, as he does not have much experience working with people.
+
+It is published for the simple reason that the author considered it noteworthy
+and not too ugly. The topic is quite non-trivial, so although contributions are
+not prohibited, they will be very, very difficult if you decide to make them
+(except for some very simple ones). The functionality provided is still being
+perfected, so the development status is alpha.
+
+No AI tools are used in the development (nor are IDE tools, for that matter).
+The only exception is text translation, since the author is not a native
+English speaker, but the texts themselves are not generated.
+
+What is the goal of the project? To realize the author's vision. Is it worth
+trusting what is available now? Well, the choice is yours. But the project `is
+already being used <https://github.com/x42005e1f/aiologic/discussions/11>`__,
+so why not give it a try?
 
 License
 =======
