@@ -404,7 +404,7 @@ def _register(
 
     record = (target_path, deprecated)
 
-    if registry.setdefault(link_name, record) is not record:
+    if registry.setdefault(link_name, record) != record:
         msg = f"{link_name!r} is already registered"
         raise RuntimeError(msg)
 

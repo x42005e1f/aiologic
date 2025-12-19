@@ -74,6 +74,10 @@ Commit messages are consistent with
   `__future__.annotations` and `typing.TYPE_CHECKING` were also included (as
   'annotations' and 'TYPE_CHECKING', respectively) if they were imported in
   `__init__.py`.
+- `aiologic.meta.export_dynamic()` and `aiologic.meta.export_deprecated()`
+  raised a `RuntimeError` when registering already registered symbolic links,
+  which prevented the module from being reloaded. Now they allow
+  re-registration for the same values.
 
 [0.16.0] - 2025-11-27
 ---------------------
