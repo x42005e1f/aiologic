@@ -449,4 +449,5 @@ Exports
 Helpers
 +++++++
 
+.. autoclass:: aiologic.meta.GeneratorCoroutineWrapper
 .. autofunction:: aiologic.meta.await_for

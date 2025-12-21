@@ -42,6 +42,11 @@ Commit messages are consistent with
   `__await__()` method via an asynchronous function (and subsequent
   transformation into a generator function) with no overhead when calling, with
   annotation updates (for `sphinx.ext.autodoc`).
+- `aiologic.meta.GeneratorCoroutineWrapper` as a way to create universal
+  objects that are similar to both `types.GeneratorType` and
+  `types.CoroutineType`. Useful when you need to use a coroutine in generator
+  functions or a generator in coroutine functions, and for some reason you
+  cannot transform the function itself.
 
 ### Changed
 
