@@ -174,7 +174,7 @@ class CapacityLimiter:
         if task in self._borrowers:
             msg = (
                 "the current task is already holding"
-                " one of this capacity limiter's tokens",
+                " one of this capacity limiter's tokens"
             )
             raise RuntimeError(msg)
 
@@ -199,7 +199,7 @@ class CapacityLimiter:
         if task in self._borrowers:
             msg = (
                 "the current task is already holding"
-                " one of this capacity limiter's tokens",
+                " one of this capacity limiter's tokens"
             )
             raise RuntimeError(msg)
 
