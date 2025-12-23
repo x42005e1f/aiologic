@@ -178,7 +178,7 @@ blocking. This is a strong advantage, but let's move on to the disadvantages:
    shielding release method calls from cancellation. Otherwise, cancelling a
    release method call (e.g. due to its blocking nature or a checkpoint) will
    result in the primitive no longer being able to be acquired.
-2. A cascade effect. Coroutine functions can only be used from coroutines - the
+2. A cascade effect. Coroutine functions can only be used from coroutines — the
    async/await syntax says so. As a consequence, in addition to splitting
    ``event.set()`` into ``event.green_set()`` and ``event.async_set()``, any
    code that used ``event.set()`` in an asynchronous environment must also
@@ -331,7 +331,7 @@ How does aiologic detect libraries?
 
 The example given during the previous question showed one of the cases of
 checking that a library is "running", and it is for a reason. Using similar
-functions, aiologic implements detection of the currently running library - the
+functions, aiologic implements detection of the currently running library — the
 one whose API should be used to create a waiter or get the current task.
 
 .. autofunction:: aiologic.lowlevel.current_green_library

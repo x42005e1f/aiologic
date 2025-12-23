@@ -402,7 +402,7 @@ Commit messages are consistent with
     started outside of the `threading` module instead of returning `None`. This
     is to prevent situations where the function is used for identification
     without proper handling of dummy threads, since in such cases dummy threads
-    would share the same "identifier" - `None`.
+    would share the same "identifier" — `None`.
   + The fallback `_thread._local` implementation now works not only with thread
     objects but also with main greenlet objects, so it now supports `gevent`'s
     pool of native worker threads.
@@ -762,7 +762,7 @@ Commit messages are consistent with
 - Optimized the event removal in locks and semaphores. Previously, removing an
   event from the waiting queue was performed even when it was successfully set,
   which caused serious slowdown due to expensive O(n) operations. Now the
-  removal is only performed in case of failure - on cancellation, in particular
+  removal is only performed in case of failure — on cancellation, in particular
   timeouts, and exceptions.
   ([#5](https://github.com/x42005e1f/aiologic/issues/5)).
 

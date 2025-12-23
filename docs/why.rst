@@ -120,7 +120,7 @@ call and has issues with cancellation and timeouts:
 
     print("active threads:", threading.active_count())  # 1
     asyncio.run(main())
-    print("active threads:", threading.active_count())  # 9 - wow, thread leak!
+    print("active threads:", threading.active_count())  # 9 — wow, thread leak!
 
     # program will hang until you press Control-C
 
@@ -183,7 +183,7 @@ serial port:
 So back in 2015, the real need for thread-safe primitives was visible.
 Curiously, the first `Janus <https://github.com/aio-libs/janus>`__ (thread-safe
 asyncio-aware queue) release, version `0.1.0 <https://github.com/aio-libs/
-janus/releases/tag/v0.1.0>`__, was published on June 11, 2015 - before October
+janus/releases/tag/v0.1.0>`__, was published on June 11, 2015 — before October
 1, 2015, when the related question was asked.
 
 Since then, more and more questions have appeared. Here are just some of them:

@@ -185,10 +185,10 @@ The use of atomic operations as well as the lock-free implementation style
 gives aiologic primitives a special behavior. And first of all it concerns
 atomicity of primitives' methods, such as ``event.set()``.
 
-When you call :meth:`threading.Event.set`, it works in mutual exclusion mode -
+When you call :meth:`threading.Event.set`, it works in mutual exclusion mode —
 in fact, :class:`threading.Event` is built on top of
 :class:`threading.Condition` (see source code). But :meth:`aiologic.Event.set`
-has a different situation - it allows its parallel execution in different
+has a different situation — it allows its parallel execution in different
 threads, which affects the wakeup order and when the method completes its
 execution. So all aiologic primitives have to use some tricks to provide
 predictable behavior and emulate atomicity (within some limits).
@@ -198,7 +198,7 @@ The events implement the following special behavior:
 1. The wakeup order is exactly FIFO for all events except
    :class:`aiologic.Event` without GIL (free threading, perfect fairness
    disabled). The latter allows racing between threads, which makes the order
-   non-deterministic - your async tasks may wake up in a different order than
+   non-deterministic — your async tasks may wake up in a different order than
    when they called ``await event``. If you need determinism in free threading,
    you can enable perfect fairness via the ``AIOLOGIC_PERFECT_FAIRNESS``
    environment variable, but this will cost you some (noticeable) performance
@@ -572,7 +572,7 @@ but with the following specifics:
 2. The parallelism of successful wakeup is limited for
    :class:`aiologic.Barrier` and :class:`aiologic.RBarrier`. When tasks are
    more than expected, they are divided into phases. Tasks wake up each other
-   in their phase, but the wakeup of phases is sequential - a task from the
+   in their phase, but the wakeup of phases is sequential — a task from the
    next phase will be woken up only when the wakeup initiator wakes up all
    tasks in its phase. In particular, the case where the expected number is
    :math:`1` and the actual number is :math:`n` gives :math:`O(n^2)` complexity
@@ -959,7 +959,7 @@ the cancellation semantics of pure asyncio.
 As for AnyIO, it has a different cancellation semantics and its own
 cancellation shielding mechanism. :class:`anyio.CancelScope` with
 ``shield=True`` works at the third level and, unlike the second technique of
-pure asyncio, does not raise :exc:`asyncio.CancelledError` upon completion - it
+pure asyncio, does not raise :exc:`asyncio.CancelledError` upon completion — it
 will be raised on the next asynchronous call within the cancelled scope (since
 in AnyIO the cancel is raised at each unshielded call, even if you have
 previously suppressed the cancel). But along with this, it does not handle pure
@@ -1063,7 +1063,7 @@ that they are raised after completion, and in the correct order:
 
     Using :func:`asyncio.shield` effectively gives that each run of the
     shielded coroutine function will create a new task. The same is true for
-    green libraries - they create a new greenlet via :func:`gevent.spawn` /
+    green libraries — they create a new greenlet via :func:`gevent.spawn` /
     :func:`eventlet.spawn`. If you rely on the number of context switches in
     your applications, you should take this into account.
 
@@ -1073,7 +1073,7 @@ that they are raised after completion, and in the correct order:
     cancellation types. If you kill a greenlet with an exception other than
     :exc:`greenlet.GreenletExit`, it will be successfully raised as if you did
     not perform shielding from cancellation. The same is true for
-    :exc:`KeyboardInterrupt` - if you want safe cancelling, make sure you have
+    :exc:`KeyboardInterrupt` — if you want safe cancelling, make sure you have
     proper signal handlers (such as those that asyncio installs by default in
     :func:`asyncio.run`).
 

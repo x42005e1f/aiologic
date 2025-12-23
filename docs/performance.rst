@@ -28,7 +28,7 @@ Meet the square
 
 Suppose we want to start :math:`n` threads to perform some long work. Whether
 it is for parallel computing with `NumPy <https://numpy.org/>`__ arrays, for
-network operations, or for simulating some game processes - it does not matter.
+network operations, or for simulating some game processes — it does not matter.
 Here is an example that allows us to estimate the time spent on performing a
 full start of all threads:
 
@@ -159,7 +159,7 @@ Thus, calling :meth:`threading.Thread.start` effectively forces the main thread
 in our example to do a context switch (since it must be notified by the
 thread). And since the operating system needs to emulate the concurrent
 execution of all threads, the whole thing does not look like ping-pong between
-the main thread and the newly started thread - the operating system also needs
+the main thread and the newly started thread — the operating system also needs
 to allocate CPU resources to the already running threads.
 
 If we look at the order in which context switching occurs on each pass of the
@@ -197,7 +197,7 @@ With each new thread, the required number of context switches to start the next
 one increases. We see two triangles (:math:`1+1+2+2+3+3+…+n+n`
 :math:`=2(1+2+3+…+n)` context switches until the end), which become one
 *square* when the constants is discarded (:math:`2(1+2+3+…+n)+1`
-:math:`=2\frac{n(1+n)}{2}+1` :math:`=n(1+n)+1` :math:`⇒n(n)` :math:`=n^2`) -
+:math:`=2\frac{n(1+n)}{2}+1` :math:`=n(1+n)+1` :math:`⇒n(n)` :math:`=n^2`) —
 that is where the quadratic `time complexity <https://en.wikipedia.org/wiki/
 Time_complexity>`__ comes from!
 
@@ -379,7 +379,7 @@ cases, related to waking up multiple threads. For example, such as multiple
 :meth:`semaphore.release() <threading.Semaphore.release>`, or even just
 :meth:`lock.release() <threading.Lock.release>`! Waiting for one queue by
 multiple threads also suffers from the square problem. We will give all such
-cases one concise name - *the notify case*.
+cases one concise name — *the notify case*.
 
 In the second case, we addressed the topic of mutual exclusion, and we will
 refer to all related cases simply as *the mutex case*. You know how ubiquitous
@@ -827,7 +827,7 @@ different numbers of allocated cores.
     +---------------+------------------------+--------------------+
 
 All this time, we have been using a simplified execution model, which can be
-described as round-robin scheduling - :abbr:`FIFO (first-in, first-out)`
+described as round-robin scheduling — :abbr:`FIFO (first-in, first-out)`
 execution order, static priorities (remember, we never mentioned them?), fixed
 timeslices. This model describes multithreading under the GIL quite well due to
 the tendency of modern CPU schedulers to be fair, and we were even able to use
@@ -838,7 +838,7 @@ In modern CPU schedulers, timeslices can be adjusted in real time. For example,
 :abbr:`CFS (Completely Fair Scheduler)` attempts to distribute time fairly
 across all processes, and accordingly, timeslices decrease as the number of
 processes increases. This can turn :math:`O(n^2)` into :math:`O(n)`, because
-the same amount of time will be allocated for each pass of the scheduler - in
+the same amount of time will be allocated for each pass of the scheduler — in
 an ideal case. In reality, however, timeslices have their own minimum, and with
 a sufficiently large number of execution units, we will meet the square again.
 
@@ -922,7 +922,7 @@ somehow "not quite right", that certain cases have strangely low performance
 arguments. Well, now they will be. Let us highlight some of Python's
 multithreading performance issues:
 
-1. Low adaptability of the GIL - lack of dynamic switching intervals and
+1. Low adaptability of the GIL — lack of dynamic switching intervals and
    priorities, which leads to the square problem in its pure form. For
    comparison, many other languages rely on the OS-level scheduler and, as a
    result, inherit its advantages.
@@ -931,7 +931,7 @@ multithreading performance issues:
    might not have been there. For comparison, primitives in Java are
    implemented via atomic :abbr:`CAS (compare-and-swap)`.
 3. Acquire-release after waiting in :meth:`condition.wait()
-   <threading.Condition.wait>` - well, this is a general problem with this
+   <threading.Condition.wait>` — well, this is a general problem with this
    primitive, and there is nothing we can do.
 
 .. admonition:: Do you need to go deeper?
