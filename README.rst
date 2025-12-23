@@ -193,6 +193,11 @@ Read the Docs: https://aiologic.readthedocs.io (official)
 
 DeepWiki: https://deepwiki.com/x42005e1f/aiologic (AI generated; lying!)
 
+There are also related posts:
+
+* https://news.ycombinator.com/item?id=46308839 — how it all began
+* https://redd.it/1psjsnu — a brief introduction
+
 Communication channels
 ======================
 
