@@ -226,10 +226,10 @@ No AI tools are used in the development (nor are IDE tools, for that matter).
 The only exception is text translation, since the author is not a native
 English speaker, but the texts themselves are not generated (they are written
 and edited manually by a human). Unicode characters are also actively used (via
-a `compose key <https://en.wikipedia.org/wiki/Compose_key>`__), as the author
-likes beautiful texts, such as they were before the AI hype. If you are ready
-to cancel anything that somehow looks like AI to you (and, mind you, they are
-trained on human works!), please move on.
+a compose key), as the author likes beautiful texts, such as they were before
+the avoidance of signs of AI writing. *— It may not be too obvious, but this
+paragraph addresses the sore subject of "you are an AI", expressed in... not
+the best ways.*
 
 It is published for the simple reason that the author considered it noteworthy
 and not too ugly. The topic is quite non-trivial, so although contributions are
