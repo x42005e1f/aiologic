@@ -217,10 +217,10 @@ may encounter some misunderstandings. However, he has been programming as a
 hobby for over a decade, delving into specific topics (often esoteric ones),
 and until 2024, he made almost no public contributions (you can find some if
 you try hard; for example, one very ugly one in Java from 2019), as he set high
-standards for himself. He often makes mistakes, so he constantly double-checks
-and improves himself (which is well reflected in how often he edits his own
-comments) — as a result, he relies heavily on careful theoretical analysis and
-proactive bug fixing.
+standards for himself. The author often makes mistakes, so he constantly
+double-checks and improves himself (which is well reflected in how often he
+edits his own comments) — as a result, he relies heavily on careful theoretical
+analysis and proactive bug fixing.
 
 No AI tools are used in the development (nor are IDE tools, for that matter).
 The only exception is text translation, since the author is not a native
