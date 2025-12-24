@@ -212,21 +212,30 @@ Project status
 ==============
 
 The project is developed and maintained by one person in his spare time and is
-not a commercial product. The author is not a professional programmer, but has
-been programming for over a decade as a hobby with almost no publicity (you may
-be able to find some contributions if you try hard, but it will be just a drop
-in the ocean). Therefore, if you encounter any misunderstandings, please excuse
-him, as he does not have much experience working with people.
+not a commercial product. The author is not a professional programmer, so you
+may encounter some misunderstandings. However, he has been programming as a
+hobby for over a decade, delving into specific topics (often esoteric ones),
+and until 2024, he made almost no public contributions (you can find some if
+you try hard; for example, one very ugly one in Java from 2019), as he set high
+standards for himself. He often makes mistakes, so he constantly double-checks
+and improves himself (which is well reflected in how often he edits his own
+comments) — as a result, he relies heavily on careful theoretical analysis and
+proactive bug fixing.
+
+No AI tools are used in the development (nor are IDE tools, for that matter).
+The only exception is text translation, since the author is not a native
+English speaker, but the texts themselves are not generated (they are written
+and edited manually by a human). Unicode characters are also actively used (via
+a `compose key <https://en.wikipedia.org/wiki/Compose_key>`__), as the author
+likes beautiful texts, such as they were before the AI hype. If you are ready
+to cancel anything that somehow looks like AI to you (and, mind you, they are
+trained on human works!), please move on.
 
 It is published for the simple reason that the author considered it noteworthy
 and not too ugly. The topic is quite non-trivial, so although contributions are
 not prohibited, they will be very, very difficult if you decide to make them
 (except for some very simple ones). The functionality provided is still being
 perfected, so the development status is alpha.
-
-No AI tools are used in the development (nor are IDE tools, for that matter).
-The only exception is text translation, since the author is not a native
-English speaker, but the texts themselves are not generated.
 
 What is the goal of the project? To realize the author's vision. Is it worth
 trusting what is available now? Well, the choice is yours. But the project `is
