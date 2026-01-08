@@ -28,6 +28,8 @@ if sys.version_info >= (3, 11):  # runtime introspection support
 else:  # typing-extensions>=4.1.0
     from typing_extensions import final
 
+_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]
+
 # `_SingletonMeta.__call__()` omitted due to python/typing#270
 class _SingletonMeta(EnumType): ...
 

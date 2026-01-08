@@ -38,6 +38,8 @@ if sys.version_info >= (3, 11):  # runtime introspection support
 else:  # typing-extensions>=4.2.0
     from typing_extensions import get_overloads, overload
 
+# python/cpython#82711
+_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
     os.getenv(
         "SPHINX_AUTODOC_RELOAD_MODULES",
@@ -363,8 +365,9 @@ def _register(
             try:
                 msg = f"module {module_name!r} has not attribute {name!r}"
                 exc = AttributeError(msg)
-                exc.name = name
-                exc.obj = module
+                if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+                    exc.name = name
+                    exc.obj = module
 
                 try:
                     raise exc from import_exc

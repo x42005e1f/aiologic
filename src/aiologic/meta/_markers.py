@@ -35,6 +35,9 @@ if sys.version_info >= (3, 11):  # runtime introspection support
 else:  # typing-extensions>=4.1.0
     from typing_extensions import final
 
+# python/cpython#82711
+_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
+
 # We have to use the `enum` module so that type checkers can understand that
 # the instance is a singleton object. Otherwise, they will not be able to
 # narrow the type of a parameter that has the default value when
@@ -158,11 +161,19 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
 
         # A singleton object should not provide mutable public state, so we
         # raise an `AttributeError` on any attempt to set an unknown attribute,
-        # suppressing its hints (which would occur if we set the `name` and
-        # `obj` attributes of the exception object). Note, `enum.Enum` itself
-        # does not prohibit setting attributes (see python/cpython#90290)!
+        # suppressing its suggestions (which would occur if we either did not
+        # set the 'name' and 'obj' attributes, or manually set them to the
+        # correct values). Note, `enum.Enum` itself does not prohibit setting
+        # attributes (see python/cpython#90290)!
         msg = f"{cls_qualname!r} object has no attribute {name!r}"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.{self._name_}"

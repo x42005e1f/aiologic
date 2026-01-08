@@ -20,6 +20,7 @@ if sys.version_info >= (3, 13):  # PEP 742
 else:  # typing-extensions>=4.10.0
     from typing_extensions import TypeIs
 
+_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool]
 
 def _isbuiltindescriptor(

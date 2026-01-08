@@ -13,6 +13,7 @@ from ._inspect import iscoroutinelike, isgeneratorlike
 
 if TYPE_CHECKING:
     from types import CodeType, FrameType, TracebackType
+    from typing import Final
 
     if sys.version_info >= (3, 9):  # PEP 585
         from collections.abc import Awaitable
@@ -41,6 +42,9 @@ if TYPE_CHECKING:
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 _SendT_contra = TypeVar("_SendT_contra", contravariant=True)
 _YieldT_co = TypeVar("_YieldT_co", covariant=True)
+
+# python/cpython#82711
+_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
 
 
 class GeneratorCoroutineWrapper(
@@ -141,7 +145,14 @@ class GeneratorCoroutineWrapper(
 
         if generator is None:
             msg = "the wrapped object is not a generator"
-            raise AttributeError(msg)
+            exc = AttributeError(msg)
+            if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+                exc.name = None  # suppress suggestions
+
+            try:
+                raise exc
+            finally:
+                del exc  # break reference cycles
 
         return generator
 
@@ -159,7 +170,14 @@ class GeneratorCoroutineWrapper(
 
         if coroutine is None:
             msg = "the wrapped object is not a coroutine"
-            raise AttributeError(msg)
+            exc = AttributeError(msg)
+            if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+                exc.name = None  # suppress suggestions
+
+            try:
+                raise exc
+            finally:
+                del exc  # break reference cycles
 
         return coroutine
 
@@ -180,7 +198,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_code'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_code(self, /) -> CodeType:
@@ -199,7 +224,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_code'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def gi_frame(self, /) -> FrameType | None:
@@ -218,7 +250,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_frame'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_frame(self, /) -> FrameType | None:
@@ -237,7 +276,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_frame'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def gi_running(self, /) -> bool:
@@ -256,7 +302,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_running'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_running(self, /) -> bool:
@@ -275,7 +328,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_running'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def gi_suspended(self, /) -> bool:
@@ -294,7 +354,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_suspended'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_suspended(self, /) -> bool:
@@ -313,7 +380,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_suspended'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def gi_yieldfrom(self, /) -> object | None:
@@ -332,7 +406,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_yieldfrom'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_await(self, /) -> object | None:
@@ -351,7 +432,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_await'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def gi_origin(self, /) -> tuple[tuple[str, int, str], ...] | None:
@@ -370,7 +458,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'gi_origin'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
     @property
     def cr_origin(self, /) -> tuple[tuple[str, int, str], ...] | None:
@@ -389,7 +484,14 @@ class GeneratorCoroutineWrapper(
             pass
 
         msg = "the wrapped object has not attribute 'cr_origin'"
-        raise AttributeError(msg)
+        exc = AttributeError(msg)
+        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
+            exc.name = None  # suppress suggestions
+
+        try:
+            raise exc
+        finally:
+            del exc  # break reference cycles
 
 
 async def await_for(awaitable: Awaitable[_T], /) -> _T:
