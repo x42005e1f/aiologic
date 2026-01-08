@@ -133,7 +133,26 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi(self, /) -> Generator[_YieldT_co, _SendT_contra, _ReturnT_co]:
-        """..."""
+        """
+        The underlying generator-like object (see :func:`isgeneratorlike`), if
+        the wrapped object is one. Otherwise, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.gi
+          <generator object generator_function at ...>
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.gi
+          Traceback (most recent call last):
+          AttributeError: the wrapped object is not a generator
+          >>> coro.close()
+        """
 
         try:
             generator = self.__wrapped_gi
@@ -158,7 +177,26 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr(self, /) -> Coroutine[_YieldT_co, _SendT_contra, _ReturnT_co]:
-        """..."""
+        """
+        The underlying coroutine-like object (see :func:`iscoroutinelike`), if
+        the wrapped object is one. Otherwise, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.cr
+          Traceback (most recent call last):
+          AttributeError: the wrapped object is not a coroutine
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.cr
+          <coroutine object coroutine_function at ...>
+          >>> coro.close()
+        """
 
         try:
             coroutine = self.__wrapped_cr
@@ -183,7 +221,33 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_code(self, /) -> CodeType:
-        """..."""
+        """
+        An associated code object of the wrapped object.
+
+        This property is provided for compatibility with
+        :data:`types.GeneratorType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`gi.gi_code <gi>`
+        * :attr:`cr.cr_code <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.gi_code
+          <code object generator_function at ...>
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.gi_code
+          <code object coroutine_function at ...>
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -209,7 +273,33 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_code(self, /) -> CodeType:
-        """..."""
+        """
+        An associated code object of the wrapped object.
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`cr.cr_code <cr>`
+        * :attr:`gi.gi_code <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.cr_code
+          <code object generator_function at ...>
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.cr_code
+          <code object coroutine_function at ...>
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -235,7 +325,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_frame(self, /) -> FrameType | None:
-        """..."""
+        """
+        An associated frame object of the wrapped object, or :data:`None` (if
+        execution has completed).
+
+        This property is provided for compatibility with
+        :data:`types.GeneratorType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`gi.gi_frame <gi>`
+        * :attr:`cr.cr_frame <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.gi_frame
+          <frame at ...>
+          >>> gen.close()
+          >>> gen.gi_frame is None
+          True
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.gi_frame
+          <frame at ...>
+          >>> coro.close()
+          >>> coro.gi_frame is None
+          True
+        """
 
         wrapped = self.__wrapped
 
@@ -261,7 +382,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_frame(self, /) -> FrameType | None:
-        """..."""
+        """
+        An associated frame object of the wrapped object, or :data:`None` (if
+        execution has completed).
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`cr.cr_frame <cr>`
+        * :attr:`gi.gi_frame <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.cr_frame
+          <frame at ...>
+          >>> gen.close()
+          >>> gen.cr_frame is None
+          True
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.cr_frame
+          <frame at ...>
+          >>> coro.close()
+          >>> coro.cr_frame is None
+          True
+        """
 
         wrapped = self.__wrapped
 
@@ -287,7 +439,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_running(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the wrapped object is currently being
+        executed by the interpreter (created, not suspended, and not closed),
+        :data:`False` otherwise (see :func:`inspect.getgeneratorstate`).
+
+        This property is provided for compatibility with
+        :data:`types.GeneratorType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`gi.gi_running <gi>`
+        * :attr:`cr.cr_running <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.gi_running]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen)
+          True
+          >>> gen.gi_running
+          False
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro)
+          True
+          >>> coro.gi_running
+          False
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -313,7 +496,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_running(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the wrapped object is currently being
+        executed by the interpreter (created, not suspended, and not closed),
+        :data:`False` otherwise (see :func:`inspect.getcoroutinestate`).
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`cr.cr_running <cr>`
+        * :attr:`gi.gi_running <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.cr_running]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen)
+          True
+          >>> gen.cr_running
+          False
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro)
+          True
+          >>> coro.cr_running
+          False
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -339,7 +553,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_suspended(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the wrapped object is currently
+        suspended (created, not running, and not closed), :data:`False`
+        otherwise (see :func:`inspect.getgeneratorstate`).
+
+        This property is provided for compatibility with
+        :data:`types.GeneratorType` instances (Python ≥3.11). It is equivalent
+        to one of the following:
+
+        * :attr:`gi.gi_suspended <gi>`
+        * :attr:`cr.cr_suspended <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.gi_suspended]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen)
+          False
+          >>> gen.gi_suspended
+          True
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro)
+          False
+          >>> coro.gi_suspended
+          True
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -365,7 +610,38 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_suspended(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the wrapped object is currently
+        suspended (created, not running, and not closed), :data:`False`
+        otherwise (see :func:`inspect.getcoroutinestate`).
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances (Python ≥3.11). It is equivalent
+        to one of the following:
+
+        * :attr:`cr.cr_suspended <cr>`
+        * :attr:`gi.gi_suspended <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.cr_suspended]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen)
+          False
+          >>> gen.cr_suspended
+          True
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro)
+          False
+          >>> coro.cr_suspended
+          True
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -391,7 +667,36 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_yieldfrom(self, /) -> object | None:
-        """..."""
+        """
+        An associated iterated object of the wrapped object, or :data:`None`.
+
+        This property is provided for compatibility with
+        :data:`types.GeneratorType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`gi.gi_yieldfrom <gi>`
+        * :attr:`cr.cr_await <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.gi_yieldfrom]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen) is None
+          True
+          >>> gen.gi_yieldfrom
+          <list_iterator object at ...>
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro) is None
+          True
+          >>> coro.gi_yieldfrom
+          <aiologic.meta.GeneratorCoroutineWrapper object at ...>
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -417,7 +722,36 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_await(self, /) -> object | None:
-        """..."""
+        """
+        An associated iterated object of the wrapped object, or :data:`None`.
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`cr.cr_await <cr>`
+        * :attr:`gi.gi_yieldfrom <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> def generator_function():
+          ...     yield from [target.cr_await]
+          >>> async def coroutine_function():
+          ...     await GeneratorCoroutineWrapper(generator_function())
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> next(target := gen) is None
+          True
+          >>> gen.cr_await
+          <list_iterator object at ...>
+          >>> gen.close()
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> next(target := coro) is None
+          True
+          >>> coro.cr_await
+          <aiologic.meta.GeneratorCoroutineWrapper object at ...>
+          >>> coro.close()
+        """
 
         wrapped = self.__wrapped
 
@@ -443,7 +777,44 @@ class GeneratorCoroutineWrapper(
 
     @property
     def gi_origin(self, /) -> tuple[tuple[str, int, str], ...] | None:
-        """..."""
+        """
+        A tuple of ``(filename, line_number, function_name)`` tuples describing
+        the traceback where the wrapped object was created, or :data:`None`
+        (see :func:`sys.set_coroutine_origin_tracking_depth`).
+
+        This property is provided for consistency with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`gi.gi_origin <gi>`
+        * :attr:`cr.cr_origin <cr>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> import sys
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.gi_origin
+          Traceback (most recent call last):
+          AttributeError: the wrapped object has not attribute 'gi_origin'
+          >>> gen.close()
+          >>> sys.set_coroutine_origin_tracking_depth(0)
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.gi_origin is None
+          True
+          >>> coro.close()
+          >>> sys.set_coroutine_origin_tracking_depth(1)
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.gi_origin
+          ((..., ..., ...),)
+          >>> coro.close()
+          >>> sys.set_coroutine_origin_tracking_depth(0)
+        """
 
         wrapped = self.__wrapped
 
@@ -469,7 +840,44 @@ class GeneratorCoroutineWrapper(
 
     @property
     def cr_origin(self, /) -> tuple[tuple[str, int, str], ...] | None:
-        """..."""
+        """
+        A tuple of ``(filename, line_number, function_name)`` tuples describing
+        the traceback where the wrapped object was created, or :data:`None`
+        (see :func:`sys.set_coroutine_origin_tracking_depth`).
+
+        This property is provided for compatibility with
+        :data:`types.CoroutineType` instances. It is equivalent to one of the
+        following:
+
+        * :attr:`cr.cr_origin <cr>`
+        * :attr:`gi.gi_origin <gi>`
+
+        If none is available, raises :exc:`AttributeError`.
+
+        Example:
+          >>> import sys
+          >>> def generator_function():
+          ...     return
+          ...     yield  # generator definition
+          >>> async def coroutine_function():
+          ...     pass
+          >>> gen = GeneratorCoroutineWrapper(generator_function())
+          >>> gen.cr_origin
+          Traceback (most recent call last):
+          AttributeError: the wrapped object has not attribute 'cr_origin'
+          >>> gen.close()
+          >>> sys.set_coroutine_origin_tracking_depth(0)
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.cr_origin is None
+          True
+          >>> coro.close()
+          >>> sys.set_coroutine_origin_tracking_depth(1)
+          >>> coro = GeneratorCoroutineWrapper(coroutine_function())
+          >>> coro.cr_origin
+          ((..., ..., ...),)
+          >>> coro.close()
+          >>> sys.set_coroutine_origin_tracking_depth(0)
+        """
 
         wrapped = self.__wrapped
 
