@@ -260,6 +260,7 @@ ignore = [
     # ruff-specific rules
     "RUF029",  # unused-async
     "RUF052",  # used-dummy-variable
+    "RUF067",  # non-empty-init-module
 ]
 fixable = [
     "ALL",
