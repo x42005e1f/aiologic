@@ -8,29 +8,27 @@ import sys
 
 from typing import Final, NoReturn
 
-if sys.version_info >= (3, 11):  # `EnumMeta` has been renamed to `EnumType`
+if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
 
-if sys.version_info >= (3, 11):  # a caching bug fix
+if sys.version_info >= (3, 9):  # various bug fixes (caching, etc.)
     from typing import Literal
 else:  # typing-extensions>=4.6.0
     from typing_extensions import Literal
 
-if sys.version_info >= (3, 11):  # python/cpython#90633
+if sys.version_info >= (3, 11):  # python/cpython#30842
     from typing import Never
 else:  # typing-extensions>=4.1.0
     from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
     from typing import final
 else:  # typing-extensions>=4.1.0
     from typing_extensions import final
 
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]
-
-# `_SingletonMeta.__call__()` omitted due to python/typing#270
+# `_SingletonMeta.__call__()` is omitted due to python/typing#270
 class _SingletonMeta(EnumType): ...
 
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]

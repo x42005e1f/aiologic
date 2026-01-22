@@ -14,29 +14,29 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Final, NoReturn
 
-if sys.version_info >= (3, 11):  # `EnumMeta` has been renamed to `EnumType`
+if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):  # a caching bug fix
+    if sys.version_info >= (3, 9):  # various bug fixes (caching, etc.)
         from typing import Literal
     else:  # typing-extensions>=4.6.0
         from typing_extensions import Literal
 
-    if sys.version_info >= (3, 11):  # python/cpython#90633
+    if sys.version_info >= (3, 11):  # python/cpython#30842
         from typing import Never
     else:  # typing-extensions>=4.1.0
         from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
     from typing import final
 else:  # typing-extensions>=4.1.0
     from typing_extensions import final
 
 # python/cpython#82711
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
+_ATTRIBUTE_SUGGESTIONS_OFFERED = sys.version_info >= (3, 10)
 
 # We have to use the `enum` module so that type checkers can understand that
 # the instance is a singleton object. Otherwise, they will not be able to
@@ -88,7 +88,7 @@ class _SingletonMeta(EnumType):
     # `typing_extensions._ProtocolMeta` if necessary, which is not very
     # convenient from a type checking perspective, since python/typeshed does
     # not include non-public names in typing-extensions). In this case, we
-    # would have to restore runtime checks as described in the following links:
+    # would have to restore runtime checks as described at the following links:
     #
     # * https://stackoverflow.com/q/54893595
     # * https://stackoverflow.com/q/56131308
@@ -124,11 +124,12 @@ class _SingletonMeta(EnumType):
 
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
     """
-    A base class for creating type-checker-friendly singleton classes whose
+    A base class for `type-checker-friendly <https://peps.python.org/pep-0484/
+    #support-for-singleton-types-in-unions>`__ singleton classes whose
     instances will be defined at the module level.
 
     Unlike :class:`enum.Enum`, it prohibits setting attributes that are not
-    explicitly declared (via :ref:`slots`).
+    explicitly declared via :data:`__slots__ <object.__slots__>`.
 
     Example:
       >>> class SingletonType(SingletonEnum):
@@ -149,7 +150,7 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
             return
 
         cls = self.__class__
-        cls_qualname = cls.__qualname__
+        cls_name = cls.__name__
 
         # We allow setting attributes for user-defined slots to better match
         # expected behavior. Although this goes against the concept in a sense
@@ -165,7 +166,7 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
         # set the 'name' and 'obj' attributes, or manually set them to the
         # correct values). Note, `enum.Enum` itself does not prohibit setting
         # attributes (see python/cpython#90290)!
-        msg = f"{cls_qualname!r} object has no attribute {name!r}"
+        msg = f"{cls_name!r} object has no attribute {name!r}"
         exc = AttributeError(msg)
         if _ATTRIBUTE_SUGGESTIONS_OFFERED:
             exc.name = None  # suppress suggestions
