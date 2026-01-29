@@ -193,12 +193,12 @@ class DefaultType(SingletonEnum):
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
         bcs = __class__  # an implicit closure reference
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+        bcs_name = bcs.__name__
 
         # Although enum classes with defined members cannot be subclassed in
         # any case, we make this behavior explicit for clarity.
 
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
 
     def __bool__(self, /) -> Literal[False]:
@@ -215,12 +215,12 @@ class MissingType(SingletonEnum):
 
     def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
         bcs = __class__  # an implicit closure reference
-        bcs_repr = f"{bcs.__module__}.{bcs.__qualname__}"
+        bcs_name = bcs.__name__
 
         # Although enum classes with defined members cannot be subclassed in
         # any case, we make this behavior explicit for clarity.
 
-        msg = f"type '{bcs_repr}' is not an acceptable base type"
+        msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
 
     def __bool__(self, /) -> Literal[False]:
