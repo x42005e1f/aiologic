@@ -8,7 +8,7 @@ from __future__ import annotations
 import enum
 import sys
 
-from inspect import ismemberdescriptor
+from inspect import isdatadescriptor
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -152,21 +152,27 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
         cls = self.__class__
         cls_name = cls.__name__
 
-        # We allow setting attributes for user-defined slots to better match
-        # expected behavior. Although this goes against the concept in a sense
-        # (since data for an instance can be set at the class/module level
-        # instead), it may contribute to new usage scenarios.
-        if ismemberdescriptor(getattr(cls, name, None)):
-            super().__setattr__(name, value)
-            return
-
         # A singleton object should not provide mutable public state, so we
-        # raise an `AttributeError` on any attempt to set an unknown attribute,
-        # suppressing its suggestions (which would occur if we either did not
-        # set the 'name' and 'obj' attributes, or manually set them to the
-        # correct values). Note, `enum.Enum` itself does not prohibit setting
-        # attributes (see python/cpython#90290)!
-        msg = f"{cls_name!r} object has no attribute {name!r}"
+        # raise an `AttributeError` on any attempt to set an unknown instance
+        # attribute, suppressing its suggestions (which would occur if we
+        # either did not set the 'name' and 'obj' attributes, or manually set
+        # them to the correct values). Note, `enum.Enum` itself does not
+        # prohibit setting attributes (see python/cpython#90290)!
+        try:
+            cls_member = getattr(cls, name)
+        except AttributeError:
+            msg = f"{cls_name!r} object has no attribute {name!r}"
+        else:
+            # We allow setting attributes for user-defined slots and properties
+            # to better match expected behavior. Although this goes against the
+            # concept in a sense (since data for an instance can be set at the
+            # class/module level instead), it may contribute to new usage
+            # scenarios.
+            if isdatadescriptor(cls_member):
+                super().__setattr__(name, value)
+                return
+
+            msg = f"{cls_name!r} object attribute {name!r} is read-only"
         exc = AttributeError(msg)
         if _ATTRIBUTE_SUGGESTIONS_OFFERED:
             exc.name = None  # suppress suggestions

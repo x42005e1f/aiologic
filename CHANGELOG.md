@@ -57,6 +57,10 @@ Commit messages are consistent with
 - The `aiologic.meta.SingletonEnum` constructor now reverts to the original
   behavior if there are zero or more than one members, or if additional
   parameters are passed, which should make it safer.
+- `aiologic.meta.SingletonEnum` instances now allow setting attributes for any
+  properties (descriptors) that have a setter. Previously, only slot
+  descriptors (member descriptors) were supported, which prevented any
+  user-defined setter from being called.
 - `aiologic.meta.replaces()` now raises a `LookupError` with an informative
   message instead of a `KeyError` if there is no function of the same name in
   the namespace, which should make debugging easier.
