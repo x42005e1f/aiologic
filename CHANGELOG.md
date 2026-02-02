@@ -38,10 +38,10 @@ Commit messages are consistent with
 - `aiologic.meta.generator()` and `aiologic.meta.coroutine()` functions for
   transforming generator/coroutine factories into the corresponding object
   functions. Unlike `types.coroutine()`, they always return a new function, and
-  it is always a native object function. Mainly added to define the
-  `__await__()` method via an asynchronous function (and subsequent
-  transformation into a generator function) with no overhead when calling, with
-  annotation updates (for `sphinx.ext.autodoc`).
+  it is always a native object function (unless they have been cythonized).
+  Mainly added to define the `__await__()` method via an asynchronous function
+  (and subsequent transformation into a generator function) with no overhead
+  when calling, with annotation updates (for `sphinx.ext.autodoc`).
 - `aiologic.meta.GeneratorCoroutineWrapper` as a way to create universal
   objects that are similar to both `types.GeneratorType` and
   `types.CoroutineType`. Useful when you need to use a coroutine in generator

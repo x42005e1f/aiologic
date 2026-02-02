@@ -27,12 +27,12 @@ from types import (
 )
 from typing import TYPE_CHECKING
 
-from ._markers import DEFAULT, MISSING
+from ._markers import MISSING
 
 if TYPE_CHECKING:
     from typing import Any, TypeVar
 
-    from ._markers import DefaultType, MissingType
+    from ._markers import MissingType
 
 if sys.version_info >= (3, 9):  # PEP 585
     from collections.abc import AsyncGenerator, Coroutine, Generator
@@ -60,11 +60,6 @@ else:
     NoneType = type(None)
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):  # a caching bug fix
-        from typing import Literal
-    else:  # typing-extensions>=4.6.0
-        from typing_extensions import Literal
-
     if sys.version_info >= (3, 10):  # PEP 612
         from typing import ParamSpec
     else:  # typing-extensions>=3.10.0
@@ -209,15 +204,6 @@ _coroutinefactory_marker: _MarkerInfo = _MarkerInfo(
 _asyncgenfactory_marker: _MarkerInfo = _MarkerInfo(
     f"{_prefix}_asyncgenfactory_marker",
 )
-_generatorfunction_marker: _MarkerInfo = _MarkerInfo(
-    f"{_prefix}_generatorfunction_marker",
-)
-_coroutinefunction_marker: _MarkerInfo = _MarkerInfo(
-    f"{_prefix}_coroutinefunction_marker",
-)
-_asyncgenfunction_marker: _MarkerInfo = _MarkerInfo(
-    f"{_prefix}_asyncgenfunction_marker",
-)
 
 
 def _get_generatorfactory_marker() -> _MarkerInfo:
@@ -232,18 +218,6 @@ def _get_asyncgenfactory_marker() -> _MarkerInfo:
     return _asyncgenfactory_marker
 
 
-def _get_generatorfunction_marker() -> _MarkerInfo:
-    return _generatorfunction_marker
-
-
-def _get_coroutinefunction_marker() -> _MarkerInfo:
-    return _coroutinefunction_marker
-
-
-def _get_asyncgenfunction_marker() -> _MarkerInfo:
-    return _asyncgenfunction_marker
-
-
 def _catch_generatorfactory_marker() -> _MarkerInfo:
     if _generatorfactory_marker.value is MISSING:
         _generatorfactory_marker.value = _generatorfactory_marker.default
@@ -252,63 +226,7 @@ def _catch_generatorfactory_marker() -> _MarkerInfo:
 
 
 if sys.version_info >= (3, 12):  # python/cpython#99247
-
-    def _catch_coroutinefactory_marker() -> _MarkerInfo:
-        if _coroutinefactory_marker.value is MISSING:
-            _coroutinefactory_marker.value = _coroutinefactory_marker.default
-
-        return _coroutinefactory_marker
-
-else:
-    from wrapt import when_imported
-
-    def _catch_coroutinefactory_marker() -> _MarkerInfo:
-        if _coroutinefactory_marker.value is MISSING:
-            try:
-                from asyncio.coroutines import _is_coroutine
-
-                _coroutinefactory_marker.name = "_is_coroutine"
-                _coroutinefactory_marker.value = _is_coroutine
-            except ImportError:
-                warnings.warn(
-                    (
-                        "Unable to obtain the standard marker; manually marked"
-                        " functions using standard library tools will not be"
-                        " recognized; `markcoroutinefactory(native=False)`"
-                        " will also not affect `asyncio.iscoroutinefunction()`"
-                    ),
-                    RuntimeWarning,
-                    stacklevel=3,
-                )
-                _coroutinefactory_marker.value = (
-                    _coroutinefactory_marker.default
-                )
-
-        return _coroutinefactory_marker
-
-    @when_imported("asyncio")
-    def _(_):
-        global _get_coroutinefactory_marker
-
-        _get_coroutinefactory_marker = _catch_coroutinefactory_marker
-
-
-def _catch_asyncgenfactory_marker() -> _MarkerInfo:
-    if _asyncgenfactory_marker.value is MISSING:
-        _asyncgenfactory_marker.value = _asyncgenfactory_marker.default
-
-    return _asyncgenfactory_marker
-
-
-def _catch_generatorfunction_marker() -> _MarkerInfo:
-    if _generatorfunction_marker.value is MISSING:
-        _generatorfunction_marker.value = _generatorfunction_marker.default
-
-    return _generatorfunction_marker
-
-
-if sys.version_info >= (3, 12):  # python/cpython#99247
-    from inspect import markcoroutinefunction as _markcoroutinefunction_impl
+    from inspect import markcoroutinefunction
 
     class _MarkerCatchingError(RuntimeError):
         pass
@@ -346,47 +264,72 @@ if sys.version_info >= (3, 12):  # python/cpython#99247
                 msg = "the marker has not been set"
                 raise _MarkerCatchingError(msg) from None
 
-    def _catch_coroutinefunction_marker() -> _MarkerInfo:
-        if _coroutinefunction_marker.value is MISSING:
+    def _catch_coroutinefactory_marker() -> _MarkerInfo:
+        if _coroutinefactory_marker.value is MISSING:
             try:
                 catcher = _MarkerCatcher()
 
-                _markcoroutinefunction_impl(catcher)
+                markcoroutinefunction(catcher)
 
-                _coroutinefunction_marker.name = catcher.name
-                _coroutinefunction_marker.value = catcher.value
+                _coroutinefactory_marker.name = catcher.name
+                _coroutinefactory_marker.value = catcher.value
             except _MarkerCatchingError:
                 warnings.warn(
                     (
                         "Unable to obtain the standard marker; manually marked"
                         " functions using standard library tools will not be"
-                        " recognized; `markcoroutinefactory(native=True)` will"
-                        " also not affect `inspect.iscoroutinefunction()`"
+                        " recognized; `markcoroutinefactory()` will also not"
+                        " affect `inspect.iscoroutinefunction()`"
                     ),
                     RuntimeWarning,
                     stacklevel=3,
                 )
-                _coroutinefunction_marker.value = (
-                    _coroutinefunction_marker.default
+                _coroutinefactory_marker.value = (
+                    _coroutinefactory_marker.default
                 )
 
-        return _coroutinefunction_marker
+        return _coroutinefactory_marker
 
-    _get_coroutinefunction_marker = _catch_coroutinefunction_marker
+    _get_coroutinefactory_marker = _catch_coroutinefactory_marker
 else:
+    from wrapt import when_imported
 
-    def _catch_coroutinefunction_marker() -> _MarkerInfo:
-        if _coroutinefunction_marker.value is MISSING:
-            _coroutinefunction_marker.value = _coroutinefunction_marker.default
+    def _catch_coroutinefactory_marker() -> _MarkerInfo:
+        if _coroutinefactory_marker.value is MISSING:
+            try:
+                from asyncio.coroutines import _is_coroutine
 
-        return _coroutinefunction_marker
+                _coroutinefactory_marker.name = "_is_coroutine"
+                _coroutinefactory_marker.value = _is_coroutine
+            except ImportError:
+                warnings.warn(
+                    (
+                        "Unable to obtain the standard marker; manually marked"
+                        " functions using standard library tools will not be"
+                        " recognized; `markcoroutinefactory()` will also not"
+                        " affect `asyncio.iscoroutinefunction()`"
+                    ),
+                    RuntimeWarning,
+                    stacklevel=3,
+                )
+                _coroutinefactory_marker.value = (
+                    _coroutinefactory_marker.default
+                )
+
+        return _coroutinefactory_marker
+
+    @when_imported("asyncio")
+    def _(_):
+        global _get_coroutinefactory_marker
+
+        _get_coroutinefactory_marker = _catch_coroutinefactory_marker
 
 
-def _catch_asyncgenfunction_marker() -> _MarkerInfo:
-    if _asyncgenfunction_marker.value is MISSING:
-        _asyncgenfunction_marker.value = _asyncgenfunction_marker.default
+def _catch_asyncgenfactory_marker() -> _MarkerInfo:
+    if _asyncgenfactory_marker.value is MISSING:
+        _asyncgenfactory_marker.value = _asyncgenfactory_marker.default
 
-    return _asyncgenfunction_marker
+    return _asyncgenfactory_marker
 
 
 if sys.version_info >= (3, 13):  # python/cpython#16600
@@ -454,52 +397,23 @@ def _unwrap_and_check(
 def isgeneratorfactory(
     obj: Callable[..., Generator[Any, Any, Any]],
     /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> bool: ...
 @overload
 def isgeneratorfactory(
     obj: Callable[_P, Awaitable[_T]],
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[_P, GeneratorType[Any, Any, _T]]]: ...
-@overload
-def isgeneratorfactory(
-    obj: Callable[_P, Awaitable[_T]],
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[_P, Generator[Any, Any, _T]]]: ...
 @overload
 def isgeneratorfactory(
     obj: Callable[_P, object],
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[_P, GeneratorType[Any, Any, Any]]]: ...
-@overload
-def isgeneratorfactory(
-    obj: Callable[_P, object],
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[_P, Generator[Any, Any, Any]]]: ...
 @overload
 def isgeneratorfactory(
     obj: object,
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[..., GeneratorType[Any, Any, Any]]]: ...
-@overload
-def isgeneratorfactory(
-    obj: object,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Generator[Any, Any, Any]]]: ...
-def isgeneratorfactory(obj, /, *, native=DEFAULT):
+def isgeneratorfactory(obj, /):
     """
     Return :data:`True` if the object returns a :term:`generator iterator` when
     called, :data:`False` otherwise.
@@ -561,33 +475,17 @@ def isgeneratorfactory(obj, /, *, native=DEFAULT):
       True
       >>> isgeneratorfactory(ComplexGeneratorCallable())
       True
-
-    Args:
-      native:
-        If set to :data:`True`, only objects that return a native generator
-        iterator (see :func:`inspect.isgenerator`/:data:`types.GeneratorType`)
-        when called are treated as generator factories, which corresponds to
-        the standard :func:`inspect.isgeneratorfunction`. Typically, you do not
-        need to set this parameter unless you want to perform more detailed
-        introspection, e.g. using :func:`inspect.getgeneratorstate`.
     """
 
-    if native is DEFAULT:
-        native = False
-
-    markers = []
-
-    if (marker := _get_generatorfunction_marker()).value is not MISSING:
-        markers.append(marker)
-
-    if not native:
-        if (marker := _get_generatorfactory_marker()).value is not MISSING:
-            markers.append(marker)
+    if (marker := _get_generatorfactory_marker()).value is not MISSING:
+        markers = [marker]
+    else:
+        markers = []
 
     return _unwrap_and_check(
         obj,
         CO_GENERATOR,
-        GeneratorType if native else _generator_types,
+        _generator_types,
         markers,
     )
 
@@ -596,52 +494,23 @@ def isgeneratorfactory(obj, /, *, native=DEFAULT):
 def iscoroutinefactory(
     obj: Callable[..., Coroutine[Any, Any, Any]],
     /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> bool: ...
 @overload
 def iscoroutinefactory(
     obj: Callable[_P, Awaitable[_T]],
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[_P, CoroutineType[Any, Any, _T]]]: ...
-@overload
-def iscoroutinefactory(
-    obj: Callable[_P, Awaitable[_T]],
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[_P, Coroutine[Any, Any, _T]]]: ...
 @overload
 def iscoroutinefactory(
     obj: Callable[_P, object],
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[_P, CoroutineType[Any, Any, Any]]]: ...
-@overload
-def iscoroutinefactory(
-    obj: Callable[_P, object],
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[_P, Coroutine[Any, Any, Any]]]: ...
 @overload
 def iscoroutinefactory(
     obj: object,
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[..., CoroutineType[Any, Any, Any]]]: ...
-@overload
-def iscoroutinefactory(
-    obj: object,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., Coroutine[Any, Any, Any]]]: ...
-def iscoroutinefactory(obj, /, *, native=DEFAULT):
+def iscoroutinefactory(obj, /):
     """
     Return :data:`True` if the object returns a :term:`coroutine` when called,
     :data:`False` otherwise.
@@ -709,33 +578,17 @@ def iscoroutinefactory(obj, /, *, native=DEFAULT):
       True
       >>> iscoroutinefactory(ComplexCoroutineCallable())
       True
-
-    Args:
-      native:
-        If set to :data:`True`, only objects that return a native coroutine
-        (see :func:`inspect.iscoroutine`/:data:`types.CoroutineType`) when
-        called are treated as coroutine factories, which corresponds to the
-        standard :func:`inspect.iscoroutinefunction`. Typically, you do not
-        need to set this parameter unless you want to perform more detailed
-        introspection, e.g. using :func:`inspect.getcoroutinestate`.
     """
 
-    if native is DEFAULT:
-        native = False
-
-    markers = []
-
-    if (marker := _get_coroutinefunction_marker()).value is not MISSING:
-        markers.append(marker)
-
-    if not native:
-        if (marker := _get_coroutinefactory_marker()).value is not MISSING:
-            markers.append(marker)
+    if (marker := _get_coroutinefactory_marker()).value is not MISSING:
+        markers = [marker]
+    else:
+        markers = []
 
     return _unwrap_and_check(
         obj,
-        CO_COROUTINE if native else CO_COROUTINE | CO_ITERABLE_COROUTINE,
-        CoroutineType if native else _coroutine_types,
+        CO_COROUTINE | CO_ITERABLE_COROUTINE,
+        _coroutine_types,
         markers,
     )
 
@@ -744,38 +597,18 @@ def iscoroutinefactory(obj, /, *, native=DEFAULT):
 def isasyncgenfactory(
     obj: Callable[..., AsyncGenerator[Any, Any]],
     /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> bool: ...
 @overload
 def isasyncgenfactory(
     obj: Callable[_P, object],
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[_P, AsyncGeneratorType[Any, Any]]]: ...
-@overload
-def isasyncgenfactory(
-    obj: Callable[_P, object],
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[_P, AsyncGenerator[Any, Any]]]: ...
 @overload
 def isasyncgenfactory(
     obj: object,
     /,
-    *,
-    native: Literal[True],
-) -> TypeGuard[Callable[..., AsyncGeneratorType[Any, Any]]]: ...
-@overload
-def isasyncgenfactory(
-    obj: object,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
 ) -> TypeGuard[Callable[..., AsyncGenerator[Any, Any]]]: ...
-def isasyncgenfactory(obj, /, *, native=DEFAULT):
+def isasyncgenfactory(obj, /):
     """
     Return :data:`True` if the object returns an :term:`asynchronous generator
     iterator` when called, :data:`False` otherwise.
@@ -840,61 +673,23 @@ def isasyncgenfactory(obj, /, *, native=DEFAULT):
       True
       >>> isasyncgenfactory(ComplexAsyncGeneratorCallable())
       True
-
-    Args:
-      native:
-        If set to :data:`True`, only objects that return a native asynchronous
-        generator iterator (see
-        :func:`inspect.isasyncgen`/:data:`types.AsyncGeneratorType`) when
-        called are treated as asynchronous generator factories, which
-        corresponds to the standard :func:`inspect.isasyncgenfunction`.
-        Typically, you do not need to set this parameter unless you want to
-        perform more detailed introspection, e.g. using
-        :func:`inspect.getasyncgenstate`.
     """
 
-    if native is DEFAULT:
-        native = False
-
-    markers = []
-
-    if (marker := _get_asyncgenfunction_marker()).value is not MISSING:
-        markers.append(marker)
-
-    if not native:
-        if (marker := _get_asyncgenfactory_marker()).value is not MISSING:
-            markers.append(marker)
+    if (marker := _get_asyncgenfactory_marker()).value is not MISSING:
+        markers = [marker]
+    else:
+        markers = []
 
     return _unwrap_and_check(
         obj,
         CO_ASYNC_GENERATOR,
-        AsyncGeneratorType if native else _asyncgen_types,
+        _asyncgen_types,
         markers,
     )
 
 
-@overload
-def markgeneratorfactory(
-    factory: MissingType = MISSING,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> Callable[[_CallableT], _CallableT]: ...
-@overload
-def markgeneratorfactory(
-    factory: _CallableT,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> _CallableT: ...
-def markgeneratorfactory(factory=MISSING, /, *, native=DEFAULT):
+def markgeneratorfactory(factory: _CallableT, /) -> _CallableT:
     """..."""
-
-    if factory is MISSING:
-        return partial(markgeneratorfactory, native=native)
-
-    if native is DEFAULT:
-        native = False
 
     if not callable(factory):
         msg = "the first argument must be callable"
@@ -905,38 +700,15 @@ def markgeneratorfactory(factory=MISSING, /, *, native=DEFAULT):
     while ismethod(obj):
         obj = obj.__func__
 
-    if native:
-        marker = _catch_generatorfunction_marker()
-    else:
-        marker = _catch_generatorfactory_marker()
+    marker = _catch_generatorfactory_marker()
 
     setattr(obj, marker.name, marker.value)
 
     return factory
 
 
-@overload
-def markcoroutinefactory(
-    factory: MissingType = MISSING,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> Callable[[_CallableT], _CallableT]: ...
-@overload
-def markcoroutinefactory(
-    factory: _CallableT,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> _CallableT: ...
-def markcoroutinefactory(factory=MISSING, /, *, native=DEFAULT):
+def markcoroutinefactory(factory: _CallableT, /) -> _CallableT:
     """..."""
-
-    if factory is MISSING:
-        return partial(markcoroutinefactory, native=native)
-
-    if native is DEFAULT:
-        native = False
 
     if not callable(factory):
         msg = "the first argument must be callable"
@@ -947,38 +719,15 @@ def markcoroutinefactory(factory=MISSING, /, *, native=DEFAULT):
     while ismethod(obj):
         obj = obj.__func__
 
-    if native:
-        marker = _catch_coroutinefunction_marker()
-    else:
-        marker = _catch_coroutinefactory_marker()
+    marker = _catch_coroutinefactory_marker()
 
     setattr(obj, marker.name, marker.value)
 
     return factory
 
 
-@overload
-def markasyncgenfactory(
-    factory: MissingType = MISSING,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> Callable[[_CallableT], _CallableT]: ...
-@overload
-def markasyncgenfactory(
-    factory: _CallableT,
-    /,
-    *,
-    native: bool | DefaultType = DEFAULT,
-) -> _CallableT: ...
-def markasyncgenfactory(factory=MISSING, /, *, native=DEFAULT):
+def markasyncgenfactory(factory: _CallableT, /) -> _CallableT:
     """..."""
-
-    if factory is MISSING:
-        return partial(markasyncgenfactory, native=native)
-
-    if native is DEFAULT:
-        native = False
 
     if not callable(factory):
         msg = "the first argument must be callable"
@@ -989,10 +738,7 @@ def markasyncgenfactory(factory=MISSING, /, *, native=DEFAULT):
     while ismethod(obj):
         obj = obj.__func__
 
-    if native:
-        marker = _catch_asyncgenfunction_marker()
-    else:
-        marker = _catch_asyncgenfactory_marker()
+    marker = _catch_asyncgenfactory_marker()
 
     setattr(obj, marker.name, marker.value)
 

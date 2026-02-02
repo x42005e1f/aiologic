@@ -55,8 +55,6 @@ if TYPE_CHECKING:
     _YieldT = TypeVar("_YieldT")
     _P = ParamSpec("_P")
 
-# python/cpython#110209
-_USE_NATIVE_TYPES: Final[bool] = sys.version_info >= (3, 13)
 _COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)  # PEP 649
 
 _generator_origins: tuple[type, ...] = (
@@ -238,27 +236,27 @@ def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
 def _generator(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, GeneratorType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Generator[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def _generator(
     func: Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, GeneratorType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Generator[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def _generator(
     func: Callable[_P, Awaitable[_T]],
     /,
-) -> Callable[_P, GeneratorType[Any, Any, _T]]: ...
+) -> Callable[_P, Generator[Any, Any, _T]]: ...
 @overload
 def _generator(
     func: Callable[_P, object],
     /,
-) -> Callable[_P, GeneratorType[Any, Any, Any]]: ...
+) -> Callable[_P, Generator[Any, Any, Any]]: ...
 @overload
 def _generator(
     func: object,
     /,
-) -> Callable[..., GeneratorType[Any, Any, Any]]: ...
+) -> Callable[..., Generator[Any, Any, Any]]: ...
 def _generator(func, /):
     if not callable(func):
         msg = "the first argument must be callable"
@@ -319,27 +317,27 @@ def _generator(func, /):
 def _coroutine(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, CoroutineType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def _coroutine(
     func: Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, CoroutineType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def _coroutine(
     func: Callable[_P, Awaitable[_T]],
     /,
-) -> Callable[_P, CoroutineType[Any, Any, _T]]: ...
+) -> Callable[_P, Coroutine[Any, Any, _T]]: ...
 @overload
 def _coroutine(
     func: Callable[_P, object],
     /,
-) -> Callable[_P, CoroutineType[Any, Any, Any]]: ...
+) -> Callable[_P, Coroutine[Any, Any, Any]]: ...
 @overload
 def _coroutine(
     func: object,
     /,
-) -> Callable[..., CoroutineType[Any, Any, Any]]: ...
+) -> Callable[..., Coroutine[Any, Any, Any]]: ...
 def _coroutine(func, /):
     if not callable(func):
         msg = "the first argument must be callable"
@@ -401,27 +399,27 @@ def _coroutine(func, /):
 def generator(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, GeneratorType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Generator[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def generator(
     func: Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, GeneratorType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Generator[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def generator(
     func: Callable[_P, Awaitable[_T]],
     /,
-) -> Callable[_P, GeneratorType[Any, Any, _T]]: ...
+) -> Callable[_P, Generator[Any, Any, _T]]: ...
 @overload
 def generator(
     func: Callable[_P, object],
     /,
-) -> Callable[_P, GeneratorType[Any, Any, Any]]: ...
+) -> Callable[_P, Generator[Any, Any, Any]]: ...
 @overload
 def generator(
     func: object,
     /,
-) -> Callable[..., GeneratorType[Any, Any, Any]]: ...
+) -> Callable[..., Generator[Any, Any, Any]]: ...
 def generator(func, /):
     """..."""
 
@@ -435,23 +433,17 @@ def generator(func, /):
             args = _get_generatortype_args(annotation)
 
             if isinstance(annotation, str):
-                return f"GeneratorType[{', '.join(args)}]"
+                return f"Generator[{', '.join(args)}]"
 
-            if _USE_NATIVE_TYPES:
-                return GeneratorType[args[0], args[1], args[2]]
-            else:
-                return Generator[args[0], args[1], args[2]]
+            return Generator[args[0], args[1], args[2]]
 
     elif flags & CO_COROUTINE:
 
         def transform(annotation):
             if isinstance(annotation, str):
-                return f"GeneratorType[Any, Any, {annotation}]"
+                return f"Generator[Any, Any, {annotation}]"
 
-            if _USE_NATIVE_TYPES:
-                return GeneratorType[Any, Any, annotation]
-            else:
-                return Generator[Any, Any, annotation]
+            return Generator[Any, Any, annotation]
 
     else:  # a coroutine factory
 
@@ -459,12 +451,9 @@ def generator(func, /):
             args = _get_coroutinetype_args(annotation)
 
             if isinstance(annotation, str):
-                return f"GeneratorType[{', '.join(args)}]"
+                return f"Generator[{', '.join(args)}]"
 
-            if _USE_NATIVE_TYPES:
-                return GeneratorType[args[0], args[1], args[2]]
-            else:
-                return Generator[args[0], args[1], args[2]]
+            return Generator[args[0], args[1], args[2]]
 
     return _update_returntype(genfunc, transform)
 
@@ -473,27 +462,27 @@ def generator(func, /):
 def coroutine(
     func: Callable[_P, Generator[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, CoroutineType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def coroutine(
     func: Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]],
     /,
-) -> Callable[_P, CoroutineType[_YieldT, _SendT, _ReturnT]]: ...
+) -> Callable[_P, Coroutine[_YieldT, _SendT, _ReturnT]]: ...
 @overload
 def coroutine(
     func: Callable[_P, Awaitable[_T]],
     /,
-) -> Callable[_P, CoroutineType[Any, Any, _T]]: ...
+) -> Callable[_P, Coroutine[Any, Any, _T]]: ...
 @overload
 def coroutine(
     func: Callable[_P, object],
     /,
-) -> Callable[_P, CoroutineType[Any, Any, Any]]: ...
+) -> Callable[_P, Coroutine[Any, Any, Any]]: ...
 @overload
 def coroutine(
     func: object,
     /,
-) -> Callable[..., CoroutineType[Any, Any, Any]]: ...
+) -> Callable[..., Coroutine[Any, Any, Any]]: ...
 def coroutine(func, /):
     """..."""
 
