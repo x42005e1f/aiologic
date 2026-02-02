@@ -6,8 +6,8 @@
 import sys
 
 from dataclasses import dataclass, field
-from types import AsyncGeneratorType, CodeType, CoroutineType, GeneratorType
-from typing import Any, TypeVar, type_check_only
+from types import AsyncGeneratorType, CoroutineType, GeneratorType
+from typing import Any, TypeVar
 
 from ._markers import DEFAULT, MISSING, DefaultType, MissingType
 
@@ -38,11 +38,6 @@ if sys.version_info >= (3, 10):  # PEP 612
 else:  # typing-extensions>=3.10.0
     from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 13):  # various fixes and improvements
-    from typing import Protocol
-else:  # typing-extensions>=4.10.0
-    from typing_extensions import Protocol
-
 if sys.version_info >= (3, 10):  # PEP 647
     from typing import TypeGuard
 else:  # typing-extensions>=3.10.0
@@ -57,15 +52,6 @@ if sys.version_info >= (3, 11):  # runtime introspection support
     from typing import overload
 else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
-
-@type_check_only
-class _FunctionLike(Protocol):
-    __code__: CodeType
-    __name__: str
-    __defaults__: tuple[Any, ...] | None
-    __kwdefaults__: dict[str, Any] | None
-
-    def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
 
 _T = TypeVar("_T")
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
@@ -109,7 +95,6 @@ def _catch_asyncgenfunction_marker() -> _MarkerInfo: ...
 
 _partialmethod_attribute_name: str
 
-def _isfunctionlike(obj: object, /) -> TypeIs[_FunctionLike]: ...
 def _iscallwrapper(obj: object, /) -> bool: ...
 def _unwrap_and_check(
     obj: object,

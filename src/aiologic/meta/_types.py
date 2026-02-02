@@ -19,12 +19,7 @@ from types import CoroutineType, GeneratorType
 from typing import TYPE_CHECKING, Any, TypeVar, get_args, get_origin
 
 from ._helpers import GeneratorCoroutineWrapper
-from ._inspect import (
-    _isfunctionlike,
-    isasyncgenfactory,
-    iscoroutinefactory,
-    isgeneratorfactory,
-)
+from ._inspect import isasyncgenfactory, iscoroutinefactory, isgeneratorfactory
 
 if TYPE_CHECKING:
     from typing import Final
@@ -432,10 +427,7 @@ def generator(func, /):
 
     genfunc = _generator(func)
 
-    if _isfunctionlike(func):
-        flags = func.__code__.co_flags
-    else:
-        flags = 0
+    flags = getattr(getattr(func, "__code__", None), "co_flags", 0)
 
     if flags & CO_GENERATOR or isgeneratorfactory(func):
 
@@ -507,10 +499,7 @@ def coroutine(func, /):
 
     corofunc = _coroutine(func)
 
-    if _isfunctionlike(func):
-        flags = func.__code__.co_flags
-    else:
-        flags = 0
+    flags = getattr(getattr(func, "__code__", None), "co_flags", 0)
 
     if flags & CO_GENERATOR or isgeneratorfactory(func):
 

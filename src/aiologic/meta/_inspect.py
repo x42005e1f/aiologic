@@ -17,8 +17,6 @@ from inspect import (
     CO_ITERABLE_COROUTINE,
     isawaitable,
     isclass,
-    iscode,
-    isfunction,
     ismethod,
 )
 from types import (
@@ -32,8 +30,7 @@ from typing import TYPE_CHECKING
 from ._markers import DEFAULT, MISSING
 
 if TYPE_CHECKING:
-    from types import CodeType
-    from typing import Any, TypeVar, type_check_only
+    from typing import Any, TypeVar
 
     from ._markers import DefaultType, MissingType
 
@@ -73,11 +70,6 @@ if TYPE_CHECKING:
     else:  # typing-extensions>=3.10.0
         from typing_extensions import ParamSpec
 
-    if sys.version_info >= (3, 13):  # various fixes and improvements
-        from typing import Protocol
-    else:  # typing-extensions>=4.10.0
-        from typing_extensions import Protocol
-
     if sys.version_info >= (3, 10):  # PEP 647
         from typing import TypeGuard
     else:  # typing-extensions>=3.10.0
@@ -94,16 +86,6 @@ else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 if TYPE_CHECKING:
-
-    @type_check_only
-    class _FunctionLike(Protocol):
-        __code__: CodeType
-        __name__: str
-        __defaults__: tuple[Any, ...] | None
-        __kwdefaults__: dict[str, Any] | None
-
-        def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
-
     _T = TypeVar("_T")
     _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
     _P = ParamSpec("_P")
@@ -413,28 +395,6 @@ else:
     _partialmethod_attribute_name: str = "_partialmethod"
 
 
-def _isfunctionlike(obj: object, /) -> TypeIs[_FunctionLike]:
-    return isfunction(obj) or (
-        callable(obj)
-        and not isclass(obj)
-        and iscode(
-            getattr(obj, "__code__", MISSING),
-        )
-        and isinstance(
-            getattr(obj, "__name__", MISSING),
-            str,
-        )
-        and isinstance(
-            getattr(obj, "__defaults__", MISSING),
-            (NoneType, tuple),
-        )
-        and isinstance(
-            getattr(obj, "__kwdefaults__", MISSING),
-            (NoneType, dict),
-        )
-    )
-
-
 def _iscallwrapper(obj: object, /) -> bool:
     return ismethodwrapper(obj) and (
         not ismethod(obj)  # CPython
@@ -480,7 +440,12 @@ def _unwrap_and_check(
             return False
 
         if _iscallwrapper(call) and call.__self__ is obj:
-            return _isfunctionlike(obj) and bool(obj.__code__.co_flags & flag)
+            code = getattr(obj, "__code__", None)
+
+            if code is None:
+                return False
+
+            return bool(getattr(code, "co_flags", 0) & flag)
 
         obj = call
 
