@@ -15,9 +15,7 @@ def resolve_name(name: str, package: str | None) -> str:
     behavior across all supported versions of Python.
 
     Example:
-      >>> resolve_name('.', 'a.b')
-      'a.b'
-      >>> resolve_name('x.y', 'a.b')
+      >>> resolve_name('x.y', 'a.b')  # an absolute one
       'x.y'
       >>> resolve_name('.x.y', 'a.b')
       'a.b.x.y'
@@ -25,15 +23,25 @@ def resolve_name(name: str, package: str | None) -> str:
       'a.x.y'
       >>> resolve_name('...x.y', 'a.b')
       Traceback (most recent call last):
+        ...
+      ValueError: `name` is beyond the top-level package
+      >>> resolve_name('.', 'a.b')
+      'a.b'
+      >>> resolve_name('..', 'a.b')
+      'a'
+      >>> resolve_name('...', 'a.b')
+      Traceback (most recent call last):
+        ...
       ValueError: `name` is beyond the top-level package
     """
 
-    if not name.startswith("."):
+    if not name.startswith("."):  # an absolute one
         return name
-    elif not package:
+
+    if not package:
         msg = (
-            f"no package specified for {name!r}"
-            " (required for relative module names)"
+            f"no package specified for {name!r} (required for relative module"
+            f" names)"
         )
         raise ValueError(msg)
 
@@ -42,7 +50,7 @@ def resolve_name(name: str, package: str | None) -> str:
 
     package_parts = package.rsplit(".", shifted_name_level - 1)
 
-    if len(package_parts) < shifted_name_level:
+    if len(package_parts) != shifted_name_level:
         msg = "`name` is beyond the top-level package"
         raise ValueError(msg)
 
