@@ -5,17 +5,16 @@
 
 from __future__ import annotations
 
-import os
 import sys
 
-from functools import partial, update_wrapper
+from functools import update_wrapper
 from inspect import isfunction
 from typing import TYPE_CHECKING
 
 from ._markers import MISSING
 
 if TYPE_CHECKING:
-    from typing import Any, Final, TypeVar, type_check_only
+    from typing import Any, TypeVar
 
     from ._markers import MissingType
 
@@ -29,19 +28,18 @@ if TYPE_CHECKING:
     else:  # typing-extensions>=3.10.0
         from typing_extensions import ParamSpec
 
-    if sys.version_info >= (3, 13):  # various fixes and improvements
+    if sys.version_info >= (3, 12):  # various bug fixes and improvements
         from typing import Protocol
     else:  # typing-extensions>=4.10.0
         from typing_extensions import Protocol
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
     from typing import overload
 else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 if TYPE_CHECKING:
 
-    @type_check_only
     class _NamedCallable(Protocol):
         def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
         @property
@@ -51,24 +49,19 @@ if TYPE_CHECKING:
     _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
     _P = ParamSpec("_P")
 
-_COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)  # PEP 649
-_SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
-    os.getenv(
-        "SPHINX_AUTODOC_RELOAD_MODULES",
-        "",
-    )
-)
+# before PEP 649
+_COPY_ANNOTATIONS = sys.version_info < (3, 14)
 
 
 @overload
 def replaces(
-    namespace: MutableMapping[str, object],
+    namespace: MutableMapping[str, Any],
     replacer: MissingType = MISSING,
     /,
 ) -> Callable[[_NamedCallableT], _NamedCallableT]: ...
 @overload
 def replaces(
-    namespace: MutableMapping[str, object],
+    namespace: MutableMapping[str, Any],
     replacer: _NamedCallableT,
     /,
 ) -> _NamedCallableT: ...
@@ -100,38 +93,46 @@ def replaces(namespace, replacer=MISSING, /):
     """
 
     if replacer is MISSING:
-        return partial(replaces, namespace)
+        impl = replaces  # to avoid `__globals__`
+
+        def decorator(replacer: _NamedCallableT, /) -> _NamedCallableT:
+            """
+            A partial application of :func:`replaces` to its first argument.
+            """
+
+            return impl(namespace, replacer)
+
+        return decorator
 
     # The replaced function may have a different `__name__` attribute value
     # than the replacer, so we must always use the name obtained before
     # wrapping.
     name = replacer.__name__
 
-    # When `update_wrapper()` is applied sequentially (a special case of
-    # parallel calls) on the same namespace to functions of the same name, they
-    # will refer to each other via the `__wrapped__` attribute, which will
-    # prevent them from being deleted from memory. Therefore, we delete the
-    # attribute after the call to break the reference chain.
-
     # The `KeyError` when the retrieval fails is not informative enough, so it
     # is replaced with a `LookupError` with a more informative error message.
     try:
-        wrapped = namespace[name]
+        replaced = namespace[name]
     except KeyError:
         if "__spec__" in namespace:  # a module namespace
             module_name = namespace.get("__name__")
         else:
             module_name = None
 
-        if module_name is not None:
-            namespace_repr = f"module {module_name!r}"
-        else:
+        if module_name is None:
             namespace_repr = "`namespace`"
+        else:
+            namespace_repr = f"module {module_name!r}"
 
         msg = f"{namespace_repr} has no function {name!r}"
         raise LookupError(msg) from None
-    else:
-        update_wrapper(replacer, wrapped)
+
+    # When `update_wrapper()` is applied sequentially (a special case of
+    # parallel calls) on the same namespace to functions of the same name, they
+    # will refer to each other via the `__wrapped__` attribute, which will
+    # prevent them from being deleted from memory. Therefore, we delete the
+    # attribute after the call to break the reference chain.
+    update_wrapper(replacer, replaced)
 
     # Usually, the decorator is called for a newly defined function, but it can
     # also be used in parallel for older ones, so we have to handle concurrent
@@ -146,14 +147,6 @@ def replaces(namespace, replacer=MISSING, /):
     return replacer
 
 
-# Until python/typing#548 is resolved, we can only go one of two ways (not
-# both):
-# * require the parameter lists of both functions to match (via `ParamSpec`)
-# * support callable subtypes, such as user-defined protocols (via `TypeVar`)
-# Here, we choose the first way to prevent obvious type errors when applying
-# the decorator to regular functions. This is not very suitable for forced
-# copying, as it will require the user to use `cast()` to preserve the original
-# type, but for lack of a better option...
 @overload
 def copies(
     original: Callable[_P, _T],
@@ -168,8 +161,8 @@ def copies(
 ) -> Callable[_P, _T]: ...
 def copies(original, replaced=MISSING, /):
     """
-    Replace with a copy of *original* if that is a user-defined function, and
-    make the copy look like *replaced* function.
+    Replace with a copy of *original* if that is a :ref:`user-defined function
+    <user-defined-funcs>`, and make the copy look like *replaced* function.
 
     If *original* and *replaced* are the same function, it forces copying
     (``copies(func, func)`` is always a new copy of ``func``). Otherwise, does
@@ -198,22 +191,33 @@ def copies(original, replaced=MISSING, /):
     """
 
     if replaced is MISSING:
-        return partial(copies, original)
+        impl = copies  # to avoid `__globals__`
+
+        def decorator(replaced: Callable[_P, _T], /) -> Callable[_P, _T]:
+            """
+            A partial application of :func:`copies` to its first argument.
+            """
+
+            return impl(original, replaced)
+
+        return decorator
 
     # We skip the function on type checking to speed up initialization and
     # prevent possible type errors.
-    if TYPE_CHECKING or _SPHINX_AUTODOC_RELOAD_MODULES:
+    if TYPE_CHECKING:
         if replaced is not original:
             return replaced
 
-    # We also cannot copy built-in functions (at least on CPython; on PyPy,
-    # however, this is possible, but it makes less sense there), so we ignore
-    # anything that is not a user-defined function.
+    # We cannot copy built-in functions (at least on CPython; on PyPy, however,
+    # this is possible, but it makes less sense there), so we ignore anything
+    # that is not a user-defined function. But note that proxy objects that
+    # replace `__class__` with a subclass of `types.FunctionType` will also be
+    # considered user-defined functions, so be careful.
     if not isfunction(original):
         if replaced is not original:
             return replaced
 
-        msg = "cannot copy non-user-defined functions"
+        msg = "cannot copy non-user-defined/compiled functions"
         raise TypeError(msg)
 
     # A well-known method of "deep" (actually not) copying of functions is to
@@ -242,16 +246,18 @@ def copies(original, replaced=MISSING, /):
     # how the `functools.update_wrapper()` behavior might change in the context
     # of python/cpython#85403 and python/cpython#85404, so we copy them anyway.
 
-    if isinstance(copy.__kwdefaults__, dict):
+    if copy.__kwdefaults__ is not None:
         copy.__kwdefaults__ = copy.__kwdefaults__.copy()
 
     if _COPY_ANNOTATIONS:
         copy.__annotations__ = copy.__annotations__.copy()
 
     # to preserve the signature
-    if (wrapped := getattr(replaced, "__wrapped__", MISSING)) is not MISSING:
-        copy.__wrapped__ = wrapped
-    else:
+    try:
+        wrapped = replaced.__wrapped__
+    except AttributeError:
         del copy.__wrapped__
+    else:
+        copy.__wrapped__ = wrapped
 
     return copy
