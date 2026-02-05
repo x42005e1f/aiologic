@@ -47,6 +47,9 @@ from ._markers import (
 from ._modules import (
     resolve_name as resolve_name,
 )
+from ._signatures import (
+    getsro as getsro,
+)
 from ._types import (
     coroutine as coroutine,
     generator as generator,

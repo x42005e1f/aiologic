@@ -422,6 +422,11 @@ Transformers
 .. autofunction:: aiologic.meta.generator
 .. autofunction:: aiologic.meta.coroutine
 
+Signatures
+++++++++++
+
+.. autofunction:: aiologic.meta.getsro
+
 Functions
 +++++++++
 

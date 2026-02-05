@@ -47,6 +47,10 @@ Commit messages are consistent with
   `types.CoroutineType`. Useful when you need to use a coroutine in generator
   functions or a generator in coroutine functions, and for some reason you
   cannot transform the function itself.
+- `aiologic.meta.getsro()` as a way to analyze the signature resolution order,
+  that is, the chain of (probably) callable objects that have a direct impact
+  on the signature of the passed callable object. Inspired by the
+  `inspect.signature()` implementation.
 
 ### Changed
 

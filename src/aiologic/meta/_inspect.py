@@ -9,7 +9,6 @@ import sys
 import warnings
 
 from dataclasses import dataclass, field
-from functools import partial, partialmethod
 from inspect import (
     CO_ASYNC_GENERATOR,
     CO_COROUTINE,
@@ -19,15 +18,11 @@ from inspect import (
     isclass,
     ismethod,
 )
-from types import (
-    AsyncGeneratorType,
-    CoroutineType,
-    FunctionType,
-    GeneratorType,
-)
+from types import AsyncGeneratorType, CoroutineType, GeneratorType
 from typing import TYPE_CHECKING
 
 from ._markers import MISSING
+from ._signatures import getsro
 
 if TYPE_CHECKING:
     from typing import Any, TypeVar
@@ -44,15 +39,6 @@ if TYPE_CHECKING:
         from collections.abc import Awaitable, Callable
     else:
         from typing import Awaitable, Callable
-
-if sys.version_info >= (3, 11):  # python/cpython#19261
-    from inspect import ismethodwrapper
-else:
-    from types import MethodWrapperType
-
-    def ismethodwrapper(object: object) -> TypeIs[MethodWrapperType]:
-        return isinstance(object, MethodWrapperType)
-
 
 if sys.version_info >= (3, 10):  # python/cpython#22336
     from types import NoneType
@@ -332,19 +318,6 @@ def _catch_asyncgenfactory_marker() -> _MarkerInfo:
     return _asyncgenfactory_marker
 
 
-if sys.version_info >= (3, 13):  # python/cpython#16600
-    _partialmethod_attribute_name: str = "__partialmethod__"
-else:
-    _partialmethod_attribute_name: str = "_partialmethod"
-
-
-def _iscallwrapper(obj: object, /) -> bool:
-    return ismethodwrapper(obj) and (
-        not ismethod(obj)  # CPython
-        or obj.__func__ is FunctionType.__call__  # PyPy
-    )
-
-
 def _unwrap_and_check(
     obj: object,
     /,
@@ -352,45 +325,28 @@ def _unwrap_and_check(
     types: tuple[type, ...] | type,
     markers: list[_MarkerInfo],
 ) -> bool:
-    while True:
-        if ismethod(obj):
-            obj = obj.__func__
-            continue
-
+    for current, _, _ in getsro(obj):
         for marker in markers:
-            if getattr(obj, marker.name, MISSING) is marker.value:
+            if getattr(current, marker.name, MISSING) is marker.value:
                 return True
 
-        if not callable(obj):
-            return False
-
-        if isinstance(obj, partial):
-            obj = obj.func
-            continue
-
-        impl = getattr(obj, _partialmethod_attribute_name, MISSING)
-
-        if isinstance(impl, partialmethod):
-            obj = impl.func
-            continue
-
-        if isclass(obj):
-            return issubclass(obj, types)
-
-        call = getattr(obj, "__call__", MISSING)
-
-        if call is MISSING:
-            return False
-
-        if _iscallwrapper(call) and call.__self__ is obj:
-            code = getattr(obj, "__code__", None)
+        if not isclass(current):
+            code = getattr(current, "__code__", None)
 
             if code is None:
-                return False
+                continue
 
-            return bool(getattr(code, "co_flags", 0) & flag)
+            flags = getattr(code, "co_flags", None)
 
-        obj = call
+            if flags is None:
+                continue
+
+            return bool(flags & flag)
+
+    if isclass(current):
+        return issubclass(current, types)
+
+    return False
 
 
 @overload
