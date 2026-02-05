@@ -6,7 +6,7 @@
 import enum
 import sys
 
-from typing import Final, NoReturn
+from typing import Any, Final
 
 if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
     from enum import EnumType
@@ -31,8 +31,8 @@ else:  # typing-extensions>=4.1.0
 # `_SingletonMeta.__call__()` is omitted due to python/typing#270
 class _SingletonMeta(EnumType): ...
 
+# `SingletonEnum.__setattr__()` is omitted due to python/mypy#18325
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]
-    def __setattr__(self, /, name: str, value: object) -> None: ...
     def __repr__(self, /) -> str: ...
     def __str__(self, /) -> str: ...
 
@@ -40,14 +40,14 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]
 class DefaultType(SingletonEnum):
     DEFAULT = "DEFAULT"
 
-    def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn: ...
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
     def __bool__(self, /) -> Literal[False]: ...
 
 @final
 class MissingType(SingletonEnum):
     MISSING = "MISSING"
 
-    def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn: ...
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
     def __bool__(self, /) -> Literal[False]: ...
 
 DEFAULT: Final[Literal[DefaultType.DEFAULT]]

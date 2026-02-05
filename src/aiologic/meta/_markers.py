@@ -8,11 +8,12 @@ from __future__ import annotations
 import enum
 import sys
 
+from functools import wraps
 from inspect import isdatadescriptor
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Final, NoReturn
+    from typing import Any, Final
 
 if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
     from enum import EnumType
@@ -109,7 +110,7 @@ class _SingletonMeta(EnumType):
     # We cannot solve this, and that is why our metaclass inherits only from
     # `EnumType`, thereby supporting neither abstract classes nor protocols.
 
-    # to allow `type(SINGLETON)() is SINGLETON`
+    @wraps(EnumType.__call__)
     def __call__(cls, /, *args, **kwargs):
         # If more than one member (or none members) is defined, it is unknown
         # which one the user wants to receive. Also, if additional parameters
@@ -119,6 +120,9 @@ class _SingletonMeta(EnumType):
         if len(cls) != 1 or args or kwargs:
             return super().__call__(*args, **kwargs)
 
+        # When the enumeration contains a single member, we allow
+        # `type(SINGLETON)() is SINGLETON` to mimic the `NoneType` behavior
+        # (and other similar built-in singleton types).
         return super().__call__(next(iter(cls)).value)
 
 
@@ -144,7 +148,8 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
       AttributeError: 'SingletonType' object has no attribute '_y'
     """
 
-    def __setattr__(self, /, name: str, value: object) -> None:
+    @wraps(enum.Enum.__setattr__)
+    def __setattr__(self, name, value, /):
         if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
             super().__setattr__(name, value)
             return
@@ -197,7 +202,7 @@ class DefaultType(SingletonEnum):
 
     DEFAULT = "DEFAULT"
 
-    def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__  # an implicit closure reference
         bcs_name = bcs.__name__
 
@@ -219,7 +224,7 @@ class MissingType(SingletonEnum):
 
     MISSING = "MISSING"
 
-    def __init_subclass__(cls, /, **kwargs: Never) -> NoReturn:
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__  # an implicit closure reference
         bcs_name = bcs.__name__
 
