@@ -11,7 +11,7 @@ import sys
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from ._static import lookup_static, resolvespecial
+from ._static import lookup_static, resolve_special
 
 if TYPE_CHECKING:
     from typing import Any, Final
@@ -113,7 +113,7 @@ class _SingletonMeta(EnumType):
     # We cannot solve this, and that is why our metaclass inherits only from
     # `EnumType`, thereby supporting neither abstract classes nor protocols.
 
-    @wraps(lookup_static(EnumType, "__call__"))
+    @wraps(resolve_special(EnumType, "__call__"))
     def __call__(cls, /, *args, **kwargs):
         # If more than one member (or none members) is defined, it is unknown
         # which one the user wants to receive. Also, if additional parameters
@@ -151,7 +151,7 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
       AttributeError: 'SingletonType' object has no attribute '_y'
     """
 
-    @wraps(lookup_static(enum.Enum, "__setattr__"))
+    @wraps(resolve_special(enum.Enum, "__setattr__"))
     def __setattr__(self, name, value, /):
         if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
             super().__setattr__(name, value)
@@ -171,11 +171,11 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
         except LookupError:
             msg = f"{cls_name!r} object has no attribute {name!r}"
         else:
-            descr_set = resolvespecial(
+            descr_set = resolve_special(
                 type(cls_member),
-                cls_member,
                 "__set__",
-                _sentinel,
+                cls_member,
+                default=_sentinel,
             )
 
             # We allow setting attributes for user-defined slots and properties
@@ -187,10 +187,13 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
                 descr_set(self, value)
                 return
 
-            # see python/cpython/Objects/typeobject.c#slot_tp_descr_set
-            try:
-                lookup_static(type(cls_member), "__delete__")
-            except LookupError:
+            descr_delete = lookup_static(
+                type(cls_member),
+                "__delete__",
+                default=_sentinel,
+            )
+
+            if descr_delete is _sentinel:
                 msg = f"{cls_name!r} object attribute {name!r} is read-only"
             else:
                 msg = f"{cls_name!r} object attribute {name!r} has no setter"

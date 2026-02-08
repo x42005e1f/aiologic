@@ -7,6 +7,11 @@ import sys
 
 from typing import Any, TypeVar
 
+if sys.version_info >= (3, 10):  # PEP 613
+    from typing import TypeAlias
+else:  # typing-extensions>=3.10.0
+    from typing_extensions import TypeAlias
+
 if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
     from typing import overload
 else:  # typing-extensions>=4.2.0
@@ -16,33 +21,47 @@ _T = TypeVar("_T")
 _T1 = TypeVar("_T1")
 _T2 = TypeVar("_T2")
 
+_ClassInfo: TypeAlias = type | tuple[_ClassInfo, ...]
+
 @overload
-def lookup_static(cls: type, name: str, /) -> Any: ...
+def lookup_static(owner: type, name: str, /) -> Any: ...
 @overload
-def lookup_static(cls: type, name: str, default: _T, /) -> Any | _T: ...
+def lookup_static(owner: type, name: str, /, default: _T) -> Any | _T: ...
 @overload
-def resolvespecial(owner: type, instance: None, name: str, /) -> Any: ...
-@overload
-def resolvespecial(owner: type[_T1], instance: _T1, name: str, /) -> Any: ...
-@overload
-def resolvespecial(
+def resolve_special(
     owner: type,
-    instance: None,
     name: str,
-    default: _T2,
+    instance: None = None,
     /,
+) -> Any: ...
+@overload
+def resolve_special(
+    owner: type[_T1],
+    name: str,
+    instance: _T1,
+    /,
+) -> Any: ...
+@overload
+def resolve_special(
+    owner: type,
+    name: str,
+    instance: None = None,
+    /,
+    *,
+    default: _T2,
 ) -> Any | _T2: ...
 @overload
-def resolvespecial(
+def resolve_special(
     owner: type[_T1],
-    instance: _T1,
     name: str,
-    default: _T2,
+    instance: _T1,
     /,
+    *,
+    default: _T2,
 ) -> Any | _T2: ...
 def isdatadescriptor_static(obj: object, /) -> bool: ...
 def ismethoddescriptor_static(obj: object, /) -> bool: ...
 def ismetaclass_static(obj: object, /) -> bool: ...
 def isclass_static(obj: object, /) -> bool: ...
-def issubclass_static(obj: object, cls: type, /) -> bool: ...
-def isinstance_static(obj: object, cls: type) -> bool: ...
+def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
+def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...

@@ -58,7 +58,7 @@ from ._static import (
     ismethoddescriptor_static as ismethoddescriptor_static,
     issubclass_static as issubclass_static,
     lookup_static as lookup_static,
-    resolvespecial as resolvespecial,
+    resolve_special as resolve_special,
 )
 from ._types import (
     coroutine as coroutine,

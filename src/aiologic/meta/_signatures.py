@@ -16,7 +16,7 @@ from ._static import (
     isinstance_static,
     ismetaclass_static,
     lookup_static,
-    resolvespecial,
+    resolve_special,
 )
 
 if TYPE_CHECKING:
@@ -129,7 +129,12 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
                 source = "partialmethod"
                 continue
 
-            call = resolvespecial(type(obj), obj, "__call__", _sentinel)
+            call = resolve_special(
+                type(obj),
+                "__call__",
+                obj,
+                default=_sentinel,
+            )
 
             if call is _sentinel:
                 break

@@ -23,13 +23,13 @@ Commit messages are consistent with
 
 - `aiologic.thread` subpackage for encapsulating thread-level features (since
   `aiologic.lowlevel` no longer seems like the right place for this).
-- `aiologic.meta.lookup_static()` and `aiologic.meta.resolvespecial()` to look
+- `aiologic.meta.lookup_static()` and `aiologic.meta.resolve_special()` to look
   for a name via the MRO without triggering user code. They are similar to
   `inspect.getattr_static()`, but never search via the MRO of the passed
   object's type (to avoid confusion between, for example, `EnumType.__call__()`
   and user-defined `__call__()` in an `Enum` subclass) and have a simpler (more
   efficient) implementation. Unlike `aiologic.meta.lookup_static()`,
-  `aiologic.meta.resolvespecial()` resolves descriptors using the passed
+  `aiologic.meta.resolve_special()` resolves descriptors using the passed
   arguments.
 - `aiologic.meta.isdatadescriptor_static()` and
   `aiologic.meta.ismethoddescriptor_static()` to check whether an object is a

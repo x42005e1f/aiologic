@@ -407,7 +407,7 @@ Introspecting
 +++++++++++++
 
 .. autofunction:: aiologic.meta.lookup_static
-.. autofunction:: aiologic.meta.resolvespecial
+.. autofunction:: aiologic.meta.resolve_special
 .. autofunction:: aiologic.meta.isdatadescriptor_static
 .. autofunction:: aiologic.meta.ismethoddescriptor_static
 .. autofunction:: aiologic.meta.ismetaclass_static
