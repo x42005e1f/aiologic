@@ -9,8 +9,9 @@ import enum
 import sys
 
 from functools import wraps
-from inspect import isdatadescriptor
 from typing import TYPE_CHECKING
+
+from ._static import lookup_static, resolvespecial
 
 if TYPE_CHECKING:
     from typing import Any, Final
@@ -38,6 +39,8 @@ else:  # typing-extensions>=4.1.0
 
 # python/cpython#82711
 _ATTRIBUTE_SUGGESTIONS_OFFERED = sys.version_info >= (3, 10)
+
+_sentinel = object()
 
 # We have to use the `enum` module so that type checkers can understand that
 # the instance is a singleton object. Otherwise, they will not be able to
@@ -110,7 +113,7 @@ class _SingletonMeta(EnumType):
     # We cannot solve this, and that is why our metaclass inherits only from
     # `EnumType`, thereby supporting neither abstract classes nor protocols.
 
-    @wraps(EnumType.__call__)
+    @wraps(lookup_static(EnumType, "__call__"))
     def __call__(cls, /, *args, **kwargs):
         # If more than one member (or none members) is defined, it is unknown
         # which one the user wants to receive. Also, if additional parameters
@@ -148,13 +151,13 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
       AttributeError: 'SingletonType' object has no attribute '_y'
     """
 
-    @wraps(enum.Enum.__setattr__)
+    @wraps(lookup_static(enum.Enum, "__setattr__"))
     def __setattr__(self, name, value, /):
         if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
             super().__setattr__(name, value)
             return
 
-        cls = self.__class__
+        cls = type(self)
         cls_name = cls.__name__
 
         # A singleton object should not provide mutable public state, so we
@@ -164,20 +167,33 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
         # them to the correct values). Note, `enum.Enum` itself does not
         # prohibit setting attributes (see python/cpython#90290)!
         try:
-            cls_member = getattr(cls, name)
-        except AttributeError:
+            cls_member = lookup_static(cls, name)
+        except LookupError:
             msg = f"{cls_name!r} object has no attribute {name!r}"
         else:
+            descr_set = resolvespecial(
+                type(cls_member),
+                cls_member,
+                "__set__",
+                _sentinel,
+            )
+
             # We allow setting attributes for user-defined slots and properties
             # to better match expected behavior. Although this goes against the
             # concept in a sense (since data for an instance can be set at the
             # class/module level instead), it may contribute to new usage
             # scenarios.
-            if isdatadescriptor(cls_member):
-                super().__setattr__(name, value)
+            if descr_set is not _sentinel:
+                descr_set(self, value)
                 return
 
-            msg = f"{cls_name!r} object attribute {name!r} is read-only"
+            # see python/cpython/Objects/typeobject.c#slot_tp_descr_set
+            try:
+                lookup_static(type(cls_member), "__delete__")
+            except LookupError:
+                msg = f"{cls_name!r} object attribute {name!r} is read-only"
+            else:
+                msg = f"{cls_name!r} object attribute {name!r} has no setter"
         exc = AttributeError(msg)
         if _ATTRIBUTE_SUGGESTIONS_OFFERED:
             exc.name = None  # suppress suggestions

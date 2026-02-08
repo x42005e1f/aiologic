@@ -406,6 +406,14 @@ Singletons and markers
 Introspecting
 +++++++++++++
 
+.. autofunction:: aiologic.meta.lookup_static
+.. autofunction:: aiologic.meta.resolvespecial
+.. autofunction:: aiologic.meta.isdatadescriptor_static
+.. autofunction:: aiologic.meta.ismethoddescriptor_static
+.. autofunction:: aiologic.meta.ismetaclass_static
+.. autofunction:: aiologic.meta.isclass_static
+.. autofunction:: aiologic.meta.issubclass_static
+.. autofunction:: aiologic.meta.isinstance_static
 .. autofunction:: aiologic.meta.isgeneratorlike
 .. autofunction:: aiologic.meta.iscoroutinelike
 .. autofunction:: aiologic.meta.isasyncgenlike

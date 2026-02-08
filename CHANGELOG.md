@@ -23,6 +23,33 @@ Commit messages are consistent with
 
 - `aiologic.thread` subpackage for encapsulating thread-level features (since
   `aiologic.lowlevel` no longer seems like the right place for this).
+- `aiologic.meta.lookup_static()` and `aiologic.meta.resolvespecial()` to look
+  for a name via the MRO without triggering user code. They are similar to
+  `inspect.getattr_static()`, but never search via the MRO of the passed
+  object's type (to avoid confusion between, for example, `EnumType.__call__()`
+  and user-defined `__call__()` in an `Enum` subclass) and have a simpler (more
+  efficient) implementation. Unlike `aiologic.meta.lookup_static()`,
+  `aiologic.meta.resolvespecial()` resolves descriptors using the passed
+  arguments.
+- `aiologic.meta.isdatadescriptor_static()` and
+  `aiologic.meta.ismethoddescriptor_static()` to check whether an object is a
+  descriptor of the specified type. `aiologic.meta.isdatadescriptor_static()`
+  uses the same algorithm as `aiologic.meta.lookup_static()`, so it returns
+  `True` only for objects that actually work as data descriptors (not prone to
+  false positives, unlike `inspect.isdatadescriptor()`). Note that unlike
+  `inspect.ismethoddescriptor()`, `aiologic.meta.ismethoddescriptor_static()`
+  follows the [PEP 590](https://peps.python.org/pep-0590/) definition, where
+  method descriptors associate the `__get__()` method with the `__call__()`
+  method (a special case of such descriptors are functions).
+- `aiologic.meta.ismetaclass_static()` and `aiologic.meta.isclass_static()` to
+  check whether an object is a metaclass (subclass of `type`) and a class
+  (instance of `type`), respectively. Unlike `inspect.isclass()`, they behave
+  in the same way as the functions below.
+- `aiologic.meta.issubclass_static()` and `aiologic.meta.isinstance_static()`
+  as analogues to built-in functions but without triggering user code. Unlike
+  the latter, they also ignore pseudo-classes (arbitrary objects providing
+  the `__bases__` attribute), virtual subclasses, and the `__class__`
+  attribute (which can be replaced by object proxies).
 - `aiologic.meta.isgeneratorlike()`, `aiologic.meta.iscoroutinelike()`, and
   `aiologic.meta.isasyncgenlike()` as `inspect`-like functions that check
   whether an object implements a certain interface (corresponding to the

@@ -8,9 +8,16 @@ from __future__ import annotations
 import sys
 
 from functools import partial, partialmethod
-from inspect import getattr_static, isclass, ismethod
-from types import FunctionType
+from types import FunctionType, MethodType, MethodWrapperType
 from typing import TYPE_CHECKING
+
+from ._static import (
+    isclass_static,
+    isinstance_static,
+    ismetaclass_static,
+    lookup_static,
+    resolvespecial,
+)
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 9):  # PEP 585
@@ -18,28 +25,26 @@ if TYPE_CHECKING:
     else:
         from typing import Iterator
 
-if sys.version_info >= (3, 11):  # python/cpython#19261
-    from inspect import ismethodwrapper
-else:
-    from types import MethodWrapperType
-
-    def ismethodwrapper(object):
-        return isinstance(object, MethodWrapperType)
-
-
-_TYPE_CALL = getattr_static(type, "__call__")
-_OBJECT_NEW = getattr_static(object, "__new__")
+_TYPE_CALL = lookup_static(type, "__call__")
+_TYPE_NEW = lookup_static(type, "__new__")
+_OBJECT_NEW = lookup_static(object, "__new__")
 
 if sys.version_info >= (3, 13):  # python/cpython#16600
     _PARTIALMETHOD_ATTRIBUTE_NAME = "__partialmethod__"
 else:
     _PARTIALMETHOD_ATTRIBUTE_NAME = "_partialmethod"
 
+_sentinel = object()
+
 
 def _iscallwrapper(obj, /):
-    return ismethodwrapper(obj) and (
-        not ismethod(obj)  # CPython
-        or obj.__func__ is FunctionType.__call__  # PyPy
+    return (
+        isinstance_static(obj, MethodWrapperType)
+        and obj.__name__ == "__call__"
+        and (
+            not isinstance_static(obj, MethodType)  # CPython
+            or obj.__func__ is FunctionType.__call__  # PyPy
+        )
     )
 
 
@@ -55,13 +60,13 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
         if not callable(obj):
             break
 
-        if isclass(obj):
-            call = getattr_static(type(obj), "__call__", _TYPE_CALL)
+        if isclass_static(obj):
+            call = lookup_static(type(obj), "__call__", _TYPE_CALL)
 
             if call is not _TYPE_CALL:
                 try:
-                    get = getattr_static(type(call), "__get__")
-                except AttributeError:
+                    get = lookup_static(type(call), "__get__")
+                except LookupError:
                     pass
                 else:
                     call = get(call, obj, type(obj))
@@ -71,15 +76,20 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
                 source = "mcs.__call__"
                 continue
 
-            new = getattr_static(obj, "__new__", _OBJECT_NEW)
+            if ismetaclass_static(obj):
+                original_new = _TYPE_NEW
+            else:
+                original_new = _OBJECT_NEW
 
-            if new is not _OBJECT_NEW:
+            new = lookup_static(obj, "__new__", original_new)
+
+            if new is not original_new:
                 try:
-                    get = getattr_static(type(new), "__get__")
-                except AttributeError:
+                    get = lookup_static(type(new), "__get__")
+                except LookupError:
                     pass
                 else:
-                    call = get(new, None, obj)
+                    new = get(new, None, obj)
 
                 obj = new
                 extra = None
@@ -99,13 +109,13 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
 
             break
         else:
-            if ismethod(obj):
+            if isinstance_static(obj, MethodType):
                 obj = obj.__func__
                 extra = None
                 source = "method"
                 continue
 
-            if isinstance(obj, partial):
+            if isinstance_static(obj, partial):
                 obj = obj.func
                 extra = None
                 source = "partial"
@@ -113,28 +123,21 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
 
             impl = getattr(obj, _PARTIALMETHOD_ATTRIBUTE_NAME, None)
 
-            if isinstance(impl, partialmethod):
+            if isinstance_static(impl, partialmethod):
                 obj = impl.func
                 extra = impl
                 source = "partialmethod"
                 continue
 
-            try:
-                call = getattr_static(type(obj), "__call__")
-            except AttributeError:
+            call = resolvespecial(type(obj), obj, "__call__", _sentinel)
+
+            if call is _sentinel:
                 break
-            else:
-                try:
-                    get = getattr_static(type(call), "__get__")
-                except AttributeError:
-                    pass
-                else:
-                    call = get(call, obj, type(obj))
 
-                if _iscallwrapper(call) and call.__self__ is obj:
-                    break
+            if _iscallwrapper(call) and call.__self__ is obj:
+                break
 
-                obj = call
-                extra = None
-                source = "obj.__call__"
-                continue
+            obj = call
+            extra = None
+            source = "obj.__call__"
+            continue

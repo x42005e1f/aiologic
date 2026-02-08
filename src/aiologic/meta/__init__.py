@@ -50,6 +50,16 @@ from ._modules import (
 from ._signatures import (
     getsro as getsro,
 )
+from ._static import (
+    isclass_static as isclass_static,
+    isdatadescriptor_static as isdatadescriptor_static,
+    isinstance_static as isinstance_static,
+    ismetaclass_static as ismetaclass_static,
+    ismethoddescriptor_static as ismethoddescriptor_static,
+    issubclass_static as issubclass_static,
+    lookup_static as lookup_static,
+    resolvespecial as resolvespecial,
+)
 from ._types import (
     coroutine as coroutine,
     generator as generator,
