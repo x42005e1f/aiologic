@@ -7,16 +7,21 @@ from __future__ import annotations
 
 import sys
 
-from types import FunctionType, MethodDescriptorType, WrapperDescriptorType
+from types import (
+    FunctionType,
+    MappingProxyType,
+    MethodDescriptorType,
+    WrapperDescriptorType,
+)
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any, TypeVar, Union
 
     if sys.version_info >= (3, 9):  # PEP 585
-        from builtins import tuple as Tuple
+        from builtins import tuple as Tuple, type as Type
     else:
-        from typing import Tuple
+        from typing import Tuple, Type
 
     if sys.version_info >= (3, 10):  # PEP 613
         from typing import TypeAlias
@@ -33,7 +38,7 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
 
-    _ClassInfo: TypeAlias = Union[type, Tuple["_ClassInfo", ...]]
+    _ClassInfo: TypeAlias = Union[Type, Tuple["_ClassInfo", ...]]
 
 _IS_CPYTHON = sys.implementation.name == "cpython"
 
@@ -47,7 +52,7 @@ _TPFLAGS_UNICODE_SUBCLASS = 1 << 28
 _TPFLAGS_DICT_SUBCLASS = 1 << 29
 _TPFLAGS_BASE_EXC_SUBCLASS = 1 << 30
 _TPFLAGS_TYPE_SUBCLASS = 1 << 31
-_TPFLAGS_BY_CLASS_ID = {
+_TPFLAGS_BY_CLASS_ID = MappingProxyType({
     id(int): _TPFLAGS_LONG_SUBCLASS,
     id(list): _TPFLAGS_LIST_SUBCLASS,
     id(tuple): _TPFLAGS_TUPLE_SUBCLASS,
@@ -56,7 +61,7 @@ _TPFLAGS_BY_CLASS_ID = {
     id(dict): _TPFLAGS_DICT_SUBCLASS,
     id(BaseException): _TPFLAGS_BASE_EXC_SUBCLASS,
     id(type): _TPFLAGS_TYPE_SUBCLASS,
-}
+})
 
 _getflags_static = type.__dict__["__flags__"].__get__
 _getmro_static = type.__dict__["__mro__"].__get__
@@ -65,8 +70,9 @@ _vars_static = type.__dict__["__dict__"].__get__
 _sentinel = object()
 
 
-# see python/cpython/Object/typeobject.c#find_name_in_mro
 def _lookup_static_noerror(owner, name, /):
+    # see python/cpython/Objects/typeobject.c#find_name_in_mro
+
     try:
         mro = _getmro_static(owner)
     except TypeError:  # not a class
@@ -85,13 +91,14 @@ def _lookup_static_noerror(owner, name, /):
     return _sentinel
 
 
-# see python/cpython/Object/typeobject.c#find_name_in_mro
 @overload
 def lookup_static(owner: type, name: str, /) -> Any: ...
 @overload
 def lookup_static(owner: type, name: str, /, default: _T) -> Any | _T: ...
 def lookup_static(owner, name, /, default=_sentinel):
     """..."""
+
+    # see python/cpython/Objects/typeobject.c#find_name_in_mro
 
     member = _lookup_static_noerror(owner, name)
 
@@ -104,7 +111,6 @@ def lookup_static(owner, name, /, default=_sentinel):
     return member
 
 
-# see python/cpython/Object/typeobject.c#_PyObject_LookupSpecial
 @overload
 def resolve_special(
     owner: type,
@@ -140,6 +146,11 @@ def resolve_special(
 def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
     """..."""
 
+    # see python/cpython/Objects/typeobject.c#_PyObject_LookupSpecial
+    # see python/cpython/Objects/typeobject.c#slotdefs
+    # see python/cpython/Objects/typeobject.c#update_one_slot
+    # see python/cpython/Objects/typeobject.c#slot_tp_descr_get
+
     member = _lookup_static_noerror(owner, name)
 
     if member is _sentinel:
@@ -156,19 +167,29 @@ def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
     return descr_get(member, instance, owner)
 
 
-# see python/cpython/Objects/typeobject.c#slot_tp_descr_set
 def isdatadescriptor_static(obj: object, /) -> bool:
     """..."""
 
+    # see python/cpython/Objects/object.c#PyObject_GenericSetAttr
+    # see python/cpython/Objects/typeobject.c#slotdefs
+    # see python/cpython/Objects/typeobject.c#update_one_slot
+
     return any(
-        "__set__" in base_vars or "__delete__" in base_vars
-        for base_vars in map(_vars_static, _getmro_static(type(obj)))
+        "__set__" in (base_vars := _vars_static(base))
+        or "__delete__" in base_vars
+        for base in _getmro_static(type(obj))
     )
 
 
-# see PEP 590
 def ismethoddescriptor_static(obj: object, /) -> bool:
     """..."""
+
+    # see PEP 590
+    # see python/cpython/Objects/funcobject.c#PyFunction_Type
+    # see python/cpython/Objects/descrobject.c#PyMethodDescr_Type
+    # see python/cpython/Objects/descrobject.c#PyWrapperDescr_Type
+    # see python/cpython/Include/object.h#PyType_HasFeature
+    # see python/cpython/Include/object.h#PyObject_TypeCheck
 
     cls = type(obj)
 
@@ -197,10 +218,12 @@ def ismethoddescriptor_static(obj: object, /) -> bool:
     )
 
 
-# see python/cpython/Include/object.h#PyType_FastSubclass
-# see python/cpython/Object/typeobject.c#PyType_IsSubtype
 def ismetaclass_static(obj: object, /) -> bool:
     """..."""
+
+    # see python/cpython/Include/object.h#PyType_Check
+    # see python/cpython/Include/object.h#PyType_HasFeature
+    # see python/cpython/Objects/typeobject.c#PyType_IsSubtype
 
     if obj is type:
         return True
@@ -219,10 +242,12 @@ def ismetaclass_static(obj: object, /) -> bool:
     return any(base is type for base in _getmro_static(obj))
 
 
-# see python/cpython/Include/object.h#PyType_Check
-# see python/cpython/Include/object.h#PyObject_TypeCheck
 def isclass_static(obj: object, /) -> bool:
     """..."""
+
+    # see python/cpython/Include/object.h#PyType_Check
+    # see python/cpython/Include/object.h#PyType_HasFeature
+    # see python/cpython/Include/object.h#PyObject_TypeCheck
 
     cls = type(obj)
 
@@ -238,9 +263,11 @@ def isclass_static(obj: object, /) -> bool:
     return any(base is type for base in _getmro_static(cls))
 
 
-# see python/cpython/Include/tupleobject.h#PyTuple_Check
-# see python/cpython/Include/object.h#PyObject_TypeCheck
 def _istuple_static(obj, /):
+    # see python/cpython/Include/tupleobject.h#PyTuple_Check
+    # see python/cpython/Include/object.h#PyType_HasFeature
+    # see python/cpython/Include/object.h#PyObject_TypeCheck
+
     cls = type(obj)
 
     if cls is tuple:
@@ -255,10 +282,11 @@ def _istuple_static(obj, /):
     return any(base is tuple for base in _getmro_static(cls))
 
 
-# see python/cpython/Include/object.h#PyType_FastSubclass
-# see python/cpython/Object/typeobject.c#PyType_IsSubtype
 def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
     """..."""
+
+    # see python/cpython/Include/object.h#PyType_FastSubclass
+    # see python/cpython/Objects/abstract.c#PyObject_IsSubclass
 
     if flag := _TPFLAGS_BY_CLASS_ID.get(id(class_or_tuple), 0):
         if obj is class_or_tuple:
@@ -291,31 +319,9 @@ def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
     return any(base is class_or_tuple for base in mro)
 
 
-# see python/cpython/Include/object.h#PyType_FastSubclass
-# see python/cpython/Include/object.h#PyObject_TypeCheck
 def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
     """..."""
 
-    if flag := _TPFLAGS_BY_CLASS_ID.get(id(class_or_tuple), 0):
-        cls = type(obj)
+    # see python/cpython/Include/object.h#PyObject_TypeCheck
 
-        if cls is class_or_tuple:
-            return True
-
-        if _getflags_static(cls) & flag:
-            return True
-
-        if _IS_CPYTHON:
-            return False
-    elif isclass_static(class_or_tuple):
-        cls = type(obj)
-
-        if cls is class_or_tuple:
-            return True
-    elif _istuple_static(class_or_tuple):
-        return any(isinstance_static(obj, info) for info in class_or_tuple)
-    else:
-        msg = "the second argument must be a class or a tuple of classes"
-        raise TypeError(msg)
-
-    return any(base is class_or_tuple for base in _getmro_static(cls))
+    return issubclass_static(type(obj), class_or_tuple)
