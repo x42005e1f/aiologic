@@ -15,7 +15,7 @@ repos:
       - id: check-toml
       - id: check-ast
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    rev: v0.15.0
     hooks:
       - id: ruff-check
       - id: ruff-format
@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: reuse-lint-file
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.28
+    rev: 0.10.0
     hooks:
       - id: uv-lock
         args: ["--locked"]
