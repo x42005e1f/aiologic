@@ -134,6 +134,8 @@ Non-blocking primitives:
 
 * Flags
 * Resource guards
+* `Futures (external) <https://gist.github.com/x42005e1f/
+  4f18c3c62da9135020bdea8c44c248a2>`__
 
 Supported concurrency libraries:
 
