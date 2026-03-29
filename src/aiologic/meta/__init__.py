@@ -17,6 +17,7 @@ from ._exports import (
 from ._functions import (
     copies as copies,
     replaces as replaces,
+    replaces_when_imported as replaces_when_imported,
 )
 from ._helpers import (
     GeneratorCoroutineWrapper as GeneratorCoroutineWrapper,
@@ -25,6 +26,8 @@ from ._helpers import (
 from ._imports import (
     import_from as import_from,
     import_module as import_module,
+    import_original as import_original,
+    isgreenpatched as isgreenpatched,
 )
 from ._inspect import (
     isasyncgenfactory as isasyncgenfactory,

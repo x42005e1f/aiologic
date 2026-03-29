@@ -20,8 +20,13 @@ from typing import (
     TypeVar,
 )
 
-from aiologic._monkey import import_original
-from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
+from aiologic.meta import (
+    DEFAULT,
+    MISSING,
+    DefaultType,
+    MissingType,
+    import_original,
+)
 
 from ._locks import ThreadOnceLock
 

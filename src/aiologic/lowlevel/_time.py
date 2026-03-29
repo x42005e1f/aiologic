@@ -12,8 +12,7 @@ from functools import partial
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Final, NoReturn, TypeVar
 
-from aiologic._monkey import import_original
-from aiologic.meta import replaces
+from aiologic.meta import import_original, replaces
 
 from ._libraries import current_async_library, current_green_library
 

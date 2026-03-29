@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 from wrapt import ObjectProxy, decorator, when_imported
 
-from aiologic._monkey import import_original
 from aiologic.meta import (
     MISSING,
     MissingType,
     generator,
+    import_original,
     iscoroutinefactory,
     replaces,
 )

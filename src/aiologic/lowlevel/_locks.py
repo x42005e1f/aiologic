@@ -10,8 +10,7 @@ import sys
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
 
-from aiologic._monkey import import_original
-from aiologic.meta import MISSING, MissingType
+from aiologic.meta import MISSING, MissingType, import_original
 
 from . import _checkpoints
 from ._threads import current_thread_ident

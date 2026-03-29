@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING
 
 from wrapt import when_imported
 
-from aiologic._monkey import import_original, patched
-from aiologic.meta import replaces
+from aiologic.meta import import_original, isgreenpatched, replaces
 
 from . import _greenlets
 
@@ -93,7 +92,7 @@ def _current_python_thread() -> Thread | None:
             if isinstance(thread, (_DummyThread, threading._DummyThread)):
                 return None
 
-            if patched("threading"):
+            if isgreenpatched("threading"):
                 greenlet = _greenlets._current_greenlet()
 
                 if id(greenlet) == ident and greenlet.parent is not None:

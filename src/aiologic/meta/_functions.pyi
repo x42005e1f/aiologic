@@ -29,14 +29,14 @@ if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
 else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
+_T = TypeVar("_T")
+_NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
+_P = ParamSpec("_P")
+
 class _NamedCallable(Protocol):
     def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
     @property
     def __name__(self, /) -> str: ...
-
-_T = TypeVar("_T")
-_NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
-_P = ParamSpec("_P")
 
 @overload
 def replaces(
@@ -50,13 +50,20 @@ def replaces(
     replacer: _NamedCallableT,
     /,
 ) -> _NamedCallableT: ...
-
-# Until python/typing#548 is resolved, we can only go one of two ways (not
-# both):
-# * require the parameter lists of both functions to match (via `ParamSpec`)
-# * support callable subtypes, such as user-defined protocols (via `TypeVar`)
-# Here, we choose the first way to prevent obvious type errors when applying
-# the decorator to regular functions.
+@overload
+def replaces_when_imported(
+    namespace: MutableMapping[str, Any],
+    module_name: str,
+    replacer: MissingType = MISSING,
+    /,
+) -> Callable[[_NamedCallableT], _NamedCallableT]: ...
+@overload
+def replaces_when_imported(
+    namespace: MutableMapping[str, Any],
+    module_name: str,
+    replacer: _NamedCallableT,
+    /,
+) -> _NamedCallableT: ...
 @overload
 def copies(
     original: Callable[_P, _T],

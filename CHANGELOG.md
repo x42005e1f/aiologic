@@ -23,6 +23,14 @@ Commit messages are consistent with
 
 - `aiologic.thread` subpackage for encapsulating thread-level features (since
   `aiologic.lowlevel` no longer seems like the right place for this).
+- `aiologic.meta.replaces_when_imported()` as a safer alternative to
+  `wrapt.when_imported()` + `aiologic.meta.replaces()`.
+- `aiologic.meta.import_original()` as an `aiologic.meta.import_from()`-like
+  unified alternative to `eventlet.patcher.original()` and
+  `gevent.monkey.get_original()`.
+- `aiologic.meta.isgreenpatched()` as a unified alternative to
+  `eventlet.patcher.is_monkey_patched()` and
+  `gevent.monkey.is_module_patched()`.
 - `aiologic.meta.lookup_static()` and `aiologic.meta.resolve_special()` to look
   for a name via the MRO without triggering user code. They are similar to
   `inspect.getattr_static()`, but never search via the MRO of the passed
@@ -104,6 +112,9 @@ Commit messages are consistent with
   copy's signature when the original function's signature changes.
 - `aiologic.meta.copies()` now forces copying when both functions are the same
   object, which increases its scope of application.
+- `aiologic.meta.import_from()` now uses `typing.Any` as the return type
+  instead of `object` to avoid using `typing.cast()` for dynamic imports in
+  `__init__` modules.
 
 ### Fixed
 

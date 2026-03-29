@@ -439,6 +439,7 @@ Functions
 +++++++++
 
 .. autofunction:: aiologic.meta.replaces
+.. autofunction:: aiologic.meta.replaces_when_imported
 .. autofunction:: aiologic.meta.copies
 
 Modules
@@ -451,6 +452,8 @@ Imports
 
 .. autofunction:: aiologic.meta.import_module
 .. autofunction:: aiologic.meta.import_from
+.. autofunction:: aiologic.meta.import_original
+.. autofunction:: aiologic.meta.isgreenpatched
 
 Exports
 +++++++

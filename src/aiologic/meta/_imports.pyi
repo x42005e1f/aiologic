@@ -6,14 +6,14 @@
 import sys
 
 from types import ModuleType
+from typing import Any
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
     from typing import overload
 else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 def import_module(name: str, package: str | None = None) -> ModuleType: ...
-def _import_one(module: ModuleType, name: str, /) -> object: ...
 @overload
 def import_from(
     module: ModuleType | str,
@@ -21,7 +21,7 @@ def import_from(
     /,
     *,
     package: str | None = None,
-) -> object: ...
+) -> Any: ...
 @overload
 def import_from(
     module: ModuleType | str,
@@ -30,4 +30,22 @@ def import_from(
     /,
     *names: str,
     package: str | None = None,
-) -> tuple[object, ...]: ...
+) -> tuple[Any, ...]: ...
+@overload
+def import_original(
+    module: ModuleType | str,
+    name0: str,
+    /,
+    *,
+    package: str | None = None,
+) -> Any: ...
+@overload
+def import_original(
+    module: ModuleType | str,
+    name0: str,
+    name1: str,
+    /,
+    *names: str,
+    package: str | None = None,
+) -> tuple[Any, ...]: ...
+def isgreenpatched(module: ModuleType | str, /) -> bool: ...
