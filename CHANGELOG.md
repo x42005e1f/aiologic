@@ -21,8 +21,6 @@ Commit messages are consistent with
 
 ### Added
 
-- `aiologic.thread` subpackage for encapsulating thread-level features (since
-  `aiologic.lowlevel` no longer seems like the right place for this).
 - `aiologic.meta.replaces_when_imported()` as a safer alternative to
   `wrapt.when_imported()` + `aiologic.meta.replaces()`.
 - `aiologic.meta.import_original()` as an `aiologic.meta.import_from()`-like
