@@ -247,6 +247,7 @@ ignore = [
     "PLR5501",  # collapsible-else-if
     "PLR6301",  # no-self-use
     "PLW0603",  # global-statement
+    "PLW0717",  # too-many-statements-in-try-clause
     # tryceratops
     "TRY003",  # raise-vanilla-args
     "TRY301",  # raise-within-try
