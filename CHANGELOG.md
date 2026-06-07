@@ -114,6 +114,14 @@ Commit messages are consistent with
   instead of `object` to avoid using `typing.cast()` for dynamic imports in
   `__init__` modules.
 
+### Deprecated
+
+- The `copy()` methods (see below).
+- Pickling/copying by state (for queues and flags). This behavior was
+  inconsistent with other primitives because these ones were interpreted as
+  collections, which does more harm than good. It also makes it hard to
+  optimize queues.
+
 ### Fixed
 
 - Functions with `sphinx.ext.autodoc`-specific paths did not have the expected

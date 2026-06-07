@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 
 from collections import deque
 from copy import copy
@@ -124,6 +125,12 @@ class SimpleQueue(Generic[_T]):
         if not data:
             return ()
 
+        warnings.warn(
+            "Pickling will no longer preserve the state in the future",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         return (tuple(data),)
 
     def __getstate__(self, /) -> None:
@@ -140,6 +147,12 @@ class SimpleQueue(Generic[_T]):
 
         if not data:
             return self.__class__()
+
+        warnings.warn(
+            "Copying will no longer preserve the state in the future",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self.__class__(data)
 
@@ -207,6 +220,12 @@ class SimpleQueue(Generic[_T]):
 
     def copy(self, /) -> Self:
         """..."""
+
+        warnings.warn(
+            "Use copy.copy(queue) instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self.__copy__()
 
@@ -589,6 +608,12 @@ class Queue(Generic[_T]):
 
             return (maxsize,)
         else:
+            warnings.warn(
+                "Pickling will no longer preserve the state in the future",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
             if not maxsize:
                 return (tuple(data),)
 
@@ -613,6 +638,12 @@ class Queue(Generic[_T]):
 
             return self.__class__(maxsize)
         else:
+            warnings.warn(
+                "Copying will no longer preserve the state in the future",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
             if not maxsize:
                 return self.__class__(data)
 
@@ -685,6 +716,12 @@ class Queue(Generic[_T]):
 
     def copy(self, /) -> Self:
         """..."""
+
+        warnings.warn(
+            "Use copy.copy(queue) instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self.__copy__()
 

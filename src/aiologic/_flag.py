@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -89,6 +90,12 @@ class Flag(Generic[_T]):
         if marker is MISSING:
             return ()
 
+        warnings.warn(
+            "Pickling will no longer preserve the state in the future",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         return (marker,)
 
     def __getstate__(self, /) -> None:
@@ -108,6 +115,12 @@ class Flag(Generic[_T]):
                 marker = self._markers[0]
             except IndexError:
                 pass
+
+        warnings.warn(
+            "Copying will no longer preserve the state in the future",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self.__class__(marker)
 
@@ -149,6 +162,12 @@ class Flag(Generic[_T]):
 
     def copy(self, /) -> Self:
         """..."""
+
+        warnings.warn(
+            "Use copy.copy(queue) instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self.__copy__()
 
