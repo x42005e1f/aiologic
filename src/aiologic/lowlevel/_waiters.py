@@ -472,6 +472,8 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
                 except InvalidStateError:  # task is cancelled
                     pass
 
+                self.__future = None
+
         def wake(self, /) -> None:
             current_loop = get_running_loop_if_exists()
 
