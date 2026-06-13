@@ -758,6 +758,8 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             if self.__task is not None:
                 reschedule(self.__task)
 
+                self.__task = None
+
         def wake(self, /) -> None:
             try:
                 current_token = current_trio_token()

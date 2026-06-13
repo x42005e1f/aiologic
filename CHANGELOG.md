@@ -124,6 +124,13 @@ Commit messages are consistent with
 
 ### Fixed
 
+- Low-level Trio waiters allowed multiple reschedules for the same instance,
+  which caused Trio to crash at its underlying `assert`. Only direct use of
+  them by the user was affected (low-level events already prevent multiple
+  `wake()` calls in general, so no high-level primitives were affected). See
+  [fleming79/async-kernel#493 (comment)
+  ](https://github.com/fleming79/async-kernel/pull/493#issuecomment-4698512969)
+  for details.
 - Functions with `sphinx.ext.autodoc`-specific paths did not have the expected
   behavior due to a peculiarity of module reloading. Now they also check
   environment variables.
