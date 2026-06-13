@@ -13,7 +13,7 @@ from copy import copy
 from heapq import heapify, heappop, heappush
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, Union
 
-from ._semaphore import Semaphore
+from ._semaphores import Semaphore
 from .lowlevel import (
     Event,
     async_checkpoint,

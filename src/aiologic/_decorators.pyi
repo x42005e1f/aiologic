@@ -8,7 +8,7 @@ import sys
 from types import TracebackType
 from typing import Any, Final, Protocol, TypeVar
 
-from ._semaphore import BinarySemaphore
+from ._semaphores import BinarySemaphore
 
 if sys.version_info >= (3, 11):
     from typing import Self, overload

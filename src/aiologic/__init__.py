@@ -30,39 +30,39 @@ from . import (  # noqa: F401
     lowlevel,
     meta,
 )
-from ._barrier import (
+from ._barriers import (
     Barrier as Barrier,
     BrokenBarrierError as BrokenBarrierError,
     Latch as Latch,
     RBarrier as RBarrier,
 )
-from ._condition import (
+from ._conditions import (
     Condition as Condition,
 )
-from ._decorator import (
+from ._decorators import (
     synchronized as synchronized,
 )
-from ._event import (
+from ._events import (
     CountdownEvent as CountdownEvent,
     Event as Event,
     REvent as REvent,
 )
-from ._flag import (
+from ._flags import (
     Flag as Flag,
 )
-from ._guard import (
+from ._guards import (
     BusyResourceError as BusyResourceError,
     ResourceGuard as ResourceGuard,
 )
-from ._limiter import (
+from ._limiters import (
     CapacityLimiter as CapacityLimiter,
     RCapacityLimiter as RCapacityLimiter,
 )
-from ._lock import (
+from ._locks import (
     Lock as Lock,
     RLock as RLock,
 )
-from ._queue import (
+from ._queues import (
     LifoQueue as LifoQueue,
     PriorityQueue as PriorityQueue,
     Queue as Queue,
@@ -71,7 +71,7 @@ from ._queue import (
     SimpleLifoQueue as SimpleLifoQueue,
     SimpleQueue as SimpleQueue,
 )
-from ._semaphore import (
+from ._semaphores import (
     BinarySemaphore as BinarySemaphore,
     BoundedBinarySemaphore as BoundedBinarySemaphore,
     BoundedSemaphore as BoundedSemaphore,

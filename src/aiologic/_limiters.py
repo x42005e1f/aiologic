@@ -8,7 +8,7 @@ from __future__ import annotations
 from types import MappingProxyType, TracebackType
 from typing import TYPE_CHECKING, Any
 
-from ._semaphore import BinarySemaphore, Semaphore
+from ._semaphores import BinarySemaphore, Semaphore
 from .lowlevel import (
     async_checkpoint,
     current_async_task_ident,

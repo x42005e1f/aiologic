@@ -10,8 +10,8 @@ from types import TracebackType
 from typing import Any, Final, Generic
 
 from . import lowlevel
-from ._lock import Lock, RLock
-from ._semaphore import BinarySemaphore
+from ._locks import Lock, RLock
+from ._semaphores import BinarySemaphore
 from .meta import DEFAULT, DefaultType, generator
 
 if sys.version_info >= (3, 13):

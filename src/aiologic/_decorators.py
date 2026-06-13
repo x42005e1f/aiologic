@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, Union
 
 from wrapt import FunctionWrapper, decorator
 
-from ._lock import RLock
-from ._semaphore import BinarySemaphore
+from ._locks import RLock
+from ._semaphores import BinarySemaphore
 from .meta import iscoroutinefactory
 
 if sys.version_info >= (3, 11):

@@ -10,7 +10,7 @@ import os
 from itertools import count, islice
 from typing import TYPE_CHECKING, Any, Final
 
-from ._flag import Flag
+from ._flags import Flag
 from .lowlevel import (
     ThreadOnceLock,
     async_checkpoint,

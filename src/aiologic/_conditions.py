@@ -14,9 +14,9 @@ from math import inf, isnan
 from typing import TYPE_CHECKING, Any, Final, Generic, Union
 
 from . import lowlevel
-from ._guard import ResourceGuard
-from ._lock import Lock, RLock
-from ._semaphore import BinarySemaphore
+from ._guards import ResourceGuard
+from ._locks import Lock, RLock
+from ._semaphores import BinarySemaphore
 from .lowlevel import (
     ThreadOnceLock,
     async_checkpoint,
