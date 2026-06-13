@@ -10,9 +10,14 @@ import sys
 from inspect import isawaitable
 from typing import Any, TypeVar
 
-from wrapt import ObjectProxy, decorator, when_imported
+from wrapt import ObjectProxy, decorator
 
-from aiologic.meta import generator, iscoroutinefactory, replaces
+from aiologic.meta import (
+    generator,
+    iscoroutinefactory,
+    replaces,
+    replaces_when_imported,
+)
 
 from ._libraries import current_async_library, current_green_library
 
@@ -215,41 +220,39 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
     return await _asyncio_shielded_call(wrapped, args, kwargs)
 
 
-@when_imported("anyio")
-def _(_):
+@replaces_when_imported(globals(), "anyio")
+async def _asyncio_shielded_call(wrapped, args, kwargs, /):
+    from asyncio import CancelledError, ensure_future, shield
+
+    from anyio import CancelScope
+
     @replaces(globals())
     async def _asyncio_shielded_call(wrapped, args, kwargs, /):
-        from asyncio import CancelledError, ensure_future, shield
+        with CancelScope(shield=True):
+            exc = None
 
-        from anyio import CancelScope
+            try:
+                if args is None:
+                    future = ensure_future(wrapped)
+                else:
+                    future = ensure_future(wrapped(*args, **kwargs))
 
-        @replaces(globals())
-        async def _asyncio_shielded_call(wrapped, args, kwargs, /):
-            with CancelScope(shield=True):
-                exc = None
-
-                try:
-                    if args is None:
-                        future = ensure_future(wrapped)
+                while True:
+                    try:
+                        result = await shield(future)
+                    except CancelledError as e:
+                        exc = e
                     else:
-                        future = ensure_future(wrapped(*args, **kwargs))
+                        break
 
-                    while True:
-                        try:
-                            result = await shield(future)
-                        except CancelledError as e:
-                            exc = e
-                        else:
-                            break
+                if exc is not None:
+                    raise exc
+            finally:
+                del exc
 
-                    if exc is not None:
-                        raise exc
-                finally:
-                    del exc
+        return result
 
-            return result
-
-        return await _asyncio_shielded_call(wrapped, args, kwargs)
+    return await _asyncio_shielded_call(wrapped, args, kwargs)
 
 
 @overload

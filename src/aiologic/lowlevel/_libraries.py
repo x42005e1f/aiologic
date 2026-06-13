@@ -13,9 +13,8 @@ from sniffio import (
     AsyncLibraryNotFoundError as AsyncLibraryNotFoundError,
     thread_local,
 )
-from wrapt import when_imported
 
-from aiologic.meta import replaces
+from aiologic.meta import replaces, replaces_when_imported
 
 from ._safety import signal_safety_enabled
 from ._threads import _local
@@ -57,89 +56,79 @@ def _curio_running() -> bool:
     return False
 
 
-@when_imported("eventlet")
-def _(_):
+@replaces_when_imported(globals(), "eventlet")
+def _eventlet_running():
+    # eventlet does not provide a public function to get the current hub
+    # without creating a new one when there is none, so we use its private API.
+
+    from eventlet.hubs import _threadlocal
+
     @replaces(globals())
     def _eventlet_running():
-        # eventlet does not provide a public function to get the current hub
-        # without creating a new one when there is none, so we use its private
-        # API.
+        return getattr(_threadlocal, "hub", None) is not None
 
-        from eventlet.hubs import _threadlocal
-
-        @replaces(globals())
-        def _eventlet_running():
-            return getattr(_threadlocal, "hub", None) is not None
-
-        return _eventlet_running()
+    return _eventlet_running()
 
 
-@when_imported("gevent")
-def _(_):
+@replaces_when_imported(globals(), "gevent")
+def _gevent_running():
+    # gevent does not provide a public function to get the current hub without
+    # creating a new one when there is none, so we use its private API.
+
+    from gevent._hub_local import get_hub_if_exists
+
     @replaces(globals())
     def _gevent_running():
-        # gevent does not provide a public function to get the current hub
-        # without creating a new one when there is none, so we use its private
-        # API.
+        return get_hub_if_exists() is not None
 
-        from gevent._hub_local import get_hub_if_exists
+    return _gevent_running()
+
+
+@replaces_when_imported(globals(), "asyncio")
+def _asyncio_running():
+    # While asyncio.get_running_loop() will work to get the current event loop,
+    # it will also raise a RuntimeError if there is none, which can be
+    # relatively slow to handle on CPython. So instead we use
+    # asyncio._get_running_loop(), which returns None in that case.
+
+    from asyncio import _get_running_loop
+    from sys import version_info
+
+    is_builtin = _get_running_loop.__module__ == "_asyncio"
+
+    # Since Python 3.12, the built-in (C-level) asyncio._get_running_loop()
+    # bypasses the slow os.getpid() call and thus runs fast, so we rely on it
+    # in this case. But in the other case, we try
+    # sniffio.current_async_library_cvar.get() before
+    # asyncio._get_running_loop() to improve performance at least for calls in
+    # an active anyio run.
+
+    if version_info >= (3, 12) and is_builtin:
 
         @replaces(globals())
-        def _gevent_running():
-            return get_hub_if_exists() is not None
+        def _asyncio_running():
+            return _get_running_loop() is not None
 
-        return _gevent_running()
+    else:
+        from sniffio import current_async_library_cvar
 
+        @replaces(globals())
+        def _asyncio_running():
+            return (
+                current_async_library_cvar.get() == "asyncio"
+                or _get_running_loop() is not None
+            )
 
-@when_imported("asyncio")
-def _(_):
-    @replaces(globals())
-    def _asyncio_running():
-        # While asyncio.get_running_loop() will work to get the current event
-        # loop, it will also raise a RuntimeError if there is none, which can
-        # be relatively slow to handle on CPython. So instead we use
-        # asyncio._get_running_loop(), which returns None in that case.
-
-        from asyncio import _get_running_loop
-        from sys import version_info
-
-        is_builtin = _get_running_loop.__module__ == "_asyncio"
-
-        # Since Python 3.12, the built-in (C-level) asyncio._get_running_loop()
-        # bypasses the slow os.getpid() call and thus runs fast, so we rely on
-        # it in this case. But in the other case, we try
-        # sniffio.current_async_library_cvar.get() before
-        # asyncio._get_running_loop() to improve performance at least for calls
-        # in an active anyio run.
-
-        if version_info >= (3, 12) and is_builtin:
-
-            @replaces(globals())
-            def _asyncio_running():
-                return _get_running_loop() is not None
-
-        else:
-            from sniffio import current_async_library_cvar
-
-            @replaces(globals())
-            def _asyncio_running():
-                return (
-                    current_async_library_cvar.get() == "asyncio"
-                    or _get_running_loop() is not None
-                )
-
-        return _asyncio_running()
+    return _asyncio_running()
 
 
-@when_imported("curio")
-def _(_):
-    @replaces(globals())
-    def _curio_running():
-        global _curio_running
+@replaces_when_imported(globals(), "curio")
+def _curio_running():
+    global _curio_running
 
-        from curio.meta import curio_running as _curio_running
+    from curio.meta import curio_running as _curio_running
 
-        return _curio_running()
+    return _curio_running()
 
 
 @overload

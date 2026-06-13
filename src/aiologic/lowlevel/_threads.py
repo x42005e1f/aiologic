@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING
 
 from wrapt import when_imported
 
-from aiologic.meta import import_original, isgreenpatched, replaces
+from aiologic.meta import (
+    import_original,
+    isgreenpatched,
+    replaces,
+    replaces_when_imported,
+)
 
 from . import _greenlets
 
@@ -37,26 +42,24 @@ except ImportError:
     def _is_main_thread() -> bool:
         return current_thread_ident() == main_thread().ident
 
-    @when_imported("gevent.monkey")
-    def _(_):
-        @replaces(globals())
-        def _is_main_thread():
-            thread = main_thread()
-            thread_ident = thread.ident
-            thread_greenlet = getattr(thread, "_greenlet", None)
+    @replaces_when_imported(globals(), "gevent.monkey")
+    def _is_main_thread():
+        thread = main_thread()
+        thread_ident = thread.ident
+        thread_greenlet = getattr(thread, "_greenlet", None)
 
-            if thread_greenlet is not None:
-                thread_ident = getattr(thread, "_gevent_real_ident", None)
+        if thread_greenlet is not None:
+            thread_ident = getattr(thread, "_gevent_real_ident", None)
 
-                if thread_ident is None:
-                    answer = _greenlets._main_greenlet() is thread_greenlet
+            if thread_ident is None:
+                answer = _greenlets._main_greenlet() is thread_greenlet
 
-                    if answer:
-                        thread._gevent_real_ident = current_thread_ident()
+                if answer:
+                    thread._gevent_real_ident = current_thread_ident()
 
-                    return answer
+                return answer
 
-            return current_thread_ident() == thread_ident
+        return current_thread_ident() == thread_ident
 
 else:
 
@@ -107,27 +110,25 @@ def _current_eventlet_thread() -> Thread | None:
     return None
 
 
-@when_imported("eventlet.patcher")
-def _(_):
+@replaces_when_imported(globals(), "eventlet.patcher")
+def _current_eventlet_thread():
+    from eventlet.patcher import original
+
+    threading = original("threading")
+
+    _DummyThread = threading._DummyThread
+    _active = threading._active
+
     @replaces(globals())
     def _current_eventlet_thread():
-        from eventlet.patcher import original
+        thread = _active.get(current_thread_ident())
 
-        threading = original("threading")
+        if isinstance(thread, _DummyThread):
+            return None
 
-        _DummyThread = threading._DummyThread
-        _active = threading._active
+        return thread
 
-        @replaces(globals())
-        def _current_eventlet_thread():
-            thread = _active.get(current_thread_ident())
-
-            if isinstance(thread, _DummyThread):
-                return None
-
-            return thread
-
-        return _current_eventlet_thread()
+    return _current_eventlet_thread()
 
 
 def _current_thread_or_main_greenlet() -> Thread | _GreenletLike:
