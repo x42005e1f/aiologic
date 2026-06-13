@@ -10,7 +10,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Any, Final, Literal, NoReturn, Protocol, final
 
-from aiologic.meta import generator
+from aiologic.meta import copies, generator
 
 from ._checkpoints import async_checkpoint, green_checkpoint
 from ._locks import ThreadOnceLock
@@ -133,7 +133,13 @@ class AsyncEvent(ABC, Event):
 
     @abstractmethod
     @generator
-    async def __await__(self, /) -> bool:
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        raise NotImplementedError
+
+    @abstractmethod
+    async def with_(self, /, timeout: float | None = None) -> bool:
         """..."""
 
         raise NotImplementedError
@@ -219,11 +225,23 @@ class SetEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[True]:
         return True
 
-    @generator
-    async def __await__(self, /) -> Literal[True]:
+    async def __await(self, /, timeout: float | None = None) -> Literal[True]:
         await async_checkpoint()
 
         return True
+
+    @generator
+    @copies(__await)
+    async def __await__(
+        self,
+        /,
+        timeout: float | None = None,
+    ) -> Literal[True]:
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> Literal[True]:
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> Literal[True]:
         green_checkpoint()
@@ -292,11 +310,23 @@ class DummyEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[True]:
         return True
 
-    @generator
-    async def __await__(self, /) -> Literal[True]:
+    async def __await(self, /, timeout: float | None = None) -> Literal[True]:
         await async_checkpoint()
 
         return True
+
+    @generator
+    @copies(__await)
+    async def __await__(
+        self,
+        /,
+        timeout: float | None = None,
+    ) -> Literal[True]:
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> Literal[True]:
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> Literal[True]:
         green_checkpoint()
@@ -365,11 +395,23 @@ class CancelledEvent(GreenEvent, AsyncEvent):
     def __bool__(self, /) -> Literal[False]:
         return False
 
-    @generator
-    async def __await__(self, /) -> Literal[False]:
+    async def __await(self, /, timeout: float | None = None) -> Literal[False]:
         await async_checkpoint()
 
         return False
+
+    @generator
+    @copies(__await)
+    async def __await__(
+        self,
+        /,
+        timeout: float | None = None,
+    ) -> Literal[False]:
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> Literal[False]:
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> Literal[False]:
         green_checkpoint()
@@ -565,8 +607,7 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
 
         return f"<{cls_repr} object at {id(self):#x}: {state}>"
 
-    @generator
-    async def __await__(self, /) -> bool:
+    async def __await(self, /, timeout: float | None = None) -> bool:
         if self._is_set:
             await async_checkpoint(force=self.force)
 
@@ -595,7 +636,7 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
                 return True
 
             try:
-                return await self._waiter
+                return await self._waiter.with_(timeout)
             finally:
                 if not self._is_set:
                     try:
@@ -609,6 +650,15 @@ class _AsyncEventImpl(_BaseEvent, AsyncEvent):
                         self._is_cancelled = True
         finally:
             self._waiter = None
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        return await self.__await(timeout)
 
 
 class __LockingGreenEventImpl(_GreenEventImpl):

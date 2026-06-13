@@ -21,6 +21,17 @@ Commit messages are consistent with
 
 ### Added
 
+- `with_()` methods to all awaitable primitives (for waiting with given
+  parameters) and the `timeout` parameter to all blocking asynchronous
+  functions (semantically equivalent to that of blocking green functions). This
+  unifies the interface and provides safe handling of large timeouts (which is
+  particularly relevant for Curio) and zero timeouts (which is particularly
+  relevant for Trio) across all supported libraries; in this sense, it is a
+  logical continuation of the extensive work on timeouts carried out in version
+  `0.15.0`. The main reason for this change is the observation that the lack of
+  timeouts as parameters for asynchronous operations leads to boilerplate code
+  with `asyncio.wait_for()` in some dependent repositories, which is clearly
+  undesirable.
 - `aiologic.meta.replaces_when_imported()` as a safer alternative to
   `wrapt.when_imported()` + `aiologic.meta.replaces()`.
 - `aiologic.meta.import_original()` as an `aiologic.meta.import_from()`-like

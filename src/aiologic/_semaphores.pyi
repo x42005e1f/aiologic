@@ -78,6 +78,7 @@ class Semaphore:
         /,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool: ...
     def _green_acquire(
@@ -88,7 +89,13 @@ class Semaphore:
         timeout: float | None = None,
         _shield: bool = False,
     ) -> bool: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
@@ -139,7 +146,13 @@ class BoundedSemaphore(Semaphore):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
@@ -203,7 +216,13 @@ class BinarySemaphore(Semaphore):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
@@ -257,7 +276,13 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,

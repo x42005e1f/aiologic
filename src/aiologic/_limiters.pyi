@@ -45,7 +45,13 @@ class CapacityLimiter:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
@@ -99,6 +105,7 @@ class RCapacityLimiter(CapacityLimiter):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool: ...
     def green_acquire(
         self,

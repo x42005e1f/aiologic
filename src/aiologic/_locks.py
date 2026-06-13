@@ -173,6 +173,7 @@ class Lock:
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool:
         if self._owner == task and not self._releasing:
@@ -212,7 +213,7 @@ class Lock:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if success:
                 self._releasing = False
@@ -289,12 +290,19 @@ class Lock:
 
         return success
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
         return await self._async_acquire_on_behalf_of(
             current_async_task_ident(),
             blocking=blocking,
+            timeout=timeout,
         )
 
     def green_acquire(
@@ -619,6 +627,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool:
         if count < 1:
@@ -668,7 +677,7 @@ class RLock(Lock):
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if success:
                 self._releasing = False
@@ -761,6 +770,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool:
         """..."""
 
@@ -768,6 +778,7 @@ class RLock(Lock):
             current_async_task_ident(),
             count,
             blocking=blocking,
+            timeout=timeout,
         )
 
     def green_acquire(

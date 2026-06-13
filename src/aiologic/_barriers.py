@@ -168,10 +168,7 @@ class Latch:
 
         return not self._filling
 
-    @generator
-    async def __await__(self, /) -> None:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> None:
         if not self._filling:
             unbroken = self._unbroken
 
@@ -203,7 +200,7 @@ class Latch:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 self.abort()
@@ -214,6 +211,19 @@ class Latch:
             raise BrokenBarrierError
 
         self._wakeup(unbroken)
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> None:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> None:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> None:
         """..."""
@@ -481,10 +491,7 @@ class Barrier:
         if exc_value is not None:
             self.abort()
 
-    @generator
-    async def __await__(self, /) -> int:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> int:
         if not self._unbroken:
             await async_checkpoint()
 
@@ -512,7 +519,7 @@ class Barrier:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 self.abort()
@@ -530,6 +537,19 @@ class Barrier:
             raise BrokenBarrierError
 
         return index
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> int:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> int:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> int:
         """..."""
@@ -904,10 +924,7 @@ class RBarrier(Barrier):
 
         return Barrier.__exit__(self, exc_type, exc_value, traceback)
 
-    @generator
-    async def __await__(self, /) -> int:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> int:
         if not self._unbroken:
             await async_checkpoint()
 
@@ -937,7 +954,7 @@ class RBarrier(Barrier):
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 self.abort()
@@ -955,6 +972,19 @@ class RBarrier(Barrier):
             raise BrokenBarrierError
 
         return index
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> int:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> int:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> int:
         """..."""

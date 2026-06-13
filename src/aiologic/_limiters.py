@@ -166,7 +166,13 @@ class CapacityLimiter:
 
         self.green_release()
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
         task = current_async_task_ident()
@@ -178,7 +184,10 @@ class CapacityLimiter:
             )
             raise RuntimeError(msg)
 
-        success = await self._semaphore.async_acquire(blocking=blocking)
+        success = await self._semaphore.async_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
 
         if success:
             self._borrowers[task] = 1
@@ -457,6 +466,7 @@ class RCapacityLimiter(CapacityLimiter):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool:
         """..."""
 
@@ -478,7 +488,10 @@ class RCapacityLimiter(CapacityLimiter):
 
             return True
 
-        success = await self._semaphore.async_acquire(blocking=blocking)
+        success = await self._semaphore.async_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
 
         if success:
             self._borrowers[task] = count

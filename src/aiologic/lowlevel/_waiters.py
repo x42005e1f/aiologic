@@ -10,7 +10,7 @@ import sys
 from math import inf, isinf, isnan
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, final
 
-from aiologic.meta import generator
+from aiologic.meta import copies, generator
 
 from ._libraries import current_async_library, current_green_library
 from ._locks import once
@@ -64,7 +64,10 @@ class AsyncWaiter(Waiter, Protocol):
         """..."""
 
     @generator
-    async def __await__(self, /) -> bool:
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+    async def with_(self, /, timeout: float | None = None) -> bool:
         """..."""
 
     def wake(self, /) -> None:
@@ -116,7 +119,7 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
                     try:
                         timeout = float(timeout)
                     except OverflowError:
-                        timeout = (-1 if timeout < 0 else 1) * inf
+                        timeout = (-1 if timeout < 0 else +1) * inf
 
                 if isnan(timeout):
                     msg = "timeout must be non-NaN"
@@ -201,7 +204,7 @@ def _get_eventlet_waiter_class() -> type[GreenWaiter]:
                     try:
                         timeout = float(timeout)
                     except OverflowError:
-                        timeout = (-1 if timeout < 0 else 1) * inf
+                        timeout = (-1 if timeout < 0 else +1) * inf
 
                 if isnan(timeout):
                     msg = "timeout must be non-NaN"
@@ -322,7 +325,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
                     try:
                         timeout = float(timeout)
                     except OverflowError:
-                        timeout = (-1 if timeout < 0 else 1) * inf
+                        timeout = (-1 if timeout < 0 else +1) * inf
 
                 if isnan(timeout):
                     msg = "timeout must be non-NaN"
@@ -418,7 +421,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
         get_running_loop,
     )
 
-    from . import _tasks
+    from . import _tasks, _time
 
     @final
     class _AsyncioWaiter(AsyncWaiter):
@@ -447,28 +450,77 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        @generator
-        async def __await__(self, /) -> bool:
+        async def __await(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else +1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
+
+                if isinf(timeout):
+                    timeout = None
+
             self.__future = self.__loop.create_future()
 
             try:
-                if self.shield:
-                    await _tasks._asyncio_shielded_call(
-                        self.__future,
-                        None,
-                        None,
+                if timeout is None or self.shield:
+                    if self.shield:
+                        return await _tasks._asyncio_shielded_call(
+                            self.__future,
+                            None,
+                            None,
+                        )
+                    else:
+                        return await self.__future
+                elif timeout:
+                    return await _time._async_long_sleep(
+                        self.__wait_with_timeout,
+                        timeout,
+                        _time._asyncio_seconds_per_timeout(),
+                        clock=_time._asyncio_clock,
+                        check=True,
                     )
                 else:
-                    await self.__future
+                    return await self.__wait_with_zero()
             finally:
                 self.__future = None
 
-            return True
+        @generator
+        @copies(__await)
+        async def __await__(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
 
-        def __notify(self, /) -> None:
+        @copies(__await)
+        async def with_(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
+
+        async def __wait_with_timeout(self, /, timeout: float) -> bool:
+            handle = self.__loop.call_later(timeout, self.__notify, False)
+            try:
+                return await self.__future
+            finally:
+                handle.cancel()
+
+        async def __wait_with_zero(self, /) -> bool:
+            handle = self.__loop.call_soon(self.__notify, False)
+            try:
+                return await self.__future
+            finally:
+                handle.cancel()
+
+        def __notify(self, /, result: bool = True) -> None:
             if self.__future is not None:
                 try:
-                    self.__future.set_result(True)
+                    self.__future.set_result(result)
                 except InvalidStateError:  # task is cancelled
                     pass
 
@@ -495,10 +547,10 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
     from concurrent.futures import CancelledError, InvalidStateError
     from logging import getLogger
 
-    from curio import check_cancellation
+    from curio import check_cancellation, ignore_after
     from curio.traps import _future_wait
 
-    from . import _tasks
+    from . import _tasks, _time
 
     if sys.version_info >= (3, 11):
         WaitTimeout = TimeoutError
@@ -672,19 +724,82 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        @generator
-        async def __await__(self, /) -> bool:
-            if self.shield:
-                await _tasks._curio_shielded_call(
-                    _future_wait,
-                    [self.__future],
-                    {},
+        async def __await(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else +1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
+
+                if isinf(timeout):
+                    timeout = None
+
+            if timeout is None or self.shield:
+                if self.shield:
+                    await _tasks._curio_shielded_call(
+                        _future_wait,
+                        [self.__future],
+                        {},
+                    )
+                    await check_cancellation()
+                    return True
+                else:
+                    await _future_wait(self.__future)
+                    return True
+            elif timeout:
+                return await _time._async_long_sleep(
+                    self.__wait_with_timeout,
+                    timeout,
+                    _time._curio_seconds_per_timeout(),
+                    clock=_time._curio_clock,
+                    check=True,
                 )
-                await check_cancellation()
             else:
+                return await self.__wait_with_zero()
+
+        @generator
+        @copies(__await)
+        async def __await__(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
+
+        @copies(__await)
+        async def with_(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
+
+        async def __wait_with_timeout(self, /, timeout: float) -> bool:
+            if self.__future.done():
                 await _future_wait(self.__future)
 
-            return True
+                return True
+
+            async with ignore_after(timeout):
+                await _future_wait(self.__future)
+
+                return True
+
+            return False
+
+        async def __wait_with_zero(self, /) -> bool:
+            if self.__future.done():
+                await _future_wait(self.__future)
+
+                return True
+
+            async with ignore_after(0):
+                await _future_wait(self.__future)
+
+                return True
+
+            return False
 
         def wake(self, /) -> None:
             try:
@@ -697,7 +812,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
 
 @once
 def _get_trio_waiter_class() -> type[AsyncWaiter]:
-    from trio import RunFinishedError
+    from trio import CancelScope, RunFinishedError
     from trio.lowlevel import (
         Abort,
         current_task,
@@ -706,10 +821,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
         wait_task_rescheduled,
     )
 
-    from . import _tasks
-
-    def _abort(raise_cancel: Any) -> Literal[Abort.SUCCEEDED]:
-        return Abort.SUCCEEDED
+    from . import _tasks, _time
 
     @final
     class _TrioWaiter(AsyncWaiter):
@@ -738,23 +850,90 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             msg = f"cannot reduce {self!r}"
             raise TypeError(msg)
 
-        @generator
-        async def __await__(self, /) -> bool:
+        async def __await(self, /, timeout: float | None = None) -> bool:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else +1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
+
+                if isinf(timeout):
+                    timeout = None
+
             self.__task = current_task()
 
             try:
-                if self.shield:
-                    await _tasks._trio_shielded_call(
-                        wait_task_rescheduled,
-                        [_abort],
-                        {},
+                if timeout is None or self.shield:
+                    if self.shield:
+                        await _tasks._trio_shielded_call(
+                            wait_task_rescheduled,
+                            [self.__abort],
+                            {},
+                        )
+                        return True
+                    else:
+                        await wait_task_rescheduled(self.__abort)
+                        return True
+                elif timeout:
+                    return await _time._async_long_sleep(
+                        self.__wait_with_timeout,
+                        timeout,
+                        _time._trio_seconds_per_timeout(),
+                        clock=_time._trio_clock,
+                        check=True,
                     )
                 else:
-                    await wait_task_rescheduled(_abort)
+                    return await self.__wait_with_zero()
             finally:
                 self.__task = None
 
-            return True
+        @generator
+        @copies(__await)
+        async def __await__(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
+
+        @copies(__await)
+        async def with_(self, /, timeout: float | None = None) -> bool:
+            return await self.__await(timeout)
+
+        def __abort(self, /, raise_cancel: Any) -> Literal[Abort.SUCCEEDED]:
+            self.__task = None
+
+            return Abort.SUCCEEDED
+
+        async def __wait_with_timeout(self, /, timeout: float) -> bool:
+            with CancelScope() as scope:
+                self.__token.run_sync_soon(
+                    setattr,
+                    scope,
+                    "deadline",
+                    _time._trio_clock() + timeout,
+                )
+
+                await wait_task_rescheduled(self.__abort)
+
+                return True
+
+            return False
+
+        async def __wait_with_zero(self, /) -> bool:
+            with CancelScope() as scope:
+                self.__token.run_sync_soon(scope.cancel)
+
+                await wait_task_rescheduled(self.__abort)
+
+                return True
+
+            return False
 
         def __notify(self, /) -> None:
             if self.__task is not None:

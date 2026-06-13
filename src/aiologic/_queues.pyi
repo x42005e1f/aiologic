@@ -73,6 +73,7 @@ class SimpleQueue(Generic[_T]):
         item: _T,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None: ...
     def green_put(
         self,
@@ -82,7 +83,13 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T: ...
     def green_get(
         self,
         /,
@@ -119,6 +126,7 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         item: _T,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None: ...
     def green_put(
         self,
@@ -128,7 +136,13 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T: ...
     def green_get(
         self,
         /,
@@ -180,6 +194,7 @@ class Queue(Generic[_T]):
         waiters: deque[Event],
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool: ...
     def _green_acquire(
         self,
@@ -196,6 +211,7 @@ class Queue(Generic[_T]):
         item: _T,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None: ...
     def green_put(
         self,
@@ -205,7 +221,13 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T: ...
     def green_get(
         self,
         /,
@@ -251,6 +273,7 @@ class LifoQueue(Queue[_T]):
         item: _T,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None: ...
     def green_put(
         self,
@@ -260,7 +283,13 @@ class LifoQueue(Queue[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None: ...
-    async def async_get(self, /, *, blocking: bool = True) -> _T: ...
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T: ...
     def green_get(
         self,
         /,
@@ -305,6 +334,7 @@ class PriorityQueue(Queue[_RichComparableT]):
         item: _RichComparableT,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None: ...
     def green_put(
         self,
@@ -319,6 +349,7 @@ class PriorityQueue(Queue[_RichComparableT]):
         /,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> _RichComparableT: ...
     def green_get(
         self,

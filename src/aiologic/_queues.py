@@ -235,7 +235,14 @@ class SimpleQueue(Generic[_T]):
         self._data.append(item)
         self._semaphore.release()
 
-    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+    async def async_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
         """..."""
 
         if blocking:
@@ -260,10 +267,19 @@ class SimpleQueue(Generic[_T]):
         self._data.append(item)
         self._semaphore.green_release()
 
-    async def async_get(self, /, *, blocking: bool = True) -> _T:
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
         """..."""
 
-        success = await self._semaphore.async_acquire(blocking=blocking)
+        success = await self._semaphore.async_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
 
         if not success:
             raise QueueEmpty
@@ -439,10 +455,22 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         return SimpleQueue.put(self, item)
 
     @copies(SimpleQueue.async_put)
-    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+    async def async_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
         """..."""
 
-        return await SimpleQueue.async_put(self, item, blocking=blocking)
+        return await SimpleQueue.async_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(SimpleQueue.green_put)
     def green_put(
@@ -462,10 +490,19 @@ class SimpleLifoQueue(SimpleQueue[_T]):
             timeout=timeout,
         )
 
-    async def async_get(self, /, *, blocking: bool = True) -> _T:
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
         """..."""
 
-        success = await self._semaphore.async_acquire(blocking=blocking)
+        success = await self._semaphore.async_acquire(
+            blocking=blocking,
+            timeout=timeout,
+        )
 
         if not success:
             raise QueueEmpty
@@ -770,6 +807,7 @@ class Queue(Generic[_T]):
         waiters: deque[Event],
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool:
         if acquire_nowait():
             if blocking:
@@ -801,7 +839,7 @@ class Queue(Generic[_T]):
 
         try:
             try:
-                success = await event
+                success = await event.with_(timeout)
             finally:
                 if success or not event.cancelled():
                     length = len(self._data)
@@ -892,13 +930,21 @@ class Queue(Generic[_T]):
 
         return success
 
-    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+    async def async_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
         """..."""
 
         acquired = await self._async_acquire(
             self._acquire_nowait_on_putting,
             self._putters,
             blocking=blocking,
+            timeout=timeout,
         )
 
         if not acquired:
@@ -934,13 +980,20 @@ class Queue(Generic[_T]):
         finally:
             self._release()
 
-    async def async_get(self, /, *, blocking: bool = True) -> _T:
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
         """..."""
 
         acquired = await self._async_acquire(
             self._acquire_nowait_on_getting,
             self._getters,
             blocking=blocking,
+            timeout=timeout,
         )
 
         if not acquired:
@@ -1170,10 +1223,22 @@ class LifoQueue(Queue[_T]):
         return Queue.copy(self)
 
     @copies(Queue.async_put)
-    async def async_put(self, /, item: _T, *, blocking: bool = True) -> None:
+    async def async_put(
+        self,
+        /,
+        item: _T,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> None:
         """..."""
 
-        return await Queue.async_put(self, item, blocking=blocking)
+        return await Queue.async_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(Queue.green_put)
     def green_put(
@@ -1186,13 +1251,24 @@ class LifoQueue(Queue[_T]):
     ) -> None:
         """..."""
 
-        return Queue.green_put(self, item, blocking=blocking, timeout=timeout)
+        return Queue.green_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(Queue.async_get)
-    async def async_get(self, /, *, blocking: bool = True) -> _T:
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _T:
         """..."""
 
-        return await Queue.async_get(self, blocking=blocking)
+        return await Queue.async_get(self, blocking=blocking, timeout=timeout)
 
     @copies(Queue.green_get)
     def green_get(
@@ -1381,10 +1457,16 @@ class PriorityQueue(Queue[_RichComparableT]):
         item: _RichComparableT,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> None:
         """..."""
 
-        return await Queue.async_put(self, item, blocking=blocking)
+        return await Queue.async_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(Queue.green_put)
     def green_put(
@@ -1397,13 +1479,24 @@ class PriorityQueue(Queue[_RichComparableT]):
     ) -> None:
         """..."""
 
-        return Queue.green_put(self, item, blocking=blocking, timeout=timeout)
+        return Queue.green_put(
+            self,
+            item,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(Queue.async_get)
-    async def async_get(self, /, *, blocking: bool = True) -> _RichComparableT:
+    async def async_get(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> _RichComparableT:
         """..."""
 
-        return await Queue.async_get(self, blocking=blocking)
+        return await Queue.async_get(self, blocking=blocking, timeout=timeout)
 
     @copies(Queue.green_get)
     def green_get(

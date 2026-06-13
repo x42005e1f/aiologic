@@ -105,12 +105,14 @@ class Condition(Generic[_T_co, _S_co]):
         traceback: TracebackType | None,
     ) -> None: ...
     @generator
-    async def __await__(self, /) -> bool: ...
+    async def __await__(self, /, timeout: float | None = None) -> bool: ...
+    async def with_(self, /, timeout: float | None = None) -> bool: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
     async def for_(
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T: ...
@@ -167,12 +169,14 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         traceback: TracebackType | None,
     ) -> None: ...
     @generator
-    async def __await__(self, /) -> bool: ...
+    async def __await__(self, /, timeout: float | None = None) -> bool: ...
+    async def with_(self, /, timeout: float | None = None) -> bool: ...
     def wait(self, /, timeout: float | None = None) -> bool: ...
     async def for_(
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T: ...
@@ -193,9 +197,19 @@ class _BaseCondition(Condition[_T_co, _S_co]):
     ) -> int: ...
     def notify_all(self, /, *, deadline: float | None = None) -> int: ...
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
     @overload
     def _green_wait(
         self,
@@ -241,9 +255,19 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         traceback: TracebackType | None,
     ) -> None: ...
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
     @overload
     def _green_wait(
         self,
@@ -282,9 +306,19 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
         traceback: TracebackType | None,
     ) -> None: ...
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
     @overload
     def _green_wait(
         self,
@@ -327,6 +361,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T: ...
@@ -346,9 +381,19 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         deadline: float | None = None,
     ) -> int: ...
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
     @overload
     def _green_wait(
         self,
@@ -394,9 +439,19 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
         deadline: float | None = None,
     ) -> int: ...
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
     @overload
     def _green_wait(
         self,

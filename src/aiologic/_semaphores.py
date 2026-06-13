@@ -233,6 +233,7 @@ class Semaphore:
         /,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool:
         if self._acquire_nowait():
@@ -269,7 +270,7 @@ class Semaphore:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 if event.cancelled():
@@ -337,10 +338,16 @@ class Semaphore:
 
         return success
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
-        return await self._async_acquire(blocking=blocking)
+        return await self._async_acquire(blocking=blocking, timeout=timeout)
 
     def green_acquire(
         self,
@@ -618,10 +625,16 @@ class BoundedSemaphore(Semaphore):
 
         return Semaphore.__exit__(self, exc_type, exc_value, traceback)
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
-        success = await self._async_acquire(blocking=blocking)
+        success = await self._async_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             if _USE_BYTEARRAY:
@@ -860,10 +873,20 @@ class BinarySemaphore(Semaphore):
         return Semaphore.__exit__(self, exc_type, exc_value, traceback)
 
     @copies(Semaphore.async_acquire)
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
-        return await Semaphore.async_acquire(blocking=blocking)
+        return await Semaphore.async_acquire(
+            self,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     @copies(Semaphore.green_acquire)
     def green_acquire(
@@ -875,7 +898,11 @@ class BinarySemaphore(Semaphore):
     ) -> bool:
         """..."""
 
-        return Semaphore.green_acquire(blocking=blocking, timeout=timeout)
+        return Semaphore.green_acquire(
+            self,
+            blocking=blocking,
+            timeout=timeout,
+        )
 
     def _release(self, /, count: int = 1) -> None:
         waiters = self._waiters
@@ -1122,10 +1149,16 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
         return BinarySemaphore.__exit__(self, exc_type, exc_value, traceback)
 
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool:
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool:
         """..."""
 
-        success = await self._async_acquire(blocking=blocking)
+        success = await self._async_acquire(blocking=blocking, timeout=timeout)
 
         if success:
             if _USE_DELATTR:

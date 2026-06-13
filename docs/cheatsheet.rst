@@ -766,6 +766,16 @@ anyio.readthedocs.io/en/stable/cancellation.html
 the fact that AnyIO with the asyncio backend cannot be distinguished from pure
 asyncio on the aiologic side.
 
+.. note::
+
+    Since 0.17.0, ``await cv.with_(timeout=5)`` is valid (which applies to all
+    awaitable primitives), and passing a timeout to blocking async functions is
+    supported. These have the same semantics as when using the green libraries
+    and are intended for writing library-independent code.
+
+    There are still no (and will be no) timeouts as cancellation scopes, so the
+    last paragraph remains in effect.
+
 Shielding
 ^^^^^^^^^
 

@@ -54,6 +54,7 @@ class Lock:
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool: ...
     def _green_acquire_on_behalf_of(
@@ -66,7 +67,13 @@ class Lock:
         timeout: float | None = None,
         _shield: bool = False,
     ) -> bool: ...
-    async def async_acquire(self, /, *, blocking: bool = True) -> bool: ...
+    async def async_acquire(
+        self,
+        /,
+        *,
+        blocking: bool = True,
+        timeout: float | None = None,
+    ) -> bool: ...
     def green_acquire(
         self,
         /,
@@ -128,6 +135,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
         _shield: bool = False,
     ) -> bool: ...
     def _green_acquire_on_behalf_of(
@@ -146,6 +154,7 @@ class RLock(Lock):
         count: int = 1,
         *,
         blocking: bool = True,
+        timeout: float | None = None,
     ) -> bool: ...
     def green_acquire(
         self,

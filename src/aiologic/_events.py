@@ -138,10 +138,7 @@ class Event:
 
         return not self._is_unset
 
-    @generator
-    async def __await__(self, /) -> bool:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> bool:
         if not self._is_unset:
             await async_checkpoint()
 
@@ -163,7 +160,7 @@ class Event:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 if event.cancelled():
@@ -176,6 +173,19 @@ class Event:
             self._wakeup()
 
         return success
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         """..."""
@@ -358,10 +368,7 @@ class REvent(Event):
 
         return Event.__bool__(self)
 
-    @generator
-    async def __await__(self, /) -> bool:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> bool:
         if not self._is_unset:
             await async_checkpoint()
 
@@ -388,7 +395,7 @@ class REvent(Event):
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 if event.cancelled():
@@ -401,6 +408,19 @@ class REvent(Event):
             self._wakeup(token[3])
 
         return success
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         """..."""
@@ -640,10 +660,7 @@ class CountdownEvent:
 
         return not self._is_unset
 
-    @generator
-    async def __await__(self, /) -> bool:
-        """..."""
-
+    async def __await(self, /, timeout: float | None = None) -> bool:
         if not self._is_unset:
             await async_checkpoint()
 
@@ -670,7 +687,7 @@ class CountdownEvent:
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         finally:
             if not success:
                 if event.cancelled():
@@ -683,6 +700,19 @@ class CountdownEvent:
             self._wakeup(token[3])
 
         return success
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         """..."""

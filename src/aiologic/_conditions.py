@@ -20,6 +20,7 @@ from ._semaphores import BinarySemaphore
 from .lowlevel import (
     ThreadOnceLock,
     async_checkpoint,
+    async_clock,
     create_async_event,
     create_green_event,
     current_async_task_ident,
@@ -28,7 +29,7 @@ from .lowlevel import (
     green_clock,
     lazydeque,
 )
-from .meta import DEFAULT, MISSING, DefaultType, generator
+from .meta import DEFAULT, MISSING, DefaultType, copies, generator
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -279,11 +280,21 @@ class Condition(Generic[_T_co, _S_co]):
 
         return self._impl.__exit__(exc_type, exc_value, traceback)
 
+    async def __await(self, /, timeout: float | None = None) -> bool:
+        return await self._impl.with_(timeout)
+
     @generator
-    async def __await__(self, /) -> bool:
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
         """..."""
 
-        return await self._impl
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        """..."""
+
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         """..."""
@@ -294,12 +305,13 @@ class Condition(Generic[_T_co, _S_co]):
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T:
         """..."""
 
-        return await self._impl.for_(predicate, delegate=delegate)
+        return await self._impl.for_(predicate, timeout, delegate=delegate)
 
     def wait_for(
         self,
@@ -450,13 +462,21 @@ class _BaseCondition(Condition[_T_co, _S_co]):
     ) -> None:
         return None
 
-    @generator
-    async def __await__(self, /) -> bool:
+    async def __await(self, /, timeout: float | None = None) -> bool:
         if not self._async_owned():
             msg = "cannot wait on un-acquired lock"
             raise RuntimeError(msg)
 
-        return await self._async_wait(None)
+        return await self._async_wait(None, timeout)
+
+    @generator
+    @copies(__await)
+    async def __await__(self, /, timeout: float | None = None) -> bool:
+        return await self.__await(timeout)
+
+    @copies(__await)
+    async def with_(self, /, timeout: float | None = None) -> bool:
+        return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
         if not self._green_owned():
@@ -469,6 +489,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T:
@@ -481,11 +502,36 @@ class _BaseCondition(Condition[_T_co, _S_co]):
 
             return result
 
+        deadline = None
+
         while True:
+            if timeout is not None:
+                if isinstance(timeout, int):
+                    try:
+                        timeout = float(timeout)
+                    except OverflowError:
+                        timeout = (-1 if timeout < 0 else +1) * inf
+
+                if isnan(timeout):
+                    msg = "timeout must be non-NaN"
+                    raise ValueError(msg)
+
+                if timeout < 0:
+                    msg = "timeout must be non-negative"
+                    raise ValueError(msg)
+
+                if deadline is None:
+                    deadline = async_clock() + timeout
+                else:
+                    timeout = deadline - async_clock()
+
+                    if timeout < 0:
+                        return result
+
             if delegate:
-                await self._async_wait(predicate)
+                await self._async_wait(predicate, timeout)
             else:
-                await self._async_wait(None)
+                await self._async_wait(None, timeout)
 
             if result := predicate():
                 return result
@@ -515,7 +561,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
                     try:
                         timeout = float(timeout)
                     except OverflowError:
-                        timeout = (-1 if timeout < 0 else 1) * inf
+                        timeout = (-1 if timeout < 0 else +1) * inf
 
                 if isnan(timeout):
                     msg = "timeout must be non-NaN"
@@ -643,10 +689,20 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         return self.notify(-1, deadline=deadline)
 
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
-    async def _async_wait(self, /, predicate):
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    async def _async_wait(self, /, predicate, timeout):
         if predicate is not None:
             self._waiters.append(
                 token := [
@@ -669,7 +725,7 @@ class _BaseCondition(Condition[_T_co, _S_co]):
         success = False
 
         try:
-            success = await event
+            success = await event.with_(timeout)
         except BaseException:
             if predicate is not None:
                 if token[4] is not MISSING:
@@ -872,10 +928,20 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
         self._lock.release()
 
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
-    async def _async_wait(self, /, predicate):
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    async def _async_wait(self, /, predicate, timeout):
         if predicate is not None:
             self._waiters.append(
                 token := [
@@ -908,7 +974,7 @@ class _SyncCondition(_BaseCondition[_T_co, _S_co]):
             self._lock.release()
 
             try:
-                success = await event
+                success = await event.with_(timeout)
             finally:
                 self._lock.acquire()
 
@@ -1094,10 +1160,20 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
             self._lock.release()
 
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
-    async def _async_wait(self, /, predicate):
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    async def _async_wait(self, /, predicate, timeout):
         if predicate is not None:
             self._waiters.append(
                 token := [
@@ -1123,7 +1199,7 @@ class _RSyncCondition(_BaseCondition[_T_co, _S_co]):
             state = self._lock._release_save()
 
             try:
-                success = await event
+                success = await event.with_(timeout)
             finally:
                 self._lock._acquire_restore(state)
         except BaseException:
@@ -1324,6 +1400,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
         self,
         /,
         predicate: Callable[[], _T],
+        timeout: float | None = None,
         *,
         delegate: bool = True,
     ) -> _T:
@@ -1337,13 +1414,38 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
             return result
 
         if not delegate:
+            deadline = None
+
             while True:
-                await self._async_wait(None)
+                if timeout is not None:
+                    if isinstance(timeout, int):
+                        try:
+                            timeout = float(timeout)
+                        except OverflowError:
+                            timeout = (-1 if timeout < 0 else +1) * inf
+
+                    if isnan(timeout):
+                        msg = "timeout must be non-NaN"
+                        raise ValueError(msg)
+
+                    if timeout < 0:
+                        msg = "timeout must be non-negative"
+                        raise ValueError(msg)
+
+                    if deadline is None:
+                        deadline = async_clock() + timeout
+                    else:
+                        timeout = deadline - async_clock()
+
+                        if timeout < 0:
+                            return result
+
+                await self._async_wait(None, timeout)
 
                 if result := predicate():
                     return result
 
-        return await self._async_wait(predicate)
+        return await self._async_wait(predicate, timeout)
 
     def wait_for(
         self,
@@ -1371,7 +1473,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
                         try:
                             timeout = float(timeout)
                         except OverflowError:
-                            timeout = (-1 if timeout < 0 else 1) * inf
+                            timeout = (-1 if timeout < 0 else +1) * inf
 
                     if isnan(timeout):
                         msg = "timeout must be non-NaN"
@@ -1495,10 +1597,20 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
             return notified
 
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
-    async def _async_wait(self, /, predicate):
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    async def _async_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
                 event := create_async_event(locking=_USE_ONCELOCK_FORCED),
@@ -1523,7 +1635,7 @@ class _MixedCondition(_BaseCondition[_T_co, _S_co]):
             self._lock.async_release()
 
             try:
-                success = await event
+                success = await event.with_(timeout)
             finally:
                 if event.cancelled():
                     if token[5]:
@@ -1698,10 +1810,20 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
     notify = _MixedCondition.notify
 
     @overload
-    async def _async_wait(self, /, predicate: Callable[[], _T]) -> _T: ...
+    async def _async_wait(
+        self,
+        /,
+        predicate: Callable[[], _T],
+        timeout: float | None,
+    ) -> _T: ...
     @overload
-    async def _async_wait(self, /, predicate: None) -> bool: ...
-    async def _async_wait(self, /, predicate):
+    async def _async_wait(
+        self,
+        /,
+        predicate: None,
+        timeout: float | None,
+    ) -> bool: ...
+    async def _async_wait(self, /, predicate, timeout):
         self._waiters.append(
             token := [
                 event := create_async_event(locking=_USE_ONCELOCK_FORCED),
@@ -1723,7 +1845,7 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
                 self._lock.async_release()
 
             try:
-                success = await event
+                success = await event.with_(timeout)
             finally:
                 if event.cancelled():
                     if token[5]:

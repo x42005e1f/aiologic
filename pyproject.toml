@@ -186,6 +186,7 @@ select = [
 ignore = [
     # flake8-async
     "ASYNC105",  # trio-sync-call
+    "ASYNC109",  # async-function-with-timeout
     "ASYNC110",  # async-busy-wait
     # flake8-bandit
     "S101",  # assert
