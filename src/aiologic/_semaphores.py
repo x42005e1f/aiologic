@@ -45,7 +45,7 @@ else:
     __GIL_ENABLED: Final[bool] = _is_gil_enabled()
 
 _USE_DELATTR: Final[bool] = (
-    __GIL_ENABLED or sys.version_info >= (3, 14)  # see python/cpython#127266
+    __GIL_ENABLED or sys.version_info >= (3, 14)  # see python/cpython#146270
 )
 _USE_BYTEARRAY: Final[bool] = __PYTHON_IMPLEMENTATION == "CPython" and (
     __GIL_ENABLED or sys.version_info >= (3, 14)  # see python/cpython#129107

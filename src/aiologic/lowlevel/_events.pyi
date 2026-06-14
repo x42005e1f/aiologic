@@ -8,7 +8,7 @@ from typing import Any, Final, Literal, NoReturn, Protocol, final
 
 from aiologic.meta import generator
 
-_USE_DELATTR: Final[bool]  # see python/cpython#127266
+_USE_DELATTR: Final[bool]  # see python/cpython#146270
 
 class Event(Protocol):
     __slots__ = ()
