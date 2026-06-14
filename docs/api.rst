@@ -111,7 +111,7 @@ Events (low-level)
   :type: SetEvent
   :no-index:
 
-  ...
+  The singleton instance representing an event that is always set.
 .. aiologic.lowlevel.SET_EVENT-end-marker
 
 .. aiologic.lowlevel.DUMMY_EVENT-start-marker
@@ -119,7 +119,7 @@ Events (low-level)
   :type: DummyEvent
   :no-index:
 
-  ...
+  The same as :data:`SET_EVENT`.
 .. aiologic.lowlevel.DUMMY_EVENT-end-marker
 
 .. aiologic.lowlevel.CANCELLED_EVENT-start-marker
@@ -127,7 +127,7 @@ Events (low-level)
   :type: CancelledEvent
   :no-index:
 
-  ...
+  The singleton instance representing an event that is always cancelled.
 .. aiologic.lowlevel.CANCELLED_EVENT-end-marker
 
 .. autofunction:: aiologic.lowlevel.create_async_event

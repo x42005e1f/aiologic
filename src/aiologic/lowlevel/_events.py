@@ -50,156 +50,334 @@ class Event(Protocol):
         """..."""
 
     @shield.setter
-    def shield(self, /, value: bool) -> None:
-        """..."""
+    def shield(self, /, value: bool) -> None: ...
 
     @property
     def force(self, /) -> bool:
         """..."""
 
     @force.setter
-    def force(self, /, value: bool) -> None:
-        """..."""
+    def force(self, /, value: bool) -> None: ...
 
 
 class GreenEvent(ABC, Event):
-    """..."""
+    """
+    The return type of :func:`create_green_waiter`.
+    """
 
     __slots__ = ()
 
     @abstractmethod
     def wait(self, /, timeout: float | None = None) -> bool:
-        """..."""
+        """
+        Block (put to sleep) the task until :meth:`set` is called from any
+        thread, and then return :data:`True`.
+
+        It must be called exactly once (or never) during the object's lifetime,
+        even if the first call was cancelled due to a timeout. Otherwise, a
+        :exc:`RuntimeError` is raised.
+
+        If the event is already in the set state (and the method has not yet
+        been called), this is equivalent to :func:`green_checkpoint`.
+
+        Args:
+          timeout:
+            If set to a non-negative number, the method will block at most
+            *timeout* seconds and return :data:`False` if there were no calls
+            to :meth:`set` within that time. For zero: if no such calls were
+            serialized.
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the :meth:`set` method was successfully called,
+        :data:`False` otherwise. Mutually exclusive with :meth:`cancelled`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
+        """
 
         return self.is_set()
 
     @abstractmethod
     def set(self, /) -> bool:
-        """..."""
+        """
+        Put the event into the set state, and return :data:`True` if this was
+        the first successful attempt (no one preempted it, and the call to the
+        :meth:`wait` method was not cancelled), :data:`False` otherwise.
+
+        If the task is already blocked, it is rescheduled. Otherwise, the
+        subsequent call will behave only as a checkpoint (no actual waiting).
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def is_set(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the :meth:`set` method was successfully called,
+        :data:`False` otherwise. Mutually exclusive with :meth:`cancelled`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def cancelled(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the call was cancelled (interrupted by a timeout
+        or any exception), :data:`False` otherwise. Mutually exclusive with
+        :meth:`is_set`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+        """
 
         raise NotImplementedError
 
     @property
     @abstractmethod
     def shield(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the :meth:`wait` call will be
+        shielded from external cancellation, :data:`False` otherwise.
+
+        The effect is mostly equivalent to applying the :func:`shield`
+        universal decorator to the method, but it is more efficient. Also, any
+        non-negative timeout passed to the method will be ignored.
+
+        It can be rewritten, but any changes will only take effect until the
+        call.
+        """
 
         raise NotImplementedError
 
     @shield.setter
     @abstractmethod
     def shield(self, /, value: bool) -> None:
-        """..."""
-
         raise NotImplementedError
 
     @property
     @abstractmethod
     def force(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the :meth:`wait` call will have a
+        forced checkpoint (that is, the call is guaranteed to switch to the
+        event loop and check for cancellation), :data:`False` otherwise.
+
+        The effect is mostly equivalent to applying the
+        :func:`enable_checkpoints` universal decorator to the method, but it is
+        more efficient.
+
+        It can be rewritten, but any changes will only take effect until the
+        call.
+        """
 
         raise NotImplementedError
 
     @force.setter
     @abstractmethod
     def force(self, /, value: bool) -> None:
-        """..."""
-
         raise NotImplementedError
 
 
 class AsyncEvent(ABC, Event):
-    """..."""
+    """
+    The return type of :func:`create_async_waiter`.
+    """
 
     __slots__ = ()
 
     @abstractmethod
     @generator
     async def __await__(self, /, timeout: float | None = None) -> bool:
-        """..."""
+        """
+        Block (put to sleep) the task until :meth:`set` is called from any
+        thread, and then return :data:`True`.
+
+        It must be called exactly once (or never) during the object's lifetime,
+        even if the first call was cancelled due to a timeout. Otherwise, a
+        :exc:`RuntimeError` is raised.
+
+        If the event is already in the set state (and the method has not yet
+        been called), this is equivalent to :func:`async_checkpoint`.
+
+        Args:
+          timeout:
+            If set to a non-negative number, the method will block at most
+            *timeout* seconds and return :data:`False` if there were no calls
+            to :meth:`set` within that time. For zero: if no such calls were
+            serialized.
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     async def with_(self, /, timeout: float | None = None) -> bool:
-        """..."""
+        """
+        Block (put to sleep) the task until :meth:`set` is called from any
+        thread, and then return :data:`True`.
+
+        It must be called exactly once (or never) during the object's lifetime,
+        even if the first call was cancelled due to a timeout. Otherwise, a
+        :exc:`RuntimeError` is raised.
+
+        If the event is already in the set state (and the method has not yet
+        been called), this is equivalent to :func:`async_checkpoint`.
+
+        Args:
+          timeout:
+            If set to a non-negative number, the method will block at most
+            *timeout* seconds and return :data:`False` if there were no calls
+            to :meth:`set` within that time. For zero: if no such calls were
+            serialized.
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def __bool__(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the :meth:`set` method was successfully called,
+        :data:`False` otherwise. Mutually exclusive with :meth:`cancelled`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+
+        Used by the standard :ref:`truth testing procedure <truth>`.
+        """
 
         return self.is_set()
 
     @abstractmethod
     def set(self, /) -> bool:
-        """..."""
+        """
+        Put the event into the set state, and return :data:`True` if this was
+        the first successful attempt (no one preempted it, and the call to the
+        :meth:`__await__`/:meth:`with_` method was not cancelled),
+        :data:`False` otherwise.
+
+        If the task is already blocked, it is rescheduled. Otherwise, the
+        subsequent call will behave only as a checkpoint (no actual waiting).
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def is_set(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the :meth:`set` method was successfully called,
+        :data:`False` otherwise. Mutually exclusive with :meth:`cancelled`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def cancelled(self, /) -> bool:
-        """..."""
+        """
+        Return :data:`True` if the call was cancelled (interrupted by a timeout
+        or any exception), :data:`False` otherwise. Mutually exclusive with
+        :meth:`is_set`.
+
+        It is reliable only after the task has been rescheduled (that is,
+        primarily for checks on the task's own side). Attempts at parallel
+        checks from notifiers may return false values (situations where the
+        :meth:`set` method has already been called by someone else, but both
+        :meth:`is_set` and :meth:`cancelled` return :data:`False`; the same
+        applies to races between the task and one notifier when the former is
+        cancelled).
+        """
 
         raise NotImplementedError
 
     @property
     @abstractmethod
     def shield(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the :meth:`__await__`/:meth:`with_`
+        call will be shielded from external cancellation, :data:`False`
+        otherwise.
+
+        The effect is mostly equivalent to applying the :func:`shield`
+        universal decorator to the primitive/method, but it is more efficient.
+        Also, any non-negative timeout passed to the method will be ignored.
+
+        It can be rewritten, but any changes will only take effect until the
+        call.
+        """
 
         raise NotImplementedError
 
     @shield.setter
     @abstractmethod
     def shield(self, /, value: bool) -> None:
-        """..."""
-
         raise NotImplementedError
 
     @property
     @abstractmethod
     def force(self, /) -> bool:
-        """..."""
+        """
+        A boolean that is :data:`True` if the :meth:`__await__`/:meth:`with_`
+        call will have a forced checkpoint (that is, the call is guaranteed to
+        switch to the event loop and check for cancellation), :data:`False`
+        otherwise.
+
+        The effect is mostly equivalent to applying the
+        :func:`enable_checkpoints` universal decorator to the primitive/method,
+        but it is more efficient.
+
+        It can be rewritten, but any changes will only take effect until the
+        call.
+        """
 
         raise NotImplementedError
 
     @force.setter
     @abstractmethod
     def force(self, /, value: bool) -> None:
-        """..."""
-
         raise NotImplementedError
 
 
 @final
 class SetEvent(GreenEvent, AsyncEvent):
-    """..."""
+    """
+    The singleton type for :data:`SET_EVENT`.
+    """
 
     __slots__ = ()
 
@@ -284,7 +462,9 @@ class SetEvent(GreenEvent, AsyncEvent):
 
 @final
 class DummyEvent(GreenEvent, AsyncEvent):
-    """..."""
+    """
+    The singleton type for :data:`DUMMY_EVENT`.
+    """
 
     __slots__ = ()
 
@@ -369,7 +549,9 @@ class DummyEvent(GreenEvent, AsyncEvent):
 
 @final
 class CancelledEvent(GreenEvent, AsyncEvent):
-    """..."""
+    """
+    The singleton type for :data:`CANCELLED_EVENT`.
+    """
 
     __slots__ = ()
 
@@ -679,7 +861,21 @@ def create_green_event(
     shield: bool = False,
     force: bool = False,
 ) -> GreenEvent:
-    """..."""
+    """
+    Create a new instance for a blocking green call (with state).
+
+    Args:
+      locking:
+        If set to :data:`True`, the instance will also include the slots of
+        :class:`ThreadOnceLock`, allowing the latter's methods to be used with
+        the returned object. This can be used when one-time synchronization on
+        the event is required, but having a separate :class:`ThreadOnceLock`
+        instance is expensive in terms of memory.
+      shield:
+        See the :attr:`~GreenEvent.shield` property.
+      force:
+        See the :attr:`~GreenEvent.force` property.
+    """
 
     if locking:
         event = __LockingGreenEventImpl(shield, force)
@@ -698,7 +894,21 @@ def create_async_event(
     shield: bool = False,
     force: bool = False,
 ) -> AsyncEvent:
-    """..."""
+    """
+    Create a new instance for a blocking async call (with state).
+
+    Args:
+      locking:
+        If set to :data:`True`, the instance will also include the slots of
+        :class:`ThreadOnceLock`, allowing the latter's methods to be used with
+        the returned object. This can be used when one-time synchronization on
+        the event is required, but having a separate :class:`ThreadOnceLock`
+        instance is expensive in terms of memory.
+      shield:
+        See the :attr:`~AsyncEvent.shield` property.
+      force:
+        See the :attr:`~AsyncEvent.force` property.
+    """
 
     if locking:
         event = __LockingAsyncEventImpl(shield, force)
