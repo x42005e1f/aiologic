@@ -21,6 +21,14 @@ Commit messages are consistent with
 
 ### Fixed
 
+- `aiologic.Lock` (and `aiologic.RLock`) was unable to detect mixed deadlocks
+  (for example, when a lock has already been acquired by an asynchronous task
+  and there is an attempt to acquire it synchronously), resulting in hangs. It
+  now raises a `RuntimeError` for simple mixed deadlocks (attempting to acquire
+  a lock as a thread when it has already been acquired in the same thread by
+  any green/async task), which, although only a subset of all possible cases,
+  covers the most common scenarios. Related:
+  [#38](https://github.com/x42005e1f/aiologic/issues/38).
 - `aiologic.lowlevel.async_seconds_per_sleep()` (and
   `aiologic.lowlevel.async_seconds_per_timeout()`) did not handle non-standard
   `asyncio` event loops, which could lead to overflows on Pyodide (see

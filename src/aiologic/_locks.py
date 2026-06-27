@@ -14,6 +14,7 @@ from .lowlevel import (
     create_green_event,
     current_async_task_ident,
     current_green_task_ident,
+    current_thread_ident,
     green_checkpoint,
     lazydeque,
 )
@@ -36,6 +37,7 @@ class Lock:
     __slots__ = (
         "__weakref__",
         "_owner",
+        "_owner_thread",
         "_releasing",
         "_unlocked",
         "_waiters",
@@ -47,6 +49,7 @@ class Lock:
         self = object.__new__(cls)
 
         self._owner = None
+        self._owner_thread = None
 
         self._releasing = False
         self._unlocked = [None]
@@ -169,6 +172,7 @@ class Lock:
     async def _async_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -182,6 +186,7 @@ class Lock:
 
         if self._acquire_nowait():
             self._owner = task
+            self._owner_thread = thread
 
             if blocking:
                 try:
@@ -198,6 +203,7 @@ class Lock:
         self._waiters.append(
             token := (
                 event := create_async_event(shield=_shield),
+                thread,
                 task,
                 count,
             )
@@ -209,6 +215,7 @@ class Lock:
             self._waiters.remove(token)
 
             self._owner = task
+            self._owner_thread = thread
 
         success = False
 
@@ -231,6 +238,7 @@ class Lock:
     def _green_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -242,8 +250,14 @@ class Lock:
             msg = "the current task is already holding this lock"
             raise RuntimeError(msg)
 
+        if self._owner_thread == thread and not self._releasing:
+            if self._owner[0] != "threading" and task[0] == "threading":
+                msg = "the current thread is already holding this lock"
+                raise RuntimeError(msg)
+
         if self._acquire_nowait():
             self._owner = task
+            self._owner_thread = thread
 
             if blocking:
                 try:
@@ -260,6 +274,7 @@ class Lock:
         self._waiters.append(
             token := (
                 event := create_green_event(shield=_shield),
+                thread,
                 task,
                 count,
             )
@@ -271,6 +286,7 @@ class Lock:
             self._waiters.remove(token)
 
             self._owner = task
+            self._owner_thread = thread
 
         success = False
 
@@ -300,6 +316,7 @@ class Lock:
         """..."""
 
         return await self._async_acquire_on_behalf_of(
+            current_thread_ident(),
             current_async_task_ident(),
             blocking=blocking,
             timeout=timeout,
@@ -315,6 +332,7 @@ class Lock:
         """..."""
 
         return self._green_acquire_on_behalf_of(
+            current_thread_ident(),
             current_green_task_ident(),
             blocking=blocking,
             timeout=timeout,
@@ -328,7 +346,12 @@ class Lock:
 
             while waiters:
                 try:
-                    event, self._owner, _ = waiters.popleft()
+                    (
+                        event,
+                        self._owner_thread,
+                        self._owner,
+                        _,
+                    ) = waiters.popleft()
                 except IndexError:
                     break
                 else:
@@ -336,6 +359,7 @@ class Lock:
                         return
 
             self._owner = None
+            self._owner_thread = None
 
             self._releasing = False
             self._unlocked.append(None)
@@ -517,6 +541,7 @@ class RLock(Lock):
 
         self._count = 0
         self._owner = None
+        self._owner_thread = None
 
         self._releasing = False
         self._unlocked = [None]
@@ -623,6 +648,7 @@ class RLock(Lock):
     async def _async_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -645,6 +671,7 @@ class RLock(Lock):
         if self._acquire_nowait():
             self._count = count
             self._owner = task
+            self._owner_thread = thread
 
             if blocking:
                 try:
@@ -661,6 +688,7 @@ class RLock(Lock):
         self._waiters.append(
             token := (
                 event := create_async_event(shield=_shield),
+                thread,
                 task,
                 count,
             )
@@ -673,6 +701,7 @@ class RLock(Lock):
 
             self._count = count
             self._owner = task
+            self._owner_thread = thread
 
         success = False
 
@@ -695,6 +724,7 @@ class RLock(Lock):
     def _green_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -714,9 +744,15 @@ class RLock(Lock):
 
             return True
 
+        if self._owner_thread == thread and not self._releasing:
+            if self._owner[0] != "threading" and task[0] == "threading":
+                msg = "the current thread is already holding this lock"
+                raise RuntimeError(msg)
+
         if self._acquire_nowait():
             self._count = count
             self._owner = task
+            self._owner_thread = thread
 
             if blocking:
                 try:
@@ -733,6 +769,7 @@ class RLock(Lock):
         self._waiters.append(
             token := (
                 event := create_green_event(shield=_shield),
+                thread,
                 task,
                 count,
             )
@@ -745,6 +782,7 @@ class RLock(Lock):
 
             self._count = count
             self._owner = task
+            self._owner_thread = thread
 
         success = False
 
@@ -775,6 +813,7 @@ class RLock(Lock):
         """..."""
 
         return await self._async_acquire_on_behalf_of(
+            current_thread_ident(),
             current_async_task_ident(),
             count,
             blocking=blocking,
@@ -792,6 +831,7 @@ class RLock(Lock):
         """..."""
 
         return self._green_acquire_on_behalf_of(
+            current_thread_ident(),
             current_green_task_ident(),
             count,
             blocking=blocking,
@@ -808,7 +848,12 @@ class RLock(Lock):
 
             while waiters:
                 try:
-                    event, self._owner, count = waiters.popleft()
+                    (
+                        event,
+                        self._owner_thread,
+                        self._owner,
+                        count,
+                    ) = waiters.popleft()
                 except IndexError:
                     break
                 else:
@@ -820,6 +865,7 @@ class RLock(Lock):
                     self._count = 0
 
             self._owner = None
+            self._owner_thread = None
 
             self._releasing = False
             self._unlocked.append(None)

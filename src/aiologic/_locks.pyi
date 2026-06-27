@@ -19,6 +19,7 @@ class Lock:
     __slots__ = (
         "__weakref__",
         "_owner",
+        "_owner_thread",
         "_releasing",
         "_unlocked",
         "_waiters",
@@ -50,6 +51,7 @@ class Lock:
     async def _async_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -60,6 +62,7 @@ class Lock:
     def _green_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -99,7 +102,7 @@ class Lock:
         self,
         /,
         event: Event,
-        state: tuple[tuple[str, int], int] | None = None,
+        state: tuple[int, tuple[str, int], int] | None = None,
     ) -> None: ...
     def _after_park(self, /) -> None: ...
 
@@ -131,6 +134,7 @@ class RLock(Lock):
     async def _async_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,
@@ -141,6 +145,7 @@ class RLock(Lock):
     def _green_acquire_on_behalf_of(
         self,
         /,
+        thread: int,
         task: tuple[str, int],
         count: int = 1,
         *,

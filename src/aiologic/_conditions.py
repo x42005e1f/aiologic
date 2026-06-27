@@ -1832,14 +1832,18 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
                 MISSING,  # predicate result
                 MISSING,  # predicate exception
                 False,  # reparked
-                state := (self._lock.owner, getattr(self._lock, "count", 1)),
+                state := (
+                    self._lock._owner_thread,
+                    self._lock._owner,
+                    getattr(self._lock, "count", 1),
+                ),
             ]
         )
 
         success = False
 
         try:
-            if (count := state[1]) > 1:
+            if (count := state[2]) > 1:
                 self._lock.async_release(count)
             else:
                 self._lock.async_release()
@@ -1913,14 +1917,18 @@ class _RMixedCondition(_BaseCondition[_T_co, _S_co]):
                 MISSING,  # predicate result
                 MISSING,  # predicate exception
                 False,  # reparked
-                state := (self._lock.owner, getattr(self._lock, "count", 1)),
+                state := (
+                    self._lock._owner_thread,
+                    self._lock._owner,
+                    getattr(self._lock, "count", 1),
+                ),
             ]
         )
 
         success = False
 
         try:
-            if (count := state[1]) > 1:
+            if (count := state[2]) > 1:
                 self._lock.green_release(count)
             else:
                 self._lock.green_release()
