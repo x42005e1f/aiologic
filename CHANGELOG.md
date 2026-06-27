@@ -16,6 +16,24 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
+[Unreleased]
+------------
+
+### Fixed
+
+- `aiologic.lowlevel.async_seconds_per_sleep()` (and
+  `aiologic.lowlevel.async_seconds_per_timeout()`) did not handle non-standard
+  `asyncio` event loops, which could lead to overflows on Pyodide (see
+  [pyodide/pyodide#6304](https://github.com/pyodide/pyodide/issues/6304);
+  however, note that this does not apply to
+  `aiologic.lowlevel.async_sleep_forever()`) and non-pure Python event loops.
+  It now handles standard event loops,
+  [`uvloop`](https://github.com/MagicStack/uvloop),
+  [`winloop`](https://github.com/Vizonex/Winloop),
+  [`pyodide.webloop.WebLoop`
+  ](https://pyodide.org/en/stable/usage/api/python-api/webloop.html), and
+  others.
+
 [0.17.0] - 2026-06-14
 ---------------------
 
@@ -1169,6 +1187,7 @@ Commit messages are consistent with
   + `aiologic.SimpleQueue` as a queue that works in a semaphore style
     (async-aware alternative to `queue.SimpleQueue`).
 
+[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.17.0...HEAD
 [0.17.0]: https://github.com/x42005e1f/aiologic/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/x42005e1f/aiologic/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/x42005e1f/aiologic/compare/0.14.0...0.15.0

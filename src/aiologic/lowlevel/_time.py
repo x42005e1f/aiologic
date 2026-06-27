@@ -136,19 +136,15 @@ def _eventlet_seconds_per_sleep() -> float:
 
     # see the comment about select() in _threading_seconds_per_sleep()
     _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)  # ~31 days
-
     # due to milliseconds <= INT_MAX (~25 days)
     _MAXIMUM_SECONDS_PER_POLL_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
-
-    # handled on the event loop side, so we only avoid int->float errors
-    _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP = sys.float_info.max  # ~6e+300 years
 
     @replaces(globals())
     def _eventlet_seconds_per_sleep():
         hub_name = get_hub().__module__.rpartition(".")[-1]
 
         if hub_name == "asyncio":
-            return _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP
+            return _asyncio_seconds_per_sleep()
         elif hub_name == "epolls" or hub_name == "poll":
             return _MAXIMUM_SECONDS_PER_POLL_SLEEP
         else:
@@ -169,12 +165,25 @@ def _gevent_seconds_per_sleep() -> float:
 
 
 def _asyncio_seconds_per_sleep() -> float:
+    from asyncio import get_running_loop
+
     # handled on the event loop side, so we only avoid int->float errors
-    _MAXIMUM_SECONDS_PER_SLEEP = sys.float_info.max  # ~6e+300 years
+    _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP = sys.float_info.max  # ~6e+300 years
+    # due to seconds <= MAX_SLEEP (~100 years)
+    _MAXIMUM_SECONDS_PER_UVLOOP_SLEEP = _floor_to_float(36500 * _DAY_TO_SEC)
+    # due to milliseconds <= INT_MAX (~25 days)
+    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
 
     @replaces(globals())
     def _asyncio_seconds_per_sleep():
-        return _MAXIMUM_SECONDS_PER_SLEEP
+        loop_name = get_running_loop().__module__.partition(".")[0]
+
+        if loop_name == "asyncio":
+            return _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP
+        elif loop_name == "uvloop" or loop_name == "winloop":
+            return _MAXIMUM_SECONDS_PER_UVLOOP_SLEEP
+        else:  # pyodide (pyodide/pyodide#6306), etc.
+            return _MAXIMUM_SECONDS_PER_SLEEP
 
     return _asyncio_seconds_per_sleep()
 
@@ -184,7 +193,6 @@ def _curio_seconds_per_sleep() -> float:
 
     # see the comment about select() in _threading_seconds_per_sleep()
     _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)  # ~31 days
-
     # due to milliseconds <= INT_MAX (~25 days)
     _MAXIMUM_SECONDS_PER_POLL_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
 
