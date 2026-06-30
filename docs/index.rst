@@ -53,6 +53,5 @@ Features
   :caption: Links
   :hidden:
 
-  DeepWiki <https://deepwiki.com/x42005e1f/aiologic>
   GitHub <https://github.com/x42005e1f/aiologic>
   PyPI <https://pypi.org/project/aiologic/>

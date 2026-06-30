@@ -1116,12 +1116,6 @@ you want to get the information right now, there are several ways:
    aiologic/discussions>`__ or `write to the author
    <mailto:0x42005e1f@gmail.com>`__. Response times vary, but you can expect a
    quality answer. Do not be afraid to give feedback.
-5. Search on `DeepWiki <https://deepwiki.com/x42005e1f/aiologic>`__ or ask
-   Devin there as well. The information there is generated from both the source
-   code and the documentation you are reading right now. Although Devin may lie
-   sometimes (because it is an AI; and lies a lot) or not know about some
-   things (especially complex concurrent things)... it can tell you what to do
-   in your particular case. But be extremely skeptical!
 
 Perhaps, even with all the answers, you still will not know the spirit of
 aiologic. Well, that is okay, because few people actually do. But the more you
