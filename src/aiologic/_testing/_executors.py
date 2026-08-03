@@ -129,7 +129,7 @@ class _WorkItem(Generic[_T]):
             except InvalidStateError:
                 pass
             else:
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
                 return
 
             raise
@@ -158,7 +158,7 @@ class _WorkItem(Generic[_T]):
             except InvalidStateError:
                 pass
             else:
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
                 return
 
             raise
@@ -544,9 +544,9 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -599,7 +599,7 @@ def _get_threading_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _ThreadingExecutor
 
@@ -633,9 +633,9 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -680,7 +680,7 @@ def _get_eventlet_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _EventletExecutor
 
@@ -714,9 +714,9 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
             try:
                 self._apply_backend_options(**self._backend_options)
                 self._listen()
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -761,7 +761,7 @@ def _get_gevent_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _GeventExecutor
 
@@ -793,9 +793,9 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
 
             try:
                 asyncio.run(self._listen(), **self._backend_options)
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -851,7 +851,7 @@ def _get_asyncio_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _AsyncioExecutor
 
@@ -883,9 +883,9 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
 
             try:
                 curio.run(self._listen, **self._backend_options)
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -931,7 +931,7 @@ def _get_curio_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _CurioExecutor
 
@@ -963,9 +963,9 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
 
             try:
                 trio.run(self._listen, **self._backend_options)
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -1003,7 +1003,7 @@ def _get_trio_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _TrioExecutor
 
@@ -1039,9 +1039,9 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                     backend=self._backend,
                     backend_options=self._backend_options,
                 )
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # ruff: ignore[blind-except]
                 self._abort(exc)
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
             finally:
                 shutdown_event.set()
 
@@ -1079,7 +1079,7 @@ def _get_anyio_executor_class() -> type[TaskExecutor]:
                 except AttributeError:
                     pass
 
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
     return _AnyioExecutor
 

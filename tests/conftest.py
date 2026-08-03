@@ -43,7 +43,7 @@ def spawn(request):
 
     if backend == "eventlet":  # see python-trio/trio#3015
         try:
-            import trio  # noqa: F401
+            import trio  # ruff: ignore[unused-import]
         except ImportError:
             pass
 
@@ -146,7 +146,7 @@ def _test_thread_safety_cm(event, *functions):
                         future.result()  # reraise
                 except WaitTimeout:
                     outer_future.set_result(True)
-                except BaseException as exc:  # noqa: BLE001
+                except BaseException as exc:  # ruff: ignore[blind-except]
                     outer_future.set_exception(exc)
                 else:
                     outer_future.set_result(False)

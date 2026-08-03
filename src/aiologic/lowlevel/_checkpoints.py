@@ -434,7 +434,7 @@ class __AwaitableWithCheckpoints(ObjectProxy):
         try:
             return await self.__wrapped__
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
         finally:
             _async_checkpoints_reset(token)
@@ -450,7 +450,7 @@ class __AwaitableWithNoCheckpoints(ObjectProxy):
         try:
             return await self.__wrapped__
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
         finally:
             _async_checkpoints_reset(token)

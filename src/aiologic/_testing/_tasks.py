@@ -174,7 +174,7 @@ class Task(Result[_T], ABC):
         except _CancelledError as exc:
             raise TaskCancelled(self) from exc.__cause__
         finally:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
 
     def wait(self, timeout: float | None = None) -> _T:
         if not self._future.done():
@@ -202,7 +202,7 @@ class Task(Result[_T], ABC):
         except _CancelledError as exc:
             raise TaskCancelled(self) from exc.__cause__
         finally:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
 
     def cancel(self, /) -> Result[bool]:
         if self._future.cancel():
@@ -298,7 +298,7 @@ def _get_threading_task_class() -> type[Task[_T]]:
                 msg = f"task raised {exc_cls_repr}"
                 raise RuntimeError(msg) from exc
             finally:
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -352,7 +352,7 @@ def _get_eventlet_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._greenlet
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -411,7 +411,7 @@ def _get_gevent_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._greenlet
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -472,7 +472,7 @@ def _get_asyncio_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._task
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -533,7 +533,7 @@ def _get_curio_task_class() -> type[Task[_T]]:
                 raise RuntimeError(msg) from exc
             finally:
                 del self._task
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -595,7 +595,7 @@ def _get_trio_task_class() -> type[Task[_T]]:
             finally:
                 self._cancel_scope.__exit__(*sys.exc_info())
                 del self._cancel_scope
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 
@@ -657,7 +657,7 @@ def _get_anyio_task_class() -> type[Task[_T]]:
             finally:
                 self._cancel_scope.__exit__(*sys.exc_info())
                 del self._cancel_scope
-                self = None  # noqa: PLW0642
+                self = None  # ruff: ignore[self-or-cls-assignment]
 
             return result
 

@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     class _NamedCallable(Protocol):
         def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
         @property
-        def __name__(self, /) -> str: ...  # noqa: PLW3201
+        def __name__(self, /) -> str: ...  # ruff: ignore[bad-dunder-method-name]
 
 
 # before PEP 649

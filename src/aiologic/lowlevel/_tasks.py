@@ -365,7 +365,7 @@ class __ShieldedAwaitable(ObjectProxy):
         try:
             return await coro
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
 
 
