@@ -26,7 +26,7 @@ __author__: str = "Ilya Egorov <0x42005e1f@gmail.com>"
 __version__: str  # dynamic
 __version_tuple__: tuple[int | str, ...]  # dynamic
 
-from . import (  # noqa: F401
+from . import (  # ruff: ignore[unused-import]
     lowlevel,
     meta,
 )

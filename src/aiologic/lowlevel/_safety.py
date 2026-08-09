@@ -164,7 +164,7 @@ class __AwaitableWithSignalSafety(ObjectProxy):
         try:
             return await self.__wrapped__
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
         finally:
             _signal_safety_reset(token)
@@ -180,7 +180,7 @@ class __AwaitableWithNoSignalSafety(ObjectProxy):
         try:
             return await self.__wrapped__
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
         finally:
             _signal_safety_reset(token)

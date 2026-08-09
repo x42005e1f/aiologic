@@ -53,7 +53,7 @@ def test_current_thread_on_threading():
 
 def test_current_thread_on_eventlet():
     try:  # see python-trio/trio#3015
-        import trio  # noqa: F401
+        import trio  # ruff: ignore[unused-import]
     except ImportError:
         pass
 

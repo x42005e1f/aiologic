@@ -499,7 +499,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
 
                 try:
                     switch(result)
-                except BaseException:  # noqa: BLE001
+                except BaseException:  # ruff: ignore[blind-except]
                     self.__hub.handle_error(switch, *sys.exc_info())
 
         def wake(self, /) -> None:

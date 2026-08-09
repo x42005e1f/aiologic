@@ -77,7 +77,7 @@ class Result(Generic[_T]):
         try:
             return self._future.result()
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
 
     def wait(self, timeout: float | None = None) -> _T:
@@ -95,7 +95,7 @@ class Result(Generic[_T]):
         try:
             return self._future.result()
         except BaseException:
-            self = None  # noqa: PLW0642
+            self = None  # ruff: ignore[self-or-cls-assignment]
             raise
 
     @property

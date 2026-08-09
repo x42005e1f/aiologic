@@ -127,8 +127,8 @@ def _get_generictype_args(annotation, /, origins, prefixes, length):
 
         for i, arg in enumerate(args):
             while arg.count("[") != arg.count("]"):
-                arg = ",".join(args[i : i + 2])  # noqa: PLW2901
-                args[i : i + 2] = [arg]  # noqa: B909
+                arg = ",".join(args[i : i + 2])  # ruff: ignore[redefined-loop-name]
+                args[i : i + 2] = [arg]  # ruff: ignore[loop-iterator-mutation]
 
         return (
             *(arg.strip() or "Any" for arg in args),

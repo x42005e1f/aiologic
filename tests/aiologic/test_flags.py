@@ -41,7 +41,7 @@ class TestFlag:
         flag = self.factory()
 
         with pytest.raises(AttributeError):
-            flag.nonexistent_attribute  # noqa: B018
+            flag.nonexistent_attribute  # ruff: ignore[useless-expression]
         with pytest.raises(AttributeError):
             flag.nonexistent_attribute = 42
         with pytest.raises(AttributeError):
