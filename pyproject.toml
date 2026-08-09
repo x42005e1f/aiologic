@@ -298,13 +298,6 @@ unfixable = [
     "PLW0128",  # redeclared-assigned-name
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/**.py" = [
-    # flake8-bandit
-    "S301",  # suspicious-pickle-usage
-    "S403",  # suspicious-pickle-import
-]
-
 [tool.ruff.lint.isort]
 case-sensitive = true
 combine-as-imports = true
