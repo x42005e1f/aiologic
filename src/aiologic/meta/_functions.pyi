@@ -30,11 +30,12 @@ else:  # typing-extensions>=4.2.0
     from typing_extensions import overload
 
 _T = TypeVar("_T")
-_NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable)
+_T_co = TypeVar("_T_co", covariant=True)
+_NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable[..., Any])
 _P = ParamSpec("_P")
 
-class _NamedCallable(Protocol):
-    def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
+class _NamedCallable(Protocol[_P, _T_co]):
+    def __call__(self, /, *args: _P.args, **kwargs: _P.kwargs) -> _T_co: ...
     @property
     def __name__(self, /) -> str: ...
 
@@ -64,6 +65,18 @@ def replaces_when_imported(
     replacer: _NamedCallableT,
     /,
 ) -> _NamedCallableT: ...
+@overload
+def replaces_with_outcome(
+    namespace: MutableMapping[str, Any],
+    replacer: MissingType = MISSING,
+    /,
+) -> Callable[[_NamedCallable[[], Callable[_P, _T]]], Callable[_P, _T]]: ...
+@overload
+def replaces_with_outcome(
+    namespace: MutableMapping[str, Any],
+    replacer: _NamedCallable[[], Callable[_P, _T]],
+    /,
+) -> Callable[_P, _T]: ...
 @overload
 def copies(
     original: Callable[_P, _T],

@@ -18,6 +18,7 @@ from ._functions import (
     copies as copies,
     replaces as replaces,
     replaces_when_imported as replaces_when_imported,
+    replaces_with_outcome as replaces_with_outcome,
 )
 from ._helpers import (
     GeneratorCoroutineWrapper as GeneratorCoroutineWrapper,

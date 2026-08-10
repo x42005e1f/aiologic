@@ -46,13 +46,25 @@ else:  # typing-extensions>=4.2.0
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")
-    _NamedCallableT = TypeVar("_NamedCallableT", bound="_NamedCallable")
+    _T_co = TypeVar("_T_co", covariant=True)
+    _NamedCallableT = TypeVar(
+        "_NamedCallableT",
+        bound="_NamedCallable[..., Any]",
+    )
     _P = ParamSpec("_P")
 
-    class _NamedCallable(Protocol):
-        def __call__(self, /, *args: Any, **kwargs: Any) -> Any: ...
+    class _NamedCallable(Protocol[_P, _T_co]):
+        def __call__(
+            self,
+            /,
+            *args: _P.args,
+            **kwargs: _P.kwargs,
+        ) -> _T_co: ...
         @property
-        def __name__(self, /) -> str: ...  # ruff: ignore[bad-dunder-method-name]
+        def __name__(  # ruff: ignore[bad-dunder-method-name]
+            self,
+            /,
+        ) -> str: ...
 
 
 # before PEP 649
@@ -304,6 +316,78 @@ def replaces_when_imported(namespace, module_name, replacer=MISSING, /):
     register_post_import_hook(hook, module_name)
 
     return namespace[name]
+
+
+@overload
+def replaces_with_outcome(
+    namespace: MutableMapping[str, Any],
+    replacer_factory: MissingType = MISSING,
+    /,
+) -> Callable[[_NamedCallable[[], Callable[_P, _T]]], Callable[_P, _T]]: ...
+@overload
+def replaces_with_outcome(
+    namespace: MutableMapping[str, Any],
+    replacer_factory: _NamedCallable[[], Callable[_P, _T]],
+    /,
+) -> Callable[_P, _T]: ...
+def replaces_with_outcome(namespace, replacer_factory=MISSING, /):
+    """..."""
+
+    # When the last parameter is not passed, we return a new decorator object
+    # bound to the passed arguments (and to the function itself, so that it
+    # always refers to the called function even after the module is reloaded).
+    # The object is a separate function rather than an instance of
+    # `functools.partial` to prevent the call from succeeding without a single
+    # argument being passed.
+    if replacer_factory is MISSING:
+        impl = replaces_with_outcome  # to avoid `__globals__`
+
+        def decorator(
+            replacer_factory: _NamedCallable[[], Callable[_P, _T]],
+            /,
+        ) -> Callable[_P, _T]:
+            """
+            A partial application of :func:`replaces_with_outcome` to its first
+            argument.
+            """
+
+            return impl(namespace, replacer_factory)
+
+        return decorator
+
+    # To ensure that the name remains the same even if the `__name__` attribute
+    # of either function changes, we hold the value in the closure.
+    name = replacer_factory.__name__
+
+    # When the module is reloaded, the replacement may become irrelevant. At
+    # best, it may only affect performance (reload without changes), but at
+    # worst, it may replace a new implementation with an outdated version
+    # (reload with changes, for example via an IDE). But because
+    # `module.__spec__` is replaced with a new object on every reload, we can
+    # take advantage of this and bind the wrapper to the current object.
+    spec = namespace.get("__spec__")
+
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        replacer = replacer_factory()
+
+        if namespace.get("__spec__") is spec:
+            namespace[name] = replacer
+
+        return replacer(*args, **kwargs)
+
+    # Since the decorator is a signature-changing decorator and essentially
+    # unpacks the return type, we cannot simply use `update_wrapper()`. We also
+    # do not have a function for this kind of annotation transformation, so we
+    # have to limit the update to only the base attributes.
+    for attr_name in ["__module__", "__name__", "__qualname__", "__doc__"]:
+        try:
+            attr_value = getattr(replacer_factory, attr_name)
+        except AttributeError:
+            pass
+        else:
+            setattr(wrapper, attr_name, attr_value)
+
+    return wrapper
 
 
 # Until python/typing#548 is resolved, we can only go one of two ways (not

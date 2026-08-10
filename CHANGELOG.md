@@ -16,6 +16,17 @@ and this project adheres to
 Commit messages are consistent with
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
+[Unreleased]
+------------
+
+### Added
+
+- `aiologic.meta.replaces_with_outcome()` to replace a function with its return
+  value. Essentially, this is a mechanism for lazy function initialization,
+  which is a safer alternative to `global` (since it prevents mismatches
+  between the function name and the global name), and covers cases that the
+  other two related functions could not cover.
+
 [0.17.1] - 2026-06-27
 ---------------------
 
@@ -1195,6 +1206,7 @@ Commit messages are consistent with
   + `aiologic.SimpleQueue` as a queue that works in a semaphore style
     (async-aware alternative to `queue.SimpleQueue`).
 
+[unreleased]: https://github.com/x42005e1f/aiologic/compare/0.17.1...HEAD
 [0.17.1]: https://github.com/x42005e1f/aiologic/compare/0.17.0...0.17.1
 [0.17.0]: https://github.com/x42005e1f/aiologic/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/x42005e1f/aiologic/compare/0.15.0...0.16.0

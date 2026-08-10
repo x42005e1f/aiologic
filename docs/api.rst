@@ -440,6 +440,7 @@ Functions
 
 .. autofunction:: aiologic.meta.replaces
 .. autofunction:: aiologic.meta.replaces_when_imported
+.. autofunction:: aiologic.meta.replaces_with_outcome
 .. autofunction:: aiologic.meta.copies
 
 Modules
