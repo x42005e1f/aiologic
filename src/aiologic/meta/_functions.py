@@ -367,11 +367,21 @@ def replaces_with_outcome(namespace, replacer_factory=MISSING, /):
     # take advantage of this and bind the wrapper to the current object.
     spec = namespace.get("__spec__")
 
-    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-        replacer = replacer_factory()
+    # The `replacer_factory()` call should occur only once, at least in the
+    # same thread; otherwise, it will introduce overhead when the function
+    # object is used directly. So we avoid calling it when `replacer` is no
+    # longer the initial `replacer_sentinel`, which may also slightly improve
+    # performance in a multithreaded environment.
+    replacer = replacer_sentinel = object()
 
-        if namespace.get("__spec__") is spec:
-            namespace[name] = replacer
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        nonlocal replacer
+
+        if replacer is replacer_sentinel:
+            replacer = replacer_factory()
+
+            if namespace.get("__spec__") is spec:
+                namespace[name] = replacer
 
         return replacer(*args, **kwargs)
 
