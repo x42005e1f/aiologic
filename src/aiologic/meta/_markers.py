@@ -40,7 +40,10 @@ else:  # typing-extensions>=4.1.0
 # python/cpython#82711
 _ATTRIBUTE_SUGGESTIONS_OFFERED = sys.version_info >= (3, 10)
 
-_sentinel = object()
+if "_sentinel" not in globals():  # to not redefine on reloads
+    _sentinel = object()
+else:  # to keep the old markers (on reloads)
+    _prevdata = globals().copy()
 
 # We have to use the `enum` module so that type checkers can understand that
 # the instance is a singleton object. Otherwise, they will not be able to
@@ -259,3 +262,10 @@ class MissingType(SingletonEnum):
 
 DEFAULT: Final[Literal[DefaultType.DEFAULT]] = DefaultType.DEFAULT
 MISSING: Final[Literal[MissingType.MISSING]] = MissingType.MISSING
+
+if "_prevdata" in globals():  # to restore the old markers (on reloads)
+    globals().update(
+        (key, value)
+        for key, value in globals().pop("_prevdata").items()
+        if value is not globals().get(key, object())
+    )

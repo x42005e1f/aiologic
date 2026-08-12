@@ -27,6 +27,17 @@ Commit messages are consistent with
   between the function name and the global name), and covers cases that the
   other two related functions could not cover.
 
+### Fixed
+
+- All sentinels and markers are now immune to module reloads and refer to the
+  same objects for the entire process's lifetime (provided the namespace
+  remains the same), making them more reliable. For example, if you import the
+  `aiologic.meta.MISSING` marker and then reload the entire `aiologic` package,
+  passing the old marker object to a freshly reloaded function will still
+  produce the expected result (passing the `is` check). The same is true for
+  `aiologic.meta.mark*factory()`: `aiologic.meta.is*factory()` will return
+  `True` even for objects that were marked before the reload.
+
 [0.17.1] - 2026-06-27
 ---------------------
 

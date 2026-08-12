@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+if "_sentinel" not in globals():  # to not redefine on reloads
+    _sentinel = object()
+
 # third-party patchers can break the original objects from the threading
 # module, so we need to use the _thread module in the first place
 
@@ -560,16 +563,16 @@ def once(wrapped=MISSING, /, *, reentrant=False):
         return partial(once, reentrant=reentrant)
 
     lock = create_thread_oncelock()
-    result = MISSING
+    result = _sentinel
 
     @wraps(wrapped)
     def wrapper():
         nonlocal lock
         nonlocal result
 
-        if result is MISSING:
+        if result is _sentinel:
             with lock:
-                if result is MISSING:
+                if result is _sentinel:
                     if not reentrant and lock._count > 1:
                         msg = "this function is already executing"
                         raise RuntimeError(msg)

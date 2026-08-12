@@ -70,6 +70,9 @@ if TYPE_CHECKING:
 # before PEP 649
 _ANNOTATIONS_EAGER = sys.version_info < (3, 14)
 
+if "_sentinel" not in globals():  # to not redefine on reloads
+    _sentinel = object()
+
 
 @overload
 def replaces(
@@ -370,14 +373,14 @@ def replaces_with_outcome(namespace, replacer_factory=MISSING, /):
     # The `replacer_factory()` call should occur only once, at least in the
     # same thread; otherwise, it will introduce overhead when the function
     # object is used directly. So we avoid calling it when `replacer` is no
-    # longer the initial `replacer_sentinel`, which may also slightly improve
+    # longer the initial `_sentinel`, which may also slightly improve
     # performance in a multithreaded environment.
-    replacer = replacer_sentinel = object()
+    replacer = _sentinel
 
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
         nonlocal replacer
 
-        if replacer is replacer_sentinel:
+        if replacer is _sentinel:
             replacer = replacer_factory()
 
             if namespace.get("__spec__") is spec:

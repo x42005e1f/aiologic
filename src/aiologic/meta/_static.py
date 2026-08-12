@@ -67,7 +67,8 @@ _getflags_static = type.__dict__["__flags__"].__get__
 _getmro_static = type.__dict__["__mro__"].__get__
 _vars_static = type.__dict__["__dict__"].__get__
 
-_sentinel = object()
+if "_sentinel" not in globals():  # to not redefine on reloads
+    _sentinel = object()
 
 
 def _lookup_static_noerror(owner, name, /):

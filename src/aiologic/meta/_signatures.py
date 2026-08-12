@@ -34,7 +34,8 @@ if sys.version_info >= (3, 13):  # python/cpython#16600
 else:
     _PARTIALMETHOD_ATTRIBUTE_NAME = "_partialmethod"
 
-_sentinel = object()
+if "_sentinel" not in globals():  # to not redefine on reloads
+    _sentinel = object()
 
 
 def _iscallwrapper(obj, /):

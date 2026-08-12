@@ -171,15 +171,19 @@ def isasyncgenlike(obj: object, /) -> TypeIs[AsyncGenerator[Any, Any]]:
     return isinstance(obj, _asyncgen_types)
 
 
+if "_prefix" not in globals():  # to not redefine on reloads
+    # to avoid conflicts with other implementations
+    _prefix: str = f"_{__name__.replace(*'._')}"
+else:  # to keep the old markers (on reloads)
+    _prevdata = globals().copy()
+
+
 @dataclass
 class _MarkerInfo:
     name: str
     value: object | MissingType = MISSING
     default: object = field(default_factory=object)
 
-
-# to avoid conflicts with other implementations
-_prefix: str = f"_{__name__.replace(*'._')}"
 
 _generatorfactory_marker: _MarkerInfo = _MarkerInfo(
     f"{_prefix}_generatorfactory_marker",
@@ -190,6 +194,13 @@ _coroutinefactory_marker: _MarkerInfo = _MarkerInfo(
 _asyncgenfactory_marker: _MarkerInfo = _MarkerInfo(
     f"{_prefix}_asyncgenfactory_marker",
 )
+
+if "_prevdata" in globals():  # to restore the old markers (on reloads)
+    globals().update(
+        (key, value)
+        for key, value in globals().pop("_prevdata").items()
+        if value is not globals().get(key, object())
+    )
 
 
 def _get_generatorfactory_marker() -> _MarkerInfo:
