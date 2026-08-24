@@ -29,6 +29,7 @@ __version_tuple__: tuple[int | str, ...]  # dynamic
 from . import (  # ruff: ignore[unused-import]
     lowlevel,
     meta,
+    thread,
 )
 from ._barriers import (
     Barrier as Barrier,

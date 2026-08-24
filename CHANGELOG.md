@@ -21,6 +21,8 @@ Commit messages are consistent with
 
 ### Added
 
+- `aiologic.thread` subpackage for encapsulating thread-level features (since
+  `aiologic.lowlevel` no longer seems like the right place for them).
 - `aiologic.meta.replaces_with_outcome()` to replace a function with its return
   value. Essentially, this is a mechanism for lazy function initialization,
   which is a safer alternative to `global` (since it prevents mismatches
