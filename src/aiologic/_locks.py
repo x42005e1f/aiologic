@@ -14,11 +14,11 @@ from .lowlevel import (
     create_green_event,
     current_async_task_ident,
     current_green_task_ident,
-    current_thread_ident,
     green_checkpoint,
     lazydeque,
 )
 from .meta import copies
+from .thread import current_thread_ident
 
 if TYPE_CHECKING:
     import sys

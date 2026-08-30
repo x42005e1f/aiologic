@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from threading import main_thread
 from typing import TYPE_CHECKING
 
@@ -151,6 +153,15 @@ def _current_thread_or_main_greenlet() -> Thread | _GreenletLike:
 
 
 def current_thread() -> Thread:
+    warnings.warn(
+        (
+            "Use aiologic.thread.current_thread"
+            "/aiologic.thread.current_thread_state instead"
+        ),
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     thread = _current_python_thread()
 
     if thread is None:

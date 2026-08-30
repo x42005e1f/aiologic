@@ -23,11 +23,61 @@ Commit messages are consistent with
 
 - `aiologic.thread` subpackage for encapsulating thread-level features (since
   `aiologic.lowlevel` no longer seems like the right place for them).
+- `aiologic.thread.BaseState`, `aiologic.thread.ThreadState`, and
+  `aiologic.thread.StateReferenceKey`. The first defines an abstract state that
+  is weakrefable (but not hashable, to prevent misuse in place of handles) and
+  capable of storing references to other objects (thereby extending their
+  lifetimes to at least that of the state itself). Defining and using slots in
+  user subclasses provides a very efficient way to manipulate local state,
+  since the state object can be obtained once, eliminating associated overhead
+  (in particular, set-reset for the state is faster than set-reset for a
+  `threading.local` object on CPython); however, it is worth noting that there
+  should be no strong references to the state from outside the associated
+  execution unit, to avoid excessively long lifetimes. The second is its
+  specialization for threads (it typically has the same lifetime as the
+  associated thread — that is, it dies along with the thread, unlike objects
+  from the `threading` module), and the third is the type of reference keys,
+  respectively.
+- `aiologic.thread.BaseHandle`, and `aiologic.thread.ThreadHandle`. The first
+  defines an abstract handle that is hashable (but not weakrefable, to prevent
+  misuse in place of states) and stores the minimum necessary information about
+  an execution unit: a numeric identifier and a state (if the execution unit is
+  still alive). It can be used both as a unique object/token and as a source of
+  associated debugging/identification information. The second is its
+  specialization for threads.
+- `aiologic.thread.BaseVar`, `aiologic.thread.BaseVarToken`,
+  `aiologic.thread.ThreadVar`, and `aiologic.thread.ThreadVarToken`. The first
+  two define an abstract variable and its token, respectively, similar to the
+  related objects from the `contextvars` module, but over arbitrary handles
+  (also, they treat references similarly to objects from the `weakref` and
+  `_threading_local` modules, which allows them to be freely created in
+  closures), and are thus more like "local variables". The last two are their
+  specializations for threads.
+- `aiologic.thread.current_thread_ident()`,
+  `aiologic.thread.current_thread_state()`, and
+  `aiologic.thread.current_thread()` to obtain the corresponding objects: the
+  identifier, the state, and the handle of the current thread (the same objects
+  for the same thread).
 - `aiologic.meta.replaces_with_outcome()` to replace a function with its return
   value. Essentially, this is a mechanism for lazy function initialization,
   which is a safer alternative to `global` (since it prevents mismatches
   between the function name and the global name), and covers cases that the
   other two related functions could not cover.
+
+### Changed
+
+- The experimental free-threading from CPython 3.13 is no longer supported
+  because it lacks the necessary fixes (such as for
+  [python/cpython#146270](https://github.com/python/cpython/issues/146270)).
+  For free-threading, please use CPython 3.14.5 or later.
+
+### Deprecated
+
+- `aiologic.lowlevel.current_thread()` in favor of
+  `aiologic.thread.current_thread()` and
+  `aiologic.thread.current_thread_state()`.
+- `aiologic.lowlevel.current_thread_ident()` in favor of
+  `aiologic.thread.current_thread_ident()`.
 
 ### Fixed
 

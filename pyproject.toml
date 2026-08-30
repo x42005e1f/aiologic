@@ -192,6 +192,7 @@ ignore = [
     "S101",  # assert
     # flake8-bugbear
     "B004",  # unreliable-callable-check
+    "B024",  # abstract-base-class-without-abstract-method
     "B901",  # return-in-generator
     "B905",  # zip-without-explicit-strict
     "B911",  # batched-without-explicit-strict

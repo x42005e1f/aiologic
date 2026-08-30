@@ -75,10 +75,6 @@ from ._safety import (
 from ._tasks import (
     shield as shield,
 )
-from ._threads import (
-    current_thread as current_thread,
-    current_thread_ident as current_thread_ident,
-)
 from ._time import (
     async_clock as async_clock,
     async_seconds_per_sleep as async_seconds_per_sleep,
@@ -100,3 +96,15 @@ from ._waiters import (
     create_async_waiter as create_async_waiter,
     create_green_waiter as create_green_waiter,
 )
+
+# prepare for external use
+from aiologic import meta  # isort: skip
+
+meta.export_dynamic(globals(), "current_thread", "._threads.current_thread")
+meta.export_deprecated(
+    globals(),
+    "current_thread_ident",
+    "aiologic.thread.current_thread_ident",
+)
+
+del meta

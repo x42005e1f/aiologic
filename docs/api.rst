@@ -307,20 +307,6 @@ Libraries
 Execution units
 +++++++++++++++
 
-.. aiologic.lowlevel.current_thread-start-marker
-.. py:function:: aiologic.lowlevel.current_thread() -> threading.Thread
-  :no-index:
-
-  ...
-.. aiologic.lowlevel.current_thread-end-marker
-
-.. aiologic.lowlevel.current_thread_ident-start-marker
-.. py:function:: aiologic.lowlevel.current_thread_ident() -> int
-  :no-index:
-
-  ...
-.. aiologic.lowlevel.current_thread_ident-end-marker
-
 .. autofunction:: aiologic.lowlevel.current_async_token
 .. autofunction:: aiologic.lowlevel.current_green_token
 .. autofunction:: aiologic.lowlevel.current_async_token_ident
