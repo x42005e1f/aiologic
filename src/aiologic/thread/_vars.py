@@ -130,7 +130,6 @@ class BaseVarToken(ABC, Generic[_BaseVarT, _HandleT, _T]):
 
 class _BaseVarItem(weakref.ReferenceType):
     __slots__ = (
-        "_is_not_in_use",
         "key",
         "value",
     )
@@ -289,30 +288,18 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
         handle = self._current_handle()
 
         if (item := self.__items.get(handle)) is not None:
-            try:
-                del item._is_not_in_use  # acquire
-            except AttributeError:  # a race condition
-                msg = "this variable is already being updated in parallel"
-                raise RuntimeError(msg) from None
+            token = self._create_token(handle, item.value)
 
-            try:
-                token = self._create_token(handle, item.value)
-
-                item.value = value
-            finally:
-                item._is_not_in_use = True  # release
+            item.value = value
         else:
             token = self._create_token(handle, MISSING)
             token._is_first = True
 
             item = _BaseVarItem(handle.state, self.__remove_by_item)
-            item._is_not_in_use = True
             item.key = handle
             item.value = value
 
-            if item is not self.__items.setdefault(handle, item):
-                msg = "this variable is already being updated in parallel"
-                raise RuntimeError(msg)
+            self.__items[handle] = item
 
         return token
 
@@ -332,18 +319,10 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
             raise ValueError(msg)
 
         if (item := self.__items.get(handle)) is not None:
-            try:
-                del item._is_not_in_use  # acquire
-            except AttributeError:  # a race condition
-                msg = "this variable is already being updated in parallel"
-                raise RuntimeError(msg) from None
-
             prev_value = item.value
 
             if token.value is not MISSING or not token._is_first:
                 item.value = token.value
-
-                item._is_not_in_use = True  # release
             else:
                 del self.__items[handle]
         else:
@@ -351,13 +330,10 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
 
             if token.value is not MISSING or not token._is_first:
                 item = _BaseVarItem(handle.state, self.__remove_by_item)
-                item._is_not_in_use = True
                 item.key = handle
                 item.value = token.value
 
-                if item is not self.__items.setdefault(handle, item):
-                    msg = "this variable is already being updated in parallel"
-                    raise RuntimeError(msg)
+                self.__items[handle] = item
 
         token._is_used = True
 
