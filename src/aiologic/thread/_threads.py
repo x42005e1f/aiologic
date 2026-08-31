@@ -36,11 +36,9 @@ def _current_thread_state():
 
     def impl():
         try:
-            thread_state = thread_local.thread_state
+            return thread_local.thread_state
         except AttributeError:
-            thread_local.thread_state = thread_state = ThreadState()
-
-        return thread_state
+            return vars(thread_local).setdefault("thread_state", ThreadState())
 
     return impl
 
@@ -51,14 +49,15 @@ def _current_thread():
 
     def impl():
         try:
-            thread_handle = thread_local.thread_handle
+            return thread_local.thread_handle
         except AttributeError:
-            thread_local.thread_handle = thread_handle = ThreadHandle(
-                _current_thread_state(),
-                _current_thread_ident(),
+            return vars(thread_local).setdefault(
+                "thread_handle",
+                ThreadHandle(
+                    _current_thread_state(),
+                    _current_thread_ident(),
+                ),
             )
-
-        return thread_handle
 
     return impl
 
