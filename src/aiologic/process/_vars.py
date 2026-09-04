@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from aiologic.abc import BaseVar, BaseVarToken
 
-from ._getters import current_thread
-from ._handles import ThreadHandle
+from ._getters import current_process
+from ._handles import ProcessHandle
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 11):  # python/cpython#30842
@@ -29,8 +29,8 @@ _T = TypeVar("_T")
 
 
 @final
-class ThreadVarToken(
-    BaseVarToken["ThreadVar[_T]", ThreadHandle, _T],
+class ProcessVarToken(
+    BaseVarToken["ProcessVar[_T]", ProcessHandle, _T],
     Generic[_T],
 ):
     __slots__ = ()
@@ -44,7 +44,7 @@ class ThreadVarToken(
 
 
 @final
-class ThreadVar(BaseVar[ThreadVarToken[_T], ThreadHandle, _T], Generic[_T]):
+class ProcessVar(BaseVar[ProcessVarToken[_T], ProcessHandle, _T], Generic[_T]):
     __slots__ = ()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
@@ -54,13 +54,13 @@ class ThreadVar(BaseVar[ThreadVarToken[_T], ThreadHandle, _T], Generic[_T]):
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
 
-    def _current_handle(self, /) -> ThreadHandle:
-        return current_thread()
+    def _current_handle(self, /) -> ProcessHandle:
+        return current_process()
 
     def _create_token(
         self,
         /,
-        key: ThreadHandle,
+        key: ProcessHandle,
         value: _T,
-    ) -> ThreadVarToken[_T]:
-        return ThreadVarToken(self, key, value)
+    ) -> ProcessVarToken[_T]:
+        return ProcessVarToken(self, key, value)

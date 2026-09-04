@@ -9,7 +9,7 @@ from typing import Any, Generic, TypeVar
 
 from aiologic.abc import BaseVar, BaseVarToken
 
-from ._handles import ThreadHandle
+from ._handles import ProcessHandle
 
 if sys.version_info >= (3, 11):  # python/cpython#30842
     from typing import Never
@@ -24,8 +24,8 @@ else:  # typing-extensions>=4.1.0
 _T = TypeVar("_T")
 
 @final
-class ThreadVarToken(
-    BaseVarToken[ThreadVar[_T], ThreadHandle, _T],
+class ProcessVarToken(
+    BaseVarToken[ProcessVar[_T], ProcessHandle, _T],
     Generic[_T],
 ):
     __slots__ = ()
@@ -33,14 +33,14 @@ class ThreadVarToken(
     def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
 
 @final
-class ThreadVar(BaseVar[ThreadVarToken[_T], ThreadHandle, _T], Generic[_T]):
+class ProcessVar(BaseVar[ProcessVarToken[_T], ProcessHandle, _T], Generic[_T]):
     __slots__ = ()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
-    def _current_handle(self, /) -> ThreadHandle: ...
+    def _current_handle(self, /) -> ProcessHandle: ...
     def _create_token(
         self,
         /,
-        key: ThreadHandle,
+        key: ProcessHandle,
         value: _T,
-    ) -> ThreadVarToken[_T]: ...
+    ) -> ProcessVarToken[_T]: ...

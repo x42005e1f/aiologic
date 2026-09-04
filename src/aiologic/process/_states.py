@@ -9,14 +9,10 @@ import sys
 
 from typing import TYPE_CHECKING
 
-from aiologic.abc import BaseHandle
-
-from ._states import ThreadState
+from aiologic.abc import BaseState
 
 if TYPE_CHECKING:
     from typing import Any
-
-    from aiologic.process import ProcessHandle
 
     if sys.version_info >= (3, 11):  # python/cpython#30842
         from typing import Never
@@ -30,19 +26,8 @@ else:  # typing-extensions>=4.1.0
 
 
 @final
-class ThreadHandle(BaseHandle[ThreadState]):
-    __slots__ = ("_process",)
-
-    def __init__(
-        self,
-        /,
-        process: ProcessHandle,
-        state: ThreadState,
-        ident: int,
-    ) -> None:
-        super().__init__(state, ident)
-
-        self._process = process
+class ProcessState(BaseState):
+    __slots__ = ()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__  # an implicit closure reference
@@ -50,7 +35,3 @@ class ThreadHandle(BaseHandle[ThreadState]):
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
-
-    @property
-    def process(self, /) -> ProcessHandle:
-        return self._process

@@ -21,38 +21,57 @@ Commit messages are consistent with
 
 ### Added
 
-- `aiologic.thread` subpackage for encapsulating thread-level features (since
-  `aiologic.lowlevel` no longer seems like the right place for them).
-- `aiologic.thread.BaseState`, `aiologic.thread.ThreadState`, and
-  `aiologic.thread.StateReferenceKey`. The first defines an abstract state that
-  is weakrefable (but not hashable, to prevent misuse in place of handles) and
-  capable of storing references to other objects (thereby extending their
-  lifetimes to at least that of the state itself). Defining and using slots in
-  user subclasses provides a very efficient way to manipulate local state,
-  since the state object can be obtained once, eliminating associated overhead
-  (in particular, set-reset for the state is faster than set-reset for a
-  `threading.local` object on CPython); however, it is worth noting that there
-  should be no strong references to the state from outside the associated
-  execution unit, to avoid excessively long lifetimes. The second is its
-  specialization for threads (it typically has the same lifetime as the
-  associated thread — that is, it dies along with the thread, unlike objects
-  from the `threading` module), and the third is the type of reference keys,
-  respectively.
-- `aiologic.thread.BaseHandle`, and `aiologic.thread.ThreadHandle`. The first
-  defines an abstract handle that is hashable (but not weakrefable, to prevent
-  misuse in place of states) and stores the minimum necessary information about
-  an execution unit: a numeric identifier and a state (if the execution unit is
-  still alive). It can be used both as a unique object/token and as a source of
-  associated debugging/identification information. The second is its
-  specialization for threads.
-- `aiologic.thread.BaseVar`, `aiologic.thread.BaseVarToken`,
-  `aiologic.thread.ThreadVar`, and `aiologic.thread.ThreadVarToken`. The first
-  two define an abstract variable and its token, respectively, similar to the
-  related objects from the `contextvars` module, but over arbitrary handles
-  (also, they treat references similarly to objects from the `weakref` and
-  `_threading_local` modules, which allows them to be freely created in
-  closures), and are thus more like "local variables". The last two are their
-  specializations for threads.
+- `aiologic.abc` subpackage for encapsulating some common types.
+- `aiologic.abc.BaseState` and `aiologic.abc.StateReferenceKey`. The first
+  defines an abstract state that is weakrefable (but not hashable, to prevent
+  misuse in place of handles) and capable of storing references to other
+  objects (thereby extending their lifetimes to at least that of the state
+  itself). Defining and using slots in user subclasses provides a very
+  efficient way to manipulate local state, since the state object can be
+  obtained once, eliminating associated overhead (in particular, set-reset for
+  the state is faster than set-reset for a `threading.local` object on
+  CPython); however, it is worth noting that there should be no strong
+  references to the state from outside the associated execution unit, to avoid
+  excessively long lifetimes. The second is the type of reference keys.
+- `aiologic.abc.BaseHandle`. It defines an abstract handle that is hashable
+  (but not weakrefable, to prevent misuse in place of states) and stores the
+  minimum necessary information about an execution unit: a numeric identifier
+  and a state (if the execution unit is still alive). It can be used both as a
+  unique object/token and as a source of associated debugging/identification
+  information.
+- `aiologic.abc.BaseVar` and `aiologic.abc.BaseVarToken`. They define an
+  abstract variable and its token, respectively, similar to the related objects
+  from the `contextvars` module, but over arbitrary handles (also, they treat
+  references similarly to objects from the `weakref` and `_threading_local`
+  modules, which allows them to be freely created in closures), and so the
+  former is more like a "local variable".
+- `aiologic.process` subpackage for encapsulating process-level features.
+- `aiologic.process.ProcessState` as a specialization of
+  `aiologic.abc.BaseState` for processes: it typically has the same lifetime as
+  the associated process and dies after a fork in the child process (the
+  current object is replaced, and thus no strong references remain to the
+  previous one).
+- `aiologic.process.ProcessHandle` as a specialization of
+  `aiologic.abc.BaseHandle` for processes.
+- `aiologic.process.ProcessVar` and `aiologic.process.ProcessVarToken` as
+  specializations of `aiologic.abc.BaseVar` and `aiologic.abc.BaseVarToken` for
+  processes, respectively.
+- `aiologic.process.current_process_ident()`,
+  `aiologic.process.current_process_state()`, and
+  `aiologic.process.current_process()` to obtain the corresponding objects: the
+  identifier, the state, and the handle of the current process (the same
+  objects for the same process). All three objects are cached in the globals
+  and updated via hooks, which can provide a performance boost compared to
+  `os.getpid()` (10x on CPython and 100x on PyPy).
+- `aiologic.thread` subpackage for encapsulating thread-level features.
+- `aiologic.thread.ThreadState` as a specialization of `aiologic.abc.BaseState`
+  for threads: it typically has the same lifetime as the associated thread and
+  dies along with the thread, unlike objects from the `threading` module.
+- `aiologic.thread.ThreadHandle` as a specialization of
+  `aiologic.abc.BaseHandle` for threads.
+- `aiologic.thread.ThreadVar` and `aiologic.thread.ThreadVarToken` as
+  specializations of `aiologic.abc.BaseVar` and `aiologic.abc.BaseVarToken` for
+  threads, respectively.
 - `aiologic.thread.current_thread_ident()`,
   `aiologic.thread.current_thread_state()`, and
   `aiologic.thread.current_thread()` to obtain the corresponding objects: the

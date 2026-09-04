@@ -248,6 +248,7 @@ ignore = [
     "PLR2004",  # magic-value-comparison
     "PLR5501",  # collapsible-else-if
     "PLR6301",  # no-self-use
+    "PLW0108",  # unnecessary-lambda
     "PLW0603",  # global-statement
     "PLW0717",  # too-many-statements-in-try-clause
     # tryceratops

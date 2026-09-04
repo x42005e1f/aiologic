@@ -7,10 +7,7 @@ import sys
 
 from typing import Any
 
-from aiologic.abc import BaseHandle
-from aiologic.process import ProcessHandle
-
-from ._states import ThreadState
+from aiologic.abc import BaseState
 
 if sys.version_info >= (3, 11):  # python/cpython#30842
     from typing import Never
@@ -23,16 +20,7 @@ else:  # typing-extensions>=4.1.0
     from typing_extensions import final
 
 @final
-class ThreadHandle(BaseHandle[ThreadState]):
-    __slots__ = ("_process",)
+class ProcessState(BaseState):
+    __slots__ = ()
 
-    def __init__(
-        self,
-        /,
-        process: ProcessHandle,
-        state: ThreadState,
-        ident: int,
-    ) -> None: ...
     def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
-    @property
-    def process(self, /) -> ProcessHandle: ...
