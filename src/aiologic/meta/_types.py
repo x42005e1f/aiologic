@@ -24,25 +24,25 @@ from ._inspect import isasyncgenfactory, iscoroutinefactory, isgeneratorfactory
 if TYPE_CHECKING:
     from typing import Final
 
-    if sys.version_info >= (3, 9):  # PEP 585
+    if sys.version_info >= (3, 9):
         from collections.abc import Awaitable, Callable
     else:
         from typing import Awaitable, Callable
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import Coroutine, Generator
 else:
     from typing import Coroutine, Generator
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):  # PEP 612
+    if sys.version_info >= (3, 10):
         from typing import ParamSpec
-    else:  # typing-extensions>=3.10.0
+    else:
         from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 if TYPE_CHECKING:
@@ -55,15 +55,15 @@ if TYPE_CHECKING:
     _YieldT = TypeVar("_YieldT")
     _P = ParamSpec("_P")
 
-_COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)  # PEP 649
+_COPY_ANNOTATIONS: Final[bool] = sys.version_info < (3, 14)
 
 _generator_origins: tuple[type, ...] = (
     GeneratorType,
-    Generator,  # is also the origin of `typing.Generator` (a generic alias)
+    Generator,
 )
 _coroutine_origins: tuple[type, ...] = (
     CoroutineType,
-    Coroutine,  # is also the origin of `typing.Coroutine` (a generic alias)
+    Coroutine,
 )
 _generatortype_names: set[str] = {
     "types.GeneratorType",
@@ -120,7 +120,7 @@ def _get_generictype_args(annotation, /, origins, prefixes, length):
         if args_string.count("[") != args_string.count("]"):
             return default_args
 
-        if args_string.find("[") > args_string.find("]"):  # a union type
+        if args_string.find("[") > args_string.find("]"):
             return default_args
 
         args = args_string.split(",")
@@ -177,7 +177,7 @@ def _update_returntype(
     /,
     transform: Callable[[Any], Any],
 ) -> _CallableT:
-    annotate = getattr(func, "__annotate__", None)  # PEP 649
+    annotate = getattr(func, "__annotate__", None)
 
     if callable(annotate):
 
@@ -202,7 +202,7 @@ def _update_returntype(
                 func.__annotations__ = annotations
 
     try:
-        del func.__wrapped__  # avoid unwrapping to preserve the signature
+        del func.__wrapped__
     except AttributeError:
         pass
 
@@ -217,7 +217,7 @@ def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
         name=func.__name__,
     )
     copy.__defaults__ = func.__defaults__
-    copy.__kwdefaults__ = func.__kwdefaults__  # python/cpython#112640
+    copy.__kwdefaults__ = func.__kwdefaults__
 
     update_wrapper(copy, func, updated=())
 
@@ -227,7 +227,7 @@ def _copy_with_flags(func: _CallableT, /, flags: int) -> _CallableT:
     if _COPY_ANNOTATIONS:
         copy.__annotations__ = copy.__annotations__.copy()
 
-    del copy.__wrapped__  # avoid unwrapping to preserve the signature
+    del copy.__wrapped__
 
     return copy
 
@@ -262,7 +262,7 @@ def _generator(func, /):
         msg = "the first argument must be callable"
         raise TypeError(msg)
 
-    if isfunction(func) and not hasattr(func, "__compiled__"):  # non-Nuitka
+    if isfunction(func) and not hasattr(func, "__compiled__"):
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
@@ -343,7 +343,7 @@ def _coroutine(func, /):
         msg = "the first argument must be callable"
         raise TypeError(msg)
 
-    if isfunction(func) and not hasattr(func, "__compiled__"):  # non-Nuitka
+    if isfunction(func) and not hasattr(func, "__compiled__"):
         flags = func.__code__.co_flags
 
         if flags & CO_GENERATOR:
@@ -421,8 +421,6 @@ def generator(
     /,
 ) -> Callable[..., Generator[Any, Any, Any]]: ...
 def generator(func, /):
-    """..."""
-
     genfunc = _generator(func)
 
     flags = getattr(getattr(func, "__code__", None), "co_flags", 0)
@@ -445,7 +443,7 @@ def generator(func, /):
 
             return Generator[Any, Any, annotation]
 
-    else:  # a coroutine factory
+    else:
 
         def transform(annotation):
             args = _get_coroutinetype_args(annotation)
@@ -484,8 +482,6 @@ def coroutine(
     /,
 ) -> Callable[..., Coroutine[Any, Any, Any]]: ...
 def coroutine(func, /):
-    """..."""
-
     corofunc = _coroutine(func)
 
     flags = getattr(getattr(func, "__code__", None), "co_flags", 0)
@@ -500,7 +496,7 @@ def coroutine(func, /):
         def transform(annotation):
             return annotation
 
-    else:  # a coroutine factory
+    else:
 
         def transform(annotation):
             return _get_coroutinetype_args(annotation)[-1]

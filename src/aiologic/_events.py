@@ -57,8 +57,6 @@ _USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
 
 
 class Event:
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_is_unset",
@@ -66,8 +64,6 @@ class Event:
     )
 
     def __new__(cls, /) -> Self:
-        """..."""
-
         self = object.__new__(cls)
 
         self._is_unset = True
@@ -76,39 +72,15 @@ class Event:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = Event()
-            >>> copy = Event(*orig.__getnewargs__())
-        """
-
         return ()
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__()
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -122,20 +94,6 @@ class Event:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the event is set.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> finished = Event()  # event is unset
-            >>> bool(finished)
-            False
-            >>> finished.set()  # event is set
-            >>> bool(finished)
-            True
-        """
-
         return not self._is_unset
 
     async def __await(self, /, timeout: float | None = None) -> bool:
@@ -177,19 +135,13 @@ class Event:
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         if not self._is_unset:
             green_checkpoint()
 
@@ -226,24 +178,10 @@ class Event:
         return success
 
     def set(self, /) -> None:
-        """..."""
-
         self._is_unset = False
         self._wakeup()
 
     def is_set(self, /) -> bool:
-        """
-        Return :data:`True` if the event is set.
-
-        Example:
-            >>> event = Event()
-            >>> event.is_set()
-            False
-            >>> event.set()
-            >>> event.is_set()
-            True
-        """
-
         return not self._is_unset
 
     def _wakeup(self, /) -> None:
@@ -272,31 +210,20 @@ class Event:
                                     ThreadOnceLock.release(event)
                             else:
                                 waiters.remove(event)
-                    except ValueError:  # waiters does not contain event
+                    except ValueError:
                         continue
-                    except IndexError:  # waiters is empty
+                    except IndexError:
                         break
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting for the event.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._waiters)
 
 
 class REvent(Event):
-    """..."""
-
     __slots__ = ("_timer",)
 
     def __new__(cls, /) -> Self:
-        """..."""
-
         self = object.__new__(cls)
 
         self._is_unset = Flag()
@@ -306,67 +233,6 @@ class REvent(Event):
         self._waiters = lazydeque()
 
         return self
-
-    @copies(Event.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = REvent()
-            >>> copy = REvent(*orig.__getnewargs__())
-        """
-
-        return Event.__getnewargs__(self)
-
-    @copies(Event.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return Event.__getstate__(self)
-
-    @copies(Event.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return Event.__copy__(self)
-
-    @copies(Event.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return Event.__repr__(self)
-
-    @copies(Event.__bool__)
-    def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the event is set.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> running = REvent()  # event is unset
-            >>> bool(running)
-            False
-            >>> running.set()  # event is set
-            >>> bool(running)
-            True
-            >>> running.clear()  # event is unset
-            >>> bool(running)
-            False
-        """
-
-        return Event.__bool__(self)
 
     async def __await(self, /, timeout: float | None = None) -> bool:
         if not self._is_unset:
@@ -412,19 +278,13 @@ class REvent(Event):
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         if not self._is_unset:
             green_checkpoint()
 
@@ -466,34 +326,11 @@ class REvent(Event):
         return success
 
     def clear(self, /) -> None:
-        """..."""
-
         self._is_unset.set()
 
     def set(self, /) -> None:
-        """..."""
-
         self._is_unset.clear()
         self._wakeup()
-
-    @copies(Event.is_set)
-    def is_set(self, /) -> bool:
-        """
-        Return :data:`True` if the event is set.
-
-        Example:
-            >>> event = REvent()
-            >>> event.is_set()
-            False
-            >>> event.set()
-            >>> event.is_set()
-            True
-            >>> event.clear()
-            >>> event.is_set()
-            False
-        """
-
-        return Event.is_set(self)
 
     def _wakeup(self, /, deadline: float | None = None) -> None:
         waiters = self._waiters
@@ -530,27 +367,13 @@ class REvent(Event):
                                 ThreadOnceLock.release(event)
                         else:
                             waiters.remove(token)
-                except ValueError:  # waiters does not contain token
+                except ValueError:
                     continue
-                except IndexError:  # waiters is empty
+                except IndexError:
                     break
-
-    @property
-    @copies(Event.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting for the event.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Event.waiting.fget(self)
 
 
 class CountdownEvent:
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_initial_value",
@@ -560,8 +383,6 @@ class CountdownEvent:
     )
 
     def __new__(cls, /, initial_value: int | DefaultType = DEFAULT) -> Self:
-        """..."""
-
         if initial_value is DEFAULT:
             initial_value = 0
         elif initial_value < 0:
@@ -579,26 +400,6 @@ class CountdownEvent:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = CountdownEvent(1)
-            >>> orig.initial_value
-            1
-            >>> copy = CountdownEvent(*orig.__getnewargs__())
-            >>> copy.initial_value
-            1
-        """
-
         initial_value = self._initial_value
 
         if initial_value != 0:
@@ -607,20 +408,12 @@ class CountdownEvent:
         return ()
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__(self._initial_value)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -641,23 +434,6 @@ class CountdownEvent:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the event is set.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> done = CountdownEvent()  # event is set
-            >>> bool(done)
-            True
-            >>> done.up()  # event is unset
-            >>> bool(done)
-            False
-            >>> done.down()  # event is set
-            >>> bool(done)
-            True
-        """
-
         return not self._is_unset
 
     async def __await(self, /, timeout: float | None = None) -> bool:
@@ -704,19 +480,13 @@ class CountdownEvent:
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> bool:
-        """..."""
-
         if not self._is_unset:
             green_checkpoint()
 
@@ -758,16 +528,12 @@ class CountdownEvent:
         return success
 
     def up(self, /, count: int = 1) -> None:
-        """..."""
-
         if count == 1:
             self._is_unset.append(object())
         else:
             self._is_unset.extend([object()] * count)
 
     def down(self, /) -> None:
-        """..."""
-
         try:
             self._is_unset.pop()
         except IndexError:
@@ -777,8 +543,6 @@ class CountdownEvent:
         self._wakeup()
 
     def clear(self, /) -> None:
-        """..."""
-
         self._is_unset.clear()
         self._wakeup()
 
@@ -848,34 +612,19 @@ class CountdownEvent:
                                 ThreadOnceLock.release(event)
                         else:
                             waiters.remove(token)
-                except ValueError:  # waiters does not contain token
+                except ValueError:
                     continue
-                except IndexError:  # waiters is empty
+                except IndexError:
                     break
 
     @property
     def initial_value(self, /) -> int:
-        """
-        The initial number of :meth:`down` calls required to set the event.
-        """
-
         return self._initial_value
 
     @property
     def value(self, /) -> int:
-        """
-        The current number of :meth:`down` calls remaining to set the event.
-        """
-
         return len(self._is_unset)
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting for the event.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._waiters)

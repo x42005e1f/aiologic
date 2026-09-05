@@ -24,163 +24,31 @@ if TYPE_CHECKING:
 
 
 class Waiter(Protocol):
-    """
-    The simplest synchronization primitive.
-
-    It represents a blocking call that can either be completed from outside by
-    a task/thread or be cancelled (due to a timeout or an exception). One wait
-    is one instance.
-
-    Unlike all other primitives, it is bound to the current event loop upon
-    creation.
-    """
-
     __slots__ = ()
 
-    def wake(self, /) -> None:
-        """
-        Reschedule (resume/notify) the task that is blocked.
-
-        It can be called multiple times and in parallel: all calls are expected
-        to be serialized by the event loop (if any). If no task is blocked on
-        the primitive, it has no effect.
-
-        Note that while redundant calls are allowed, they can lead to excessive
-        load on the event loop in the form of callback flood. If your scenario
-        involves either multiple notifiers or premature task rescheduling
-        (e.g., due to a timeout), consider using events instead of waiters.
-        """
+    def wake(self, /) -> None: ...
 
 
 class GreenWaiter(Waiter, Protocol):
-    """
-    The return type of :func:`create_green_waiter`.
-    """
-
     __slots__ = ()
 
-    def wait(self, /, timeout: float | None = None) -> bool:
-        """
-        Block (put to sleep) the task until :meth:`wake` is called from any
-        thread, and then return :data:`True`.
-
-        It must be called exactly once (or never) during the object's lifetime,
-        even if the first call was cancelled due to a timeout. Otherwise, the
-        behavior is undefined.
-
-        Args:
-          timeout:
-            If set to a non-negative number, the method will block at most
-            *timeout* seconds and return :data:`False` if there were no calls
-            to :meth:`wake` within that time. For zero: if no such calls were
-            serialized.
-        """
-
-    def wake(self, /) -> None:
-        """
-        Reschedule (resume/notify) the task that is blocked.
-
-        It can be called multiple times and in parallel: all calls are expected
-        to be serialized by the event loop (if any). If no task is blocked on
-        the primitive, it has no effect.
-
-        Note that while redundant calls are allowed, they can lead to excessive
-        load on the event loop in the form of callback flood. If your scenario
-        involves either multiple notifiers or premature task rescheduling
-        (e.g., due to a timeout), consider using events instead of waiters.
-        """
-
+    def wait(self, /, timeout: float | None = None) -> bool: ...
+    def wake(self, /) -> None: ...
     @property
-    def shield(self, /) -> bool:
-        """
-        A boolean that is :data:`True` if the :meth:`wait` call will be
-        shielded from external cancellation, :data:`False` otherwise.
-
-        The effect is mostly equivalent to applying the :func:`shield`
-        universal decorator to the method, but it is more efficient. Also, any
-        non-negative timeout passed to the method will be ignored.
-
-        It can be rewritten, but any changes will only take effect until the
-        call.
-        """
-
+    def shield(self, /) -> bool: ...
     @shield.setter
     def shield(self, /, value: bool) -> None: ...
 
 
 class AsyncWaiter(Waiter, Protocol):
-    """
-    The return type of :func:`create_async_waiter`.
-    """
-
     __slots__ = ()
 
     @generator
-    async def __await__(self, /, timeout: float | None = None) -> bool:
-        """
-        Block (put to sleep) the task until :meth:`wake` is called from any
-        thread, and then return :data:`True`.
-
-        It must be called exactly once (or never) during the object's lifetime,
-        even if the first call was cancelled due to a timeout. Otherwise, the
-        behavior is undefined.
-
-        Used by the :keyword:`await` expressions.
-
-        Args:
-          timeout:
-            If set to a non-negative number, the method will block at most
-            *timeout* seconds and return :data:`False` if there were no calls
-            to :meth:`wake` within that time. For zero: if no such calls were
-            serialized.
-        """
-
-    async def with_(self, /, timeout: float | None = None) -> bool:
-        """
-        Block (put to sleep) the task until :meth:`wake` is called from any
-        thread, and then return :data:`True`.
-
-        It must be called exactly once (or never) during the object's lifetime,
-        even if the first call was cancelled due to a timeout. Otherwise, the
-        behavior is undefined.
-
-        Args:
-          timeout:
-            If set to a non-negative number, the method will block at most
-            *timeout* seconds and return :data:`False` if there were no calls
-            to :meth:`wake` within that time. For zero: if no such calls were
-            serialized.
-        """
-
-    def wake(self, /) -> None:
-        """
-        Reschedule (resume/notify) the task that is blocked.
-
-        It can be called multiple times and in parallel: all calls are expected
-        to be serialized by the event loop (if any). If no task is blocked on
-        the primitive, it has no effect.
-
-        Note that while redundant calls are allowed, they can lead to excessive
-        load on the event loop in the form of callback flood. If your scenario
-        involves either multiple notifiers or premature task rescheduling
-        (e.g., due to a timeout), consider using events instead of waiters.
-        """
-
+    async def __await__(self, /, timeout: float | None = None) -> bool: ...
+    async def with_(self, /, timeout: float | None = None) -> bool: ...
+    def wake(self, /) -> None: ...
     @property
-    def shield(self, /) -> bool:
-        """
-        A boolean that is :data:`True` if the :meth:`__await__`/:meth:`with_`
-        call will be shielded from external cancellation, :data:`False`
-        otherwise.
-
-        The effect is mostly equivalent to applying the :func:`shield`
-        universal decorator to the primitive/method, but it is more efficient.
-        Also, any non-negative timeout passed to the method will be ignored.
-
-        It can be rewritten, but any changes will only take effect until the
-        call.
-        """
-
+    def shield(self, /) -> bool: ...
     @shield.setter
     def shield(self, /, value: bool) -> None: ...
 
@@ -257,7 +125,7 @@ def _get_threading_waiter_class() -> type[GreenWaiter]:
         def wake(self, /) -> None:
             try:
                 self.__lock.release()
-            except RuntimeError:  # unlocked
+            except RuntimeError:
                 pass
 
     return _ThreadingWaiter
@@ -450,7 +318,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
 
                 if timeout is None or self.shield:
                     watcher = self.__hub.loop.async_()
-                    watcher.start(_noop)  # avoid LoopExit
+                    watcher.start(_noop)
 
                     try:
                         if self.shield:
@@ -510,7 +378,7 @@ def _get_gevent_waiter_class() -> type[GreenWaiter]:
                     self.__hub.loop.run_callback(self.__notify)
                 else:
                     self.__hub.loop.run_callback_threadsafe(self.__notify)
-            except ValueError:  # event loop is destroyed
+            except ValueError:
                 pass
 
     return _GeventWaiter
@@ -624,7 +492,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
             if self.__future is not None:
                 try:
                     self.__future.set_result(result)
-                except InvalidStateError:  # task is cancelled
+                except InvalidStateError:
                     pass
 
                 self.__future = None
@@ -637,7 +505,7 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
             else:
                 try:
                     self.__loop.call_soon_threadsafe(self.__notify)
-                except RuntimeError:  # event loop is closed
+                except RuntimeError:
                     pass
 
     return _AsyncioWaiter
@@ -907,7 +775,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
         def wake(self, /) -> None:
             try:
                 self.__future.set_result(True)
-            except InvalidStateError:  # future is cancelled
+            except InvalidStateError:
                 pass
 
     return _CurioWaiter
@@ -1047,7 +915,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
         def wake(self, /) -> None:
             try:
                 current_token = current_trio_token()
-            except RuntimeError:  # no called trio.run()
+            except RuntimeError:
                 current_token = None
 
             if current_token is self.__token and not signal_safety_enabled():
@@ -1055,7 +923,7 @@ def _get_trio_waiter_class() -> type[AsyncWaiter]:
             else:
                 try:
                     self.__token.run_sync_soon(self.__notify)
-                except RunFinishedError:  # trio.run() is finished
+                except RunFinishedError:
                     pass
 
     return _TrioWaiter
@@ -1110,14 +978,6 @@ def _create_trio_waiter(shield: bool = False) -> AsyncWaiter:
 
 
 def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
-    """
-    Create a new instance for a blocking green call.
-
-    Args:
-      shield:
-        See the :attr:`~GreenWaiter.shield` property.
-    """
-
     library = current_green_library()
 
     if library == "threading":
@@ -1134,14 +994,6 @@ def create_green_waiter(*, shield: bool = False) -> GreenWaiter:
 
 
 def create_async_waiter(*, shield: bool = False) -> AsyncWaiter:
-    """
-    Create a new instance for a blocking async call.
-
-    Args:
-      shield:
-        See the :attr:`~AsyncWaiter.shield` property.
-    """
-
     library = current_async_library()
 
     if library == "asyncio":

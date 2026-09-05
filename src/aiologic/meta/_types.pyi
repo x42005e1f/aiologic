@@ -7,19 +7,19 @@ import sys
 
 from typing import Any, Final, TypeVar
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from typing import Awaitable, Callable, Coroutine, Generator
 else:
     from typing import Awaitable, Callable, Coroutine, Generator
 
-if sys.version_info >= (3, 10):  # PEP 612
+if sys.version_info >= (3, 10):
     from typing import ParamSpec
-else:  # typing-extensions>=3.10.0
+else:
     from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")

@@ -16,159 +16,54 @@ from ._static import lookup_static, resolve_special
 if TYPE_CHECKING:
     from typing import Any, Final
 
-if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
+if sys.version_info >= (3, 11):
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):  # various bug fixes (caching, etc.)
+    if sys.version_info >= (3, 9):
         from typing import Literal
-    else:  # typing-extensions>=4.6.0
+    else:
         from typing_extensions import Literal
 
-    if sys.version_info >= (3, 11):  # python/cpython#30842
+    if sys.version_info >= (3, 11):
         from typing import Never
-    else:  # typing-extensions>=4.1.0
+    else:
         from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
+if sys.version_info >= (3, 11):
     from typing import final
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import final
 
-# python/cpython#82711
 _ATTRIBUTE_SUGGESTIONS_OFFERED = sys.version_info >= (3, 10)
 
-if "_sentinel" not in globals():  # to not redefine on reloads
+if "_sentinel" not in globals():
     _sentinel = object()
-else:  # to keep the old markers (on reloads)
+else:
     _prevdata = globals().copy()
-
-# We have to use the `enum` module so that type checkers can understand that
-# the instance is a singleton object. Otherwise, they will not be able to
-# narrow the type of a parameter that has the default value when
-# `object is SINGLETON` returns `False` (see enum literal expansion, aka
-# exhaustiveness checking, or the "Support for singleton types in unions"
-# section in PEP 484).
 
 
 class _SingletonMeta(EnumType):
-    # Ideally, singletons should be able to inherit abstract classes and
-    # protocols, but `EnumType` conflicts with `ABCMeta` (which also applies to
-    # protocols, since their metaclass inherits from the latter; see
-    # python/cpython#119946, python/typeshed#8998, and python/mypy#13979).
-    # Below are some thoughts on this issue and the reason why `SingletonEnum`
-    # does not support it.
-    #
-    # Suppose we have an abstract class and we want to make our `SingletonEnum`
-    # subclass inherit from it. It is best to inherit explicitly to prevent
-    # incomplete or incompatible interface definitions (it will be checked both
-    # at runtime and by type checkers), but we cannot do this due to the
-    # metaclass conflict. Well, as a workaround, we can try the `register()`
-    # method (to declare inheritance at least forcibly, without checks), but at
-    # the moment, type checkers cannot handle this (see python/mypy#2922 and
-    # microsoft/pyright#8139).
-    #
-    # What about protocols? We also will not be able to perform interface
-    # compliance checks due to the metaclass conflict, but our `SingletonEnum`
-    # subclass will at least be considered a protocol implementation. However,
-    # there are two unpleasant aspects caused by the difference in semantics
-    # between abstract classes and protocols:
-    #
-    # 1. Any class that implements a compatible interface is considered an
-    #    implementation of the protocol (duck typing). As a result, the user
-    #    can use objects that do not behave as expected (remember, interfaces
-    #    do not specify behavior!), which can lead to errors that type checkers
-    #    cannot detect. This makes protocols a strange choice for defining a
-    #    general type for some particular ones. Related:
-    #    https://stackoverflow.com/q/73245011.
-    # 2. Checks using `issubclass()` and `isinstance()` are only allowed for
-    #    runtime protocols, and these are structural checks. Such checks are
-    #    terribly slow and completely inappropriate for the use case described
-    #    in the previous point.
-    #
-    # One solution would be to inherit our metaclass from both `EnumType` and
-    # `ABCMeta`. Moreover, we could even inherit from `typing._ProtocolMeta`
-    # (but this would be a rather fragile solution due to the reference to a
-    # non-public class, and would also require inheriting from
-    # `typing_extensions._ProtocolMeta` if necessary, which is not very
-    # convenient from a type checking perspective, since python/typeshed does
-    # not include non-public names in typing-extensions). In this case, we
-    # would have to restore runtime checks as described at the following links:
-    #
-    # * https://stackoverflow.com/q/54893595
-    # * https://stackoverflow.com/q/56131308
-    #
-    # However, there is one non-trivial problem here, and its cause is the
-    # `register()` method. What if we register some class as a subclass of our
-    # `SingletonEnum` subclass? Then it will pass inheritance checks, and a
-    # type checker will be left with one of the following two behaviors,
-    # neither of which is desirable:
-    #
-    # 1. Do not handle it in any way and continue to consider the single member
-    #    as the only instance. As a result, the user will be able to violate
-    #    the type narrowing assumption, which will lead to errors.
-    # 2. Assume that every `SingletonEnum` can have any number of instances.
-    #    Then we lose its original meaning, and `is` checks will no longer be
-    #    sufficient.
-    #
-    # We cannot solve this, and that is why our metaclass inherits only from
-    # `EnumType`, thereby supporting neither abstract classes nor protocols.
-
     @wraps(resolve_special(EnumType, "__call__"))
     def __call__(cls, /, *args, **kwargs):
-        # If more than one member (or none members) is defined, it is unknown
-        # which one the user wants to receive. Also, if additional parameters
-        # are passed, the action is aimed at creating a new instance rather
-        # than looking up an existing one. Therefore, in such cases, we fall
-        # back to the parent implementation, which will raise a `TypeError`.
         if len(cls) != 1 or args or kwargs:
             return super().__call__(*args, **kwargs)
 
-        # When the enumeration contains a single member, we allow
-        # `type(SINGLETON)() is SINGLETON` to mimic the `NoneType` behavior
-        # (and other similar built-in singleton types).
         return super().__call__(next(iter(cls)).value)
 
 
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
-    """
-    A base class for `type-checker-friendly <https://peps.python.org/pep-0484/
-    #support-for-singleton-types-in-unions>`__ singleton classes whose
-    instances will be defined at the module level.
-
-    Unlike :class:`enum.Enum`, it prohibits setting attributes that are not
-    explicitly declared via :data:`__slots__ <object.__slots__>`.
-
-    Example:
-      >>> class SingletonType(SingletonEnum):
-      ...     __slots__ = ('_x',)
-      ...     SINGLETON = 'SINGLETON'
-      >>> SINGLETON = SingletonType.SINGLETON
-      >>> repr(SINGLETON) == f"{__name__}.SINGLETON"
-      True
-      >>> SINGLETON._x = 1  # ok
-      >>> SINGLETON._y = 2
-      Traceback (most recent call last):
-      AttributeError: 'SingletonType' object has no attribute '_y'
-    """
-
     @wraps(resolve_special(enum.Enum, "__setattr__"))
     def __setattr__(self, name, value, /):
-        if name.startswith("_") and name.endswith("_"):  # used by `enum.Enum`
+        if name.startswith("_") and name.endswith("_"):
             super().__setattr__(name, value)
             return
 
         cls = type(self)
         cls_name = cls.__name__
 
-        # A singleton object should not provide mutable public state, so we
-        # raise an `AttributeError` on any attempt to set an unknown instance
-        # attribute, suppressing its suggestions (which would occur if we
-        # either did not set the 'name' and 'obj' attributes, or manually set
-        # them to the correct values). Note, `enum.Enum` itself does not
-        # prohibit setting attributes (see python/cpython#90290)!
         try:
             cls_member = lookup_static(cls, name)
         except LookupError:
@@ -181,11 +76,6 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
                 default=_sentinel,
             )
 
-            # We allow setting attributes for user-defined slots and properties
-            # to better match expected behavior. Although this goes against the
-            # concept in a sense (since data for an instance can be set at the
-            # class/module level instead), it may contribute to new usage
-            # scenarios.
             if descr_set is not _sentinel:
                 descr_set(self, value)
                 return
@@ -202,34 +92,27 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
                 msg = f"{cls_name!r} object attribute {name!r} has no setter"
         exc = AttributeError(msg)
         if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None  # suppress suggestions
+            exc.name = None
 
         try:
             raise exc
         finally:
-            del exc  # break reference cycles
+            del exc
 
     def __repr__(self, /) -> str:
         return f"{self.__class__.__module__}.{self._name_}"
 
-    def __str__(self, /) -> str:  # overridden by `enum.Enum`
+    def __str__(self, /) -> str:
         return f"{self.__class__.__module__}.{self._name_}"
 
 
 @final
 class DefaultType(SingletonEnum):
-    """
-    A singleton class for :data:`DEFAULT`; mimics :data:`~types.NoneType`.
-    """
-
     DEFAULT = "DEFAULT"
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
-        bcs = __class__  # an implicit closure reference
+        bcs = __class__
         bcs_name = bcs.__name__
-
-        # Although enum classes with defined members cannot be subclassed in
-        # any case, we make this behavior explicit for clarity.
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
@@ -240,18 +123,11 @@ class DefaultType(SingletonEnum):
 
 @final
 class MissingType(SingletonEnum):
-    """
-    A singleton class for :data:`MISSING`; mimics :data:`~types.NoneType`.
-    """
-
     MISSING = "MISSING"
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
-        bcs = __class__  # an implicit closure reference
+        bcs = __class__
         bcs_name = bcs.__name__
-
-        # Although enum classes with defined members cannot be subclassed in
-        # any case, we make this behavior explicit for clarity.
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
@@ -263,7 +139,7 @@ class MissingType(SingletonEnum):
 DEFAULT: Final[Literal[DefaultType.DEFAULT]] = DefaultType.DEFAULT
 MISSING: Final[Literal[MissingType.MISSING]] = MissingType.MISSING
 
-if "_prevdata" in globals():  # to restore the old markers (on reloads)
+if "_prevdata" in globals():
     globals().update(
         (key, value)
         for key, value in globals().pop("_prevdata").items()

@@ -8,9 +8,9 @@ import sys
 from types import ModuleType
 from typing import Any
 
-if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 def import_module(name: str, package: str | None = None) -> ModuleType: ...

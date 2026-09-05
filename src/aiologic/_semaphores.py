@@ -44,11 +44,9 @@ except ImportError:
 else:
     __GIL_ENABLED: Final[bool] = _is_gil_enabled()
 
-_USE_DELATTR: Final[bool] = (
-    __GIL_ENABLED or sys.version_info >= (3, 14)  # see python/cpython#146270
-)
+_USE_DELATTR: Final[bool] = __GIL_ENABLED or sys.version_info >= (3, 14)
 _USE_BYTEARRAY: Final[bool] = __PYTHON_IMPLEMENTATION == "CPython" and (
-    __GIL_ENABLED or sys.version_info >= (3, 14)  # see python/cpython#129107
+    __GIL_ENABLED or sys.version_info >= (3, 14)
 )
 
 _PERFECT_FAIRNESS_ENABLED: Final[bool] = bool(
@@ -62,8 +60,6 @@ _USE_ONCELOCK: Final[bool] = _PERFECT_FAIRNESS_ENABLED and not __GIL_ENABLED
 
 
 class Semaphore:
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_initial_value",
@@ -93,8 +89,6 @@ class Semaphore:
         max_value: int | DefaultType,
     ) -> BoundedSemaphore: ...
     def __new__(cls, /, initial_value=DEFAULT, max_value=None):
-        """..."""
-
         if max_value is not None:
             if cls is not Semaphore:
                 msg = (
@@ -130,43 +124,15 @@ class Semaphore:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = Semaphore(2)
-            >>> orig.initial_value
-            2
-            >>> copy = Semaphore(*orig.__getnewargs__())
-            >>> copy.initial_value
-            2
-        """
-
         return (self._initial_value,)
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__(self._initial_value)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -182,15 +148,11 @@ class Semaphore:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     async def __aenter__(self, /) -> Self:
-        """..."""
-
         await self.async_acquire()
 
         return self
 
     def __enter__(self, /) -> Self:
-        """..."""
-
         self.green_acquire()
 
         return self
@@ -202,8 +164,6 @@ class Semaphore:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        """..."""
-
         self.async_release()
 
     def __exit__(
@@ -213,8 +173,6 @@ class Semaphore:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        """..."""
-
         self.green_release()
 
     def _acquire_nowait(self, /) -> bool:
@@ -345,8 +303,6 @@ class Semaphore:
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         return await self._async_acquire(blocking=blocking, timeout=timeout)
 
     def green_acquire(
@@ -356,8 +312,6 @@ class Semaphore:
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         return self._green_acquire(blocking=blocking, timeout=timeout)
 
     def _release(self, /, count: int = 1) -> None:
@@ -388,9 +342,9 @@ class Semaphore:
                                         ThreadOnceLock.release(event)
                                 else:
                                     waiters.remove(event)
-                        except ValueError:  # waiters does not contain event
+                        except ValueError:
                             continue
-                        except IndexError:  # waiters is empty
+                        except IndexError:
                             break
 
             if count < 1:
@@ -418,56 +372,30 @@ class Semaphore:
 
     @copies(_release)
     def release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self._release(count)
 
     @copies(release)
     def async_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @copies(release)
     def green_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @property
     def initial_value(self, /) -> int:
-        """
-        The initial number of permits available for acquiring.
-        """
-
         return self._initial_value
 
     @property
     def value(self, /) -> int:
-        """
-        The current number of permits available to be acquired.
-
-        It may not change after release if all the released permits have been
-        reassigned to waiting tasks.
-        """
-
         return len(self._unlocked)
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to acquire.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._waiters)
 
 
 class BoundedSemaphore(Semaphore):
-    """..."""
-
     __slots__ = (
         "_locked",
         "_max_value",
@@ -479,8 +407,6 @@ class BoundedSemaphore(Semaphore):
         initial_value: int | DefaultType = DEFAULT,
         max_value: int | DefaultType = DEFAULT,
     ) -> Self:
-        """..."""
-
         if (
             cls is BoundedSemaphore
             and (initial_value is DEFAULT or initial_value <= 1)
@@ -530,43 +456,15 @@ class BoundedSemaphore(Semaphore):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = BoundedSemaphore(2)
-            >>> orig.max_value
-            2
-            >>> copy = BoundedSemaphore(*orig.__getnewargs__())
-            >>> copy.max_value
-            2
-        """
-
         return (self._initial_value, self._max_value)
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__(self._initial_value, self._max_value)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -589,42 +487,6 @@ class BoundedSemaphore(Semaphore):
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
-    @copies(Semaphore.__aenter__)
-    async def __aenter__(self, /) -> Self:
-        """..."""
-
-        return await Semaphore.__aenter__(self)
-
-    @copies(Semaphore.__enter__)
-    def __enter__(self, /) -> Self:
-        """..."""
-
-        return Semaphore.__enter__(self)
-
-    @copies(Semaphore.__aexit__)
-    async def __aexit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return await Semaphore.__aexit__(self, exc_type, exc_value, traceback)
-
-    @copies(Semaphore.__exit__)
-    def __exit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return Semaphore.__exit__(self, exc_type, exc_value, traceback)
-
     async def async_acquire(
         self,
         /,
@@ -632,8 +494,6 @@ class BoundedSemaphore(Semaphore):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         success = await self._async_acquire(blocking=blocking, timeout=timeout)
 
         if success:
@@ -651,8 +511,6 @@ class BoundedSemaphore(Semaphore):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
@@ -664,8 +522,6 @@ class BoundedSemaphore(Semaphore):
         return success
 
     def release(self, /, count: int = 1) -> None:
-        """..."""
-
         if count != 1:
             msg = "count must be 1"
             raise ValueError(msg)
@@ -680,61 +536,18 @@ class BoundedSemaphore(Semaphore):
 
     @copies(release)
     def async_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @copies(release)
     def green_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @property
-    @copies(Semaphore.initial_value.fget)
-    def initial_value(self, /) -> int:
-        """
-        The initial number of permits available for acquiring.
-        """
-
-        return Semaphore.initial_value.fget(self)
-
-    @property
     def max_value(self, /) -> int:
-        """
-        The maximum number of permits which the semaphore can hold.
-        """
-
         return self._max_value
-
-    @property
-    @copies(Semaphore.value.fget)
-    def value(self, /) -> int:
-        """
-        The current number of permits available to be acquired.
-
-        It may not change after release if all the released permits have been
-        reassigned to waiting tasks.
-        """
-
-        return Semaphore.value.fget(self)
-
-    @property
-    @copies(Semaphore.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to acquire.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Semaphore.waiting.fget(self)
 
 
 class BinarySemaphore(Semaphore):
-    """..."""
-
     __slots__ = ()
 
     @overload
@@ -759,8 +572,6 @@ class BinarySemaphore(Semaphore):
         max_value: int | DefaultType,
     ) -> BoundedBinarySemaphore: ...
     def __new__(cls, /, initial_value=DEFAULT, max_value=None):
-        """..."""
-
         if max_value is not None:
             if cls is not BinarySemaphore:
                 msg = (
@@ -792,118 +603,6 @@ class BinarySemaphore(Semaphore):
 
         return self
 
-    @copies(Semaphore.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = BinarySemaphore(0)
-            >>> orig.initial_value
-            0
-            >>> copy = BinarySemaphore(*orig.__getnewargs__())
-            >>> copy.initial_value
-            0
-        """
-
-        return Semaphore.__getnewargs__(self)
-
-    @copies(Semaphore.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return Semaphore.__getstate__(self)
-
-    @copies(Semaphore.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return Semaphore.__copy__(self)
-
-    @copies(Semaphore.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return Semaphore.__repr__(self)
-
-    @copies(Semaphore.__aenter__)
-    async def __aenter__(self, /) -> Self:
-        """..."""
-
-        return await Semaphore.__aenter__(self)
-
-    @copies(Semaphore.__enter__)
-    def __enter__(self, /) -> Self:
-        """..."""
-
-        return Semaphore.__enter__(self)
-
-    @copies(Semaphore.__aexit__)
-    async def __aexit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return await Semaphore.__aexit__(self, exc_type, exc_value, traceback)
-
-    @copies(Semaphore.__exit__)
-    def __exit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return Semaphore.__exit__(self, exc_type, exc_value, traceback)
-
-    @copies(Semaphore.async_acquire)
-    async def async_acquire(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> bool:
-        """..."""
-
-        return await Semaphore.async_acquire(
-            self,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(Semaphore.green_acquire)
-    def green_acquire(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> bool:
-        """..."""
-
-        return Semaphore.green_acquire(
-            self,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
     def _release(self, /, count: int = 1) -> None:
         waiters = self._waiters
 
@@ -928,8 +627,6 @@ class BinarySemaphore(Semaphore):
                 break
 
     def release(self, /, count: int = 1) -> None:
-        """..."""
-
         if count != 1:
             msg = "count must be 1"
             raise ValueError(msg)
@@ -938,50 +635,11 @@ class BinarySemaphore(Semaphore):
 
     @copies(release)
     def async_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @copies(release)
     def green_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
-
-    @property
-    @copies(Semaphore.initial_value.fget)
-    def initial_value(self, /) -> int:
-        """
-        The initial number of permits available for acquiring.
-        """
-
-        return Semaphore.initial_value.fget(self)
-
-    @property
-    @copies(Semaphore.value.fget)
-    def value(self, /) -> int:
-        """
-        The current number of permits available to be acquired.
-
-        It may not change after release if all the released permits have been
-        reassigned to waiting tasks.
-        """
-
-        return Semaphore.value.fget(self)
-
-    @property
-    @copies(Semaphore.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to acquire.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Semaphore.waiting.fget(self)
-
-    # Internal methods used by condition variables
 
     def _park(self, /, token: list[Any]) -> bool:
         event = token[0]
@@ -991,7 +649,7 @@ class BinarySemaphore(Semaphore):
 
         self._waiters.append(event)
 
-        token[5] = True  # reparked
+        token[5] = True
 
         if event.cancelled():
             try:
@@ -1014,8 +672,6 @@ class BinarySemaphore(Semaphore):
 
 
 class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
-    """..."""
-
     __slots__ = ()
 
     def __new__(
@@ -1024,8 +680,6 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         initial_value: int | DefaultType = DEFAULT,
         max_value: int | DefaultType = DEFAULT,
     ) -> Self:
-        """..."""
-
         self = object.__new__(cls)
 
         if initial_value is not DEFAULT:
@@ -1064,91 +718,6 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
         return self
 
-    @copies(BoundedSemaphore.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = BoundedBinarySemaphore(0)
-            >>> orig.max_value
-            0
-            >>> copy = BoundedBinarySemaphore(*orig.__getnewargs__())
-            >>> copy.max_value
-            0
-        """
-
-        return BoundedSemaphore.__getnewargs__(self)
-
-    @copies(BoundedSemaphore.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return BoundedSemaphore.__getstate__(self)
-
-    @copies(BoundedSemaphore.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return BoundedSemaphore.__copy__(self)
-
-    @copies(BoundedSemaphore.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return BoundedSemaphore.__repr__(self)
-
-    @copies(BinarySemaphore.__aenter__)
-    async def __aenter__(self, /) -> Self:
-        """..."""
-
-        return await BinarySemaphore.__aenter__(self)
-
-    @copies(BinarySemaphore.__enter__)
-    def __enter__(self, /) -> Self:
-        """..."""
-
-        return BinarySemaphore.__enter__(self)
-
-    @copies(BinarySemaphore.__aexit__)
-    async def __aexit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return await BinarySemaphore.__aexit__(
-            self,
-            exc_type,
-            exc_value,
-            traceback,
-        )
-
-    @copies(BinarySemaphore.__exit__)
-    def __exit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return BinarySemaphore.__exit__(self, exc_type, exc_value, traceback)
-
     async def async_acquire(
         self,
         /,
@@ -1156,8 +725,6 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         success = await self._async_acquire(blocking=blocking, timeout=timeout)
 
         if success:
@@ -1175,8 +742,6 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> bool:
-        """..."""
-
         success = self._green_acquire(blocking=blocking, timeout=timeout)
 
         if success:
@@ -1188,8 +753,6 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
         return success
 
     def release(self, /, count: int = 1) -> None:
-        """..."""
-
         if count != 1:
             msg = "count must be 1"
             raise ValueError(msg)
@@ -1207,59 +770,11 @@ class BoundedBinarySemaphore(BinarySemaphore, BoundedSemaphore):
 
     @copies(release)
     def async_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
 
     @copies(release)
     def green_release(self, /, count: int = 1) -> None:
-        """..."""
-
         return self.release(count)
-
-    @property
-    @copies(BinarySemaphore.initial_value.fget)
-    def initial_value(self, /) -> int:
-        """
-        The initial number of permits available for acquiring.
-        """
-
-        return BinarySemaphore.initial_value.fget(self)
-
-    @property
-    @copies(BoundedSemaphore.max_value.fget)
-    def max_value(self, /) -> int:
-        """
-        The maximum number of permits which the semaphore can hold.
-        """
-
-        return BoundedSemaphore.max_value.fget(self)
-
-    @property
-    @copies(BinarySemaphore.value.fget)
-    def value(self, /) -> int:
-        """
-        The current number of permits available to be acquired.
-
-        It may not change after release if all the released permits have been
-        reassigned to waiting tasks.
-        """
-
-        return BinarySemaphore.value.fget(self)
-
-    @property
-    @copies(BinarySemaphore.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to acquire.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return BinarySemaphore.waiting.fget(self)
-
-    # Internal methods used by condition variables
 
     def _after_park(self, /) -> None:
         if _USE_DELATTR:

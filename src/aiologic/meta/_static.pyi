@@ -7,14 +7,14 @@ import sys
 
 from typing import Any, TypeVar
 
-if sys.version_info >= (3, 10):  # PEP 613
+if sys.version_info >= (3, 10):
     from typing import TypeAlias
-else:  # typing-extensions>=3.10.0
+else:
     from typing_extensions import TypeAlias
 
-if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")

@@ -61,8 +61,6 @@ def _current_trio_token() -> object:
 
 
 def current_green_token() -> object:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -79,8 +77,6 @@ def current_green_token() -> object:
 
 
 def current_async_token() -> object:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -97,8 +93,6 @@ def current_async_token() -> object:
 
 
 def current_green_token_ident() -> tuple[str, int]:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -115,8 +109,6 @@ def current_green_token_ident() -> tuple[str, int]:
 
 
 def current_async_token_ident() -> tuple[str, int]:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -180,8 +172,6 @@ def _current_trio_task() -> object:
 
 
 def current_green_task() -> object:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -198,8 +188,6 @@ def current_green_task() -> object:
 
 
 def current_async_task() -> object:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -216,8 +204,6 @@ def current_async_task() -> object:
 
 
 def current_green_task_ident() -> tuple[str, int]:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -234,8 +220,6 @@ def current_green_task_ident() -> tuple[str, int]:
 
 
 def current_async_task_ident() -> tuple[str, int]:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":

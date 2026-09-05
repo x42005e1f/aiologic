@@ -10,14 +10,14 @@ from typing import Any, Final
 
 from ._markers import DEFAULT, DefaultType
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import MutableMapping
 else:
     from typing import MutableMapping
 
-if sys.version_info >= (3, 13):  # PEP 742
+if sys.version_info >= (3, 13):
     from typing import TypeIs
-else:  # typing-extensions>=4.10.0
+else:
     from typing_extensions import TypeIs
 
 _ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]

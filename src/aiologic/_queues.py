@@ -22,7 +22,7 @@ from .lowlevel import (
     green_checkpoint,
     lazydeque,
 )
-from .meta import MISSING, MissingType, copies
+from .meta import MISSING, MissingType
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -69,16 +69,14 @@ _RichComparableT = TypeVar(
 
 
 class QueueEmpty(Exception):
-    """..."""
+    pass
 
 
 class QueueFull(Exception):
-    """..."""
+    pass
 
 
 class SimpleQueue(Generic[_T]):
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_data",
@@ -86,8 +84,6 @@ class SimpleQueue(Generic[_T]):
     )
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
-        """..."""
-
         self = object.__new__(cls)
 
         if items is not MISSING:
@@ -100,26 +96,6 @@ class SimpleQueue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same state.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state affects the arguments.
-
-        Example:
-            >>> orig = SimpleQueue('items')
-            >>> orig.green_get()
-            'i'
-            >>> copy = SimpleQueue(*orig.__getnewargs__())
-            >>> copy.green_get()
-            't'
-        """
-
         data = self._data.copy()
 
         if not data:
@@ -134,15 +110,9 @@ class SimpleQueue(Generic[_T]):
         return (tuple(data),)
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         data = self._data.copy()
 
         if not data:
@@ -157,8 +127,6 @@ class SimpleQueue(Generic[_T]):
         return self.__class__(data)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -179,48 +147,12 @@ class SimpleQueue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the queue is not empty.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> items = SimpleQueue()  # queue is empty
-            >>> bool(items)
-            False
-            >>> items.green_put('spam')  # queue is not empty
-            >>> bool(items)
-            True
-            >>> item = items.green_get()  # queue is empty
-            >>> bool(items)
-            False
-        """
-
         return bool(self._data)
 
     def __len__(self) -> int:
-        """
-        Returns the number of items in the queue.
-
-        Used by the built-in function :func:`len`.
-
-        Example:
-            >>> items = SimpleQueue()  # queue has no items
-            >>> len(items)
-            0
-            >>> items.green_put('spam')  # queue has one item
-            >>> len(items)
-            1
-            >>> item = items.green_get()  # queue has no items
-            >>> len(items)
-            0
-        """
-
         return len(self._data)
 
     def copy(self, /) -> Self:
-        """..."""
-
         warnings.warn(
             "Use copy.copy(queue) instead",
             DeprecationWarning,
@@ -230,8 +162,6 @@ class SimpleQueue(Generic[_T]):
         return self.__copy__()
 
     def put(self, /, item: _T) -> None:
-        """..."""
-
         self._data.append(item)
         self._semaphore.release()
 
@@ -243,8 +173,6 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
-        """..."""
-
         if blocking:
             await async_checkpoint()
 
@@ -259,8 +187,6 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
-        """..."""
-
         if blocking:
             green_checkpoint()
 
@@ -274,8 +200,6 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         success = await self._semaphore.async_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -293,8 +217,6 @@ class SimpleQueue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         success = self._semaphore.green_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -307,44 +229,21 @@ class SimpleQueue(Generic[_T]):
 
     @property
     def putting(self, /) -> int:
-        """
-        The current number of tasks waiting to put.
-
-        It is always :data:`0` for simple queues.
-        """
-
         return 0
 
     @property
     def getting(self, /) -> int:
-        """
-        The current number of tasks waiting to get.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return self._semaphore.waiting
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to access.
-
-        It is the same as the :attr:`getting` property.
-        """
-
         return self._semaphore.waiting
 
 
 class SimpleLifoQueue(SimpleQueue[_T]):
-    """..."""
-
     __slots__ = ()
 
     def __new__(cls, items: Iterable[_T] | MissingType = MISSING, /) -> Self:
-        """..."""
-
         self = object.__new__(cls)
 
         if items is not MISSING:
@@ -356,140 +255,6 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         return self
 
-    @copies(SimpleQueue.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same state.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state affects the arguments.
-
-        Example:
-            >>> orig = SimpleLifoQueue('items')
-            >>> orig.green_get()
-            's'
-            >>> copy = SimpleLifoQueue(*orig.__getnewargs__())
-            >>> copy.green_get()
-            'm'
-        """
-
-        return SimpleQueue.__getnewargs__(self)
-
-    @copies(SimpleQueue.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return SimpleQueue.__getstate__(self)
-
-    @copies(SimpleQueue.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return SimpleQueue.__copy__(self)
-
-    @copies(SimpleQueue.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return SimpleQueue.__repr__(self)
-
-    @copies(SimpleQueue.__bool__)
-    def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the queue is not empty.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> items = SimpleLifoQueue()  # queue is empty
-            >>> bool(items)
-            False
-            >>> items.green_put('spam')  # queue is not empty
-            >>> bool(items)
-            True
-            >>> item = items.green_get()  # queue is empty
-            >>> bool(items)
-            False
-        """
-
-        return SimpleQueue.__bool__(self)
-
-    @copies(SimpleQueue.__len__)
-    def __len__(self) -> int:
-        """
-        Returns the number of items in the queue.
-
-        Used by the built-in function :func:`len`.
-
-        Example:
-            >>> items = SimpleLifoQueue()  # queue has no items
-            >>> len(items)
-            0
-            >>> items.green_put('spam')  # queue has one item
-            >>> len(items)
-            1
-            >>> item = items.green_get()  # queue has no items
-            >>> len(items)
-            0
-        """
-
-        return SimpleQueue.__len__(self)
-
-    @copies(SimpleQueue.copy)
-    def copy(self, /) -> Self:
-        """..."""
-
-        return SimpleQueue.copy(self)
-
-    @copies(SimpleQueue.put)
-    def put(self, /, item: _T) -> None:
-        """..."""
-
-        return SimpleQueue.put(self, item)
-
-    @copies(SimpleQueue.async_put)
-    async def async_put(
-        self,
-        /,
-        item: _T,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return await SimpleQueue.async_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(SimpleQueue.green_put)
-    def green_put(
-        self,
-        /,
-        item: _T,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return SimpleQueue.green_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
     async def async_get(
         self,
         /,
@@ -497,8 +262,6 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         success = await self._semaphore.async_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -516,8 +279,6 @@ class SimpleLifoQueue(SimpleQueue[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         success = self._semaphore.green_acquire(
             blocking=blocking,
             timeout=timeout,
@@ -528,44 +289,8 @@ class SimpleLifoQueue(SimpleQueue[_T]):
 
         return self._data.pop()
 
-    @property
-    @copies(SimpleQueue.putting.fget)
-    def putting(self, /) -> int:
-        """
-        The current number of tasks waiting to put.
-
-        It is always :data:`0` for simple queues.
-        """
-
-        return SimpleQueue.putting.fget(self)
-
-    @property
-    @copies(SimpleQueue.getting.fget)
-    def getting(self, /) -> int:
-        """
-        The current number of tasks waiting to get.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return SimpleQueue.getting.fget(self)
-
-    @property
-    @copies(SimpleQueue.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to access.
-
-        It is the same as the :attr:`getting` property.
-        """
-
-        return SimpleQueue.waiting.fget(self)
-
 
 class Queue(Generic[_T]):
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_data",
@@ -587,8 +312,6 @@ class Queue(Generic[_T]):
         maxsize: int | None = None,
     ) -> Self: ...
     def __new__(cls, items=MISSING, /, maxsize=None):
-        """..."""
-
         if maxsize is None and (items is None or isinstance(items, int)):
             items, maxsize = MISSING, items
 
@@ -616,26 +339,6 @@ class Queue(Generic[_T]):
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same state.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state affects the arguments.
-
-        Example:
-            >>> orig = Queue('items')
-            >>> orig.green_get()
-            'i'
-            >>> copy = Queue(*orig.__getnewargs__())
-            >>> copy.green_get()
-            't'
-        """
-
         data = copy(self._data)
         maxsize = self._maxsize
 
@@ -657,15 +360,9 @@ class Queue(Generic[_T]):
             return (tuple(data), maxsize)
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         data = copy(self._data)
         maxsize = self._maxsize
 
@@ -687,8 +384,6 @@ class Queue(Generic[_T]):
             return self.__class__(data, maxsize)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -712,48 +407,12 @@ class Queue(Generic[_T]):
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the queue is not empty.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> items = Queue()  # queue is empty
-            >>> bool(items)
-            False
-            >>> items.green_put('spam')  # queue is not empty
-            >>> bool(items)
-            True
-            >>> item = items.green_get()  # queue is empty
-            >>> bool(items)
-            False
-        """
-
         return bool(self._data)
 
     def __len__(self) -> int:
-        """
-        Returns the number of items in the queue.
-
-        Used by the built-in function :func:`len`.
-
-        Example:
-            >>> items = Queue()  # queue has no items
-            >>> len(items)
-            0
-            >>> items.green_put('spam')  # queue has one item
-            >>> len(items)
-            1
-            >>> item = items.green_get()  # queue has no items
-            >>> len(items)
-            0
-        """
-
         return len(self._data)
 
     def copy(self, /) -> Self:
-        """..."""
-
         warnings.warn(
             "Use copy.copy(queue) instead",
             DeprecationWarning,
@@ -938,8 +597,6 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
-        """..."""
-
         acquired = await self._async_acquire(
             self._acquire_nowait_on_putting,
             self._putters,
@@ -963,8 +620,6 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> None:
-        """..."""
-
         acquired = self._green_acquire(
             self._acquire_nowait_on_putting,
             self._putters,
@@ -987,8 +642,6 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         acquired = await self._async_acquire(
             self._acquire_nowait_on_getting,
             self._getters,
@@ -1011,8 +664,6 @@ class Queue(Generic[_T]):
         blocking: bool = True,
         timeout: float | None = None,
     ) -> _T:
-        """..."""
-
         acquired = self._green_acquire(
             self._acquire_nowait_on_getting,
             self._getters,
@@ -1069,218 +720,23 @@ class Queue(Generic[_T]):
 
     @property
     def maxsize(self, /) -> int:
-        """
-        The maximum number of items which the queue can hold.
-        """
-
         return self._maxsize
 
     @property
     def putting(self, /) -> int:
-        """
-        The current number of tasks waiting to put.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._putters)
 
     @property
     def getting(self, /) -> int:
-        """
-        The current number of tasks waiting to get.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._getters)
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to access.
-
-        It is roughly equivalent to the sum of the :attr:`putting` and
-        :attr:`getting` properties, but is more reliable than the sum in a
-        multithreaded environment.
-        """
-
         return len(self._putters_and_getters)
 
 
 class LifoQueue(Queue[_T]):
-    """..."""
-
     __slots__ = ()
-
-    @overload
-    def __new__(cls, /, maxsize: int | None = None) -> Self: ...
-    @overload
-    def __new__(
-        cls,
-        items: Iterable[_T] | MissingType = MISSING,
-        /,
-        maxsize: int | None = None,
-    ) -> Self: ...
-    @copies(Queue.__new__)
-    def __new__(cls, items=MISSING, /, maxsize=None):
-        """..."""
-
-        return Queue.__new__(cls, items, maxsize)
-
-    @copies(Queue.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same state.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state affects the arguments.
-
-        Example:
-            >>> orig = LifoQueue('items')
-            >>> orig.green_get()
-            's'
-            >>> copy = LifoQueue(*orig.__getnewargs__())
-            >>> copy.green_get()
-            'm'
-        """
-
-        return Queue.__getnewargs__(self)
-
-    @copies(Queue.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return Queue.__getstate__(self)
-
-    @copies(Queue.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return Queue.__copy__(self)
-
-    @copies(Queue.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return Queue.__repr__(self)
-
-    @copies(Queue.__bool__)
-    def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the queue is not empty.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> items = LifoQueue()  # queue is empty
-            >>> bool(items)
-            False
-            >>> items.green_put('spam')  # queue is not empty
-            >>> bool(items)
-            True
-            >>> item = items.green_get()  # queue is empty
-            >>> bool(items)
-            False
-        """
-
-        return Queue.__bool__(self)
-
-    @copies(Queue.__len__)
-    def __len__(self, /) -> bool:
-        """
-        Returns the number of items in the queue.
-
-        Used by the built-in function :func:`len`.
-
-        Example:
-            >>> items = LifoQueue()  # queue has no items
-            >>> len(items)
-            0
-            >>> items.green_put('spam')  # queue has one item
-            >>> len(items)
-            1
-            >>> item = items.green_get()  # queue has no items
-            >>> len(items)
-            0
-        """
-
-        return Queue.__len__(self)
-
-    @copies(Queue.copy)
-    def copy(self, /) -> Self:
-        """..."""
-
-        return Queue.copy(self)
-
-    @copies(Queue.async_put)
-    async def async_put(
-        self,
-        /,
-        item: _T,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return await Queue.async_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(Queue.green_put)
-    def green_put(
-        self,
-        /,
-        item: _T,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return Queue.green_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(Queue.async_get)
-    async def async_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> _T:
-        """..."""
-
-        return await Queue.async_get(self, blocking=blocking, timeout=timeout)
-
-    @copies(Queue.green_get)
-    def green_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> _T:
-        """..."""
-
-        return Queue.green_get(self, blocking=blocking, timeout=timeout)
 
     def _init(self, /, items: Iterable[_T], maxsize: int) -> None:
         self._data = list(items)
@@ -1291,224 +747,9 @@ class LifoQueue(Queue[_T]):
     def _get(self, /) -> _T:
         return self._data.pop()
 
-    @property
-    @copies(Queue.maxsize.fget)
-    def maxsize(self, /) -> int:
-        """
-        The maximum number of items which the queue can hold.
-        """
-
-        return Queue.maxsize.fget(self)
-
-    @property
-    @copies(Queue.putting.fget)
-    def putting(self, /) -> int:
-        """
-        The current number of tasks waiting to put.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Queue.putting.fget(self)
-
-    @property
-    @copies(Queue.getting.fget)
-    def getting(self, /) -> int:
-        """
-        The current number of tasks waiting to get.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Queue.getting.fget(self)
-
-    @property
-    @copies(Queue.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to access.
-
-        It is roughly equivalent to the sum of the :attr:`putting` and
-        :attr:`getting` properties, but is more reliable than the sum in a
-        multithreaded environment.
-        """
-
-        return Queue.waiting.fget(self)
-
 
 class PriorityQueue(Queue[_RichComparableT]):
-    """..."""
-
     __slots__ = ()
-
-    @overload
-    def __new__(cls, /, maxsize: int | None = None) -> Self: ...
-    @overload
-    def __new__(
-        cls,
-        items: Iterable[_RichComparableT] | MissingType = MISSING,
-        /,
-        maxsize: int | None = None,
-    ) -> Self: ...
-    @copies(Queue.__new__)
-    def __new__(cls, items=MISSING, /, maxsize=None):
-        """..."""
-
-        return Queue.__new__(cls, items, maxsize)
-
-    @copies(Queue.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same state.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state affects the arguments.
-
-        Example:
-            >>> orig = PriorityQueue('items')
-            >>> orig.green_get()
-            'e'
-            >>> copy = PriorityQueue(*orig.__getnewargs__())
-            >>> copy.green_get()
-            'i'
-        """
-
-        return Queue.__getnewargs__(self)
-
-    @copies(Queue.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return Queue.__getstate__(self)
-
-    @copies(Queue.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return Queue.__copy__(self)
-
-    @copies(Queue.__repr__)
-    def __repr__(self, /) -> str:
-        """..."""
-
-        return Queue.__repr__(self)
-
-    @copies(Queue.__bool__)
-    def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the queue is not empty.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> items = PriorityQueue()  # queue is empty
-            >>> bool(items)
-            False
-            >>> items.green_put('spam')  # queue is not empty
-            >>> bool(items)
-            True
-            >>> item = items.green_get()  # queue is empty
-            >>> bool(items)
-            False
-        """
-
-        return Queue.__bool__(self)
-
-    @copies(Queue.__len__)
-    def __len__(self, /) -> bool:
-        """
-        Returns the number of items in the queue.
-
-        Used by the built-in function :func:`len`.
-
-        Example:
-            >>> items = PriorityQueue()  # queue has no items
-            >>> len(items)
-            0
-            >>> items.green_put('spam')  # queue has one item
-            >>> len(items)
-            1
-            >>> item = items.green_get()  # queue has no items
-            >>> len(items)
-            0
-        """
-
-        return Queue.__len__(self)
-
-    @copies(Queue.copy)
-    def copy(self, /) -> Self:
-        """..."""
-
-        return Queue.copy(self)
-
-    @copies(Queue.async_put)
-    async def async_put(
-        self,
-        /,
-        item: _RichComparableT,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return await Queue.async_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(Queue.green_put)
-    def green_put(
-        self,
-        /,
-        item: _RichComparableT,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> None:
-        """..."""
-
-        return Queue.green_put(
-            self,
-            item,
-            blocking=blocking,
-            timeout=timeout,
-        )
-
-    @copies(Queue.async_get)
-    async def async_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> _RichComparableT:
-        """..."""
-
-        return await Queue.async_get(self, blocking=blocking, timeout=timeout)
-
-    @copies(Queue.green_get)
-    def green_get(
-        self,
-        /,
-        *,
-        blocking: bool = True,
-        timeout: float | None = None,
-    ) -> _RichComparableT:
-        """..."""
-
-        return Queue.green_get(self, blocking=blocking, timeout=timeout)
 
     def _init(
         self,
@@ -1525,49 +766,3 @@ class PriorityQueue(Queue[_RichComparableT]):
 
     def _get(self, /) -> _RichComparableT:
         return heappop(self._data)
-
-    @property
-    @copies(Queue.maxsize.fget)
-    def maxsize(self, /) -> int:
-        """
-        The maximum number of items which the queue can hold.
-        """
-
-        return Queue.maxsize.fget(self)
-
-    @property
-    @copies(Queue.putting.fget)
-    def putting(self, /) -> int:
-        """
-        The current number of tasks waiting to put.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Queue.putting.fget(self)
-
-    @property
-    @copies(Queue.getting.fget)
-    def getting(self, /) -> int:
-        """
-        The current number of tasks waiting to get.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Queue.getting.fget(self)
-
-    @property
-    @copies(Queue.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to access.
-
-        It is roughly equivalent to the sum of the :attr:`putting` and
-        :attr:`getting` properties, but is more reliable than the sum in a
-        multithreaded environment.
-        """
-
-        return Queue.waiting.fget(self)

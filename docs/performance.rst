@@ -989,10 +989,6 @@ Kill the square
        operation, decrease it after, and wait. It is also implemented according
        to the points above, and thus will solve the problem locally for each
        batch of threads using the mutex concurrently.
-    6. For some use cases, there are specialized primitives. For example, once
-       locks, such as :class:`aiologic.lowlevel.ThreadOnceLock`. It is also
-       implemented according to the points above and allows you to avoid the
-       square problem for one-time operations.
 
     There are other topics worth considering, such as the impact of the square
     problem and resource starvation on timeouts (in fact, it is timeouts that

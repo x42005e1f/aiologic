@@ -12,14 +12,14 @@ from aiologic.meta import replaces_with_outcome
 from ._handles import ProcessHandle
 from ._states import ProcessState
 
-if "_is_forking" not in globals():  # to not redefine on reloads
+if "_is_forking" not in globals():
     _is_forking = False
 
 
 def _before_fork():
     global _is_forking
 
-    _current_process_ident()  # to ensure the parent's `_process_ident`
+    _current_process_ident()
 
     _is_forking = True
 
@@ -60,8 +60,8 @@ def _register_hooks():
     else:
         marker = object()
 
-        if globals().setdefault("_is_registered", marker) is marker:  # once
-            register_at_fork(  # we use lambdas to support reloads
+        if globals().setdefault("_is_registered", marker) is marker:
+            register_at_fork(
                 before=(lambda: _before_fork()),
                 after_in_parent=(lambda: _after_fork_in_parent()),
                 after_in_child=(lambda: _after_fork_in_child()),

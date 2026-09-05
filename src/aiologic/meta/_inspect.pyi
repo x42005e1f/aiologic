@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 
 from ._markers import MISSING, MissingType
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import (
         AsyncGenerator,
         Awaitable,
@@ -27,24 +27,24 @@ else:
         Generator,
     )
 
-if sys.version_info >= (3, 10):  # PEP 612
+if sys.version_info >= (3, 10):
     from typing import ParamSpec
-else:  # typing-extensions>=3.10.0
+else:
     from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 10):  # PEP 647
+if sys.version_info >= (3, 10):
     from typing import TypeGuard
-else:  # typing-extensions>=3.10.0
+else:
     from typing_extensions import TypeGuard
 
-if sys.version_info >= (3, 13):  # PEP 742
+if sys.version_info >= (3, 13):
     from typing import TypeIs
-else:  # typing-extensions>=4.10.0
+else:
     from typing_extensions import TypeIs
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")
@@ -85,7 +85,7 @@ def _unwrap_and_check(
     markers: list[_MarkerInfo],
 ) -> bool: ...
 @overload
-def isgeneratorfactory(  # pyright: ignore[reportOverlappingOverload]
+def isgeneratorfactory(
     obj: Callable[..., Generator[Any, Any, Any]],
     /,
 ) -> bool: ...
@@ -105,7 +105,7 @@ def isgeneratorfactory(
     /,
 ) -> TypeGuard[Callable[..., Generator[Any, Any, Any]]]: ...
 @overload
-def iscoroutinefactory(  # pyright: ignore[reportOverlappingOverload]
+def iscoroutinefactory(
     obj: Callable[..., Coroutine[Any, Any, Any]],
     /,
 ) -> bool: ...
@@ -125,7 +125,7 @@ def iscoroutinefactory(
     /,
 ) -> TypeGuard[Callable[..., Coroutine[Any, Any, Any]]]: ...
 @overload
-def isasyncgenfactory(  # pyright: ignore[reportOverlappingOverload]
+def isasyncgenfactory(
     obj: Callable[..., AsyncGenerator[Any, Any]],
     /,
 ) -> bool: ...

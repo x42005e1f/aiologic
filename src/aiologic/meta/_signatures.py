@@ -20,7 +20,7 @@ from ._static import (
 )
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):  # PEP 585
+    if sys.version_info >= (3, 9):
         from collections.abc import Iterator
     else:
         from typing import Iterator
@@ -29,12 +29,12 @@ _TYPE_CALL = lookup_static(type, "__call__")
 _TYPE_NEW = lookup_static(type, "__new__")
 _OBJECT_NEW = lookup_static(object, "__new__")
 
-if sys.version_info >= (3, 13):  # python/cpython#16600
+if sys.version_info >= (3, 13):
     _PARTIALMETHOD_ATTRIBUTE_NAME = "__partialmethod__"
 else:
     _PARTIALMETHOD_ATTRIBUTE_NAME = "_partialmethod"
 
-if "_sentinel" not in globals():  # to not redefine on reloads
+if "_sentinel" not in globals():
     _sentinel = object()
 
 
@@ -43,15 +43,13 @@ def _iscallwrapper(obj, /):
         isinstance_static(obj, MethodWrapperType)
         and obj.__name__ == "__call__"
         and (
-            not isinstance_static(obj, MethodType)  # CPython
-            or obj.__func__ is FunctionType.__call__  # PyPy
+            not isinstance_static(obj, MethodType)
+            or obj.__func__ is FunctionType.__call__
         )
     )
 
 
 def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
-    """..."""
-
     extra = None
     source = ""
 
@@ -96,17 +94,6 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
                 extra = None
                 source = "cls.__new__"
                 continue
-
-            # When neither `mcs.__call__()` nor `cls.__new__()` is redefined,
-            # the class signature is also affected by the `cls.__init__()`
-            # method. However, the latter is resolved on behalf of the
-            # instance, which makes its reliable analysis on behalf of the
-            # class extremely difficult: the `cls.__init__.__get__()` call
-            # always precedes the `cls.__init__.__call__()` call, and it is
-            # practically impossible to distinguish a user-defined callable
-            # descriptor from an arbitrary function (since functions also
-            # provide the `__get__()` method, and its implementation differs
-            # for different types of functions).
 
             break
         else:

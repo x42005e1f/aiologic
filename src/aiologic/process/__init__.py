@@ -3,8 +3,6 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-"""..."""
-
 from ._getters import (
     current_process as current_process,
     current_process_ident as current_process_ident,

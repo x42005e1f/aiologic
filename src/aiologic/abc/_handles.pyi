@@ -10,9 +10,9 @@ from typing import Generic, TypeVar
 
 from ._states import BaseState
 
-if sys.version_info >= (3, 11):  # python/cpython#30842
+if sys.version_info >= (3, 11):
     from typing import Never
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import Never
 
 _StateT_co = TypeVar("_StateT_co", bound=BaseState, covariant=True)

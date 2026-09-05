@@ -30,11 +30,8 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
-if "_sentinel" not in globals():  # to not redefine on reloads
+if "_sentinel" not in globals():
     _sentinel = object()
-
-# third-party patchers can break the original objects from the threading
-# module, so we need to use the _thread module in the first place
 
 ThreadLock = import_original("_thread", "LockType")
 
@@ -51,9 +48,9 @@ except ImportError:
             "_owner",
         )
 
-        _block: ThreadLock  # not provided by _thread.RLock
-        _count: int  # not provided by _thread.RLock
-        _owner: int | None  # not provided by _thread.RLock
+        _block: ThreadLock
+        _count: int
+        _owner: int | None
 
         def __init__(self, /) -> None:
             self._block = create_thread_lock()
@@ -144,8 +141,6 @@ except ImportError:
             def locked(self, /) -> bool:
                 return self._block.locked()
 
-        # Internal methods used by condition variables
-
         def _acquire_restore(self, /, state: tuple[int, int]) -> None:
             self._block.acquire()
             self._count = state[0]
@@ -166,8 +161,6 @@ except ImportError:
 
         def _is_owned(self, /) -> bool:
             return self._owner == current_thread_ident()
-
-        # Internal method used for reentrancy checks
 
         if sys.version_info >= (3, 12, 1) or (
             sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
@@ -319,8 +312,6 @@ class ThreadOnceLock:
         def locked(self, /) -> bool:
             return _get_owner(self) is not None
 
-    # Internal methods used by condition variables
-
     def _acquire_restore(self, /, state: tuple[int, int]) -> None:
         if _checkpoints._threading_checkpoints_enabled():
             _checkpoints._threading_checkpoint()
@@ -344,8 +335,6 @@ class ThreadOnceLock:
     def _is_owned(self, /) -> bool:
         return _get_owner(self) == current_thread_ident()
 
-    # Internal method used for reentrancy checks
-
     if sys.version_info >= (3, 12, 1) or (
         sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
     ):
@@ -357,8 +346,6 @@ class ThreadOnceLock:
                 return count
 
             return 0
-
-    # Internal properties used for compatibility with threading._PyRLock
 
     @property
     def _block(self, /) -> ThreadLock:
@@ -451,8 +438,6 @@ class ThreadDummyLock:
     def locked(self, /) -> Literal[False]:
         return False
 
-    # Internal methods used by condition variables
-
     def _acquire_restore(self, /, state: tuple[int, int]) -> None:
         if _checkpoints._threading_checkpoints_enabled():
             _checkpoints._threading_checkpoint()
@@ -464,16 +449,12 @@ class ThreadDummyLock:
     def _is_owned(self, /) -> Literal[False]:
         return False
 
-    # Internal method used for reentrancy checks
-
     if sys.version_info >= (3, 12, 1) or (
         sys.version_info < (3, 12) and sys.version_info >= (3, 11, 6)
     ):
 
         def _recursion_count(self, /) -> Literal[0]:
             return 0
-
-    # Internal properties used for compatibility with threading._PyRLock
 
     @property
     def _block(self, /) -> ThreadLock:
@@ -497,37 +478,14 @@ else:
 
 
 def create_thread_lock() -> ThreadLock:
-    """
-    Create a new instance of a primitive lock that blocks threads.
-
-    The same as :class:`threading.Lock`, but not affected by monkey patching.
-    """
-
     return __allocate_lock()
 
 
 def create_thread_rlock() -> ThreadRLock:
-    """
-    Create a new instance of a reentrant lock that blocks threads.
-
-    The same as :class:`threading.RLock`, but not affected by monkey patching.
-    """
-
     return ThreadRLock()
 
 
 def create_thread_oncelock() -> ThreadOnceLock:
-    """
-    Create a new instance of a once lock that mimics a reentrant lock but does
-    nothing after release (when the counter reaches zero).
-
-    It wakes up all threads at once, thereby solving the square problem, which
-    makes it suitable for creating thread-safe initialization (or any other
-    one-time actions).
-
-    Unlike :class:`threading.RLock`, it is signal-safe.
-    """
-
     return ThreadOnceLock()
 
 
@@ -541,24 +499,6 @@ def once(
 @overload
 def once(wrapped: Callable[[], _T], /) -> Callable[[], _T]: ...
 def once(wrapped=MISSING, /, *, reentrant=False):
-    """
-    Transform *wrapped* into a one-time function.
-
-    Blocks threads attempting to execute the function in parallel and wakes
-    them up at once upon completion. The result is stored in the closure of the
-    new function and is returned on each subsequent call.
-
-    Args:
-      reentrant:
-        Unless set to :data:`True`, recursive attempts to call the function
-        will raise the :exc:`RuntimeError` exception. Also affects signal
-        handlers and destructors.
-
-    Raises:
-      RuntimeError:
-        if called recursively and ``reentrant=False``.
-    """
-
     if wrapped is MISSING:
         return partial(once, reentrant=reentrant)
 

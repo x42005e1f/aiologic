@@ -5,7 +5,7 @@
 
 import sys
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import Iterator
 else:
     from typing import Iterator

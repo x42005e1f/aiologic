@@ -18,14 +18,14 @@ if TYPE_CHECKING:
 
     from aiologic.process import ProcessHandle
 
-    if sys.version_info >= (3, 11):  # python/cpython#30842
+    if sys.version_info >= (3, 11):
         from typing import Never
-    else:  # typing-extensions>=4.1.0
+    else:
         from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
+if sys.version_info >= (3, 11):
     from typing import final
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import final
 
 
@@ -45,7 +45,7 @@ class ThreadHandle(BaseHandle[ThreadState]):
         self._process = process
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
-        bcs = __class__  # an implicit closure reference
+        bcs = __class__
         bcs_name = bcs.__name__
 
         msg = f"type {bcs_name!r} is not an acceptable base type"

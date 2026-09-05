@@ -8,19 +8,19 @@ import sys
 from types import CodeType, FrameType, TracebackType
 from typing import Final, Generic, TypeVar
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import Awaitable, Coroutine, Generator
 else:
     from typing import Awaitable, Coroutine, Generator
 
-if sys.version_info >= (3, 11):  # PEP 673
+if sys.version_info >= (3, 11):
     from typing import Self
-else:  # typing-extensions>=4.0.0
+else:
     from typing_extensions import Self
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")

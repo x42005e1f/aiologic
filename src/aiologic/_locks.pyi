@@ -94,9 +94,6 @@ class Lock:
     def owner(self, /) -> tuple[str, int] | None: ...
     @property
     def waiting(self, /) -> int: ...
-
-    # Internal methods used by condition variables
-
     def _park(self, /, token: list[Any]) -> bool: ...
     def _unpark(
         self,

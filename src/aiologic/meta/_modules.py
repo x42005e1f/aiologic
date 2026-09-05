@@ -7,35 +7,7 @@ from __future__ import annotations
 
 
 def resolve_name(name: str, package: str | None) -> str:
-    """
-    Resolve a relative module name to an absolute one.
-
-    Like :func:`importlib.util.resolve_name`, but raises :exc:`ValueError`
-    instead of :exc:`ImportError` on Python ≥3.9 to achieve consistent
-    behavior across all supported versions of Python.
-
-    Example:
-      >>> resolve_name('x.y', 'a.b')  # an absolute one
-      'x.y'
-      >>> resolve_name('.x.y', 'a.b')
-      'a.b.x.y'
-      >>> resolve_name('..x.y', 'a.b')
-      'a.x.y'
-      >>> resolve_name('...x.y', 'a.b')
-      Traceback (most recent call last):
-        ...
-      ValueError: `name` is beyond the top-level package
-      >>> resolve_name('.', 'a.b')
-      'a.b'
-      >>> resolve_name('..', 'a.b')
-      'a'
-      >>> resolve_name('...', 'a.b')
-      Traceback (most recent call last):
-        ...
-      ValueError: `name` is beyond the top-level package
-    """
-
-    if not name.startswith("."):  # an absolute one
+    if not name.startswith("."):
         return name
 
     if not package:

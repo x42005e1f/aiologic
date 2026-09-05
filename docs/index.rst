@@ -30,15 +30,6 @@ Features
 
   installation
   overview
-  cheatsheet
-  api
-
-.. toctree::
-  :caption: Advanced topics
-  :maxdepth: 3
-  :hidden:
-
-  advanced-topics/libraries
 
 .. toctree::
   :caption: Meta

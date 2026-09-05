@@ -58,7 +58,7 @@ class _GreenletLike(Protocol):
     @property
     def gr_frame(self) -> FrameType | None: ...
 
-    parent: Any  # due to python/mypy#9202
+    parent: Any
 
     @property
     def run(self) -> Callable[..., Any]: ...

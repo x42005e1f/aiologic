@@ -9,24 +9,24 @@ from typing import Any, TypeVar
 
 from ._markers import MISSING, MissingType
 
-if sys.version_info >= (3, 9):  # PEP 585
+if sys.version_info >= (3, 9):
     from collections.abc import Callable, MutableMapping
 else:
     from typing import Callable, MutableMapping
 
-if sys.version_info >= (3, 10):  # PEP 612
+if sys.version_info >= (3, 10):
     from typing import ParamSpec
-else:  # typing-extensions>=3.10.0
+else:
     from typing_extensions import ParamSpec
 
-if sys.version_info >= (3, 12):  # various bug fixes and improvements
+if sys.version_info >= (3, 12):
     from typing import Protocol
-else:  # typing-extensions>=4.10.0
+else:
     from typing_extensions import Protocol
 
-if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")

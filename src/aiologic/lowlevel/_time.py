@@ -26,8 +26,8 @@ _T = TypeVar("_T")
 
 _DAY_TO_SEC: Final[int] = 24 * 60 * 60
 
-_MS_TO_SEC: Final[int] = -3  # / 1_000
-_NS_TO_SEC: Final[int] = -9  # / 1_000_000_000
+_MS_TO_SEC: Final[int] = -3
+_NS_TO_SEC: Final[int] = -9
 
 
 def _floor_to_float(value: int, pow10: int = 0, /) -> float:
@@ -35,23 +35,7 @@ def _floor_to_float(value: int, pow10: int = 0, /) -> float:
 
     float_rounds_floor = sys.float_info.rounds in {0, 3}
 
-    # When converting to float, there are two cases:
-    # 1. The difference exceeded more than one integer, since the value did not
-    #    fit into the significand of the float.
-    # 2. The result exceeded the actual maximum, since rounding towards
-    #    positive infinity (or to nearest) occurred.
-    # Therefore, to represent the maximum most accurately, a special approach
-    # to calculation is required. Here is one such approach: we find the
-    # nearest representable value in float towards negative infinity that does
-    # not exceed one integer in difference, and if there is no such value, just
-    # return int.
-
     max_digits = sys.float_info.dig
-
-    # There are float values with more than max_digits digits, but we ignore
-    # them because finding such values would require too much code complexity,
-    # which is beyond the scope of this module. After all, we cannot provide
-    # perfect sleep accuracy anyway.
 
     rounding = decimal.ROUND_FLOOR
 
@@ -100,28 +84,11 @@ def _floor_to_float(value: int, pow10: int = 0, /) -> float:
 
 def _threading_seconds_per_sleep() -> float:
     if sys.version_info >= (3, 11):
-        # Under the hood, time.sleep() actually works like sleep-until, because
-        # starting with Python 3.5, it has to handle interrupts (it is
-        # implemented via a loop with delay recomputation). And since Python
-        # 3.11, it utilizes functions that internally operate via absolute time
-        # (in particular, clock_nanosleep(), to which it passes the deadline
-        # directly), which may lead to errors due to overflow. As a result, the
-        # current clock reduces the range of acceptable values (and the longer
-        # the uptime, the fewer seconds we can use), so to avoid
-        # overflow-related errors, we have to choose any fixed window.
-        _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**30 - 1)  # ~35 years
+        _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**30 - 1)
     else:
         if platform.system() != "Windows":
-            # select() is only guaranteed to support at least 31 days, and the
-            # actual limits implemented are usually not documented, so we have
-            # to deal with this. It will also be used on Python >= 3.11, when
-            # neither clock_nanosleep() nor nanosleep() are available, but we
-            # assume that this is not our case (it is a very specific case, and
-            # we cannot effectively detect it).
             _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)
         else:
-            # due to milliseconds < ULONG_MAX (~50 days)
-            # (note that 0xffffffff (=> 4294967.295) is INFINITE)
             _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**32 - 2, _MS_TO_SEC)
 
     @replaces(globals())
@@ -134,9 +101,7 @@ def _threading_seconds_per_sleep() -> float:
 def _eventlet_seconds_per_sleep() -> float:
     from eventlet.hubs import get_hub
 
-    # see the comment about select() in _threading_seconds_per_sleep()
-    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)  # ~31 days
-    # due to milliseconds <= INT_MAX (~25 days)
+    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)
     _MAXIMUM_SECONDS_PER_POLL_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
 
     @replaces(globals())
@@ -154,7 +119,6 @@ def _eventlet_seconds_per_sleep() -> float:
 
 
 def _gevent_seconds_per_sleep() -> float:
-    # due to milliseconds <= UINT64_MAX for CFFI (~6e+11 years)
     _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**64 - 1, _MS_TO_SEC)
 
     @replaces(globals())
@@ -167,11 +131,8 @@ def _gevent_seconds_per_sleep() -> float:
 def _asyncio_seconds_per_sleep() -> float:
     from asyncio import get_running_loop
 
-    # handled on the event loop side, so we only avoid int->float errors
-    _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP = sys.float_info.max  # ~6e+300 years
-    # due to seconds <= MAX_SLEEP (~100 years)
+    _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP = sys.float_info.max
     _MAXIMUM_SECONDS_PER_UVLOOP_SLEEP = _floor_to_float(36500 * _DAY_TO_SEC)
-    # due to milliseconds <= INT_MAX (~25 days)
     _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
 
     @replaces(globals())
@@ -182,7 +143,7 @@ def _asyncio_seconds_per_sleep() -> float:
             return _MAXIMUM_SECONDS_PER_ASYNCIO_SLEEP
         elif loop_name == "uvloop" or loop_name == "winloop":
             return _MAXIMUM_SECONDS_PER_UVLOOP_SLEEP
-        else:  # pyodide (pyodide/pyodide#6306), etc.
+        else:
             return _MAXIMUM_SECONDS_PER_SLEEP
 
     return _asyncio_seconds_per_sleep()
@@ -191,9 +152,7 @@ def _asyncio_seconds_per_sleep() -> float:
 def _curio_seconds_per_sleep() -> float:
     from curio.meta import _locals
 
-    # see the comment about select() in _threading_seconds_per_sleep()
-    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)  # ~31 days
-    # due to milliseconds <= INT_MAX (~25 days)
+    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)
     _MAXIMUM_SECONDS_PER_POLL_SLEEP = _floor_to_float(2**31 - 1, _MS_TO_SEC)
 
     def _from_runner(name, /):
@@ -235,8 +194,7 @@ def _curio_seconds_per_sleep() -> float:
         selector_max_timeout = _from_runner("selector_max_timeout")
 
         if selector_max_timeout and selector_max_timeout <= seconds:
-            # handled on the kernel side, so we only avoid int->float errors
-            seconds = sys.float_info.max  # ~6e+300 years
+            seconds = sys.float_info.max
 
         return seconds
 
@@ -244,8 +202,7 @@ def _curio_seconds_per_sleep() -> float:
 
 
 def _trio_seconds_per_sleep() -> float:
-    # handled on the event loop side, so we only avoid int->float errors
-    _MAXIMUM_SECONDS_PER_SLEEP = sys.float_info.max  # ~6e+300 years
+    _MAXIMUM_SECONDS_PER_SLEEP = sys.float_info.max
 
     @replaces(globals())
     def _trio_seconds_per_sleep():
@@ -255,8 +212,6 @@ def _trio_seconds_per_sleep() -> float:
 
 
 def green_seconds_per_sleep() -> float:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -273,8 +228,6 @@ def green_seconds_per_sleep() -> float:
 
 
 def async_seconds_per_sleep() -> float:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -291,15 +244,9 @@ def async_seconds_per_sleep() -> float:
 
 
 def _threading_seconds_per_timeout() -> float:
-    # We cannot rely on _thread.TIMEOUT_MAX (threading.TIMEOUT_MAX) because it
-    # includes INFINITE until Python 3.11 (see python/cpython#28673).
-
     if platform.system() != "Windows":
-        # due to _PyTime_FromSecondsObject(): SEC_TO_NS (~300.5 years)
         _MAXIMUM_SECONDS_PER_TIMEOUT = _floor_to_float(2**63 - 1, _NS_TO_SEC)
     else:
-        # due to milliseconds < ULONG_MAX (~50 days)
-        # (note that 0xffffffff (=> 4294967.295) is INFINITE)
         _MAXIMUM_SECONDS_PER_TIMEOUT = _floor_to_float(2**32 - 2, _MS_TO_SEC)
 
     @replaces(globals())
@@ -360,8 +307,6 @@ def _trio_seconds_per_timeout() -> float:
 
 
 def green_seconds_per_timeout() -> float:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -378,8 +323,6 @@ def green_seconds_per_timeout() -> float:
 
 
 def async_seconds_per_timeout() -> float:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -400,7 +343,7 @@ def _threading_clock() -> float:
 
     if sys.version_info >= (3, 13) or platform.system() != "Windows":
         _threading_clock = import_original("time", "monotonic")
-    else:  # see python/cpython#88494
+    else:
         _threading_clock = import_original("time", "perf_counter")
 
     return _threading_clock()
@@ -480,8 +423,6 @@ def _trio_clock() -> float:
 
 
 def green_clock() -> float:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -498,8 +439,6 @@ def green_clock() -> float:
 
 
 def async_clock() -> float:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":
@@ -622,8 +561,6 @@ async def _async_long_sleep(
 
 
 def green_sleep(seconds: float, /) -> None:
-    """..."""
-
     if isinstance(seconds, int):
         try:
             seconds = float(seconds)
@@ -663,8 +600,6 @@ def green_sleep(seconds: float, /) -> None:
 
 
 async def async_sleep(seconds: float, /) -> None:
-    """..."""
-
     if isinstance(seconds, int):
         try:
             seconds = float(seconds)
@@ -820,8 +755,6 @@ async def _async_long_sleep_until(
 
 
 def green_sleep_until(deadline: float, /) -> None:
-    """..."""
-
     if isinstance(deadline, int):
         try:
             deadline = float(deadline)
@@ -862,8 +795,6 @@ def green_sleep_until(deadline: float, /) -> None:
 
 
 async def async_sleep_until(deadline: float, /) -> None:
-    """..."""
-
     if isinstance(deadline, int):
         try:
             deadline = float(deadline)
@@ -913,7 +844,7 @@ def _threading_sleep_forever() -> NoReturn:
             lock.acquire()
             lock.acquire()
 
-    else:  # see python/cpython#74157 or python/cpython#125541
+    else:
 
         @replaces(globals())
         def _threading_sleep_forever():
@@ -977,8 +908,6 @@ async def _trio_sleep_forever() -> NoReturn:
 
 
 def green_sleep_forever() -> NoReturn:
-    """..."""
-
     library = current_green_library()
 
     if library == "threading":
@@ -996,8 +925,6 @@ def green_sleep_forever() -> NoReturn:
 
 
 async def async_sleep_forever() -> NoReturn:
-    """..."""
-
     library = current_async_library()
 
     if library == "asyncio":

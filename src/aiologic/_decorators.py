@@ -463,12 +463,12 @@ def __green_synchronized_wrapper(wrapped, instance, args, kwargs, /):
 
 
 @overload
-def synchronized(  # type: ignore[overload-overlap]
+def synchronized(
     wrapped: _AALock,
     /,
 ) -> _AASynchronizer: ...
 @overload
-def synchronized(  # type: ignore[overload-overlap]
+def synchronized(
     wrapped: _ASLock,
     /,
 ) -> _ASSynchronizer: ...
@@ -482,15 +482,13 @@ def synchronized(
     /,
 ) -> _SynchronizedDecorator: ...
 @overload
-def synchronized(  # type: ignore[overload-overlap]
+def synchronized(
     wrapped: _CallableT,
     /,
 ) -> _CallableT: ...
 @overload
 def synchronized(wrapped: object, /) -> _SynchronizedDecorator: ...
 def synchronized(wrapped, /):
-    """..."""
-
     if hasattr(wrapped, "acquire") and hasattr(wrapped, "release"):
         if iscoroutinefactory(wrapped.acquire):
             if iscoroutinefactory(wrapped.release):

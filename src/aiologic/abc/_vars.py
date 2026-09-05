@@ -21,24 +21,24 @@ if TYPE_CHECKING:
 
     from aiologic.meta import MissingType
 
-    if sys.version_info >= (3, 9):  # PEP 585
+    if sys.version_info >= (3, 9):
         from collections.abc import Callable
     else:
         from typing import Callable
 
-    if sys.version_info >= (3, 11):  # python/cpython#30842
+    if sys.version_info >= (3, 11):
         from typing import Never
-    else:  # typing-extensions>=4.1.0
+    else:
         from typing_extensions import Never
 
-    if sys.version_info >= (3, 11):  # PEP 673
+    if sys.version_info >= (3, 11):
         from typing import Self
-    else:  # typing-extensions>=4.0.0
+    else:
         from typing_extensions import Self
 
-if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 _T = TypeVar("_T")

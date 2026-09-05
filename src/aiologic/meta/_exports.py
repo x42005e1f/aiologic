@@ -23,22 +23,21 @@ if TYPE_CHECKING:
 
     from ._markers import DefaultType
 
-    if sys.version_info >= (3, 9):  # PEP 585
+    if sys.version_info >= (3, 9):
         from collections.abc import MutableMapping
     else:
         from typing import MutableMapping
 
-    if sys.version_info >= (3, 13):  # PEP 742
+    if sys.version_info >= (3, 13):
         from typing import TypeIs
-    else:  # typing-extensions>=4.10.0
+    else:
         from typing_extensions import TypeIs
 
-if sys.version_info >= (3, 11):  # runtime introspection support
+if sys.version_info >= (3, 11):
     from typing import get_overloads, overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import get_overloads, overload
 
-# python/cpython#82711
 _ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
     os.getenv(
@@ -75,46 +74,21 @@ def _export_one(
     *,
     visited: set[int] | DefaultType = DEFAULT,
 ) -> None:
-    # There are various algorithms for processing arbitrary objects. We rely on
-    # explicit type checking so that we do not have to deal with singletons and
-    # other problematic objects that provide a read-only `__module__`
-    # attribute.
-
     if isclass(value):
-        # When we encounter a class, we apply the function not only to it, but
-        # also recursively to its members. This allows the user to safely
-        # reference class functions during pickling.
-
-        # To avoid changing attributes of objects that are not under our
-        # control, we explicitly check whether the class belongs to our
-        # package. However, keep in mind that this does not eliminate
-        # collisions when the same object belongs to different namespaces that
-        # we can reach.
         if not _issubmodule(value.__module__, package_name):
-            return  # skip foreign ones
+            return
 
-        # There may be situations where the class directly or indirectly
-        # references itself (this may be part of the interface). Therefore, we
-        # have to keep track of the visited IDs in the current stack to avoid
-        # infinite recursion.
         if visited is DEFAULT:
             visited = set()
         elif id(value) in visited:
-            return  # skip visited ones
+            return
 
         visited.add(id(value))
 
         try:
-            # The function is applied recursively only to those objects that
-            # are defined as direct attributes of the class (via `__dict__`).
-            # We could obtain a list of all available attributes via `dir()`
-            # and rely on MRO to also handle non-public parents, but this would
-            # exacerbate the collision problem.
-
-            # copy the namespace so that it works in case of parallel calls
             for attr_name, attr_value in {**vars(value)}.items():
                 if attr_name.startswith("_"):
-                    continue  # skip non-public ones
+                    continue
 
                 _export_one(
                     package_name,
@@ -130,48 +104,34 @@ def _export_one(
         value.__qualname__ = qualname
         value.__module__ = package_name
     elif isfunction(value):
-        # To avoid changing attributes of objects that are not under our
-        # control, we explicitly check whether the function belongs to our
-        # package. However, keep in mind that this does not eliminate
-        # collisions when the same object belongs to different namespaces that
-        # we can reach.
         if not _issubmodule(value.__module__, package_name):
-            return  # skip foreign ones
+            return
 
-        # We have to re-register overloads before updating the function's
-        # attributes, as the latter are used by `get_overloads()` as keys.
         for value_overload in get_overloads(value):
             value_overload.__name__ = name
             value_overload.__qualname__ = qualname
             value_overload.__module__ = package_name
 
-            # re-register the overload for `package_name` and `qualname`
             overload(value_overload)
 
         value.__name__ = name
         value.__qualname__ = qualname
         value.__module__ = package_name
     elif _isbuiltindescriptor(value):
-        # We cannot reliably check whether the `classmethod`/`staticmethod`
-        # instance belongs to the package, so we always assume that it does.
-
         _export_one(package_name, qualname, name, value.__func__)
 
-        if sys.version_info >= (3, 10):  # inherit the method attributes
+        if sys.version_info >= (3, 10):
             value.__name__ = name
             value.__qualname__ = qualname
             value.__module__ = package_name
     elif _isproperty(value):
-        # We cannot reliably check whether the `property` instance belongs to
-        # the package, so we always assume that it does.
-
         for func in (value.fget, value.fset, value.fdel):
             if func is None:
                 continue
 
             _export_one(package_name, qualname, name, func)
 
-        if sys.version_info >= (3, 13):  # new `__name__` attribute
+        if sys.version_info >= (3, 13):
             value.__name__ = name
 
 
@@ -179,44 +139,6 @@ def export(
     package_namespace: ModuleType | MutableMapping[str, object],
     /,
 ) -> None:
-    """
-    Prepare *package_namespace* for external use.
-
-    Its contents must be structured as follows:
-
-    * Every non-public submodule/subpackage that is part of the implementation
-      has a name that starts with the underscore character (``package._util``).
-    * Every public submodule/subpackage that is available for direct use has a
-      name that does not start with the underscore character (``package.abc``).
-    * Every member of a public submodule/subpackage (including the package
-      itself) follows the same naming rules.
-
-    The result of applying the function will be to update attributes of all
-    public members so that they look as if they were defined directly in the
-    package. If a public submodule/subpackage or class is encountered, the
-    function is also applied recursively to its members. Additionally, for each
-    public submodule/subpackage (including the package itself), a
-    human-readable :keyword:`__all__ <import>` is built, which includes the
-    names of all public members that are not submodules/subpackages.
-
-    Typically, the usage is as follows: ``export(globals())`` near the end of
-    ``__init__.py``. This allows the package to be safely split into
-    subpackages and submodules without breaking pickling on incompatible
-    implementation changes and while preserving convenient representations
-    (which is especially important for exceptions).
-
-    .. caution::
-
-      If the function updates the same object by different names (or in
-      different namespaces), the result is undefined, especially when parallel
-      calls are made. So avoid providing access to the same object in different
-      ways.
-    """
-
-    # `sphinx.ext.autodoc` does not support the `__module__` hacks. In
-    # particular, 'bysource' ordering will not work, nor will some
-    # cross-references. So we skip all on type checking (implied by
-    # `SPHINX_AUTODOC_RELOAD_MODULES=1`).
     if TYPE_CHECKING or _SPHINX_AUTODOC_RELOAD_MODULES:
         return
 
@@ -228,27 +150,21 @@ def export(
 
     public_names = []
 
-    # copy the namespace so that it works in case of parallel calls
     copied_namespace = {**package_namespace}
 
     if copied_namespace.get("TYPE_CHECKING") is TYPE_CHECKING:
-        del copied_namespace["TYPE_CHECKING"]  # skip `typing.TYPE_CHECKING`
+        del copied_namespace["TYPE_CHECKING"]
 
     if copied_namespace.get("annotations") is annotations:
-        del copied_namespace["annotations"]  # skip `__future__.annotations`
+        del copied_namespace["annotations"]
 
     for name, value in copied_namespace.items():
         if name.startswith("_"):
-            continue  # skip non-public ones
+            continue
 
         if ismodule(value):
-            # When we encounter another public package (we require all modules
-            # to be non-public to avoid redundant operations), we apply the
-            # function recursively to it. This allows us to avoid manually
-            # calling the function for each such package in `__init__.py`.
-
             if value.__name__.rpartition(".")[0] != package_name:
-                continue  # skip indirect ones
+                continue
 
             export(value)
         else:
@@ -256,7 +172,6 @@ def export(
 
             _export_one(package_name, name, name, value)
 
-    # sort the list to make it more human-readable
     public_names.sort()
     public_names.sort(key=str.isupper, reverse=True)
 
@@ -279,16 +194,10 @@ def _register(
         module_name = module_namespace["__name__"]
         module = sys.modules.get(module_name)
 
-        # We need the module object for two reasons. First, it allows us to
-        # detect cases where `__getattr__()` is overridden via a `ModuleType`
-        # subclass. Second, it is used to provide hints via an
-        # `AttributeError`. Therefore, we raise a `RuntimeError` if we cannot
-        # obtain it in the known way.
         if module is None or vars(module) is not module_namespace:
             msg = "the module object is not in the module cache"
             raise RuntimeError(msg)
 
-    # to avoid conflicts with other implementations
     try:
         registry_name = _register._registry_name
     except AttributeError:
@@ -300,11 +209,9 @@ def _register(
     try:
         getattr_impl = module.__getattr__
     except AttributeError:
-        # Having a strong reference to the module object creates reference
-        # cycles via closure, so we use a weak reference instead.
         module_ref = weakref.ref(module)
 
-        registry = {}  # {link_name: (target_path, deprecated)}
+        registry = {}
 
         def getattr_impl(name: str) -> object:
             nonlocal module_name
@@ -315,23 +222,14 @@ def _register(
                 msg = "weakly-referenced module object no longer exists"
                 raise ReferenceError(msg)
 
-            # We use the current module name in each call to handle cases where
-            # it has been renamed (this may be relevant for manually created
-            # module objects).
             module_name = getattr(module, "__name__", module_name)
 
-            # One pattern used for dynamic exports is providing objects from
-            # modules that may not exist at runtime. Since their non-existence
-            # is expected behavior in some environments (similar to optional
-            # attributes of the `os` module), we handle this case by raising an
-            # `AttributeError` instead of a `ModuleNotFoundError`, but refer to
-            # the original exception to explain why the attribute is missing.
             import_exc = None
 
             try:
                 (target_module_name, target_name), deprecated = registry[name]
             except KeyError:
-                pass  # unregistered name
+                pass
             else:
                 try:
                     if target_module_name:
@@ -340,7 +238,7 @@ def _register(
                         value = import_from(module, target_name)
                 except ModuleNotFoundError as exc:
                     if exc.name != target_module_name:
-                        raise  # a side import
+                        raise
 
                     import_exc = exc
                 else:
@@ -351,15 +249,11 @@ def _register(
                             stacklevel=2,
                         )
                     elif not name.startswith("_"):
-                        # see the `export()` function
                         if not ismodule(value):
                             _export_one(module_name, name, name, value)
                         elif value.__name__.rpartition(".")[0] == module_name:
                             export(value)
 
-                    # By using `setdefault()` instead of `setattr()` to cache
-                    # the value, we ensure that it will not overwrite any other
-                    # value that may be set in parallel by the user.
                     return vars(module).setdefault(name, value)
 
             try:
@@ -372,9 +266,9 @@ def _register(
                 try:
                     raise exc from import_exc
                 finally:
-                    del exc  # break reference cycles
+                    del exc
             finally:
-                del import_exc  # break reference cycles
+                del import_exc
 
         setattr(getattr_impl, registry_name, registry)
 
@@ -402,7 +296,7 @@ def _register(
         if not target_path[0]:
             msg = "`target` is beyond the top-level package"
             raise ValueError(msg)
-    else:  # to support uncached module objects
+    else:
         target_path = ("", target)
 
     record = (target_path, deprecated)
@@ -418,31 +312,6 @@ def export_dynamic(
     target: str,
     /,
 ) -> None:
-    """
-    Register a dynamic export (symbolic link) in the specified
-    *module_namespace*.
-
-    On the first call, the function defines :meth:`~module.__getattr__` in
-    *module_namespace*. When attempting to retrieve an undefined attribute from
-    the module object by *link_name*, it imports *target* via
-    :func:`import_from`, updates its attributes, caches it in the namespace,
-    and returns it.
-
-    *target* can be an absolute path (``package.module.attribute``) or a
-    relative path (``..attribute``). If it does not contain the dot character,
-    the name relative to the module is implied (``name`` is equivalent to
-    ``.name``).
-
-    Useful for defining optional package members that are not available in all
-    environments.
-
-    Raises:
-      RuntimeError:
-        if *link_name* cannot be registered.
-      ValueError:
-        if *target* is beyond the top-level package.
-    """
-
     _register(module_namespace, link_name, target, deprecated=False)
 
 
@@ -452,15 +321,4 @@ def export_deprecated(
     target: str,
     /,
 ) -> None:
-    """
-    Register a deprecated export (symbolic link) in the specified
-    *module_namespace*.
-
-    Like :func:`export_dynamic`, but raises :exc:`DeprecationWarning` on the
-    first attempt to access the attribute, and never updates attributes of the
-    latter.
-
-    Useful for providing a temporary alias by the old name to a renamed object.
-    """
-
     _register(module_namespace, link_name, target, deprecated=True)

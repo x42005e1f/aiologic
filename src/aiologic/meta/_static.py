@@ -18,19 +18,19 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, TypeVar, Union
 
-    if sys.version_info >= (3, 9):  # PEP 585
+    if sys.version_info >= (3, 9):
         from builtins import tuple as Tuple, type as Type
     else:
         from typing import Tuple, Type
 
-    if sys.version_info >= (3, 10):  # PEP 613
+    if sys.version_info >= (3, 10):
         from typing import TypeAlias
-    else:  # typing-extensions>=3.10.0
+    else:
         from typing_extensions import TypeAlias
 
-if sys.version_info >= (3, 11):  # python/cpython#31716: introspectable
+if sys.version_info >= (3, 11):
     from typing import overload
-else:  # typing-extensions>=4.2.0
+else:
     from typing_extensions import overload
 
 if TYPE_CHECKING:
@@ -42,7 +42,6 @@ if TYPE_CHECKING:
 
 _IS_CPYTHON = sys.implementation.name == "cpython"
 
-# see python/cpython/Include/object.h
 _TPFLAGS_METHOD_DESCRIPTOR = 1 << 17
 _TPFLAGS_LONG_SUBCLASS = 1 << 24
 _TPFLAGS_LIST_SUBCLASS = 1 << 25
@@ -67,16 +66,14 @@ _getflags_static = type.__dict__["__flags__"].__get__
 _getmro_static = type.__dict__["__mro__"].__get__
 _vars_static = type.__dict__["__dict__"].__get__
 
-if "_sentinel" not in globals():  # to not redefine on reloads
+if "_sentinel" not in globals():
     _sentinel = object()
 
 
 def _lookup_static_noerror(owner, name, /):
-    # see python/cpython/Objects/typeobject.c#find_name_in_mro
-
     try:
         mro = _getmro_static(owner)
-    except TypeError:  # not a class
+    except TypeError:
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
@@ -86,7 +83,7 @@ def _lookup_static_noerror(owner, name, /):
         if name in base_vars:
             try:
                 return base_vars[name]
-            except KeyError:  # a race condition
+            except KeyError:
                 pass
 
     return _sentinel
@@ -97,10 +94,6 @@ def lookup_static(owner: type, name: str, /) -> Any: ...
 @overload
 def lookup_static(owner: type, name: str, /, default: _T) -> Any | _T: ...
 def lookup_static(owner, name, /, default=_sentinel):
-    """..."""
-
-    # see python/cpython/Objects/typeobject.c#find_name_in_mro
-
     member = _lookup_static_noerror(owner, name)
 
     if member is _sentinel:
@@ -145,13 +138,6 @@ def resolve_special(
     default: _T2,
 ) -> Any | _T2: ...
 def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
-    """..."""
-
-    # see python/cpython/Objects/typeobject.c#_PyObject_LookupSpecial
-    # see python/cpython/Objects/typeobject.c#slotdefs
-    # see python/cpython/Objects/typeobject.c#update_one_slot
-    # see python/cpython/Objects/typeobject.c#slot_tp_descr_get
-
     member = _lookup_static_noerror(owner, name)
 
     if member is _sentinel:
@@ -169,12 +155,6 @@ def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
 
 
 def isdatadescriptor_static(obj: object, /) -> bool:
-    """..."""
-
-    # see python/cpython/Objects/object.c#PyObject_GenericSetAttr
-    # see python/cpython/Objects/typeobject.c#slotdefs
-    # see python/cpython/Objects/typeobject.c#update_one_slot
-
     return any(
         "__set__" in (base_vars := _vars_static(base))
         or "__delete__" in base_vars
@@ -183,15 +163,6 @@ def isdatadescriptor_static(obj: object, /) -> bool:
 
 
 def ismethoddescriptor_static(obj: object, /) -> bool:
-    """..."""
-
-    # see PEP 590
-    # see python/cpython/Objects/funcobject.c#PyFunction_Type
-    # see python/cpython/Objects/descrobject.c#PyMethodDescr_Type
-    # see python/cpython/Objects/descrobject.c#PyWrapperDescr_Type
-    # see python/cpython/Include/object.h#PyType_HasFeature
-    # see python/cpython/Include/object.h#PyObject_TypeCheck
-
     cls = type(obj)
 
     if cls is FunctionType:
@@ -220,18 +191,12 @@ def ismethoddescriptor_static(obj: object, /) -> bool:
 
 
 def ismetaclass_static(obj: object, /) -> bool:
-    """..."""
-
-    # see python/cpython/Include/object.h#PyType_Check
-    # see python/cpython/Include/object.h#PyType_HasFeature
-    # see python/cpython/Objects/typeobject.c#PyType_IsSubtype
-
     if obj is type:
         return True
 
     try:
         flags = _getflags_static(obj)
-    except TypeError:  # not a class
+    except TypeError:
         return False
 
     if flags & _TPFLAGS_TYPE_SUBCLASS:
@@ -244,12 +209,6 @@ def ismetaclass_static(obj: object, /) -> bool:
 
 
 def isclass_static(obj: object, /) -> bool:
-    """..."""
-
-    # see python/cpython/Include/object.h#PyType_Check
-    # see python/cpython/Include/object.h#PyType_HasFeature
-    # see python/cpython/Include/object.h#PyObject_TypeCheck
-
     cls = type(obj)
 
     if cls is type:
@@ -265,10 +224,6 @@ def isclass_static(obj: object, /) -> bool:
 
 
 def _istuple_static(obj, /):
-    # see python/cpython/Include/tupleobject.h#PyTuple_Check
-    # see python/cpython/Include/object.h#PyType_HasFeature
-    # see python/cpython/Include/object.h#PyObject_TypeCheck
-
     cls = type(obj)
 
     if cls is tuple:
@@ -284,18 +239,13 @@ def _istuple_static(obj, /):
 
 
 def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
-    """..."""
-
-    # see python/cpython/Include/object.h#PyType_FastSubclass
-    # see python/cpython/Objects/abstract.c#PyObject_IsSubclass
-
     if flag := _TPFLAGS_BY_CLASS_ID.get(id(class_or_tuple), 0):
         if obj is class_or_tuple:
             return True
 
         try:
             flags = _getflags_static(obj)
-        except TypeError:  # not a class
+        except TypeError:
             return False
 
         if flags & flag:
@@ -314,15 +264,11 @@ def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
 
     try:
         mro = _getmro_static(obj)
-    except TypeError:  # not a class
+    except TypeError:
         return False
 
     return any(base is class_or_tuple for base in mro)
 
 
 def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
-    """..."""
-
-    # see python/cpython/Include/object.h#PyObject_TypeCheck
-
     return issubclass_static(type(obj), class_or_tuple)

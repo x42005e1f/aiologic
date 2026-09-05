@@ -127,7 +127,7 @@ class lazydeque(MutableSequence[_T]):
 
         return f"{self.__class__.__qualname__}({data_repr})"
 
-    __hash__: ClassVar[None] = None  # type: ignore[assignment]
+    __hash__: ClassVar[None] = None
 
     def __eq__(self, value: object, /) -> bool:
         if self is value:
@@ -316,7 +316,7 @@ class lazydeque(MutableSequence[_T]):
             return self.__class__(data * value, self._maxlen)
 
         if not isinstance(value, int):
-            "" * value  # checks for isinstance(value, SupportsIndex)
+            "" * value
 
         return self.__class__(maxlen=self._maxlen)
 
@@ -325,7 +325,7 @@ class lazydeque(MutableSequence[_T]):
             return self.__class__(value * data, self._maxlen)
 
         if not isinstance(value, int):
-            "" * value  # checks for isinstance(value, SupportsIndex)
+            "" * value
 
         return self.__class__(maxlen=self._maxlen)
 
@@ -355,7 +355,7 @@ class lazydeque(MutableSequence[_T]):
             empty = not value
 
             if empty and not isinstance(value, deque):
-                value = tuple(value)  # checks for isinstance(value, Iterable)
+                value = tuple(value)
 
                 empty = not value
 
@@ -373,11 +373,11 @@ class lazydeque(MutableSequence[_T]):
             return self
 
         if not isinstance(value, int):
-            "" * value  # checks for isinstance(value, SupportsIndex)
+            "" * value
 
         return self
 
-    def __getitem__(  # type: ignore[override]
+    def __getitem__(
         self,
         key: SupportsIndex,
         /,
@@ -386,12 +386,12 @@ class lazydeque(MutableSequence[_T]):
             return data[key]
 
         if not isinstance(key, int):
-            range(key)  # checks for isinstance(key, SupportsIndex)
+            range(key)
 
         msg = "deque index out of range"
         raise IndexError(msg)
 
-    def __setitem__(  # type: ignore[override]
+    def __setitem__(
         self,
         key: SupportsIndex,
         value: _T,
@@ -401,12 +401,12 @@ class lazydeque(MutableSequence[_T]):
             data[key] = value
 
         if not isinstance(key, int):
-            range(key)  # checks for isinstance(key, SupportsIndex)
+            range(key)
 
         msg = "deque index out of range"
         raise IndexError(msg)
 
-    def __delitem__(  # type: ignore[override]
+    def __delitem__(
         self,
         key: SupportsIndex,
         /,
@@ -415,7 +415,7 @@ class lazydeque(MutableSequence[_T]):
             del data[key]
 
         if not isinstance(key, int):
-            range(key)  # checks for isinstance(key, SupportsIndex)
+            range(key)
 
         msg = "deque index out of range"
         raise IndexError(msg)
@@ -544,7 +544,7 @@ class lazydeque(MutableSequence[_T]):
             empty = not value
 
             if empty and not isinstance(value, deque):
-                value = tuple(value)  # checks for isinstance(value, Iterable)
+                value = tuple(value)
 
                 empty = not value
 
@@ -583,7 +583,7 @@ class lazydeque(MutableSequence[_T]):
             empty = not value
 
             if empty and not isinstance(value, deque):
-                value = tuple(value)  # checks for isinstance(value, Iterable)
+                value = tuple(value)
 
                 empty = not value
 
@@ -617,7 +617,7 @@ class lazydeque(MutableSequence[_T]):
                 return data.index(x, start)
             else:
                 return data.index(x, start, stop)
-        else:  # checks for type errors
+        else:
             if stop is not DEFAULT:
                 ()[start:stop]
             elif start is not DEFAULT:
@@ -640,7 +640,7 @@ class lazydeque(MutableSequence[_T]):
             return
 
         if not isinstance(n, int):
-            range(n)  # checks for isinstance(n, SupportsIndex)
+            range(n)
 
     @wraps(deque.reverse, assigned=_WRAPPER_ASSIGNMENTS)
     def reverse(self, /) -> None:
@@ -657,7 +657,7 @@ class lazydeque(MutableSequence[_T]):
         raise ValueError(msg)
 
     @wraps(deque.pop, assigned=_WRAPPER_ASSIGNMENTS)
-    def pop(self, /) -> _T:  # type: ignore[override]
+    def pop(self, /) -> _T:
         if (data := self._data) is not None:
             return data.pop()
 
@@ -679,8 +679,6 @@ class lazydeque(MutableSequence[_T]):
 
     @property
     def maxlen(self, /) -> int | None:
-        """maximum size of a deque or None if unbounded"""
-
         return self._maxlen
 
 

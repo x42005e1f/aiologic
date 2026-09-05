@@ -8,30 +8,28 @@ import sys
 
 from typing import Any, Final
 
-if sys.version_info >= (3, 11):  # python/cpython#22392 | python/cpython#93064
+if sys.version_info >= (3, 11):
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
 
-if sys.version_info >= (3, 9):  # various bug fixes (caching, etc.)
+if sys.version_info >= (3, 9):
     from typing import Literal
-else:  # typing-extensions>=4.6.0
+else:
     from typing_extensions import Literal
 
-if sys.version_info >= (3, 11):  # python/cpython#30842
+if sys.version_info >= (3, 11):
     from typing import Never
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
+if sys.version_info >= (3, 11):
     from typing import final
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import final
 
-# `_SingletonMeta.__call__()` is omitted due to python/typing#270
 class _SingletonMeta(EnumType): ...
 
-# `SingletonEnum.__setattr__()` is omitted due to python/mypy#18325
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]
     def __repr__(self, /) -> str: ...
     def __str__(self, /) -> str: ...

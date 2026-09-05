@@ -313,10 +313,10 @@ Let us give the following definitions:
    implemented at the C level, and only that one.
 3. **A signal-safe primitive** is a primitive whose functions are all
    reentrant. For example, no primitive from the :mod:`threading` module
-   (except :class:`threading.Lock`) is signal-safe, because attempting to use a
-   primitive while interrupted in any of its methods can lead to a deadlock or
-   broken behavior, even for non-blocking calls, even with
-   :class:`threading.RLock`.
+   (except :class:`threading.Lock` `and <https://github.com/python/cpython/
+   issues/141460>`__ :class:`threading.RLock`) is signal-safe, because
+   attempting to use a primitive while interrupted in any of its methods can
+   lead to a deadlock or broken behavior, even for non-blocking calls.
 
 Due to its design (lockless, lock-free, thread-safe, etc.), aiologic boasts
 both reentrant and signal-safe primitives. You may find that

@@ -15,14 +15,14 @@ from ._getters import current_thread
 from ._handles import ThreadHandle
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):  # python/cpython#30842
+    if sys.version_info >= (3, 11):
         from typing import Never
-    else:  # typing-extensions>=4.1.0
+    else:
         from typing_extensions import Never
 
-if sys.version_info >= (3, 11):  # python/cpython#30530: introspectable
+if sys.version_info >= (3, 11):
     from typing import final
-else:  # typing-extensions>=4.1.0
+else:
     from typing_extensions import final
 
 _T = TypeVar("_T")
@@ -36,7 +36,7 @@ class ThreadVarToken(
     __slots__ = ()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
-        bcs = __class__  # an implicit closure reference
+        bcs = __class__
         bcs_name = bcs.__name__
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
@@ -48,7 +48,7 @@ class ThreadVar(BaseVar[ThreadVarToken[_T], ThreadHandle, _T], Generic[_T]):
     __slots__ = ()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
-        bcs = __class__  # an implicit closure reference
+        bcs = __class__
         bcs_name = bcs.__name__
 
         msg = f"type {bcs_name!r} is not an acceptable base type"

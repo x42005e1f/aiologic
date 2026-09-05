@@ -374,8 +374,6 @@ def shield(wrapped: _AwaitableT, /) -> _AwaitableT: ...
 @overload
 def shield(wrapped: _CallableT, /) -> _CallableT: ...
 def shield(wrapped, /):
-    """..."""
-
     if isawaitable(wrapped):
         return __ShieldedAwaitable(wrapped)
 

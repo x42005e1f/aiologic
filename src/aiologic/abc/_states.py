@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, ClassVar
 
-    if sys.version_info >= (3, 11):  # python/cpython#30842
+    if sys.version_info >= (3, 11):
         from typing import Never
-    else:  # typing-extensions>=4.1.0
+    else:
         from typing_extensions import Never
 
-if sys.version_info >= (3, 10):  # python/cpython#27250: callable class
+if sys.version_info >= (3, 10):
     from typing import NewType
-else:  # typing-extensions>=4.6.0
+else:
     from typing_extensions import NewType
 
 StateReferenceKey = NewType("StateReferenceKey", object)

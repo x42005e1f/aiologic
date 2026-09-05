@@ -50,12 +50,10 @@ _USE_ONCELOCK_FORCED: Final[bool] = not __GIL_ENABLED
 
 
 class BrokenBarrierError(RuntimeError):
-    """..."""
+    pass
 
 
 class Latch:
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_filling",
@@ -65,8 +63,6 @@ class Latch:
     )
 
     def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
-        """..."""
-
         if parties is DEFAULT:
             parties = 0
         elif parties < 0:
@@ -85,26 +81,6 @@ class Latch:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = Latch(4)
-            >>> orig.parties
-            4
-            >>> copy = Latch(*orig.__getnewargs__())
-            >>> copy.parties
-            4
-        """
-
         parties = self._parties
 
         if parties != 0:
@@ -113,20 +89,12 @@ class Latch:
         return ()
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__(self._parties)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -149,23 +117,6 @@ class Latch:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     def __bool__(self, /) -> bool:
-        """
-        Returns :data:`True` if the barrier has been passed or broken.
-
-        Used by the standard :ref:`truth testing procedure <truth>`.
-
-        Example:
-            >>> started = Latch(1)  # barrier is filling
-            >>> bool(started)
-            False
-            >>> started.wait()  # barrier is draining
-            >>> bool(started)
-            True
-            >>> started.abort()  # barrier is broken
-            >>> bool(started)
-            True
-        """
-
         return not self._filling
 
     async def __await(self, /, timeout: float | None = None) -> None:
@@ -215,19 +166,13 @@ class Latch:
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> None:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> None:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> None:
-        """..."""
-
         if not self._filling:
             unbroken = self._unbroken
 
@@ -272,8 +217,6 @@ class Latch:
         self._wakeup(unbroken)
 
     def abort(self, /) -> None:
-        """..."""
-
         self._unbroken = False
 
         if self._filling:
@@ -329,42 +272,25 @@ class Latch:
                                     ThreadOnceLock.release(event)
                             else:
                                 waiters.remove(token)
-                    except ValueError:  # waiters does not contain token
+                    except ValueError:
                         continue
-                    except IndexError:  # waiters is empty
+                    except IndexError:
                         break
 
     @property
     def parties(self, /) -> int:
-        """
-        The initial number of tasks required to pass the barrier.
-        """
-
         return self._parties
 
     @property
     def broken(self, /) -> bool:
-        """
-        A boolean that is :data:`True` if the barrier is in the broken state.
-        """
-
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to pass.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._waiters)
 
 
 class Barrier:
-    """..."""
-
     __slots__ = (
         "__weakref__",
         "_parties",
@@ -374,8 +300,6 @@ class Barrier:
     )
 
     def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
-        """..."""
-
         if parties is DEFAULT:
             parties = 0
         elif parties < 0:
@@ -394,26 +318,6 @@ class Barrier:
         return self
 
     def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = Barrier(4)
-            >>> orig.parties
-            4
-            >>> copy = Barrier(*orig.__getnewargs__())
-            >>> copy.parties
-            4
-        """
-
         parties = self._parties
 
         if parties != 0:
@@ -422,20 +326,12 @@ class Barrier:
         return ()
 
     def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
         return None
 
     def __copy__(self, /) -> Self:
-        """..."""
-
         return self.__class__(self._parties)
 
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -458,13 +354,9 @@ class Barrier:
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
 
     async def __aenter__(self, /) -> int:
-        """..."""
-
         return await self
 
     def __enter__(self, /) -> int:
-        """..."""
-
         return self.wait()
 
     async def __aexit__(
@@ -474,8 +366,6 @@ class Barrier:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        """..."""
-
         if exc_value is not None:
             self.abort()
 
@@ -486,8 +376,6 @@ class Barrier:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        """..."""
-
         if exc_value is not None:
             self.abort()
 
@@ -541,19 +429,13 @@ class Barrier:
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         if not self._unbroken:
             green_checkpoint()
 
@@ -601,8 +483,6 @@ class Barrier:
         return index
 
     def abort(self, /) -> None:
-        """..."""
-
         self._unbroken = False
 
         self._wakeup_on_breaking()
@@ -644,7 +524,7 @@ class Barrier:
 
         try:
             tokens = list(islice(waiters, parties))
-        except RuntimeError:  # deque mutated during iteration
+        except RuntimeError:
             if not self._unbroken:
                 return False
 
@@ -715,9 +595,9 @@ class Barrier:
                                 ThreadOnceLock.release(event)
                         else:
                             waiters.remove(token)
-                except ValueError:  # waiters does not contain token
+                except ValueError:
                     continue
-                except IndexError:  # waiters is empty
+                except IndexError:
                     break
 
     def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
@@ -757,9 +637,9 @@ class Barrier:
                                     ThreadOnceLock.release(event)
                             else:
                                 waiters.remove(token)
-                    except ValueError:  # waiters does not contain token
+                    except ValueError:
                         continue
-                    except IndexError:  # waiters is empty
+                    except IndexError:
                         break
 
     def _release(self, /) -> None:
@@ -773,43 +653,24 @@ class Barrier:
 
     @property
     def parties(self, /) -> int:
-        """
-        The initial number of tasks required to pass the barrier.
-        """
-
         return self._parties
 
     @property
     def broken(self, /) -> bool:
-        """
-        A boolean that is :data:`True` if the barrier is in the broken state.
-        """
-
         return not self._unbroken
 
     @property
     def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to pass.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
         return len(self._waiters)
 
 
 class RBarrier(Barrier):
-    """..."""
-
     __slots__ = (
         "_resetting",
         "_timer",
     )
 
     def __new__(cls, /, parties: int | DefaultType = DEFAULT) -> Self:
-        """..."""
-
         if parties is DEFAULT:
             parties = 0
         elif parties < 0:
@@ -829,47 +690,7 @@ class RBarrier(Barrier):
 
         return self
 
-    @copies(Barrier.__getnewargs__)
-    def __getnewargs__(self, /) -> tuple[Any, ...]:
-        """
-        Returns arguments that can be used to create new instances with the
-        same initial values.
-
-        Used by:
-
-        * The :mod:`pickle` module for pickling.
-        * The :mod:`copy` module for copying.
-
-        The current state does not affect the arguments.
-
-        Example:
-            >>> orig = RBarrier(4)
-            >>> orig.parties
-            4
-            >>> copy = RBarrier(*orig.__getnewargs__())
-            >>> copy.parties
-            4
-        """
-
-        return Barrier.__getnewargs__(self)
-
-    @copies(Barrier.__getstate__)
-    def __getstate__(self, /) -> None:
-        """
-        Disables the use of internal state for pickling and copying.
-        """
-
-        return Barrier.__getstate__(self)
-
-    @copies(Barrier.__copy__)
-    def __copy__(self, /) -> Self:
-        """..."""
-
-        return Barrier.__copy__(self)
-
     def __repr__(self, /) -> str:
-        """..."""
-
         cls = self.__class__
         cls_repr = f"{cls.__module__}.{cls.__qualname__}"
 
@@ -887,42 +708,6 @@ class RBarrier(Barrier):
             extra = f"filling, waiting={waiting}"
 
         return f"<{object_repr} at {id(self):#x} [{extra}]>"
-
-    @copies(Barrier.__aenter__)
-    async def __aenter__(self, /) -> int:
-        """..."""
-
-        return await Barrier.__aenter__(self)
-
-    @copies(Barrier.__enter__)
-    def __enter__(self, /) -> int:
-        """..."""
-
-        return Barrier.__enter__(self)
-
-    @copies(Barrier.__aexit__)
-    async def __aexit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return await Barrier.__aexit__(self, exc_type, exc_value, traceback)
-
-    @copies(Barrier.__exit__)
-    def __exit__(
-        self,
-        /,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """..."""
-
-        return Barrier.__exit__(self, exc_type, exc_value, traceback)
 
     async def __await(self, /, timeout: float | None = None) -> int:
         if not self._unbroken:
@@ -976,19 +761,13 @@ class RBarrier(Barrier):
     @generator
     @copies(__await)
     async def __await__(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         return await self.__await(timeout)
 
     @copies(__await)
     async def with_(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         return await self.__await(timeout)
 
     def wait(self, /, timeout: float | None = None) -> int:
-        """..."""
-
         if not self._unbroken:
             green_checkpoint()
 
@@ -1038,8 +817,6 @@ class RBarrier(Barrier):
         return index
 
     def reset(self, /) -> None:
-        """..."""
-
         self._resetting.append(None)
 
         try:
@@ -1052,8 +829,6 @@ class RBarrier(Barrier):
             self._resetting.pop()
 
     def abort(self, /) -> None:
-        """..."""
-
         self._unbroken.clear()
 
         self._wakeup_on_breaking()
@@ -1069,7 +844,7 @@ class RBarrier(Barrier):
 
         try:
             tokens = list(islice(waiters, parties))
-        except RuntimeError:  # deque mutated during iteration
+        except RuntimeError:
             if self._unbroken.get(None) is not marker:
                 return False
 
@@ -1156,9 +931,9 @@ class RBarrier(Barrier):
                                 ThreadOnceLock.release(event)
                         else:
                             waiters.remove(token)
-                except ValueError:  # waiters does not contain token
+                except ValueError:
                     continue
-                except IndexError:  # waiters is empty
+                except IndexError:
                     break
 
     def _wakeup_on_draining(self, /, tokens: list[Any]) -> None:
@@ -1205,37 +980,7 @@ class RBarrier(Barrier):
                                 ThreadOnceLock.release(event)
                         else:
                             waiters.remove(token)
-                except ValueError:  # waiters does not contain token
+                except ValueError:
                     continue
-                except IndexError:  # waiters is empty
+                except IndexError:
                     break
-
-    @property
-    @copies(Barrier.parties.fget)
-    def parties(self, /) -> int:
-        """
-        The initial number of tasks required to pass the barrier.
-        """
-
-        return Barrier.parties.fget(self)
-
-    @property
-    @copies(Barrier.broken.fget)
-    def broken(self, /) -> bool:
-        """
-        A boolean that is :data:`True` if the barrier is in the broken state.
-        """
-
-        return Barrier.broken.fget(self)
-
-    @property
-    @copies(Barrier.waiting.fget)
-    def waiting(self, /) -> int:
-        """
-        The current number of tasks waiting to pass.
-
-        It represents the length of the waiting queue and thus changes
-        immediately.
-        """
-
-        return Barrier.waiting.fget(self)
