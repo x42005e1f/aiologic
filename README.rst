@@ -165,26 +165,18 @@ and this allows the execution of Python code to be interpreted as one of the
 possible serialized sequences of all threads' operations. In addition, there
 are also effectively atomic operations (those at the C level that do not
 release the GIL), and the pure-Python implementation of this library takes
-advantage of this, which gives `an incredible speedup on PyPy <https://
-gist.github.com/x42005e1f/149d3994d5f7bd878def71d5404e6ea4>`__ compared to
-alternatives from the :mod:`threading` module.
+advantage of this.
 
 In `free-threaded Python <https://docs.python.org/3/howto/
 free-threading-python.html>`__, the same subset of effectively atomic
 operations we use `remains thread-safe <https://docs.python.org/3/library/
 threadsafety.html>`__; however, one nuance is that sequential consistency is no
-longer guaranteed, and we may observe weaker ordering on relaxed operations. On
-the other hand, when interpreting `per-object locks <https://docs.python.org/3/
-glossary.html#term-per-object-lock>`__, we will also observe some sequential
-order in their case.
+longer guaranteed, and we may observe weaker ordering on relaxed operations.
 
 The pure-Python implementation is primarily designed for the GIL (sequential
 consistency) and targets `x86-TSO <https://www.cl.cam.ac.uk/~pes20/weakmemory/
-index3.html>`__ or stronger (x86, x86-64, s390x, WASM/WASI, etc.) where
-ordering may be in question in the current free-threading implementation. It
-should work well in most cases with threads, and perfectly when you are not
-working with threads (that is, single-threaded sync/async code, with/without
-signal handlers and/or destructors, and the like). If you need stricter
+index3.html>`__ or stronger (x86, x86-64, s390x, etc.) where ordering may be in
+question in the current free-threading implementation. If you need stricter
 guarantees, please prefer the build with extension modules when it is
 available.
 
