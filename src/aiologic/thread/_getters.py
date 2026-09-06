@@ -86,6 +86,7 @@ def _current_thread_state():
 
 @replaces_with_outcome(globals())
 def _current_thread():
+    current_process()
     _register_hooks()
 
     thread_local = _get_thread_local()
