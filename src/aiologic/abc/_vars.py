@@ -206,41 +206,38 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
         return None
 
     def __deepcopy__(self, memo: Any, /) -> Self:
-        args, kwargs = self.__getnewargs_ex__()
-
-        obj = type(self)(*deepcopy(args, memo), **deepcopy(kwargs, memo))
-        memo[id(self)] = obj
+        args, kwargs = deepcopy(self.__getnewargs_ex__(), memo)
+        memo[id(self)] = self_copy = type(self)(*args, **kwargs)
 
         for item in self.__items.copy().values():
             state = item()
             if state is None:
                 continue
 
-            new_item = _BaseVarItem(state, obj.__remove_by_item)
+            new_item = _BaseVarItem(state, self_copy.__remove_by_item)
             new_item.key = item.key
             new_item.value = deepcopy(item.value, memo)
 
-            obj.__items[item.key] = new_item
+            self_copy.__items[item.key] = new_item
 
-        return obj
+        return self_copy
 
     def __copy__(self, /) -> Self:
         args, kwargs = self.__getnewargs_ex__()
-
-        obj = type(self)(*args, **kwargs)
+        self_copy = type(self)(*args, **kwargs)
 
         for item in self.__items.copy().values():
             state = item()
             if state is None:
                 continue
 
-            new_item = _BaseVarItem(state, obj.__remove_by_item)
+            new_item = _BaseVarItem(state, self_copy.__remove_by_item)
             new_item.key = item.key
             new_item.value = item.value
 
-            obj.__items[item.key] = new_item
+            self_copy.__items[item.key] = new_item
 
-        return obj
+        return self_copy
 
     def __repr__(self, /) -> str:
         cls = type(self)
