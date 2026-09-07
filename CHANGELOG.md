@@ -82,6 +82,9 @@ Commit messages are consistent with
   which is a safer alternative to `global` (since it prevents mismatches
   between the function name and the global name), and covers cases that the
   other two related functions could not cover.
+- `message` parameter to `aiologic.meta.export_deprecated()` (an optional
+  fourth parameter) as a way to set a custom deprecation message (instead of
+  the default, which simply refers to the target).
 
 ### Changed
 

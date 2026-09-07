@@ -48,7 +48,7 @@ def _register(
     target: str,
     /,
     *,
-    deprecated: bool,
+    deprecation_message: str | DefaultType | None,
 ) -> None: ...
 def export_dynamic(
     module_namespace: ModuleType | MutableMapping[str, object],
@@ -61,4 +61,5 @@ def export_deprecated(
     link_name: str,
     target: str,
     /,
+    message: str | DefaultType = DEFAULT,
 ) -> None: ...

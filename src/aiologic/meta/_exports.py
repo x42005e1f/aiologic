@@ -184,7 +184,7 @@ def _register(
     target: str,
     /,
     *,
-    deprecated: bool,
+    deprecation_message: str | DefaultType | None,
 ) -> None:
     if ismodule(module_namespace):
         module = module_namespace
@@ -227,7 +227,10 @@ def _register(
             import_exc = None
 
             try:
-                (target_module_name, target_name), deprecated = registry[name]
+                (
+                    (target_module_name, target_name),
+                    deprecation_message,
+                ) = registry[name]
             except KeyError:
                 pass
             else:
@@ -242,9 +245,15 @@ def _register(
 
                     import_exc = exc
                 else:
-                    if deprecated:
+                    if deprecation_message is not None:
+                        if deprecation_message is DEFAULT:
+                            deprecation_message = (
+                                f"Use {target_module_name}.{target_name}"
+                                f" instead"
+                            )
+
                         warnings.warn(
-                            f"Use {target_module_name}.{target_name} instead",
+                            deprecation_message,
                             DeprecationWarning,
                             stacklevel=2,
                         )
@@ -299,7 +308,7 @@ def _register(
     else:
         target_path = ("", target)
 
-    record = (target_path, deprecated)
+    record = (target_path, deprecation_message)
 
     if registry.setdefault(link_name, record) != record:
         msg = f"{link_name!r} is already registered"
@@ -312,7 +321,7 @@ def export_dynamic(
     target: str,
     /,
 ) -> None:
-    _register(module_namespace, link_name, target, deprecated=False)
+    _register(module_namespace, link_name, target, deprecation_message=None)
 
 
 def export_deprecated(
@@ -320,5 +329,6 @@ def export_deprecated(
     link_name: str,
     target: str,
     /,
+    message: str | DefaultType = DEFAULT,
 ) -> None:
-    _register(module_namespace, link_name, target, deprecated=True)
+    _register(module_namespace, link_name, target, deprecation_message=message)

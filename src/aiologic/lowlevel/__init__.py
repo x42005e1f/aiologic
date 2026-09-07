@@ -91,7 +91,15 @@ from ._waiters import (
 
 from aiologic import meta  # isort: skip
 
-meta.export_dynamic(globals(), "current_thread", "._threads.current_thread")
+meta.export_deprecated(
+    globals(),
+    "current_thread",
+    "._threads.current_thread",
+    (
+        "Use aiologic.thread.current_thread"
+        "/aiologic.thread.current_thread_state instead"
+    ),
+)
 meta.export_deprecated(
     globals(),
     "current_thread_ident",
