@@ -9,6 +9,7 @@ import sys
 import weakref
 
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from aiologic.meta import MISSING
@@ -203,6 +204,43 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
 
     def __getstate__(self, /) -> None:
         return None
+
+    def __deepcopy__(self, memo: Any, /) -> Self:
+        args, kwargs = self.__getnewargs_ex__()
+
+        obj = type(self)(*deepcopy(args, memo), **deepcopy(kwargs, memo))
+        memo[id(self)] = obj
+
+        for item in self.__items.copy().values():
+            state = item()
+            if state is None:
+                continue
+
+            new_item = _BaseVarItem(state, obj.__remove_by_item)
+            new_item.key = item.key
+            new_item.value = deepcopy(item.value, memo)
+
+            obj.__items[item.key] = new_item
+
+        return obj
+
+    def __copy__(self, /) -> Self:
+        args, kwargs = self.__getnewargs_ex__()
+
+        obj = type(self)(*args, **kwargs)
+
+        for item in self.__items.copy().values():
+            state = item()
+            if state is None:
+                continue
+
+            new_item = _BaseVarItem(state, obj.__remove_by_item)
+            new_item.key = item.key
+            new_item.value = item.value
+
+            obj.__items[item.key] = new_item
+
+        return obj
 
     def __repr__(self, /) -> str:
         cls = type(self)
