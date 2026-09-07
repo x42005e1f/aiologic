@@ -255,6 +255,8 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
 
         return f"<{self_repr} at {id(self):#x}>"
 
+    __hash__: ClassVar[None] = None
+
     @abstractmethod
     def _current_handle(self, /) -> _HandleT:
         raise NotImplementedError
