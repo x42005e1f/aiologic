@@ -6,7 +6,7 @@
 import sys
 
 from abc import ABC
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from ._states import BaseState
 
@@ -25,6 +25,7 @@ class BaseHandle(ABC, Generic[_StateT_co]):
 
     def __init__(self, /, state: _StateT_co, ident: int) -> None: ...
     def __reduce__(self, /) -> Never: ...
+    def __deepcopy__(self, memo: Any, /) -> Never: ...
     def __copy__(self, /) -> Never: ...
     @property
     def state(self, /) -> _StateT_co | None: ...

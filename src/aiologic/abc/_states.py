@@ -44,6 +44,13 @@ class BaseState(ABC):
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
+    def __deepcopy__(self, memo: Any, /) -> Never:
+        cls = type(self)
+        cls_name = cls.__name__
+
+        msg = f"cannot deep copy {cls_name!r} object"
+        raise TypeError(msg)
+
     def __copy__(self, /) -> Never:
         cls = type(self)
         cls_name = cls.__name__

@@ -15,6 +15,8 @@ from ._states import BaseState
 if TYPE_CHECKING:
     import sys
 
+    from typing import Any
+
     if sys.version_info >= (3, 11):
         from typing import Never
     else:
@@ -40,6 +42,13 @@ class BaseHandle(ABC, Generic[_StateT_co]):
         cls_name = cls.__name__
 
         msg = f"cannot pickle {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __deepcopy__(self, memo: Any, /) -> Never:
+        cls = type(self)
+        cls_name = cls.__name__
+
+        msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
