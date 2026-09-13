@@ -88,46 +88,53 @@ from aiologic import meta  # isort: skip
 meta.export_deprecated(
     globals(),
     "THREAD_DUMMY_LOCK",
-    "aiologic.thread.DUMMY_LOCK",
+    "._locks.THREAD_DUMMY_LOCK",
+    "Use `aiologic.thread.DUMMY_LOCK` instead",
 )
 meta.export_deprecated(
     globals(),
     "ThreadDummyLock",
-    "aiologic.thread.DummyLockType",
+    "._locks.ThreadDummyLock",
+    "Use `aiologic.thread.DummyLockType` instead",
 )
 meta.export_deprecated(
     globals(),
     "ThreadLock",
-    "aiologic.thread.LockType",
+    "._locks.ThreadLock",
+    "Use `aiologic.thread.LockType` instead",
 )
 meta.export_deprecated(
     globals(),
     "ThreadRLock",
-    "aiologic.thread.RLockType",
+    "._locks.ThreadRLock",
+    "Use `aiologic.thread.RLockType` instead",
 )
 meta.export_deprecated(
     globals(),
     "create_thread_lock",
-    "aiologic.thread.create_lock",
+    "._locks.create_thread_lock",
+    "Use `aiologic.thread.create_lock` instead",
 )
 meta.export_deprecated(
     globals(),
     "create_thread_rlock",
-    "aiologic.thread.create_rlock",
+    "._locks.create_thread_rlock",
+    "Use `aiologic.thread.create_rlock` instead",
 )
 meta.export_deprecated(
     globals(),
     "current_thread",
     "._threads.current_thread",
     (
-        "Use aiologic.thread.current_thread"
-        "/aiologic.thread.current_thread_state instead"
+        "Use `aiologic.thread.current_thread`"
+        "/`aiologic.thread.current_thread_state` instead"
     ),
 )
 meta.export_deprecated(
     globals(),
     "current_thread_ident",
-    "aiologic.thread.current_thread_ident",
+    "._threads.current_thread_ident",
+    "Use `aiologic.thread.current_thread_ident` instead",
 )
 
 del meta
