@@ -94,6 +94,11 @@ Commit messages are consistent with
 - `aiologic.thread.create_rlock_if_notso()` as a way to create actual lock
   objects only if TSO (Total Store Order) is not guaranteed (otherwise, the
   dummy lock is returned).
+- `aiologic.meta.when_imported_for()` to register a post import hook for the
+  given namespace. Unlike `wrapt.when_imported()`, it is bound to the current
+  module state (that is, the hook becomes a no-op after a reload) and accepts
+  an optional `name` parameter to overwrite hooks with the same name (instead
+  of adding new ones; that is, O(1) instead of O(n)).
 - `aiologic.meta.replaces_with_outcome()` to replace a function with its return
   value. Essentially, this is a mechanism for lazy function initialization,
   which is a safer alternative to `global` (since it prevents mismatches
@@ -105,6 +110,9 @@ Commit messages are consistent with
 
 ### Changed
 
+- `aiologic.meta.replaces_when_imported()` now uses
+  `aiologic.meta.when_imported_for()`, thereby inheriting its features (and
+  requirements).
 - The experimental free-threading from CPython 3.13 is no longer supported
   because it lacks the necessary fixes (such as for
   [python/cpython#146270](https://github.com/python/cpython/issues/146270)).

@@ -5,6 +5,7 @@
 
 import sys
 
+from types import ModuleType
 from typing import Any, TypeVar
 
 from ._markers import MISSING, MissingType
@@ -31,6 +32,7 @@ else:
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
+_HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
 _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable[..., Any])
 _P = ParamSpec("_P")
 
@@ -39,6 +41,24 @@ class _NamedCallable(Protocol[_P, _T_co]):
     @property
     def __name__(self, /) -> str: ...
 
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name: str,
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+) -> Callable[[_HookT], _HookT]: ...
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name: str,
+    hook: _HookT,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+) -> _HookT: ...
 @overload
 def replaces(
     namespace: MutableMapping[str, Any],
