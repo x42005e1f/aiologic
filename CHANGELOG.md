@@ -77,6 +77,23 @@ Commit messages are consistent with
   `aiologic.thread.current_thread()` to obtain the corresponding objects: the
   identifier, the state, and the handle of the current thread (the same objects
   for the same thread).
+- `aiologic.thread.LockType` and `aiologic.thread.create_lock()` as a new type
+  of thread-level lock and its factory function, respectively. Unlike the
+  similar ones from `aiologic.lowlevel`, the former is a thin wrapper around
+  `threading.Lock` and backports some useful single-underscore methods.
+- `aiologic.thread.RLockType`, `aiologic.thread.RLockState`, and
+  `aiologic.thread.create_rlock()` as a new type of thread-level reentrant
+  lock, its distinct state type, and its factory function, respectively. Unlike
+  the similar ones from `aiologic.lowlevel`, the former is a thin wrapper
+  around `threading.RLock` and backports some useful single-underscore methods.
+- `aiologic.thread.DummyLockType`, `aiologic.thread.DummyLockState`, and
+  `aiologic.thread.DUMMY_LOCK` as a new type of thread-level dummy lock, its
+  distinct state type, and its singleton object, respectively.
+- `aiologic.thread.create_rlock_if_nogil()` as a way to create actual lock
+  objects only if the GIL is disabled (otherwise, the dummy lock is returned).
+- `aiologic.thread.create_rlock_if_notso()` as a way to create actual lock
+  objects only if TSO (Total Store Order) is not guaranteed (otherwise, the
+  dummy lock is returned).
 - `aiologic.meta.replaces_with_outcome()` to replace a function with its return
   value. Essentially, this is a mechanism for lazy function initialization,
   which is a safer alternative to `global` (since it prevents mismatches
@@ -95,6 +112,16 @@ Commit messages are consistent with
 
 ### Deprecated
 
+- `aiologic.lowlevel.THREAD_DUMMY_LOCK` in favor of
+  `aiologic.thread.DUMMY_LOCK`.
+- `aiologic.lowlevel.ThreadDummyLock` in favor of
+  `aiologic.thread.DummyLockType`.
+- `aiologic.lowlevel.ThreadLock` in favor of `aiologic.thread.LockType`.
+- `aiologic.lowlevel.ThreadRLock` in favor of `aiologic.thread.RLockType`.
+- `aiologic.lowlevel.create_thread_lock()` in favor of
+  `aiologic.thread.create_lock()`.
+- `aiologic.lowlevel.create_thread_rlock()` in favor of
+  `aiologic.thread.create_rlock()`.
 - `aiologic.lowlevel.current_thread()` in favor of
   `aiologic.thread.current_thread()` and
   `aiologic.thread.current_thread_state()`.

@@ -110,10 +110,10 @@ class BaseVarToken(ABC, Generic[_BaseVarT, _HandleT, _T]):
 
     def __exit__(
         self,
-        /,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: TracebackType | None,
+        /,
     ) -> None:
         self.__var.reset(self)
 

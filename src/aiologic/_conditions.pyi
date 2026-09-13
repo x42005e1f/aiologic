@@ -9,7 +9,7 @@ from logging import Logger
 from types import TracebackType
 from typing import Any, Final, Generic
 
-from . import lowlevel
+from . import thread
 from ._locks import Lock, RLock
 from ._semaphores import BinarySemaphore
 from .meta import DEFAULT, DefaultType, generator
@@ -36,13 +36,7 @@ LOGGER: Final[Logger]
 _T = TypeVar("_T")
 _T_co = TypeVar(
     "_T_co",
-    bound=(
-        Lock
-        | BinarySemaphore
-        | lowlevel.ThreadRLock
-        | lowlevel.ThreadLock
-        | None
-    ),
+    bound=(Lock | BinarySemaphore | thread.RLockType | thread.LockType | None),
     default=RLock,
     covariant=True,
 )

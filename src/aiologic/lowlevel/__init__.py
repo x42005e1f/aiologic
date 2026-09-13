@@ -45,14 +45,8 @@ from ._libraries import (
     current_green_library_tlocal as current_green_library_tlocal,
 )
 from ._locks import (
-    THREAD_DUMMY_LOCK as THREAD_DUMMY_LOCK,
-    ThreadDummyLock as ThreadDummyLock,
-    ThreadLock as ThreadLock,
     ThreadOnceLock as ThreadOnceLock,
-    ThreadRLock as ThreadRLock,
-    create_thread_lock as create_thread_lock,
     create_thread_oncelock as create_thread_oncelock,
-    create_thread_rlock as create_thread_rlock,
     once as once,
 )
 from ._queues import (
@@ -91,6 +85,36 @@ from ._waiters import (
 
 from aiologic import meta  # isort: skip
 
+meta.export_deprecated(
+    globals(),
+    "THREAD_DUMMY_LOCK",
+    "aiologic.thread.DUMMY_LOCK",
+)
+meta.export_deprecated(
+    globals(),
+    "ThreadDummyLock",
+    "aiologic.thread.DummyLockType",
+)
+meta.export_deprecated(
+    globals(),
+    "ThreadLock",
+    "aiologic.thread.LockType",
+)
+meta.export_deprecated(
+    globals(),
+    "ThreadRLock",
+    "aiologic.thread.RLockType",
+)
+meta.export_deprecated(
+    globals(),
+    "create_thread_lock",
+    "aiologic.thread.create_lock",
+)
+meta.export_deprecated(
+    globals(),
+    "create_thread_rlock",
+    "aiologic.thread.create_rlock",
+)
 meta.export_deprecated(
     globals(),
     "current_thread",

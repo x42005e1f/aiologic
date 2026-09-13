@@ -11,6 +11,18 @@ from ._getters import (
 from ._handles import (
     ThreadHandle as ThreadHandle,
 )
+from ._locks import (
+    DUMMY_LOCK as DUMMY_LOCK,
+    DummyLockState as DummyLockState,
+    DummyLockType as DummyLockType,
+    LockType as LockType,
+    RLockState as RLockState,
+    RLockType as RLockType,
+    create_lock as create_lock,
+    create_rlock as create_rlock,
+    create_rlock_if_nogil as create_rlock_if_nogil,
+    create_rlock_if_notso as create_rlock_if_notso,
+)
 from ._states import (
     ThreadState as ThreadState,
 )

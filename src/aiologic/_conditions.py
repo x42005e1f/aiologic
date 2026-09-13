@@ -13,7 +13,7 @@ from logging import Logger, getLogger
 from math import inf, isnan
 from typing import TYPE_CHECKING, Any, Final, Generic, Union
 
-from . import lowlevel
+from . import thread
 from ._guards import ResourceGuard
 from ._locks import Lock, RLock
 from ._semaphores import BinarySemaphore
@@ -71,8 +71,8 @@ _T_co = TypeVar(
     bound=Union[
         Lock,
         BinarySemaphore,
-        lowlevel.ThreadRLock,
-        lowlevel.ThreadLock,
+        thread.RLockType,
+        thread.LockType,
         None,
     ],
     default=RLock,
