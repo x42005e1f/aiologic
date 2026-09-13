@@ -173,12 +173,16 @@ operations we use `remains thread-safe <https://docs.python.org/3/library/
 threadsafety.html>`__; however, one nuance is that sequential consistency is no
 longer guaranteed, and we may observe weaker ordering on relaxed operations.
 
-The pure-Python implementation is primarily designed for the GIL (sequential
-consistency) and targets `x86-TSO <https://www.cl.cam.ac.uk/~pes20/weakmemory/
-index3.html>`__ or stronger (x86, x86-64, s390x, etc.) where ordering may be in
-question in the current free-threading implementation. If you need stricter
-guarantees, please prefer the build with extension modules when it is
-available.
+Historically, the pure-Python implementation was primarily designed for the GIL
+(sequential consistency), but since version 0.18.0, it has explicitly targeted:
+
+- `x86-TSO <https://www.cl.cam.ac.uk/~pes20/weakmemory/index3.html>`__ and
+  stronger for metafunctions (import machinery, etc.).
+- `Weaker memory models <https://preshing.com/20120930/
+  weak-vs-strong-memory-models/>`__ for primitives (via per-object locks).
+
+If you need stricter guarantees, please prefer the build with extension modules
+when it is available.
 
 .. features-end-marker
 
