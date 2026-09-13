@@ -213,11 +213,6 @@ Documentation
 
 Read the Docs: https://aiologic.readthedocs.io (official)
 
-There are also related posts:
-
-* https://news.ycombinator.com/item?id=46308839 — how it all began
-* https://redd.it/1psjsnu — a brief introduction
-
 Communication channels
 ======================
 
@@ -227,40 +222,6 @@ questions)
 GitHub Issues: https://github.com/x42005e1f/aiologic/issues (bug tracker)
 
 You can also send an email to 0x42005e1f@gmail.com with any feedback.
-
-Project status
-==============
-
-The project is developed and maintained by one person in his spare time and is
-not a commercial product. The author is not a professional programmer, so you
-may encounter some misunderstandings. However, he has been programming as a
-hobby for over a decade, delving into specific topics (often esoteric ones),
-and until 2024, he made almost no public contributions (you can find some if
-you try hard; for example, one very ugly one in Java from 2019), as he set high
-standards for himself. The author often makes mistakes, so he constantly
-double-checks and improves himself (which is well reflected in how often he
-edits his own comments) — as a result, he relies heavily on careful theoretical
-analysis and proactive bug fixing.
-
-No AI tools are used in the development (nor are IDE tools, for that matter).
-The only exception is text translation, since the author is not a native
-English speaker, but the texts themselves are not generated (they are written
-and edited manually by a human). Unicode characters are also actively used (via
-a compose key), as the author likes beautiful texts, such as they were before
-the avoidance of signs of AI writing. *— It may not be too obvious, but this
-paragraph addresses the sore subject of "you are an AI", expressed in... not
-the best ways.*
-
-It is published for the simple reason that the author considered it noteworthy
-and not too ugly. The topic is quite non-trivial, so although contributions are
-not prohibited, they will be very, very difficult if you decide to make them
-(except for some very simple ones). The functionality provided is still being
-perfected, so the development status is alpha.
-
-What is the goal of the project? To realize the author's vision. Is it worth
-trusting what is available now? Well, the choice is yours. But the project `is
-already being used <https://github.com/x42005e1f/aiologic/discussions/11>`__,
-so why not give it a try?
 
 License
 =======
