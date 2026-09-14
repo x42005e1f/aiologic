@@ -172,13 +172,26 @@ free-threading-python.html>`__, the same subset of effectively atomic
 operations we use `remains thread-safe <https://docs.python.org/3/library/
 threadsafety.html>`__; however, one nuance is that sequential consistency is no
 longer guaranteed, and we may observe weaker ordering on relaxed operations.
+But the good news is that:
+
+* Load operations (``slot.__get__()``, ``value = dict[key]``, and so on) that
+  return arbitrary objects are typically acquire operations or stronger.
+* Store operations (``slot.__set__()``, ``dict[key] = value``, and so on) that
+  set arbitrary objects are typically release operations or stronger.
+
+This release-acquire ordering establishes the same synchronizes-with
+relationship and thereby guarantees that a thread performing a load operation
+will not be able to see a partially initialized object (the release semantics
+prevent reordering of the initialization and the store operation; the acquire
+semantics ensure that the cache is updated). Otherwise, we would have to use
+locks for every transfer of a newly created object between threads.
 
 Historically, the pure-Python implementation was primarily designed for the GIL
 (sequential consistency), but since version 0.18.0, it has explicitly targeted:
 
-- `x86-TSO <https://www.cl.cam.ac.uk/~pes20/weakmemory/index3.html>`__ and
+* `x86-TSO <https://www.cl.cam.ac.uk/~pes20/weakmemory/index3.html>`__ and
   stronger for metafunctions (import machinery, etc.).
-- `Weaker memory models <https://preshing.com/20120930/
+* `Weaker memory models <https://preshing.com/20120930/
   weak-vs-strong-memory-models/>`__ for primitives (via per-object locks).
 
 If you need stricter guarantees, please prefer the build with extension modules
