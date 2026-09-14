@@ -178,8 +178,12 @@ But the good news is that:
   return arbitrary objects are typically acquire operations or stronger.
 * Store operations (``slot.__set__()``, ``dict[key] = value``, and so on) that
   set arbitrary objects are typically release operations or stronger.
+* Read-modify-write operations (``slot.__delete__()``, ``del dict[key]``,
+  ``dict.setdefault(key, value)``, and so on) typically have a consistent side
+  effect (that is, two or more threads cannot both delete the same slot/item or
+  get/set different defaults unless there were concurrent store operations).
 
-This release-acquire ordering establishes the same synchronizes-with
+The release-acquire ordering establishes the same synchronizes-with
 relationship and thereby guarantees that a thread performing a load operation
 will not be able to see a partially initialized object (the release semantics
 prevent reordering of the initialization and the store operation; the acquire
