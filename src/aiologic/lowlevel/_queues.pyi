@@ -3,8 +3,6 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections import deque
 from collections.abc import Iterable, Iterator, MutableSequence
 from typing import (
@@ -13,16 +11,12 @@ from typing import (
     Final,
     Generic,
     NoReturn,
+    Self,
     SupportsIndex,
     TypeVar,
 )
 
 from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 _USE_SIMPLEQUEUE: Final[bool]
 

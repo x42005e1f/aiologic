@@ -11,7 +11,7 @@ import sys
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar, Token
 from inspect import isawaitable
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator, when_imported
 
@@ -26,11 +26,6 @@ from aiologic.meta import (
 
 from ._libraries import current_async_library, current_green_library
 from ._threads import current_thread_ident
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType

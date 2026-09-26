@@ -3,22 +3,10 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from types import TracebackType
-from typing import Any, Final, Literal, NewType
+from typing import Any, Final, Literal, Never, NewType, final
 
 from aiologic.meta import SingletonEnum
-
-if sys.version_info >= (3, 11):
-    from typing import Never
-else:
-    from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
 
 RLockState = NewType("RLockState", tuple[int, int])
 DummyLockState = NewType("DummyLockState", tuple[int, int])

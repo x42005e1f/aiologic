@@ -3,17 +3,10 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from types import TracebackType
-from typing import Any
+from typing import Any, Self
 
 from .lowlevel import Event
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 class Lock:
     __slots__ = (

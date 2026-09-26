@@ -13,7 +13,7 @@ from collections.abc import (
     Generator,
 )
 from dataclasses import dataclass, field
-from typing import Any, ParamSpec, TypeGuard, TypeVar
+from typing import Any, ParamSpec, TypeGuard, TypeVar, overload
 
 from ._markers import MISSING, MissingType
 
@@ -21,11 +21,6 @@ if sys.version_info >= (3, 13):
     from typing import TypeIs
 else:
     from typing_extensions import TypeIs
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _T = TypeVar("_T")
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])

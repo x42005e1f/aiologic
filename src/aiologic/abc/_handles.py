@@ -13,14 +13,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from ._states import BaseState
 
 if TYPE_CHECKING:
-    import sys
-
-    from typing import Any
-
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
+    from typing import Any, Never
 
 _StateT_co = TypeVar("_StateT_co", bound=BaseState, covariant=True)
 

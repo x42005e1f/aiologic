@@ -11,7 +11,7 @@ import warnings
 import weakref
 
 from inspect import isclass, isfunction, ismodule
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_overloads, overload
 
 from ._imports import import_from
 from ._markers import DEFAULT
@@ -28,11 +28,6 @@ if TYPE_CHECKING:
         from typing import TypeIs
     else:
         from typing_extensions import TypeIs
-
-if sys.version_info >= (3, 11):
-    from typing import get_overloads, overload
-else:
-    from typing_extensions import get_overloads, overload
 
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
     os.getenv(

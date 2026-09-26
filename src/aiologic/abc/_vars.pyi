@@ -3,31 +3,14 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, Never, Self, TypeVar, overload
 
 from aiologic.meta import MISSING, MissingType
 
 from ._handles import BaseHandle
-
-if sys.version_info >= (3, 11):
-    from typing import Never
-else:
-    from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _T = TypeVar("_T")
 _HandleT = TypeVar("_HandleT", bound=BaseHandle[Any])

@@ -5,9 +5,7 @@
 
 from __future__ import annotations
 
-import sys
-
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, final
 
 from aiologic.abc import BaseVar, BaseVarToken
 
@@ -15,15 +13,7 @@ from ._getters import current_thread
 from ._handles import ThreadHandle
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
+    from typing import Never
 
 _T = TypeVar("_T")
 

@@ -17,7 +17,7 @@ from inspect import (
     isfunction,
 )
 from types import CoroutineType, GeneratorType
-from typing import TYPE_CHECKING, Any, TypeVar, get_args, get_origin
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, get_origin, overload
 
 from ._helpers import GeneratorCoroutineWrapper
 from ._inspect import isasyncgenfactory, iscoroutinefactory, isgeneratorfactory
@@ -25,11 +25,6 @@ from ._inspect import isasyncgenfactory, iscoroutinefactory, isgeneratorfactory
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import Final, ParamSpec
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")

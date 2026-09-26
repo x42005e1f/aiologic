@@ -3,14 +3,7 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
-from typing import Any, TypeAlias, TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
+from typing import Any, TypeAlias, TypeVar, overload
 
 _T = TypeVar("_T")
 _T1 = TypeVar("_T1")

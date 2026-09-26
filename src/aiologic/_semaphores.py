@@ -9,7 +9,7 @@ import os
 import platform
 import sys
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, overload
 
 from .lowlevel import (
     Event,
@@ -22,18 +22,9 @@ from .lowlevel import (
 )
 from .meta import DEFAULT, DefaultType, copies
 
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if TYPE_CHECKING:
     from types import TracebackType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 __PYTHON_IMPLEMENTATION = platform.python_implementation()
 

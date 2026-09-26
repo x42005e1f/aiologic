@@ -3,17 +3,10 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections.abc import Callable
 from contextvars import Context
 from types import FrameType, TracebackType
-from typing import Any, Protocol
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
+from typing import Any, Protocol, overload
 
 class _GreenletLike(Protocol):
     def __init__(

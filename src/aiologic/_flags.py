@@ -8,27 +8,18 @@ from __future__ import annotations
 import sys
 import warnings
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from .meta import MISSING, MissingType
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Self
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
 
 _T = TypeVar("_T", default=object)
 _D = TypeVar("_D")

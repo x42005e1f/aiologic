@@ -5,10 +5,8 @@
 
 from __future__ import annotations
 
-import sys
-
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
 
 from wrapt import FunctionWrapper, decorator
 
@@ -16,18 +14,9 @@ from ._locks import RLock
 from ._semaphores import BinarySemaphore
 from .meta import iscoroutinefactory
 
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if TYPE_CHECKING:
     from types import TracebackType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 

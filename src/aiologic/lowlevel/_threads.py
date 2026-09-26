@@ -20,17 +20,10 @@ from aiologic.meta import (
 from . import _greenlets
 
 if TYPE_CHECKING:
-    import sys
-
     from threading import Thread
-    from typing import Any
+    from typing import Any, Self
 
     from ._greenlets import _GreenletLike
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
 
 try:
     _get_main_thread_ident = import_original(

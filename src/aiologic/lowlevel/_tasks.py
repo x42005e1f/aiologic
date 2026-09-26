@@ -5,11 +5,9 @@
 
 from __future__ import annotations
 
-import sys
-
 from collections.abc import Awaitable, Callable
 from inspect import isawaitable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator
 
@@ -21,11 +19,6 @@ from aiologic.meta import (
 )
 
 from ._libraries import current_async_library, current_green_library
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])

@@ -5,26 +5,14 @@
 
 from __future__ import annotations
 
-import sys
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from aiologic.abc import BaseHandle
 
 from ._states import ProcessState
 
 if TYPE_CHECKING:
-    from typing import Any
-
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
+    from typing import Any, Never
 
 
 @final

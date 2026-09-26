@@ -13,15 +13,10 @@ from types import (
     MethodDescriptorType,
     WrapperDescriptorType,
 )
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from typing import Any, TypeAlias, TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")

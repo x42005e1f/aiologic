@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import sys
-
 from collections import deque
 from collections.abc import Iterable, Iterator, MutableSequence
 from functools import wraps
@@ -32,10 +30,7 @@ from aiologic.meta import (
 from ._locks import ThreadOnceLock
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 try:
     _Empty = import_original("_queue", "Empty")

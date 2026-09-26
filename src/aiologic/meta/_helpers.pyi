@@ -3,21 +3,9 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections.abc import Awaitable, Coroutine, Generator
 from types import CodeType, FrameType, TracebackType
-from typing import Generic, TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
+from typing import Generic, Self, TypeVar, overload
 
 _T = TypeVar("_T")
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)

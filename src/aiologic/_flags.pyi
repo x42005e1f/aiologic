@@ -6,7 +6,7 @@
 import sys
 
 from collections.abc import Callable
-from typing import Any, Generic
+from typing import Any, Generic, Self, overload
 
 from .meta import MISSING, MissingType
 
@@ -14,11 +14,6 @@ if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import Self, overload
-else:
-    from typing_extensions import Self, overload
 
 _T = TypeVar("_T", default=object)
 _D = TypeVar("_D")

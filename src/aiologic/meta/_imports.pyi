@@ -3,15 +3,8 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from types import ModuleType
-from typing import Any
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
+from typing import Any, overload
 
 def import_module(name: str, package: str | None = None) -> ModuleType: ...
 @overload

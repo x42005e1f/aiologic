@@ -3,17 +3,10 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections.abc import Callable
-from typing import Any, Final
+from typing import Any, Final, Self, overload
 
 from .meta import DEFAULT, MISSING, DefaultType, MissingType, generator
-
-if sys.version_info >= (3, 11):
-    from typing import Self, overload
-else:
-    from typing_extensions import Self, overload
 
 _PERFECT_FAIRNESS_ENABLED: Final[bool]
 

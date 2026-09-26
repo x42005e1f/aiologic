@@ -3,19 +3,12 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections import deque
 from collections.abc import Callable, Iterable
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, Self, TypeVar, overload
 
 from .lowlevel import Event
 from .meta import MISSING, MissingType
-
-if sys.version_info >= (3, 11):
-    from typing import Self, overload
-else:
-    from typing_extensions import Self, overload
 
 _T = TypeVar("_T")
 _T_contra = TypeVar("_T_contra", contravariant=True)

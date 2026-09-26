@@ -6,10 +6,9 @@
 from __future__ import annotations
 
 import os
-import sys
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, overload
 
 from ._flags import Flag
 from .lowlevel import (
@@ -24,17 +23,7 @@ from .meta import DEFAULT, MISSING, DefaultType, MissingType, copies, generator
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 try:
     from sys import _is_gil_enabled

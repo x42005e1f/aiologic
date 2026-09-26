@@ -510,8 +510,6 @@ def _get_asyncio_waiter_class() -> type[AsyncWaiter]:
 
 @once
 def _get_curio_waiter_class() -> type[AsyncWaiter]:
-    import sys
-
     from concurrent.futures import CancelledError, InvalidStateError
     from logging import getLogger
 
@@ -519,11 +517,6 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
     from curio.traps import _future_wait
 
     from . import _tasks, _time
-
-    if sys.version_info >= (3, 11):
-        WaitTimeout = TimeoutError
-    else:
-        from concurrent.futures import TimeoutError as WaitTimeout
 
     _LOGGER = getLogger("concurrent.futures")
 
@@ -575,7 +568,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
                 raise CancelledError
 
             if timeout is not None and timeout <= 0:
-                raise WaitTimeout
+                raise TimeoutError
 
             raise NotImplementedError
 
@@ -593,7 +586,7 @@ def _get_curio_waiter_class() -> type[AsyncWaiter]:
                 raise CancelledError
 
             if timeout is not None and timeout <= 0:
-                raise WaitTimeout
+                raise TimeoutError
 
             raise NotImplementedError
 

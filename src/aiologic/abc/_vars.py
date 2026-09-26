@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-import sys
 import weakref
 
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from aiologic.meta import MISSING
 
@@ -19,24 +18,9 @@ from ._handles import BaseHandle
 if TYPE_CHECKING:
     from collections.abc import Callable
     from types import TracebackType
-    from typing import ClassVar
+    from typing import ClassVar, Never, Self
 
     from aiologic.meta import MissingType
-
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _T = TypeVar("_T")
 _HandleT = TypeVar("_HandleT", bound=BaseHandle[Any])

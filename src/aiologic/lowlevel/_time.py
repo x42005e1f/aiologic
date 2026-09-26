@@ -80,13 +80,7 @@ def _floor_to_float(value: int, pow10: int = 0, /) -> float:
 
 
 def _threading_seconds_per_sleep() -> float:
-    if sys.version_info >= (3, 11):
-        _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**30 - 1)
-    else:
-        if platform.system() != "Windows":
-            _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(31 * _DAY_TO_SEC)
-        else:
-            _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**32 - 2, _MS_TO_SEC)
+    _MAXIMUM_SECONDS_PER_SLEEP = _floor_to_float(2**30 - 1)
 
     @replaces(globals())
     def _threading_seconds_per_sleep():

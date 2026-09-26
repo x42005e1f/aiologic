@@ -3,18 +3,11 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any, Final, Protocol, TypeVar
+from typing import Any, Final, Protocol, Self, TypeVar, overload
 
 from ._semaphores import BinarySemaphore
-
-if sys.version_info >= (3, 11):
-    from typing import Self, overload
-else:
-    from typing_extensions import Self, overload
 
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 

@@ -4,26 +4,10 @@
 # SPDX-License-Identifier: ISC
 
 import enum
-import sys
 
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, Never, final
 
-if sys.version_info >= (3, 11):
-    from enum import EnumType
-else:
-    from enum import EnumMeta as EnumType
-
-if sys.version_info >= (3, 11):
-    from typing import Never
-else:
-    from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
-
-class _SingletonMeta(EnumType): ...
+class _SingletonMeta(enum.EnumType): ...
 
 class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):  # type: ignore[misc]
     def __repr__(self, /) -> str: ...

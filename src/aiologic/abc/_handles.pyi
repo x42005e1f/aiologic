@@ -3,17 +3,10 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from abc import ABC
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Never, TypeVar
 
 from ._states import BaseState
-
-if sys.version_info >= (3, 11):
-    from typing import Never
-else:
-    from typing_extensions import Never
 
 _StateT_co = TypeVar("_StateT_co", bound=BaseState, covariant=True)
 

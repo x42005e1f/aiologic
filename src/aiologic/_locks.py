@@ -20,14 +20,8 @@ from .lowlevel import (
 from .thread import current_thread_ident
 
 if TYPE_CHECKING:
-    import sys
-
     from types import TracebackType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 
 class Lock:

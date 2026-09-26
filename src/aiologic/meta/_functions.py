@@ -10,7 +10,7 @@ import weakref
 
 from functools import update_wrapper
 from types import FunctionType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from wrapt import register_post_import_hook
 
@@ -28,11 +28,6 @@ if TYPE_CHECKING:
         from typing import Protocol
     else:
         from typing_extensions import Protocol
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")

@@ -3,15 +3,8 @@
 # SPDX-FileCopyrightText: 2026 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from abc import ABC
-from typing import Any, ClassVar, NewType
-
-if sys.version_info >= (3, 11):
-    from typing import Never
-else:
-    from typing_extensions import Never
+from typing import Any, ClassVar, Never, NewType
 
 StateReferenceKey = NewType("StateReferenceKey", object)
 

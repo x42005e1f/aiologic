@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: CC0-1.0
 
 import os
-import sys
 
 from importlib.metadata import version as get_version
 
@@ -28,10 +27,8 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx_rtd_theme",
+    "sphinxcontrib.autodoc_inherit_overload",
 ]
-
-if sys.version_info >= (3, 11):
-    extensions.append("sphinxcontrib.autodoc_inherit_overload")
 
 autodoc_class_signature = "separated"
 autodoc_inherit_docstrings = False

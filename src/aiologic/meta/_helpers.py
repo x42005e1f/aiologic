@@ -5,26 +5,15 @@
 
 from __future__ import annotations
 
-import sys
-
 from collections.abc import Coroutine, Generator
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 from ._inspect import iscoroutinelike, isgeneratorlike
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
     from types import CodeType, FrameType, TracebackType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
+    from typing import Self
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")

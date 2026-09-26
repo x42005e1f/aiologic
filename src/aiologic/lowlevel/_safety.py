@@ -5,12 +5,10 @@
 
 from __future__ import annotations
 
-import sys
-
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar, Token
 from inspect import isawaitable
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from wrapt import ObjectProxy, decorator
 
@@ -23,11 +21,6 @@ from aiologic.meta import (
 )
 
 from ._threads import current_thread_ident
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     from types import TracebackType

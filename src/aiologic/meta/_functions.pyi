@@ -7,7 +7,7 @@ import sys
 
 from collections.abc import Callable, MutableMapping
 from types import ModuleType
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, overload
 
 from ._markers import MISSING, MissingType
 
@@ -15,11 +15,6 @@ if sys.version_info >= (3, 12):
     from typing import Protocol
 else:
     from typing_extensions import Protocol
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)

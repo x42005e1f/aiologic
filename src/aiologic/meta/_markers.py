@@ -6,31 +6,14 @@
 from __future__ import annotations
 
 import enum
-import sys
 
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from ._static import lookup_static, resolve_special
 
 if TYPE_CHECKING:
-    from typing import Any, Final, Literal
-
-if sys.version_info >= (3, 11):
-    from enum import EnumType
-else:
-    from enum import EnumMeta as EnumType
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
+    from typing import Any, Final, Literal, Never
 
 if "_sentinel" not in globals():
     _sentinel = object()
@@ -38,8 +21,8 @@ else:
     _prevdata = globals().copy()
 
 
-class _SingletonMeta(EnumType):
-    @wraps(resolve_special(EnumType, "__call__"))
+class _SingletonMeta(enum.EnumType):
+    @wraps(resolve_special(enum.EnumType, "__call__"))
     def __call__(cls, /, *args, **kwargs):
         if len(cls) != 1 or args or kwargs:
             return super().__call__(*args, **kwargs)

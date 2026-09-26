@@ -5,13 +5,12 @@
 
 from __future__ import annotations
 
-import sys
 import warnings
 
 from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, overload
 
 from ._semaphores import Semaphore
 from .lowlevel import (
@@ -24,18 +23,9 @@ from .lowlevel import (
 )
 from .meta import MISSING, MissingType
 
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 _T = TypeVar("_T")
 _T_contra = TypeVar("_T_contra", contravariant=True)

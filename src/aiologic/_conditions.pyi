@@ -8,7 +8,7 @@ import sys
 from collections.abc import Callable
 from logging import Logger
 from types import TracebackType
-from typing import Any, Final, Generic
+from typing import Any, Final, Generic, Self, overload
 
 from . import thread
 from ._locks import Lock, RLock
@@ -19,11 +19,6 @@ if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import Self, overload
-else:
-    from typing_extensions import Self, overload
 
 _USE_ONCELOCK_FORCED: Final[bool]
 

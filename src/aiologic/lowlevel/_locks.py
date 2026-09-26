@@ -8,7 +8,16 @@ from __future__ import annotations
 import sys
 
 from functools import partial, wraps
-from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeVar, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    NoReturn,
+    TypeVar,
+    final,
+    overload,
+)
 
 from aiologic.meta import MISSING, MissingType, import_original
 
@@ -18,11 +27,6 @@ from ._threads import current_thread_ident
 if TYPE_CHECKING:
     from collections.abc import Callable
     from types import TracebackType
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 _T = TypeVar("_T")
 

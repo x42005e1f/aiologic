@@ -20,7 +20,7 @@ from inspect import (
     ismethod,
 )
 from types import AsyncGeneratorType, CoroutineType, GeneratorType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from ._markers import MISSING
 from ._signatures import getsro
@@ -35,11 +35,6 @@ if TYPE_CHECKING:
         from typing import TypeIs
     else:
         from typing_extensions import TypeIs
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")

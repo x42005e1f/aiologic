@@ -12,7 +12,7 @@ from collections.abc import Callable
 from itertools import count
 from logging import Logger, getLogger
 from math import inf, isnan
-from typing import TYPE_CHECKING, Any, Final, Generic
+from typing import TYPE_CHECKING, Any, Final, Generic, overload
 
 from . import thread
 from ._guards import ResourceGuard
@@ -32,23 +32,14 @@ from .lowlevel import (
 )
 from .meta import DEFAULT, MISSING, DefaultType, copies, generator
 
+if TYPE_CHECKING:
+    from types import TracebackType
+    from typing import Self
+
 if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
-
-if TYPE_CHECKING:
-    from types import TracebackType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
 
 try:
     from sys import _is_gil_enabled

@@ -3,17 +3,10 @@
 # SPDX-FileCopyrightText: 2025 Ilya Egorov <0x42005e1f@gmail.com>
 # SPDX-License-Identifier: ISC
 
-import sys
-
 from types import TracebackType
-from typing import Any, Final
+from typing import Any, Final, Self
 
 from .meta import DEFAULT, DefaultType
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 _USE_DELATTR: Final[bool]
 

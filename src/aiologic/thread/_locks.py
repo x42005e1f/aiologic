@@ -5,9 +5,7 @@
 
 from __future__ import annotations
 
-import sys
-
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, NewType, final
 
 from aiologic.meta import SingletonEnum, import_original, replaces_with_outcome
 
@@ -15,17 +13,7 @@ from ._getters import current_thread_ident
 
 if TYPE_CHECKING:
     from types import TracebackType
-    from typing import Any, Final, Literal
-
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
-
-if sys.version_info >= (3, 11):
-    from typing import final
-else:
-    from typing_extensions import final
+    from typing import Any, Final, Literal, Never
 
 
 @replaces_with_outcome(globals())

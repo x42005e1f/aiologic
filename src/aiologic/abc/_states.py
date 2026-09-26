@@ -9,14 +9,7 @@ from abc import ABC
 from typing import TYPE_CHECKING, NewType
 
 if TYPE_CHECKING:
-    import sys
-
-    from typing import Any, ClassVar
-
-    if sys.version_info >= (3, 11):
-        from typing import Never
-    else:
-        from typing_extensions import Never
+    from typing import Any, ClassVar, Never
 
 StateReferenceKey = NewType("StateReferenceKey", object)
 

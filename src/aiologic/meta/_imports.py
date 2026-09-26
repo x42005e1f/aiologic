@@ -8,18 +8,13 @@ from __future__ import annotations
 import sys
 
 from importlib import import_module as _import_module_impl
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from ._functions import copies, replaces, replaces_when_imported
 
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import Any
-
-if sys.version_info >= (3, 11):
-    from typing import overload
-else:
-    from typing_extensions import overload
 
 
 @copies(_import_module_impl)
