@@ -114,13 +114,13 @@ Commit messages are consistent with
   `aiologic.meta.when_imported_for()`, thereby inheriting its features (and
   requirements).
 - Python <3.11 is no longer supported:
-  + Support for 3.9 has been dropped primarily because
+  + Support for 3.8 has been dropped primarily because
     `typing_extensions.disjoint_base()` requires Python ≥3.9, and also to
     simplify the treatment of standard collections as generics at runtime.
-  + Support for 3.10 has been dropped to take advantage of the `match`
+  + Support for 3.9 has been dropped to take advantage of the `match`
     statement, to ensure that certain exception classes have specific
     attributes, and to use the `|` operator for type unions at runtime.
-  + Support for 3.11 has been dropped to eliminate most of the remaining
+  + Support for 3.10 has been dropped to eliminate most of the remaining
     version checks and rely on built-in exception groups when required.
 - The experimental free-threading from CPython 3.13 is no longer supported
   because it lacks the necessary fixes (such as for
