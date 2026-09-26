@@ -5,6 +5,7 @@
 
 import sys
 
+from collections.abc import Callable
 from logging import Logger
 from types import TracebackType
 from typing import Any, Final, Generic
@@ -23,11 +24,6 @@ if sys.version_info >= (3, 11):
     from typing import Self, overload
 else:
     from typing_extensions import Self, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
 
 _USE_ONCELOCK_FORCED: Final[bool]
 

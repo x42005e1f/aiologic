@@ -7,25 +7,15 @@ from __future__ import annotations
 
 import sys
 
+from collections.abc import Coroutine, Generator
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from ._inspect import iscoroutinelike, isgeneratorlike
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
     from types import CodeType, FrameType, TracebackType
-    from typing import Final
 
-    if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable
-    else:
-        from typing import Awaitable
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Coroutine, Generator
-else:
-    from typing import Coroutine, Generator
-
-if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
@@ -42,8 +32,6 @@ if TYPE_CHECKING:
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 _SendT_contra = TypeVar("_SendT_contra", contravariant=True)
 _YieldT_co = TypeVar("_YieldT_co", covariant=True)
-
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
 
 
 class GeneratorCoroutineWrapper(
@@ -127,8 +115,7 @@ class GeneratorCoroutineWrapper(
         if generator is None:
             msg = "the wrapped object is not a generator"
             exc = AttributeError(msg)
-            if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-                exc.name = None
+            exc.name = None
 
             try:
                 raise exc
@@ -150,8 +137,7 @@ class GeneratorCoroutineWrapper(
         if coroutine is None:
             msg = "the wrapped object is not a coroutine"
             exc = AttributeError(msg)
-            if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-                exc.name = None
+            exc.name = None
 
             try:
                 raise exc
@@ -176,8 +162,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_code'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -200,8 +185,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_code'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -224,8 +208,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_frame'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -248,8 +231,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_frame'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -272,8 +254,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_running'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -296,8 +277,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_running'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -320,8 +300,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_suspended'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -344,8 +323,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_suspended'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -368,8 +346,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_yieldfrom'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -392,8 +369,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_await'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -416,8 +392,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'gi_origin'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc
@@ -440,8 +415,7 @@ class GeneratorCoroutineWrapper(
 
         msg = "the wrapped object has not attribute 'cr_origin'"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc

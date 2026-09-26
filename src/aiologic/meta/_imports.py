@@ -10,7 +10,7 @@ import sys
 from importlib import import_module as _import_module_impl
 from typing import TYPE_CHECKING
 
-from ._functions import replaces, replaces_when_imported
+from ._functions import copies, replaces, replaces_when_imported
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -22,25 +22,9 @@ else:
     from typing_extensions import overload
 
 
-if sys.version_info >= (3, 9):
-    from ._functions import copies
-
-    @copies(_import_module_impl)
-    def import_module(name: str, package: str | None = None) -> ModuleType:
-        return _import_module_impl(name, package)
-
-else:
-    from importlib.util import resolve_name as _resolve_name_impl
-
-    def import_module(name: str, package: str | None = None) -> ModuleType:
-        if name.startswith(".") and package:
-            try:
-                name = _resolve_name_impl(name, package)
-            except ValueError as exc:
-                msg = str(exc)
-                raise ImportError(msg) from None
-
-        return _import_module_impl(name, package)
+@copies(_import_module_impl)
+def import_module(name: str, package: str | None = None) -> ModuleType:
+    return _import_module_impl(name, package)
 
 
 def _import_one(module, name, /, *, import_submodule=True):

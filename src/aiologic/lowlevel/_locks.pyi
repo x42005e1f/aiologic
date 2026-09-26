@@ -5,6 +5,7 @@
 
 import sys
 
+from collections.abc import Callable
 from types import TracebackType
 from typing import Final, Literal, NoReturn, TypeVar, final
 
@@ -14,11 +15,6 @@ if sys.version_info >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
 
 _T = TypeVar("_T")
 
@@ -32,8 +28,7 @@ class ThreadLock:
         traceback: TracebackType | None,
         /,
     ) -> None: ...
-    if sys.version_info >= (3, 9):
-        def _at_fork_reinit(self, /) -> None: ...
+    def _at_fork_reinit(self, /) -> None: ...
     def acquire(
         self,
         /,
@@ -61,8 +56,7 @@ class ThreadRLock:
         traceback: TracebackType | None,
         /,
     ) -> None: ...
-    if sys.version_info >= (3, 9):
-        def _at_fork_reinit(self, /) -> None: ...
+    def _at_fork_reinit(self, /) -> None: ...
     def acquire(
         self,
         /,
@@ -88,8 +82,7 @@ class ThreadOnceLock:
         traceback: TracebackType | None,
         /,
     ) -> None: ...
-    if sys.version_info >= (3, 9):
-        def _at_fork_reinit(self, /) -> None: ...
+    def _at_fork_reinit(self, /) -> None: ...
     def acquire(
         self,
         /,
@@ -120,8 +113,7 @@ class ThreadDummyLock:
         traceback: TracebackType | None,
         /,
     ) -> None: ...
-    if sys.version_info >= (3, 9):
-        def _at_fork_reinit(self, /) -> None: ...
+    def _at_fork_reinit(self, /) -> None: ...
     def acquire(
         self,
         /,

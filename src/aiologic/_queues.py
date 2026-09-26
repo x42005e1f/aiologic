@@ -11,7 +11,7 @@ import warnings
 from collections import deque
 from copy import copy
 from heapq import heapify, heappop, heappush
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from ._semaphores import Semaphore
 from .lowlevel import (
@@ -30,15 +30,12 @@ else:
     from typing_extensions import overload
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
         from typing_extensions import Self
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable, Iterable
-    else:
-        from typing import Callable, Iterable
 
 _T = TypeVar("_T")
 _T_contra = TypeVar("_T_contra", contravariant=True)
@@ -64,7 +61,7 @@ class _SupportsGT(Protocol[_T_contra]):
 
 _RichComparableT = TypeVar(
     "_RichComparableT",
-    bound=Union[_SupportsLT[Any], _SupportsGT[Any]],
+    bound=_SupportsLT[Any] | _SupportsGT[Any],
 )
 
 

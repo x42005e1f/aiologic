@@ -92,7 +92,7 @@ Features
 
 .. features-start-marker
 
-* Python 3.8+ support
+* Python 3.10+ support
 * `CPython <https://www.python.org/>`__ and `PyPy <https://pypy.org/>`__
   support
 * Experimental `Nuitka <https://nuitka.net/>`__ support

@@ -5,6 +5,7 @@
 
 import sys
 
+from collections.abc import Callable
 from types import TracebackType
 from typing import Any, Final, Protocol, TypeVar
 
@@ -14,11 +15,6 @@ if sys.version_info >= (3, 11):
     from typing import Self, overload
 else:
     from typing_extensions import Self, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
 
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 

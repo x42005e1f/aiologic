@@ -17,10 +17,7 @@ from aiologic.meta import import_original, replaces
 from ._libraries import current_async_library, current_green_library
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable, Callable
-    else:
-        from typing import Awaitable, Callable
+    from collections.abc import Awaitable, Callable
 
 _T = TypeVar("_T")
 

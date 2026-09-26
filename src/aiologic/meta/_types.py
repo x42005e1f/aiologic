@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sys
 
+from collections.abc import Coroutine, Generator
 from functools import update_wrapper
 from inspect import (
     CO_ASYNC_GENERATOR,
@@ -22,23 +23,8 @@ from ._helpers import GeneratorCoroutineWrapper
 from ._inspect import isasyncgenfactory, iscoroutinefactory, isgeneratorfactory
 
 if TYPE_CHECKING:
-    from typing import Final
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable, Callable
-    else:
-        from typing import Awaitable, Callable
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Coroutine, Generator
-else:
-    from typing import Coroutine, Generator
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import ParamSpec
-    else:
-        from typing_extensions import ParamSpec
+    from collections.abc import Awaitable, Callable
+    from typing import Final, ParamSpec
 
 if sys.version_info >= (3, 11):
     from typing import overload

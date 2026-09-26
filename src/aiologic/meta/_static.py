@@ -16,17 +16,7 @@ from types import (
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, TypeVar, Union
-
-    if sys.version_info >= (3, 9):
-        from builtins import tuple as Tuple, type as Type
-    else:
-        from typing import Tuple, Type
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
+    from typing import Any, TypeAlias, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import overload
@@ -38,7 +28,7 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
 
-    _ClassInfo: TypeAlias = Union[Type, Tuple["_ClassInfo", ...]]
+    _ClassInfo: TypeAlias = type | tuple["_ClassInfo", ...]
 
 _IS_CPYTHON = sys.implementation.name == "cpython"
 

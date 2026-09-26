@@ -17,15 +17,11 @@ from aiologic.meta import MISSING
 from ._handles import BaseHandle
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
     from typing import ClassVar
 
     from aiologic.meta import MissingType
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
 
     if sys.version_info >= (3, 11):
         from typing import Never

@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 import warnings
 
+from collections.abc import AsyncGenerator, Coroutine, Generator
 from dataclasses import dataclass, field
 from inspect import (
     CO_ASYNC_GENERATOR,
@@ -25,36 +26,10 @@ from ._markers import MISSING
 from ._signatures import getsro
 
 if TYPE_CHECKING:
-    from typing import Any, TypeVar
+    from collections.abc import Awaitable, Callable
+    from typing import Any, ParamSpec, TypeGuard, TypeVar
 
     from ._markers import MissingType
-
-if sys.version_info >= (3, 9):
-    from collections.abc import AsyncGenerator, Coroutine, Generator
-else:
-    from typing import AsyncGenerator, Coroutine, Generator
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Awaitable, Callable
-    else:
-        from typing import Awaitable, Callable
-
-if sys.version_info >= (3, 10):
-    from types import NoneType
-else:
-    NoneType = type(None)
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import ParamSpec
-    else:
-        from typing_extensions import ParamSpec
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
 
     if sys.version_info >= (3, 13):
         from typing import TypeIs

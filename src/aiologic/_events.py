@@ -22,6 +22,9 @@ from .lowlevel import (
 )
 from .meta import DEFAULT, MISSING, DefaultType, MissingType, copies, generator
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 if sys.version_info >= (3, 11):
     from typing import overload
 else:
@@ -32,11 +35,6 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
 
 try:
     from sys import _is_gil_enabled

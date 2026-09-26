@@ -6,17 +6,12 @@
 import sys
 
 from abc import ABC
-from typing import Any, ClassVar
+from typing import Any, ClassVar, NewType
 
 if sys.version_info >= (3, 11):
     from typing import Never
 else:
     from typing_extensions import Never
-
-if sys.version_info >= (3, 10):
-    from typing import NewType
-else:
-    from typing_extensions import NewType
 
 StateReferenceKey = NewType("StateReferenceKey", object)
 

@@ -6,24 +6,14 @@
 import sys
 
 from types import TracebackType
-from typing import Any, Final
+from typing import Any, Final, Literal, NewType
 
 from aiologic.meta import SingletonEnum
-
-if sys.version_info >= (3, 9):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 if sys.version_info >= (3, 11):
     from typing import Never
 else:
     from typing_extensions import Never
-
-if sys.version_info >= (3, 10):
-    from typing import NewType
-else:
-    from typing_extensions import NewType
 
 if sys.version_info >= (3, 11):
     from typing import final

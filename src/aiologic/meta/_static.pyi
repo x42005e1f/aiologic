@@ -5,12 +5,7 @@
 
 import sys
 
-from typing import Any, TypeVar
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+from typing import Any, TypeAlias, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import overload

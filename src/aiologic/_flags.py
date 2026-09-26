@@ -23,15 +23,12 @@ else:
     from typing_extensions import overload
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
         from typing_extensions import Self
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
 
 _T = TypeVar("_T", default=object)
 _D = TypeVar("_D")

@@ -6,6 +6,7 @@
 import sys
 
 from collections import deque
+from collections.abc import Callable, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
 from .lowlevel import Event
@@ -15,11 +16,6 @@ if sys.version_info >= (3, 11):
     from typing import Self, overload
 else:
     from typing_extensions import Self, overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable, Iterable
-else:
-    from typing import Callable, Iterable
 
 _T = TypeVar("_T")
 _T_contra = TypeVar("_T_contra", contravariant=True)

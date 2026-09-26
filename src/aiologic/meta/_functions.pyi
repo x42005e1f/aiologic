@@ -5,20 +5,11 @@
 
 import sys
 
+from collections.abc import Callable, MutableMapping
 from types import ModuleType
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 from ._markers import MISSING, MissingType
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable, MutableMapping
-else:
-    from typing import Callable, MutableMapping
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
 
 if sys.version_info >= (3, 12):
     from typing import Protocol

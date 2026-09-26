@@ -5,17 +5,13 @@
 
 import sys
 
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable, Callable
-else:
-    from typing import Awaitable, Callable
 
 _AwaitableT = TypeVar("_AwaitableT", bound=Awaitable[Any])
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])

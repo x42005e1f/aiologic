@@ -15,18 +15,14 @@ from aiologic.meta import MISSING, MissingType, import_original
 from . import _checkpoints
 from ._threads import current_thread_ident
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from types import TracebackType
+
 if sys.version_info >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
-
-if TYPE_CHECKING:
-    from types import TracebackType
 
 _T = TypeVar("_T")
 
@@ -94,12 +90,10 @@ except ImportError:
         ) -> None:
             self.release()
 
-        if sys.version_info >= (3, 9):
-
-            def _at_fork_reinit(self, /) -> None:
-                self._block._at_fork_reinit()
-                self._count = 0
-                self._owner = None
+        def _at_fork_reinit(self, /) -> None:
+            self._block._at_fork_reinit()
+            self._count = 0
+            self._owner = None
 
         def acquire(
             self,
@@ -225,11 +219,9 @@ class ThreadOnceLock:
     ) -> None:
         self.release()
 
-    if sys.version_info >= (3, 9):
-
-        def _at_fork_reinit(self, /) -> None:
-            self._oncelock_count = 1
-            self._oncelock_waiters = []
+    def _at_fork_reinit(self, /) -> None:
+        self._oncelock_count = 1
+        self._oncelock_waiters = []
 
     def acquire(self, /, blocking: bool = True, timeout: float = -1) -> bool:
         if not self._oncelock_count:
@@ -416,10 +408,8 @@ class ThreadDummyLock:
     ) -> None:
         pass
 
-    if sys.version_info >= (3, 9):
-
-        def _at_fork_reinit(self, /) -> None:
-            pass
+    def _at_fork_reinit(self, /) -> None:
+        pass
 
     def acquire(
         self,

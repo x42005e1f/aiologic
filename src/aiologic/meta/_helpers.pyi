@@ -5,13 +5,9 @@
 
 import sys
 
+from collections.abc import Awaitable, Coroutine, Generator
 from types import CodeType, FrameType, TracebackType
-from typing import Final, Generic, TypeVar
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable, Coroutine, Generator
-else:
-    from typing import Awaitable, Coroutine, Generator
+from typing import Generic, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -27,8 +23,6 @@ _T = TypeVar("_T")
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 _SendT_contra = TypeVar("_SendT_contra", contravariant=True)
 _YieldT_co = TypeVar("_YieldT_co", covariant=True)
-
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]
 
 class GeneratorCoroutineWrapper(
     Generator[_YieldT_co, _SendT_contra, _ReturnT_co],

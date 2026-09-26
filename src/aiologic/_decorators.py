@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import sys
 
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
 
 from wrapt import FunctionWrapper, decorator
 
@@ -19,11 +20,6 @@ if sys.version_info >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -106,7 +102,7 @@ class _MMLock(Protocol):
     def green_release(self, /) -> object: ...
 
 
-_LockT = TypeVar("_LockT", bound=Union[_AALock, _ASLock, _SSLock, _MMLock])
+_LockT = TypeVar("_LockT", bound=_AALock | _ASLock | _SSLock | _MMLock)
 
 
 class _SynchronizedType(Protocol[_LockT]):

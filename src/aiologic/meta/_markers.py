@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from ._static import lookup_static, resolve_special
 
 if TYPE_CHECKING:
-    from typing import Any, Final
+    from typing import Any, Final, Literal
 
 if sys.version_info >= (3, 11):
     from enum import EnumType
@@ -22,11 +22,6 @@ else:
     from enum import EnumMeta as EnumType
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
-
     if sys.version_info >= (3, 11):
         from typing import Never
     else:
@@ -36,8 +31,6 @@ if sys.version_info >= (3, 11):
     from typing import final
 else:
     from typing_extensions import final
-
-_ATTRIBUTE_SUGGESTIONS_OFFERED = sys.version_info >= (3, 10)
 
 if "_sentinel" not in globals():
     _sentinel = object()
@@ -91,8 +84,7 @@ class SingletonEnum(enum.Enum, metaclass=_SingletonMeta):
             else:
                 msg = f"{cls_name!r} object attribute {name!r} has no setter"
         exc = AttributeError(msg)
-        if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-            exc.name = None
+        exc.name = None
 
         try:
             raise exc

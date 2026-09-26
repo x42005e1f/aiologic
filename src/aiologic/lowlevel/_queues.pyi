@@ -6,6 +6,7 @@
 import sys
 
 from collections import deque
+from collections.abc import Iterable, Iterator, MutableSequence
 from typing import (
     Any,
     ClassVar,
@@ -17,11 +18,6 @@ from typing import (
 )
 
 from aiologic.meta import DEFAULT, MISSING, DefaultType, MissingType
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterable, Iterator, MutableSequence
-else:
-    from typing import Iterable, Iterator, MutableSequence
 
 if sys.version_info >= (3, 11):
     from typing import Self

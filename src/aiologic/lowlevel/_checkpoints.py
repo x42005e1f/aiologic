@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import sys
 
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar, Token
 from inspect import isawaitable
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
@@ -30,11 +31,6 @@ if sys.version_info >= (3, 11):
     from typing import overload
 else:
     from typing_extensions import overload
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Awaitable, Callable
-else:
-    from typing import Awaitable, Callable
 
 if TYPE_CHECKING:
     from types import TracebackType

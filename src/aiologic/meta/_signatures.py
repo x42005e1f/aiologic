@@ -20,10 +20,7 @@ from ._static import (
 )
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Iterator
-    else:
-        from typing import Iterator
+    from collections.abc import Iterator
 
 _TYPE_CALL = lookup_static(type, "__call__")
 _TYPE_NEW = lookup_static(type, "__new__")

@@ -20,7 +20,7 @@ dynamic = ["version"]
 description = "GIL-powered* locking library for Python"
 readme = {file = "README.rst", content-type = "text/x-rst"}
 authors = [{name = "Ilya Egorov", email = "0x42005e1f@gmail.com"}]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -31,8 +31,6 @@ classifiers = [
     "Framework :: Trio",
     "Framework :: AnyIO",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

@@ -8,10 +8,11 @@ from __future__ import annotations
 import sys
 
 from collections import defaultdict
+from collections.abc import Callable
 from itertools import count
 from logging import Logger, getLogger
 from math import inf, isnan
-from typing import TYPE_CHECKING, Any, Final, Generic, Union
+from typing import TYPE_CHECKING, Any, Final, Generic
 
 from . import thread
 from ._guards import ResourceGuard
@@ -41,11 +42,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import overload
 
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
-
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -68,13 +64,7 @@ LOGGER: Final[Logger] = getLogger(__name__)
 _T = TypeVar("_T")
 _T_co = TypeVar(
     "_T_co",
-    bound=Union[
-        Lock,
-        BinarySemaphore,
-        thread.RLockType,
-        thread.LockType,
-        None,
-    ],
+    bound=Lock | BinarySemaphore | thread.RLockType | thread.LockType | None,
     default=RLock,
     covariant=True,
 )

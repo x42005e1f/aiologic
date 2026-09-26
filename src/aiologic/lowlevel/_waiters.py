@@ -17,10 +17,7 @@ from ._locks import once
 from ._safety import signal_safety_enabled
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
+    from collections.abc import Callable
 
 
 class Waiter(Protocol):

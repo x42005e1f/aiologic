@@ -5,22 +5,17 @@
 
 import sys
 
+from collections.abc import MutableMapping
 from types import ModuleType
 from typing import Any, Final
 
 from ._markers import DEFAULT, DefaultType
-
-if sys.version_info >= (3, 9):
-    from collections.abc import MutableMapping
-else:
-    from typing import MutableMapping
 
 if sys.version_info >= (3, 13):
     from typing import TypeIs
 else:
     from typing_extensions import TypeIs
 
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool]
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool]
 
 def _isbuiltindescriptor(

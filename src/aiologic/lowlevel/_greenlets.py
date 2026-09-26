@@ -17,13 +17,9 @@ else:
     from typing_extensions import overload
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from contextvars import Context
     from types import FrameType, TracebackType
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import Callable
-    else:
-        from typing import Callable
 
 
 class _GreenletLike(Protocol):

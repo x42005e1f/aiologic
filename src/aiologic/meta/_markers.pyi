@@ -6,17 +6,12 @@
 import enum
 import sys
 
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 if sys.version_info >= (3, 11):
     from enum import EnumType
 else:
     from enum import EnumMeta as EnumType
-
-if sys.version_info >= (3, 9):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 if sys.version_info >= (3, 11):
     from typing import Never

@@ -5,17 +5,8 @@
 
 import sys
 
-from typing import Any, Final, TypeVar
-
-if sys.version_info >= (3, 9):
-    from typing import Awaitable, Callable, Coroutine, Generator
-else:
-    from typing import Awaitable, Callable, Coroutine, Generator
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
+from collections.abc import Awaitable, Callable, Coroutine, Generator
+from typing import Any, Final, ParamSpec, TypeVar
 
 if sys.version_info >= (3, 11):
     from typing import overload

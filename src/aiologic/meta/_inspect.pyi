@@ -5,37 +5,17 @@
 
 import sys
 
+from collections.abc import (
+    AsyncGenerator,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Generator,
+)
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeGuard, TypeVar
 
 from ._markers import MISSING, MissingType
-
-if sys.version_info >= (3, 9):
-    from collections.abc import (
-        AsyncGenerator,
-        Awaitable,
-        Callable,
-        Coroutine,
-        Generator,
-    )
-else:
-    from typing import (
-        AsyncGenerator,
-        Awaitable,
-        Callable,
-        Coroutine,
-        Generator,
-    )
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
-
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 13):
     from typing import TypeIs

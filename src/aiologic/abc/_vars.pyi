@@ -6,17 +6,13 @@
 import sys
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from types import TracebackType
 from typing import Any, ClassVar, Generic, TypeVar
 
 from aiologic.meta import MISSING, MissingType
 
 from ._handles import BaseHandle
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Callable
-else:
-    from typing import Callable
 
 if sys.version_info >= (3, 11):
     from typing import Never

@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 
 from collections import deque
+from collections.abc import Iterable, Iterator, MutableSequence
 from functools import wraps
 from typing import (
     TYPE_CHECKING,
@@ -29,11 +30,6 @@ from aiologic.meta import (
 )
 
 from ._locks import ThreadOnceLock
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterable, Iterator, MutableSequence
-else:
-    from typing import Iterable, Iterator, MutableSequence
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 11):

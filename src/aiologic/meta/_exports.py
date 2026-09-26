@@ -18,15 +18,11 @@ from ._markers import DEFAULT
 from ._modules import resolve_name
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
     from types import ModuleType
     from typing import Any, Final
 
     from ._markers import DefaultType
-
-    if sys.version_info >= (3, 9):
-        from collections.abc import MutableMapping
-    else:
-        from typing import MutableMapping
 
     if sys.version_info >= (3, 13):
         from typing import TypeIs
@@ -38,7 +34,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import get_overloads, overload
 
-_ATTRIBUTE_SUGGESTIONS_OFFERED: Final[bool] = sys.version_info >= (3, 10)
 _SPHINX_AUTODOC_RELOAD_MODULES: Final[bool] = bool(
     os.getenv(
         "SPHINX_AUTODOC_RELOAD_MODULES",
@@ -120,10 +115,9 @@ def _export_one(
     elif _isbuiltindescriptor(value):
         _export_one(package_name, qualname, name, value.__func__)
 
-        if sys.version_info >= (3, 10):
-            value.__name__ = name
-            value.__qualname__ = qualname
-            value.__module__ = package_name
+        value.__name__ = name
+        value.__qualname__ = qualname
+        value.__module__ = package_name
     elif _isproperty(value):
         for func in (value.fget, value.fset, value.fdel):
             if func is None:
@@ -268,9 +262,8 @@ def _register(
             try:
                 msg = f"module {module_name!r} has not attribute {name!r}"
                 exc = AttributeError(msg)
-                if _ATTRIBUTE_SUGGESTIONS_OFFERED:
-                    exc.name = name
-                    exc.obj = module
+                exc.name = name
+                exc.obj = module
 
                 try:
                     raise exc from import_exc
