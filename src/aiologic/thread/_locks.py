@@ -7,47 +7,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NewType, final
 
-from aiologic.meta import SingletonEnum, import_original, replaces_with_outcome
+from aiologic.meta import (
+    SingletonEnum,
+    import_original,
+    is_nogil,
+    is_notso,
+    replaces_with_outcome,
+)
 
 from ._getters import current_thread_ident
 
 if TYPE_CHECKING:
     from types import TracebackType
     from typing import Any, Final, Literal, Never
-
-
-@replaces_with_outcome(globals())
-def _is_gil():
-    try:
-        from sys import _is_gil_enabled
-    except ImportError:
-        pass
-    else:
-        return _is_gil_enabled
-
-    def impl():
-        return True
-
-    return impl
-
-
-@replaces_with_outcome(globals())
-def _is_tso():
-    import platform
-
-    answer = platform.machine().lower() in {
-        "i386",
-        "i686",
-        "x86",
-        "x86_64",
-        "amd64",
-        "s390x",
-    }
-
-    def impl():
-        return answer
-
-    return impl
 
 
 @replaces_with_outcome(globals())
@@ -336,14 +308,14 @@ def create_rlock() -> RLockType:
 
 
 def create_rlock_if_nogil() -> RLockType | DummyLockType:
-    if _is_gil():
-        return DUMMY_LOCK
-    else:
+    if is_nogil():
         return RLockType()
+    else:
+        return DUMMY_LOCK
 
 
 def create_rlock_if_notso() -> RLockType | DummyLockType:
-    if _is_gil() or _is_tso():
-        return DUMMY_LOCK
-    else:
+    if is_notso():
         return RLockType()
+    else:
+        return DUMMY_LOCK

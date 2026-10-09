@@ -90,10 +90,15 @@ Commit messages are consistent with
   `aiologic.thread.DUMMY_LOCK` as a new type of thread-level dummy lock, its
   distinct state type, and its singleton object, respectively.
 - `aiologic.thread.create_rlock_if_nogil()` as a way to create actual lock
-  objects only if the GIL is disabled (otherwise, the dummy lock is returned).
+  objects only if the GIL (Global Interpreter Lock) is disabled (otherwise, the
+  dummy lock is returned).
 - `aiologic.thread.create_rlock_if_notso()` as a way to create actual lock
   objects only if TSO (Total Store Order) is not guaranteed (otherwise, the
   dummy lock is returned).
+- `aiologic.meta.is_nogil()` to determine whether the GIL (Global Interpreter
+  Lock) is disabled.
+- `aiologic.meta.is_notso()` to determine whether TSO (Total Store Order) is
+  not guaranteed.
 - `aiologic.meta.when_imported_for()` to register a post import hook for the
   given namespace. Unlike `wrapt.when_imported()`, it is bound to the current
   module state (that is, the hook becomes a no-op after a reload) and accepts
