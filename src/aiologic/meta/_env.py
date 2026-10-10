@@ -6,12 +6,14 @@
 from __future__ import annotations
 
 _TSO_MACHINES = frozenset({
+    # x86(-64)
     "i386",
     "i686",
     "i86pc",
     "x86",
     "x86_64",
     "amd64",
+    # z/Architecture
     "s390x",
 })
 
@@ -23,23 +25,21 @@ except ImportError:
 else:
     import platform
 
+    _is_tso_machine = platform.machine().lower() in _TSO_MACHINES
+
     def _is_nogil():
         global _is_nogil
 
         is_gil = _is_gil_enabled()
-
         if is_gil:
             _is_nogil = bool  # () -> Literal[False]
 
         return not is_gil
 
-    _is_tso_machine = platform.machine().lower() in _TSO_MACHINES
-
     def _is_notso():
         global _is_notso
 
         is_tso = _is_tso_machine or _is_gil_enabled()
-
         if is_tso:
             _is_notso = bool  # () -> Literal[False]
 
