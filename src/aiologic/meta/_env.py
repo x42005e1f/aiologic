@@ -8,11 +8,20 @@ from __future__ import annotations
 _TSO_MACHINES = frozenset({
     # x86(-64)
     "i386",
+    "i386-at386",
+    "i486",
+    "i486-at386",
+    "i586",
+    "i586-at386",
     "i686",
+    "i686-at386",
     "i86pc",
+    "x86pc",
     "x86",
     "x86_64",
     "amd64",
+    # ESA/390
+    "s390",
     # z/Architecture
     "s390x",
 })
