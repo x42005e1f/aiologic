@@ -36,7 +36,6 @@ Features
   :maxdepth: 1
   :hidden:
 
-  performance
   changelog
   license
 
