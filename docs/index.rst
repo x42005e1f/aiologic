@@ -18,12 +18,6 @@ Features
   :end-before: .. features-end-marker
 
 .. toctree::
-  :maxdepth: 2
-  :hidden:
-
-  why
-
-.. toctree::
   :caption: Quickstart
   :maxdepth: 3
   :hidden:
