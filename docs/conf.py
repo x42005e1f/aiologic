@@ -62,7 +62,7 @@ html_context = {
     "display_github": True,
     "github_user": "x42005e1f",
     "github_repo": "aiologic",
-    "github_version": "main",
+    "github_version": "latest",
     "conf_py_path": "/docs/",
 }
 
