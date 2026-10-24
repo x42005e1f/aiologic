@@ -195,9 +195,19 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
                 try:
                     result = await shield(future)
                 except CancelledError as e:
+                    if future.cancelled():
+                        break
+
                     exc = e
                 else:
                     break
+
+            if future.cancelled():
+                if future is wrapped:
+                    future.result()
+                else:
+                    msg = "the underlying task was cancelled (but shielded)"
+                    raise RuntimeError(msg)
 
             if exc is not None:
                 raise exc
@@ -230,9 +240,21 @@ async def _asyncio_shielded_call(wrapped, args, kwargs, /):
                     try:
                         result = await shield(future)
                     except CancelledError as e:
+                        if future.cancelled():
+                            break
+
                         exc = e
                     else:
                         break
+
+                if future.cancelled():
+                    if future is wrapped:
+                        future.result()
+                    else:
+                        msg = (
+                            "the underlying task was cancelled (but shielded)"
+                        )
+                        raise RuntimeError(msg)
 
                 if exc is not None:
                     raise exc

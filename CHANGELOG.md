@@ -152,6 +152,13 @@ Commit messages are consistent with
 
 ### Fixed
 
+- `aiologic.lowlevel.shield()` did not handle cancellation of the object itself
+  on `asyncio`, which could have caused a hang during the event loop's
+  shutdown. It now successfully propagates `asyncio.CancelledError` for the
+  passed-in future and raises a `RuntimeError` for the created underlying task
+  (when the universal decorator is applied to an object other than a future) to
+  signal a potentially dangerous cancellation.
+  ([#47](https://github.com/x42005e1f/aiologic/issues/47)).
 - All sentinels and markers are now immune to module reloads and refer to the
   same objects for the entire process's lifetime (provided the namespace
   remains the same), making them more reliable. For example, if you import the
