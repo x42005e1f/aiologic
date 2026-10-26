@@ -54,6 +54,12 @@ from ._signatures import (
     getsro as getsro,
 )
 from ._static import (
+    getabsname_static as getabsname_static,
+    getmodulename_static as getmodulename_static,
+    getmro_static as getmro_static,
+    getname_static as getname_static,
+    getqualname_static as getqualname_static,
+    getvars_static as getvars_static,
     isclass_static as isclass_static,
     isdatadescriptor_static as isdatadescriptor_static,
     isinstance_static as isinstance_static,
@@ -62,6 +68,9 @@ from ._static import (
     issubclass_static as issubclass_static,
     lookup_static as lookup_static,
     resolve_special as resolve_special,
+    setmodulename_static as setmodulename_static,
+    setname_static as setname_static,
+    setqualname_static as setqualname_static,
 )
 from ._types import (
     coroutine as coroutine,

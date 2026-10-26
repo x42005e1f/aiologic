@@ -5,54 +5,237 @@
 
 from __future__ import annotations
 
-import sys
-
-from types import (
-    FunctionType,
-    MappingProxyType,
-    MethodDescriptorType,
-    WrapperDescriptorType,
-)
+from types import FunctionType, MethodDescriptorType, WrapperDescriptorType
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from typing import Any, TypeAlias, TypeVar
+    from types import MappingProxyType
+    from typing import Any, TypeAlias, TypeGuard, TypeVar
 
-if TYPE_CHECKING:
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
 
     _ClassInfo: TypeAlias = type | tuple["_ClassInfo", ...]
 
-_IS_CPYTHON = sys.implementation.name == "cpython"
-
-_TPFLAGS_METHOD_DESCRIPTOR = 1 << 17
-_TPFLAGS_LONG_SUBCLASS = 1 << 24
-_TPFLAGS_LIST_SUBCLASS = 1 << 25
-_TPFLAGS_TUPLE_SUBCLASS = 1 << 26
-_TPFLAGS_BYTES_SUBCLASS = 1 << 27
-_TPFLAGS_UNICODE_SUBCLASS = 1 << 28
-_TPFLAGS_DICT_SUBCLASS = 1 << 29
-_TPFLAGS_BASE_EXC_SUBCLASS = 1 << 30
-_TPFLAGS_TYPE_SUBCLASS = 1 << 31
-_TPFLAGS_BY_CLASS_ID = MappingProxyType({
-    id(int): _TPFLAGS_LONG_SUBCLASS,
-    id(list): _TPFLAGS_LIST_SUBCLASS,
-    id(tuple): _TPFLAGS_TUPLE_SUBCLASS,
-    id(bytes): _TPFLAGS_BYTES_SUBCLASS,
-    id(str): _TPFLAGS_UNICODE_SUBCLASS,
-    id(dict): _TPFLAGS_DICT_SUBCLASS,
-    id(BaseException): _TPFLAGS_BASE_EXC_SUBCLASS,
-    id(type): _TPFLAGS_TYPE_SUBCLASS,
-})
-
-_getflags_static = type.__dict__["__flags__"].__get__
-_getmro_static = type.__dict__["__mro__"].__get__
-_vars_static = type.__dict__["__dict__"].__get__
-
 if "_sentinel" not in globals():
     _sentinel = object()
+
+_getmro_static = vars(type)["__mro__"].__get__
+
+_pytype_getvars_static = vars(type)["__dict__"].__get__
+
+_pytype_getmodulename_static = vars(type)["__module__"].__get__
+_pytype_getqualname_static = vars(type)["__qualname__"].__get__
+_pytype_getname_static = vars(type)["__name__"].__get__
+
+_pytype_setmodulename_static = vars(type)["__module__"].__set__
+_pytype_setqualname_static = vars(type)["__qualname__"].__set__
+_pytype_setname_static = vars(type)["__name__"].__set__
+
+
+def getmro_static(owner: type, /) -> tuple[type, ...]:
+    try:
+        return _getmro_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+
+def getvars_static(owner: type, /) -> MappingProxyType[str, Any]:
+    try:
+        return _pytype_getvars_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+
+def getabsname_static(owner: type, /) -> str:
+    try:
+        owner_modulename = _pytype_getmodulename_static(owner)
+        owner_qualname = _pytype_getqualname_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+    return f"{owner_modulename}.{owner_qualname}"
+
+
+def getmodulename_static(owner: type, /) -> str:
+    try:
+        return _pytype_getmodulename_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+
+def getqualname_static(owner: type, /) -> str:
+    try:
+        return _pytype_getqualname_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+
+def getname_static(owner: type, /) -> str:
+    try:
+        return _pytype_getname_static(owner)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+
+def setmodulename_static(owner: type, value: str, /) -> None:
+    try:
+        _pytype_setmodulename_static(owner, value)
+    except TypeError:
+        try:
+            _pytype_getmodulename_static(owner)
+        except TypeError:
+            msg = "the first argument must be a class"
+        else:
+            msg = "the second argument must be a string"
+        raise TypeError(msg) from None
+
+
+def setqualname_static(owner: type, value: str, /) -> None:
+    try:
+        _pytype_setqualname_static(owner, value)
+    except TypeError:
+        try:
+            _pytype_getqualname_static(owner)
+        except TypeError:
+            msg = "the first argument must be a class"
+        else:
+            msg = "the second argument must be a string"
+        raise TypeError(msg) from None
+
+
+def setname_static(owner: type, value: str, /) -> None:
+    try:
+        _pytype_setname_static(owner, value)
+    except TypeError:
+        try:
+            _pytype_getname_static(owner)
+        except TypeError:
+            msg = "the first argument must be a class"
+        else:
+            msg = "the second argument must be a string"
+        raise TypeError(msg) from None
+
+
+@overload
+def issubclass_static(
+    obj: type,
+    class_or_tuple: type[_T],
+    /,
+) -> TypeGuard[type[_T]]: ...
+@overload
+def issubclass_static(obj: type, class_or_tuple: _ClassInfo, /) -> bool: ...
+def issubclass_static(obj, class_or_tuple, /):
+    try:
+        mro = _getmro_static(obj)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+    if isclass_static(class_or_tuple):
+        if obj is class_or_tuple:
+            return True
+
+        return any(base is class_or_tuple for base in mro)
+
+    if _istuple_static(class_or_tuple):
+        return any(issubclass_static(obj, info) for info in class_or_tuple)
+
+    msg = "the second argument must be a class or a tuple of classes"
+    raise TypeError(msg)
+
+
+@overload
+def isinstance_static(
+    obj: object,
+    class_or_tuple: type[_T],
+    /,
+) -> TypeGuard[_T]: ...
+@overload
+def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
+def isinstance_static(obj, class_or_tuple, /):
+    return issubclass_static(type(obj), class_or_tuple)
+
+
+def ismetaclass_static(obj: object, /) -> TypeGuard[type[type]]:
+    if obj is type:
+        return True
+
+    try:
+        mro = _getmro_static(obj)
+    except TypeError:  # not a class
+        return False
+
+    return any(base is type for base in mro)
+
+
+def isclass_static(obj: object, /) -> TypeGuard[type[object]]:
+    cls = type(obj)
+
+    if cls is type:
+        return True
+
+    return any(base is type for base in _getmro_static(cls))
+
+
+def _isstr_static(obj, /):
+    cls = type(obj)
+
+    if cls is str:
+        return True
+
+    return any(base is str for base in _getmro_static(cls))
+
+
+def _istuple_static(obj, /):
+    cls = type(obj)
+
+    if cls is tuple:
+        return True
+
+    return any(base is tuple for base in _getmro_static(cls))
+
+
+def isdatadescriptor_static(obj: object, /) -> bool:
+    cls = type(obj)
+
+    for base in _getmro_static(cls):
+        base_vars = _pytype_getvars_static(base)
+
+        if "__set__" in base_vars:
+            return True
+
+        if "__delete__" in base_vars:
+            return True
+
+    return False
+
+
+def ismethoddescriptor_static(obj: object, /) -> bool:
+    cls = type(obj)
+
+    if (
+        cls is FunctionType
+        or cls is MethodDescriptorType
+        or cls is WrapperDescriptorType
+    ):
+        return True
+
+    return any(
+        (
+            base is FunctionType
+            or base is MethodDescriptorType
+            or base is WrapperDescriptorType
+        )
+        for base in _getmro_static(cls)
+    )
 
 
 def _lookup_static_noerror(owner, name, /):
@@ -62,13 +245,17 @@ def _lookup_static_noerror(owner, name, /):
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
+    if not _isstr_static(name):
+        msg = "the second argument must be a string"
+        raise TypeError(msg)
+
     for base in mro:
-        base_vars = _vars_static(base)
+        base_vars = _pytype_getvars_static(base)
 
         if name in base_vars:
             try:
                 return base_vars[name]
-            except KeyError:
+            except KeyError:  # a race condition
                 pass
 
     return _sentinel
@@ -137,123 +324,3 @@ def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
         return member
 
     return descr_get(member, instance, owner)
-
-
-def isdatadescriptor_static(obj: object, /) -> bool:
-    return any(
-        "__set__" in (base_vars := _vars_static(base))
-        or "__delete__" in base_vars
-        for base in _getmro_static(type(obj))
-    )
-
-
-def ismethoddescriptor_static(obj: object, /) -> bool:
-    cls = type(obj)
-
-    if cls is FunctionType:
-        return True
-
-    if cls is MethodDescriptorType:
-        return True
-
-    if cls is WrapperDescriptorType:
-        return True
-
-    if _getflags_static(cls) & _TPFLAGS_METHOD_DESCRIPTOR:
-        return True
-
-    if _IS_CPYTHON:
-        return False
-
-    return any(
-        (
-            base is FunctionType
-            or base is MethodDescriptorType
-            or base is WrapperDescriptorType
-        )
-        for base in _getmro_static(cls)
-    )
-
-
-def ismetaclass_static(obj: object, /) -> bool:
-    if obj is type:
-        return True
-
-    try:
-        flags = _getflags_static(obj)
-    except TypeError:
-        return False
-
-    if flags & _TPFLAGS_TYPE_SUBCLASS:
-        return True
-
-    if _IS_CPYTHON:
-        return False
-
-    return any(base is type for base in _getmro_static(obj))
-
-
-def isclass_static(obj: object, /) -> bool:
-    cls = type(obj)
-
-    if cls is type:
-        return True
-
-    if _getflags_static(cls) & _TPFLAGS_TYPE_SUBCLASS:
-        return True
-
-    if _IS_CPYTHON:
-        return False
-
-    return any(base is type for base in _getmro_static(cls))
-
-
-def _istuple_static(obj, /):
-    cls = type(obj)
-
-    if cls is tuple:
-        return True
-
-    if _getflags_static(cls) & _TPFLAGS_TUPLE_SUBCLASS:
-        return True
-
-    if _IS_CPYTHON:
-        return False
-
-    return any(base is tuple for base in _getmro_static(cls))
-
-
-def issubclass_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
-    if flag := _TPFLAGS_BY_CLASS_ID.get(id(class_or_tuple), 0):
-        if obj is class_or_tuple:
-            return True
-
-        try:
-            flags = _getflags_static(obj)
-        except TypeError:
-            return False
-
-        if flags & flag:
-            return True
-
-        if _IS_CPYTHON:
-            return False
-    elif isclass_static(class_or_tuple):
-        if obj is class_or_tuple:
-            return True
-    elif _istuple_static(class_or_tuple):
-        return any(issubclass_static(obj, info) for info in class_or_tuple)
-    else:
-        msg = "the second argument must be a class or a tuple of classes"
-        raise TypeError(msg)
-
-    try:
-        mro = _getmro_static(obj)
-    except TypeError:
-        return False
-
-    return any(base is class_or_tuple for base in mro)
-
-
-def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool:
-    return issubclass_static(type(obj), class_or_tuple)

@@ -10,6 +10,8 @@ import weakref
 from abc import ABC
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from aiologic.meta import getname_static
+
 from ._states import BaseState
 
 if TYPE_CHECKING:
@@ -32,21 +34,21 @@ class BaseHandle(ABC, Generic[_StateT_co]):
 
     def __reduce__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
     def __deepcopy__(self, memo: Any, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)

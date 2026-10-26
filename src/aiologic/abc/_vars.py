@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
-from aiologic.meta import MISSING
+from aiologic.meta import MISSING, getabsname_static, getname_static
 
 from ._handles import BaseHandle
 
@@ -50,31 +50,31 @@ class BaseVarToken(ABC, Generic[_BaseVarT, _HandleT, _T]):
 
     def __reduce__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
     def __deepcopy__(self, memo: Any, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __repr__(self, /) -> str:
         cls = type(self)
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+        cls_absname = getabsname_static(cls)
 
         args_repr = f"{self.__var!r}, {self.__key!r}, {self.__value!r}"
-        self_repr = f"{cls_repr}({args_repr})"
+        self_repr = f"{cls_absname}({args_repr})"
 
         if self._is_used:
             state = "used"
@@ -228,14 +228,14 @@ class BaseVar(ABC, Generic[_BaseVarTokenT, _HandleT, _T]):
 
     def __repr__(self, /) -> str:
         cls = type(self)
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+        cls_absname = getabsname_static(cls)
 
         args_repr = f"{self.__name!r}"
         if self.__default_factory is not MISSING:
             args_repr += f", default_factory={self.__default_factory!r}"
         elif self.__default is not MISSING:
             args_repr += f", default={self.__default!r}"
-        self_repr = f"{cls_repr}({args_repr})"
+        self_repr = f"{cls_absname}({args_repr})"
 
         return f"<{self_repr} at {id(self):#x}>"
 

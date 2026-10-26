@@ -8,6 +8,8 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, NewType
 
+from aiologic.meta import getname_static
+
 if TYPE_CHECKING:
     from typing import Any, ClassVar, Never
 
@@ -27,21 +29,21 @@ class BaseState(ABC):
 
     def __reduce__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
     def __deepcopy__(self, memo: Any, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)

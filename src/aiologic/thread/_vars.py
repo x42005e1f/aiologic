@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, final
 
 from aiologic.abc import BaseVar, BaseVarToken
+from aiologic.meta import getname_static
 
 from ._getters import current_thread
 from ._handles import ThreadHandle
@@ -27,7 +28,7 @@ class ThreadVarToken(
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
@@ -39,7 +40,7 @@ class ThreadVar(BaseVar[ThreadVarToken[_T], ThreadHandle, _T], Generic[_T]):
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)

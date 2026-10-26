@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, NewType, final
 
 from aiologic.meta import (
     SingletonEnum,
+    getabsname_static,
+    getname_static,
     import_original,
     is_nogil,
     is_notso,
@@ -48,38 +50,38 @@ class LockType:
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
 
     def __reduce__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
     def __deepcopy__(self, memo: Any, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __repr__(self, /) -> str:
         cls = type(self)
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+        cls_absname = getabsname_static(cls)
 
         result = repr(self.__impl)
-        result = result.replace("_thread.lock", cls_repr)
+        result = result.replace("_thread.lock", cls_absname)
         result = result.replace(f"{id(self.__impl):#x}", f"{id(self):#x}")
 
         return result
@@ -131,38 +133,38 @@ class RLockType:
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
 
     def __reduce__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot pickle {cls_name!r} object"
         raise TypeError(msg)
 
     def __deepcopy__(self, memo: Any, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot deep copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __copy__(self, /) -> Never:
         cls = type(self)
-        cls_name = cls.__name__
+        cls_name = getname_static(cls)
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
 
     def __repr__(self, /) -> str:
         cls = type(self)
-        cls_repr = f"{cls.__module__}.{cls.__qualname__}"
+        cls_absname = getabsname_static(cls)
 
         result = repr(self.__impl)
-        result = result.replace("_thread.RLock", cls_repr)
+        result = result.replace("_thread.RLock", cls_absname)
         result = result.replace(f"{id(self.__impl):#x}", f"{id(self):#x}")
 
         return result
@@ -249,7 +251,7 @@ class DummyLockType(SingletonEnum):
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)

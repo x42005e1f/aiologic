@@ -109,6 +109,18 @@ Commit messages are consistent with
   which is a safer alternative to `global` (since it prevents mismatches
   between the function name and the global name), and covers cases that the
   other two related functions could not cover.
+- `aiologic.meta.getmro_static()` and `aiologic.meta.getvars_static()` to
+  retrieve the `__mro__` and `__dict__` attributes of the class, respectively,
+  without triggering user code (that which may be defined in its metaclass).
+- `aiologic.meta.getabsname_static()` to retrieve the absolute name of the
+  class, which can be used for representation. Its behavior is the same as that
+  of the other related functions.
+- `aiologic.meta.getmodulename_static()`, `aiologic.meta.getqualname_static()`,
+  `aiologic.meta.getname_static()`, `aiologic.meta.setmodulename_static()`,
+  `aiologic.meta.setqualname_static()`, and `aiologic.meta.setname_static()` to
+  manipulate the corresponding class attributes (`__module__`, `__qualname__`,
+  and `__name__`) via direct descriptor calls. They are useful for ensuring
+  consistency with C implementations.
 - `message` parameter to `aiologic.meta.export_deprecated()` (an optional
   fourth parameter) as a way to set a custom deprecation message (instead of
   the default, which simply refers to the target).
@@ -118,6 +130,10 @@ Commit messages are consistent with
 - `aiologic.meta.replaces_when_imported()` now uses
   `aiologic.meta.when_imported_for()`, thereby inheriting its features (and
   requirements).
+- `aiologic.meta.issubclass_static()` now expects a class as its first argument
+  instead of an arbitrary object, to prevent errors and ensure consistency with
+  the standard library; as a result, it raises a `TypeError` when this is not
+  the case (previously, it returned `False`).
 - Python <3.11 is no longer supported:
   + Support for 3.8 has been dropped primarily because
     `typing_extensions.disjoint_base()` requires Python ≥3.9, and also to
@@ -159,6 +175,10 @@ Commit messages are consistent with
   (when the universal decorator is applied to an object other than a future) to
   signal a potentially dangerous cancellation.
   ([#47](https://github.com/x42005e1f/aiologic/issues/47)).
+- `aiologic.meta.lookup_static()` now checks that the second argument is indeed
+  a string (and raises a `TypeError` when it is not), to prevent accidental
+  triggering of user code via `__hash__()` and `__eq__()` when an object of a
+  different type is passed.
 - All sentinels and markers are now immune to module reloads and refer to the
   same objects for the entire process's lifetime (provided the namespace
   remains the same), making them more reliable. For example, if you import the

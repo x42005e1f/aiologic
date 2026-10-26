@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, final
 
 from aiologic.abc import BaseState
+from aiologic.meta import getname_static
 
 if TYPE_CHECKING:
     from typing import Any, Never
@@ -19,7 +20,7 @@ class ProcessState(BaseState):
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
-        bcs_name = bcs.__name__
+        bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
         raise TypeError(msg)
