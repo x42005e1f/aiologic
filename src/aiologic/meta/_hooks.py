@@ -131,6 +131,13 @@ class _WeakBoundHook:
                 del args
                 del kwargs
 
+    @property
+    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+        try:
+            return self.__impl.callback
+        except AttributeError:
+            return None
+
 
 class _CountdownHook:
     __slots__ = (
@@ -192,6 +199,13 @@ class _CountdownHook:
             del callback
             del args
             del kwargs
+
+    @property
+    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+        try:
+            return self.__callback
+        except AttributeError:
+            return None
 
 
 class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
@@ -297,6 +311,13 @@ class _DynamicHookWrapper:
             return True
 
         return False
+
+    @property
+    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+        try:
+            return self.__hook
+        except AttributeError:
+            return None
 
 
 def _register_bound_hook(
