@@ -129,7 +129,12 @@ Commit messages are consistent with
 
 - `aiologic.meta.replaces_when_imported()` now uses
   `aiologic.meta.when_imported_for()`, thereby inheriting its features (and
-  requirements).
+  requirements). In particular, in place of the module name, it supports
+  disjunctive normal forms (an OR of ANDs): for example, a string has the same
+  behavior, a list of strings means "any of these modules", and a list of
+  tuples of strings means "all of these modules (per tuple)". This should
+  simplify the use of the decorator in cases where there is more than one
+  required module.
 - `aiologic.meta.issubclass_static()` now expects a class as its first argument
   instead of an arbitrary object, to prevent errors and ensure consistency with
   the standard library; as a result, it raises a `TypeError` when this is not

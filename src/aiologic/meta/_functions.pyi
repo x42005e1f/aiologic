@@ -5,8 +5,7 @@
 
 import sys
 
-from collections.abc import Callable, MutableMapping
-from types import ModuleType
+from collections.abc import Callable, Iterable, MutableMapping
 from typing import Any, ParamSpec, TypeVar, overload
 
 from ._markers import MISSING, MissingType
@@ -18,7 +17,6 @@ else:
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
-_HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
 _NamedCallableT = TypeVar("_NamedCallableT", bound=_NamedCallable[..., Any])
 _P = ParamSpec("_P")
 
@@ -27,24 +25,6 @@ class _NamedCallable(Protocol[_P, _T_co]):
     @property
     def __name__(self, /) -> str: ...
 
-@overload
-def when_imported_for(
-    namespace: MutableMapping[str, Any],
-    module_name: str,
-    hook: MissingType = MISSING,
-    /,
-    *,
-    name: str | MissingType = MISSING,
-) -> Callable[[_HookT], _HookT]: ...
-@overload
-def when_imported_for(
-    namespace: MutableMapping[str, Any],
-    module_name: str,
-    hook: _HookT,
-    /,
-    *,
-    name: str | MissingType = MISSING,
-) -> _HookT: ...
 @overload
 def replaces(
     namespace: MutableMapping[str, Any],
@@ -60,14 +40,14 @@ def replaces(
 @overload
 def replaces_when_imported(
     namespace: MutableMapping[str, Any],
-    module_name: str,
+    module_name_or_info: str | Iterable[str | Iterable[str]],
     replacer: MissingType = MISSING,
     /,
 ) -> Callable[[_NamedCallableT], _NamedCallableT]: ...
 @overload
 def replaces_when_imported(
     namespace: MutableMapping[str, Any],
-    module_name: str,
+    module_name_or_info: str | Iterable[str | Iterable[str]],
     replacer: _NamedCallableT,
     /,
 ) -> _NamedCallableT: ...

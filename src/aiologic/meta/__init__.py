@@ -17,11 +17,13 @@ from ._functions import (
     replaces as replaces,
     replaces_when_imported as replaces_when_imported,
     replaces_with_outcome as replaces_with_outcome,
-    when_imported_for as when_imported_for,
 )
 from ._helpers import (
     GeneratorCoroutineWrapper as GeneratorCoroutineWrapper,
     await_for as await_for,
+)
+from ._hooks import (
+    when_imported_for as when_imported_for,
 )
 from ._imports import (
     import_from as import_from,
