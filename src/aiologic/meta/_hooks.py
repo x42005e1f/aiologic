@@ -16,7 +16,7 @@ from ._markers import DEFAULT, MISSING
 from ._static import getabsname_static, getname_static, isinstance_static
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, MutableMapping
+    from collections.abc import Callable, Iterable, Mapping, MutableMapping
     from types import ModuleType
     from typing import Any, TypeVar
 
@@ -381,6 +381,10 @@ def _register_bound_hook(
     name=MISSING,
     conjunction=DEFAULT,
 ):
+    if name is MISSING:
+        register_post_import_hook(bound_hook, module_name)
+        return
+
     if conjunction is DEFAULT:
         conjunction = frozenset({module_name})
 
@@ -391,10 +395,6 @@ def _register_bound_hook(
             _NAMESPACE_HOOKS_NAME,
             _DynamicHookDictionary(),
         )
-
-    if name is MISSING or module_name in sys.modules:
-        register_post_import_hook(bound_hook, module_name)
-        return
 
     key = (name, conjunction, module_name)
 
@@ -421,6 +421,24 @@ def _register_bound_hook(
         register_post_import_hook(bound_hook, module_name)
 
 
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: MissingType = MISSING,
+) -> Callable[[_HookT], _HookT]: ...
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: _HookT,
+    /,
+    *,
+    name: MissingType = MISSING,
+) -> _HookT: ...
 @overload
 def when_imported_for(
     namespace: MutableMapping[str, Any],
