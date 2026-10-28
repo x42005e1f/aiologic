@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-import sys
 import weakref
 
 from typing import TYPE_CHECKING, overload
 
-from wrapt import register_post_import_hook
+from wrapt import register_post_import_hook, when_imported
 
 from ._markers import DEFAULT, MISSING
 from ._static import getabsname_static, getname_static, isinstance_static
@@ -28,14 +27,21 @@ _NAMESPACE_HOOKS_NAME = "_aiologic_post_import_hooks"
 
 
 def _maybe_create_rlock_if_nogil():
+    return None
+
+
+@when_imported("aiologic.thread")
+def _(_):
     global _maybe_create_rlock_if_nogil
 
-    if "aiologic.thread" in sys.modules:
+    def _maybe_create_rlock_if_nogil():
+        global _maybe_create_rlock_if_nogil
+
         from aiologic import thread
 
         try:
             _maybe_create_rlock_if_nogil = thread.create_rlock_if_nogil
-        except AttributeError:
+        except AttributeError:  # see GrahamDumpleton/wrapt#366
             thread_spec = getattr(thread, "__spec__", None)
 
             if getattr(thread_spec, "_initializing", True):
@@ -44,8 +50,6 @@ def _maybe_create_rlock_if_nogil():
             raise
 
         return _maybe_create_rlock_if_nogil()
-
-    return None
 
 
 class _WeakBoundHookImpl:
