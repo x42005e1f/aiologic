@@ -407,7 +407,7 @@ def _register_bound_hook(
             register_post_import_hook(bound_hook, module_name)
             return
 
-        if dynamic_hook is hooks.setdefault(key, dynamic_hook):  # only once
+        if dynamic_hook is hooks.setdefault(key, dynamic_hook):
             register_post_import_hook(dynamic_hook, module_name)
             return
 
