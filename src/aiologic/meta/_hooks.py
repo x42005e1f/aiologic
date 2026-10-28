@@ -411,7 +411,11 @@ def _register_bound_hook(
             register_post_import_hook(dynamic_hook, module_name)
             return
 
-        dynamic_hook = hooks[key]  # a race condition
+        try:
+            dynamic_hook = hooks[key]
+        except KeyError:  # unregistered in parallel
+            register_post_import_hook(bound_hook, module_name)
+            return
 
     if not dynamic_hook._set_if_not_called(bound_hook):
         register_post_import_hook(bound_hook, module_name)
