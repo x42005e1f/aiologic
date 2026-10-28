@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, overload
 from wrapt import register_post_import_hook
 
 from ._markers import DEFAULT, MISSING
-from ._static import getname_static, isinstance_static
+from ._static import getabsname_static, getname_static, isinstance_static
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, MutableMapping
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
 
-_NAMESPACE_HOOKS_KEY = "_aiologic_post_import_hooks"
+_NAMESPACE_HOOKS_NAME = "_aiologic_post_import_hooks"
 
 
 def _maybe_create_rlock_if_nogil():
@@ -42,8 +42,8 @@ def _maybe_create_rlock_if_nogil():
                 return None
 
             raise
-        else:
-            return _maybe_create_rlock_if_nogil()
+
+        return _maybe_create_rlock_if_nogil()
 
     return None
 
@@ -81,7 +81,7 @@ class _WeakBoundHook:
             self.__spec = None
 
     def __init_subclass__(cls, /, **kwargs):
-        bcs = __class__
+        bcs = __class__  # an implicit closure reference
         bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
@@ -107,6 +107,18 @@ class _WeakBoundHook:
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
+
+    def __repr__(self, /):
+        cls = type(self)
+        cls_absname = getabsname_static(cls)
+
+        self_repr = f"{cls_absname} object"
+        if self._is_alive:
+            state = "alive"
+        else:
+            state = "dead"
+
+        return f"<{self_repr} at {id(self):#x}: {state}>"
 
     def __call__(self, /, *args, **kwargs):
         try:
@@ -141,6 +153,29 @@ class _WeakBoundHook:
         except AttributeError:
             return None
 
+    @property
+    def _namespace(self, /):
+        try:
+            return self.__impl.namespace
+        except AttributeError:
+            return None
+
+    @property
+    def _is_alive(self, /):
+        try:
+            impl = self.__impl
+            spec = self.__spec
+            spec_weakref = self.__spec_weakref
+        except AttributeError:
+            return False
+
+        if spec_weakref is not None:
+            spec = spec_weakref()
+            if spec is None:
+                return False
+
+        return spec is impl.namespace.get("__spec__")
+
 
 class _CountdownHook:
     __slots__ = (
@@ -153,7 +188,7 @@ class _CountdownHook:
         self.__vector = [None] * (count - 1)  # a signal-safe counter
 
     def __init_subclass__(cls, /, **kwargs):
-        bcs = __class__
+        bcs = __class__  # an implicit closure reference
         bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
@@ -179,6 +214,15 @@ class _CountdownHook:
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
+
+    def __repr__(self, /):
+        cls = type(self)
+        cls_absname = getabsname_static(cls)
+
+        self_repr = f"{cls_absname} object"
+        state = f"_value={self._value}"
+
+        return f"<{self_repr} at {id(self):#x} [{state}]>"
 
     def __call__(self, /, *args, **kwargs):
         try:
@@ -205,6 +249,10 @@ class _CountdownHook:
         except AttributeError:
             return None
 
+    @property
+    def _value(self, /):
+        return len(self.__vector) + (0 if self.__wrapped__ is None else 1)
+
 
 class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
     __slots__ = ("__weakref__",)
@@ -219,15 +267,15 @@ class _DynamicHookWrapper:
         "_lock_if_nogil",
     )
 
-    def __init__(self, hook, hooks, key, /):
+    def __init__(self, hooks, hooks_key, hook, /):
         self.__hook = hook
-        self.__hooks_key = key
+        self.__hooks_key = hooks_key
         self.__hooks_weakref = weakref.ref(hooks)
         self._is_called = False
         self._lock_if_nogil = _maybe_create_rlock_if_nogil()
 
     def __init_subclass__(cls, /, **kwargs):
-        bcs = __class__
+        bcs = __class__  # an implicit closure reference
         bcs_name = getname_static(bcs)
 
         msg = f"type {bcs_name!r} is not an acceptable base type"
@@ -253,6 +301,18 @@ class _DynamicHookWrapper:
 
         msg = f"cannot copy {cls_name!r} object"
         raise TypeError(msg)
+
+    def __repr__(self, /):
+        cls = type(self)
+        cls_absname = getabsname_static(cls)
+
+        self_repr = f"{cls_absname} object"
+        if self._is_called:
+            state = "called"
+        else:
+            state = "pending"
+
+        return f"<{self_repr} at {id(self):#x}: {state}>"
 
     def __call__(self, /, *args, **kwargs):
         if self._unregister():  # only once
@@ -321,27 +381,27 @@ def _register_bound_hook(
     name=MISSING,
     conjunction=DEFAULT,
 ):
-    if name is MISSING or module_name in sys.modules:
-        register_post_import_hook(bound_hook, module_name)
-        return
-
     if conjunction is DEFAULT:
         conjunction = frozenset({module_name})
 
     try:
-        hooks = namespace[_NAMESPACE_HOOKS_KEY]
+        hooks = namespace[_NAMESPACE_HOOKS_NAME]
     except KeyError:
         hooks = namespace.setdefault(
-            _NAMESPACE_HOOKS_KEY,
+            _NAMESPACE_HOOKS_NAME,
             _DynamicHookDictionary(),
         )
 
-    key = (name, module_name, conjunction)
+    if name is MISSING or module_name in sys.modules:
+        register_post_import_hook(bound_hook, module_name)
+        return
+
+    key = (name, conjunction, module_name)
 
     try:
         dynamic_hook = hooks[key]
     except KeyError:
-        dynamic_hook = _DynamicHookWrapper(bound_hook, hooks, key)
+        dynamic_hook = _DynamicHookWrapper(hooks, key, bound_hook)
 
         if dynamic_hook._lock_if_nogil is None:  # during initialization
             register_post_import_hook(bound_hook, module_name)
@@ -390,6 +450,14 @@ def when_imported_for(
             return impl(namespace, module_name_or_info, hook, name=name)
 
         return decorator
+
+    if not callable(hook):
+        msg = "the third argument must be callable"
+        raise TypeError(msg)
+
+    if name is not MISSING and not isinstance_static(name, str):
+        msg = "the `name` must be a string"
+        raise TypeError(msg)
 
     bound_hook = _WeakBoundHook(hook, namespace)
 
