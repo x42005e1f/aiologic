@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
     _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
 
+_NAMESPACE_HOOKS_KEY = "_aiologic_post_import_hooks"
+
 
 def _maybe_create_rlock_if_nogil():
     global _maybe_create_rlock_if_nogil
@@ -327,10 +329,10 @@ def _register_bound_hook(
         conjunction = frozenset({module_name})
 
     try:
-        hooks = namespace["_aiologic_post_import_hooks"]
+        hooks = namespace[_NAMESPACE_HOOKS_KEY]
     except KeyError:
         hooks = namespace.setdefault(
-            "_aiologic_post_import_hooks",
+            _NAMESPACE_HOOKS_KEY,
             _DynamicHookDictionary(),
         )
 
