@@ -322,10 +322,10 @@ def _register_bound_hook(
         conjunction = frozenset({module_name})
 
     try:
-        hooks = namespace["_aiologic_import_hooks"]
+        hooks = namespace["_aiologic_post_import_hooks"]
     except KeyError:
         hooks = namespace.setdefault(
-            "_aiologic_import_hooks",
+            "_aiologic_post_import_hooks",
             _DynamicHookDictionary(),
         )
 
