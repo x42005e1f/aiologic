@@ -110,7 +110,7 @@ class _WeakBoundHook:
             del self.__impl
             del self.__spec
             del self.__spec_weakref
-        except AttributeError:  # a race condition
+        except AttributeError:  # already executed (possibly in parallel)
             return
 
         if spec_weakref is not None:
@@ -124,12 +124,8 @@ class _WeakBoundHook:
             del impl
             del spec
             del spec_weakref
-            try:
-                callback(*args, **kwargs)
-            finally:
-                del callback
-                del args
-                del kwargs
+
+            callback(*args, **kwargs)
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
@@ -180,7 +176,7 @@ class _CountdownHook:
     def __call__(self, /, *args, **kwargs):
         try:
             self.__vector.pop()
-        except IndexError:  # the last call
+        except IndexError:  # the last (or, unexpectedly, a subsequent)
             pass
         else:
             return
@@ -189,16 +185,11 @@ class _CountdownHook:
             callback = self.__callback
 
             del self.__callback
-        except AttributeError:
+        except AttributeError:  # already executed (possibly in parallel)
             msg = "this hook was called more times than expected"
             raise RuntimeError(msg) from None
 
-        try:
-            callback(*args, **kwargs)
-        finally:
-            del callback
-            del args
-            del kwargs
+        callback(*args, **kwargs)
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
@@ -267,12 +258,7 @@ class _DynamicHookWrapper:
                 except AttributeError:  # a race condition (with set)
                     return
 
-            try:
-                hook(*args, **kwargs)
-            finally:
-                del hook
-                del args
-                del kwargs
+            hook(*args, **kwargs)
 
     def _set_if_not_called(self, hook, /):
         if self._is_called:
@@ -301,7 +287,7 @@ class _DynamicHookWrapper:
 
             del self.__hooks_key
             del self.__hooks_weakref
-        except AttributeError:  # a race condition
+        except AttributeError:  # already executed (possibly in parallel)
             return False
 
         if (hooks := hooks_weakref()) is not None:
