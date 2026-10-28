@@ -33,8 +33,13 @@ def _maybe_create_rlock_if_nogil():
 
         try:
             _maybe_create_rlock_if_nogil = thread.create_rlock_if_nogil
-        except AttributeError:  # a circular import (during initialization)
-            pass
+        except AttributeError:
+            thread_spec = getattr(thread, "__spec__", None)
+
+            if getattr(thread_spec, "_initializing", True):
+                return None
+
+            raise
         else:
             return _maybe_create_rlock_if_nogil()
 
