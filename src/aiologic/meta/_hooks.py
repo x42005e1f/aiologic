@@ -31,19 +31,21 @@ def _maybe_create_rlock_if_nogil():
 
 
 @when_imported("aiologic.thread")
-def _(_):
+def _(thread):
     global _maybe_create_rlock_if_nogil
+
+    thread_spec = getattr(thread, "__spec__", None)
 
     def _maybe_create_rlock_if_nogil():
         global _maybe_create_rlock_if_nogil
 
-        from aiologic import thread
+        # see GrahamDumpleton/wrapt#366
+        if getattr(thread_spec, "_initializing", False):
+            return None
 
         try:
             _maybe_create_rlock_if_nogil = thread.create_rlock_if_nogil
-        except AttributeError:  # see GrahamDumpleton/wrapt#366
-            thread_spec = getattr(thread, "__spec__", None)
-
+        except AttributeError:
             if getattr(thread_spec, "_initializing", True):
                 return None
 
