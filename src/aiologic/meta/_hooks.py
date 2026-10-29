@@ -226,7 +226,7 @@ class _CountdownHook:
         cls_absname = getabsname_static(cls)
 
         self_repr = f"{cls_absname} object"
-        state = f"_value={self._value}"
+        state = f"_value={self._value!r}"
 
         return f"<{self_repr} at {id(self):#x} [{state}]>"
 
@@ -264,7 +264,7 @@ class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
     __slots__ = ("__weakref__",)
 
 
-class _DynamicHookWrapper:
+class _DynamicHook:
     __slots__ = (
         "__hook",
         "__hooks_key",
@@ -334,9 +334,6 @@ class _DynamicHookWrapper:
             hook(*args, **kwargs)
 
     def _set_if_not_called(self, hook, /):
-        if self._is_called:
-            return False
-
         with self._lock_if_nogil:
             self.__hook = hook
 
@@ -351,9 +348,6 @@ class _DynamicHookWrapper:
         return True
 
     def _unregister(self, /):
-        if self._is_called:
-            return False
-
         try:
             hooks_key = self.__hooks_key
             hooks_weakref = self.__hooks_weakref
@@ -383,6 +377,7 @@ def _register_bound_hook(
     namespace,
     module_name,
     bound_hook,
+    /,
     *,
     name=MISSING,
     conjunction=DEFAULT,
@@ -407,7 +402,7 @@ def _register_bound_hook(
     try:
         dynamic_hook = hooks[key]
     except KeyError:
-        dynamic_hook = _DynamicHookWrapper(hooks, key, bound_hook)
+        dynamic_hook = _DynamicHook(hooks, key, bound_hook)
 
         if dynamic_hook._lock_if_nogil is None:  # during initialization
             register_post_import_hook(bound_hook, module_name)
