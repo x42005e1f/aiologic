@@ -565,10 +565,6 @@ def when_imported_for(
 
             conjunctions.add(frozenset(module_names))
 
-    if empty_ok and frozenset() in conjunctions:
-        hook(None)
-        return hook
-
     bound_hook = _WeakBoundHook(hook, namespace)
 
     for conjunction in conjunctions:
@@ -583,7 +579,7 @@ def when_imported_for(
                     name=name,
                     conjunction=conjunction,
                 )
-        else:
+        elif len(conjunction) == 1:
             _register_bound_hook(
                 namespace,
                 *conjunction,
@@ -591,5 +587,7 @@ def when_imported_for(
                 name=name,
                 conjunction=conjunction,
             )
+        else:
+            bound_hook(None)
 
     return hook
