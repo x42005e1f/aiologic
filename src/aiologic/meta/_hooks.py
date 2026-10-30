@@ -362,9 +362,7 @@ class _DynamicHook:
             hook = hooks.pop(hooks_key)
             assert hook is self
 
-            return True
-
-        return False
+        return True
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
