@@ -5,11 +5,12 @@
 
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from types import ModuleType
-from typing import Any, TypeVar, overload
+from typing import Any, Literal, TypeVar, overload
 
 from ._markers import MISSING, MissingType
 
 _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
+_UHookT = TypeVar("_UHookT", bound=Callable[[ModuleType | None], Any])
 
 @overload
 def when_imported_for(
@@ -19,6 +20,7 @@ def when_imported_for(
     /,
     *,
     name: MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -28,6 +30,7 @@ def when_imported_for(
     /,
     *,
     name: MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -37,6 +40,7 @@ def when_imported_for(
     /,
     *,
     name: str | MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -46,4 +50,45 @@ def when_imported_for(
     /,
     *,
     name: str | MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> _HookT: ...
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> Callable[[_UHookT], _UHookT]: ...
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: _UHookT,
+    /,
+    *,
+    name: MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> _UHookT: ...
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> Callable[[_UHookT], _UHookT]: ...
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: _UHookT,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> _UHookT: ...

@@ -17,11 +17,12 @@ from ._static import getabsname_static, getname_static, isinstance_static
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, MutableMapping
     from types import ModuleType
-    from typing import Any, TypeVar
+    from typing import Any, Literal, TypeVar
 
     from ._markers import MissingType
 
     _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
+    _UHookT = TypeVar("_UHookT", bound=Callable[[ModuleType | None], Any])
 
 _NAMESPACE_HOOKS_NAME = "_aiologic_post_import_hooks"
 
@@ -430,6 +431,7 @@ def when_imported_for(
     /,
     *,
     name: MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -439,6 +441,7 @@ def when_imported_for(
     /,
     *,
     name: MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -448,6 +451,7 @@ def when_imported_for(
     /,
     *,
     name: str | MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -457,7 +461,48 @@ def when_imported_for(
     /,
     *,
     name: str | MissingType = MISSING,
+    empty_ok: Literal[False] = False,
 ) -> _HookT: ...
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> Callable[[_UHookT], _UHookT]: ...
+@overload
+def when_imported_for(
+    namespace: Mapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: _UHookT,
+    /,
+    *,
+    name: MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> _UHookT: ...
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: MissingType = MISSING,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> Callable[[_UHookT], _UHookT]: ...
+@overload
+def when_imported_for(
+    namespace: MutableMapping[str, Any],
+    module_name_or_info: str | Iterable[str | Iterable[str]],
+    hook: _UHookT,
+    /,
+    *,
+    name: str | MissingType = MISSING,
+    empty_ok: Literal[True],
+) -> _UHookT: ...
 def when_imported_for(
     namespace,
     module_name_or_info,
@@ -465,12 +510,19 @@ def when_imported_for(
     /,
     *,
     name=MISSING,
+    empty_ok=False,
 ):
     if hook is MISSING:
         impl = when_imported_for
 
-        def decorator(hook: _HookT, /) -> _HookT:
-            return impl(namespace, module_name_or_info, hook, name=name)
+        def decorator(hook, /):
+            return impl(
+                namespace,
+                module_name_or_info,
+                hook,
+                name=name,
+                empty_ok=empty_ok,
+            )
 
         return decorator
 
@@ -482,13 +534,11 @@ def when_imported_for(
         msg = "the `name` must be a string"
         raise TypeError(msg)
 
-    bound_hook = _WeakBoundHook(hook, namespace)
-
     if isinstance_static(module_name_or_info, str):
         _register_bound_hook(
             namespace,
             module_name_or_info,
-            bound_hook,
+            _WeakBoundHook(hook, namespace),
             name=name,
         )
         return hook
@@ -509,7 +559,17 @@ def when_imported_for(
                 msg = "the second argument must yield only strings at depth 2"
                 raise TypeError(msg)
 
+            if not module_names and not empty_ok:
+                msg = "the second argument must not yield empty iterables"
+                raise ValueError(msg)
+
             conjunctions.add(frozenset(module_names))
+
+    if empty_ok and frozenset() in conjunctions:
+        hook(None)
+        return hook
+
+    bound_hook = _WeakBoundHook(hook, namespace)
 
     for conjunction in conjunctions:
         if len(conjunction) >= 2:
@@ -523,7 +583,7 @@ def when_imported_for(
                     name=name,
                     conjunction=conjunction,
                 )
-        elif len(conjunction) == 1:
+        else:
             _register_bound_hook(
                 namespace,
                 *conjunction,

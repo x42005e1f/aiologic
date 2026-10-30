@@ -161,7 +161,13 @@ def replaces_when_imported(
 
         namespace[name] = replacer
 
-    when_imported_for(namespace, module_name_or_info, hook, name=name)
+    when_imported_for(
+        namespace,
+        module_name_or_info,
+        hook,
+        name=name,
+        empty_ok=True,
+    )
 
     return namespace[name]
 
