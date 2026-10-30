@@ -587,7 +587,8 @@ def when_imported_for(
                 name=name,
                 conjunction=conjunction,
             )
-        else:
-            bound_hook(None)
+
+    if frozenset() in conjunctions:
+        bound_hook(None)
 
     return hook
