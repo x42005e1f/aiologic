@@ -205,6 +205,7 @@ ignore = [
     # flake8-pyi
     "PYI011",  # typed-argument-default-in-stub
     "PYI015",  # assignment-default-in-stub
+    "PYI024",  # collections-named-tuple
     "PYI029",  # str-or-repr-defined-in-stub
     "PYI053",  # string-or-bytes-too-long
     "PYI054",  # numeric-literal-too-long

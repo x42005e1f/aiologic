@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import weakref
 
+from collections import namedtuple
 from typing import TYPE_CHECKING, overload
 
 from wrapt import register_post_import_hook, when_imported
@@ -382,6 +383,9 @@ class _DynamicHook:
             return None
 
 
+_HookKey = namedtuple("_HookKey", ["name", "conjunction", "module_name"])
+
+
 def _register_bound_hook(
     namespace,
     module_name,
@@ -406,7 +410,7 @@ def _register_bound_hook(
             _DynamicHookDictionary(),
         )
 
-    key = (name, conjunction, module_name)
+    key = _HookKey(name, conjunction, module_name)
 
     try:
         dynamic_hook = hooks[key]
