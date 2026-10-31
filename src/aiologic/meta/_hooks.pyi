@@ -39,7 +39,7 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[True],
 ) -> _UHookT: ...
 @overload
@@ -49,7 +49,7 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[True],
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
@@ -79,7 +79,7 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[False] = False,
 ) -> _HookT: ...
 @overload
@@ -89,6 +89,6 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...

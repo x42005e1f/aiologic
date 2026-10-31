@@ -392,10 +392,10 @@ def _register_bound_hook(
     bound_hook,
     /,
     *,
-    name=MISSING,
+    name=None,
     conjunction=DEFAULT,
 ):
-    if name is MISSING:
+    if name is None:
         register_post_import_hook(bound_hook, module_name)
         return
 
@@ -462,7 +462,7 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[True],
 ) -> _UHookT: ...
 @overload
@@ -472,7 +472,7 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[True],
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
@@ -502,7 +502,7 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[False] = False,
 ) -> _HookT: ...
 @overload
@@ -512,7 +512,7 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: MissingType = MISSING,
+    name: None = None,
     empty_ok: Literal[False] = False,
 ) -> Callable[[_HookT], _HookT]: ...
 def when_imported_for(
@@ -521,7 +521,7 @@ def when_imported_for(
     hook=MISSING,
     /,
     *,
-    name=MISSING,
+    name=None,
     empty_ok=False,
 ):
     if hook is MISSING:
@@ -542,7 +542,7 @@ def when_imported_for(
         msg = "the third argument must be callable"
         raise TypeError(msg)
 
-    if name is not MISSING and not isinstance_static(name, str):
+    if name is not None and not isinstance_static(name, str):
         msg = "the `name` must be a string"
         raise TypeError(msg)
 
