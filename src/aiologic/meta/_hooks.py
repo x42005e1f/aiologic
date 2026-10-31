@@ -75,6 +75,7 @@ class _WeakBoundHook:
         "__impl",
         "__spec",
         "__spec_weakref",
+        "_is_called",
     )
 
     def __init__(self, callback, namespace, /):
@@ -86,6 +87,7 @@ class _WeakBoundHook:
             self.__spec_weakref = None
         else:
             self.__spec = None
+        self._is_called = False
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = __class__  # an implicit closure reference
@@ -120,10 +122,12 @@ class _WeakBoundHook:
         cls_absname = getabsname_static(cls)
 
         self_repr = f"{cls_absname} object"
-        if self._is_alive:
-            state = "alive"
-        else:
+        if self._is_called:
+            state = "called"
+        elif self._is_dead:
             state = "dead"
+        else:
+            state = "pending"
 
         return f"<{self_repr} at {id(self):#x}: {state}>"
 
@@ -145,6 +149,8 @@ class _WeakBoundHook:
                 return
 
         if spec is impl.namespace.get("__spec__"):
+            self._is_called = True
+
             callback = impl.callback
 
             del impl
@@ -182,6 +188,10 @@ class _WeakBoundHook:
                 return False
 
         return spec is impl.namespace.get("__spec__")
+
+    @property
+    def _is_dead(self, /):
+        return not self._is_alive
 
 
 class _CountdownHook:
