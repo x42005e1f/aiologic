@@ -327,6 +327,8 @@ class _DynamicHook:
         self_repr = f"{cls_absname} object"
         if self._is_called:
             state = "called"
+        elif self._is_dead:
+            state = "dead"
         else:
             state = "pending"
 
@@ -381,6 +383,20 @@ class _DynamicHook:
             return self.__hook
         except AttributeError:
             return None
+
+    @property
+    def _is_alive(self, /):
+        try:
+            _ = self.__hooks_key
+            _ = self.__hooks_weakref
+        except AttributeError:
+            return False
+
+        return True
+
+    @property
+    def _is_dead(self, /):
+        return not self._is_alive
 
 
 _HookKey = namedtuple("_HookKey", ["name", "conjunction", "module_name"])
