@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from types import FunctionType, MethodDescriptorType, WrapperDescriptorType
 from typing import TYPE_CHECKING, overload
 
@@ -12,14 +14,22 @@ if TYPE_CHECKING:
     from types import MappingProxyType
     from typing import Any, TypeAlias, TypeGuard, TypeVar
 
+if sys.version_info >= (3, 15):  # PEP 661
+    from builtins import sentinel
+else:  # typing-extensions>=4.16.0
+    from typing_extensions import sentinel
+
+if TYPE_CHECKING:
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
 
     _ClassInfo: TypeAlias = type | tuple["_ClassInfo", ...]
 
-if "_sentinel" not in globals():
-    _sentinel = object()
+if "_MISSING" not in globals():
+    _MISSING = sentinel("_MISSING")
+if "_NOTHING" not in globals():
+    _NOTHING = sentinel("_NOTHING")
 
 _getmro_static = vars(type)["__mro__"].__get__
 
@@ -258,18 +268,18 @@ def _lookup_static_noerror(owner, name, /):
             except KeyError:  # a race condition
                 pass
 
-    return _sentinel
+    return _NOTHING
 
 
 @overload
 def lookup_static(owner: type, name: str, /) -> Any: ...
 @overload
 def lookup_static(owner: type, name: str, /, default: _T) -> Any | _T: ...
-def lookup_static(owner, name, /, default=_sentinel):
+def lookup_static(owner, name, /, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
 
-    if member is _sentinel:
-        if default is _sentinel:
+    if member is _NOTHING:
+        if default is _MISSING:
             raise LookupError(name)
 
         return default
@@ -309,18 +319,18 @@ def resolve_special(
     *,
     default: _T2,
 ) -> Any | _T2: ...
-def resolve_special(owner, name, instance=None, /, *, default=_sentinel):
+def resolve_special(owner, name, instance=None, /, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
 
-    if member is _sentinel:
-        if default is _sentinel:
+    if member is _NOTHING:
+        if default is _MISSING:
             raise LookupError(name)
 
         return default
 
     descr_get = _lookup_static_noerror(type(member), "__get__")
 
-    if descr_get is _sentinel:
+    if descr_get is _NOTHING:
         return member
 
     return descr_get(member, instance, owner)
