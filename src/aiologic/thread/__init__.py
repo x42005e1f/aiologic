@@ -26,6 +26,13 @@ from ._locks import (
 from ._states import (
     ThreadState as ThreadState,
 )
+from ._turnstiles import (
+    DUMMY_TURNSTILE as DUMMY_TURNSTILE,
+    DummyTurnstileType as DummyTurnstileType,
+    create_turnstile as create_turnstile,
+    create_turnstile_if_nogil as create_turnstile_if_nogil,
+    create_turnstile_if_notso as create_turnstile_if_notso,
+)
 from ._vars import (
     ThreadVar as ThreadVar,
     ThreadVarToken as ThreadVarToken,

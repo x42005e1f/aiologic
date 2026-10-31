@@ -95,6 +95,16 @@ Commit messages are consistent with
 - `aiologic.thread.create_rlock_if_notso()` as a way to create actual lock
   objects only if TSO (Total Store Order) is not guaranteed (otherwise, the
   dummy lock is returned).
+- `aiologic.thread.TurnstileType`, `aiologic.thread.DummyTurnstileType`,
+  `aiologic.thread.DUMMY_TURNSTILE`, `aiologic.thread.create_turnstile()`,
+  `aiologic.thread.create_turnstile_if_nogil()`, and
+  `aiologic.thread.create_turnstile_if_notso()` as a new type of thread-level
+  (dummy) turnstile, its singleton object, and its factory functions,
+  respectively. It is designed to establish the unconditional synchronizes-with
+  relation between two or more points in free threading, essentially combining
+  `acquire()` and `release()` into a single `wait()` operation. It is named
+  after the basic synchronization pattern of the same name and should not be
+  confused with Solaris' turnstiles.
 - `aiologic.meta.is_nogil()` to determine whether the GIL (Global Interpreter
   Lock) is disabled.
 - `aiologic.meta.is_notso()` to determine whether TSO (Total Store Order) is

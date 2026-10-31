@@ -28,32 +28,32 @@ if TYPE_CHECKING:
 _NAMESPACE_HOOKS_NAME = "_aiologic_post_import_hooks"
 
 
-def _maybe_create_rlock_if_nogil():
+def _maybe_create_turnstile_if_nogil():
     return None
 
 
 @when_imported("aiologic.thread")
 def _(thread):
-    global _maybe_create_rlock_if_nogil
+    global _maybe_create_turnstile_if_nogil
 
     thread_spec = getattr(thread, "__spec__", None)
 
-    def _maybe_create_rlock_if_nogil():
-        global _maybe_create_rlock_if_nogil
+    def _maybe_create_turnstile_if_nogil():
+        global _maybe_create_turnstile_if_nogil
 
         # see GrahamDumpleton/wrapt#366
         if getattr(thread_spec, "_initializing", False):
             return None
 
         try:
-            _maybe_create_rlock_if_nogil = thread.create_rlock_if_nogil
+            _maybe_create_turnstile_if_nogil = thread.create_turnstile_if_nogil
         except AttributeError:
             if getattr(thread_spec, "_initializing", True):
                 return None
 
             raise
 
-        return _maybe_create_rlock_if_nogil()
+        return _maybe_create_turnstile_if_nogil()
 
 
 class _WeakBoundHookImpl:
@@ -282,7 +282,7 @@ class _DynamicHook:
         "__hooks_key",
         "__hooks_weakref",
         "_is_called",
-        "_lock_if_nogil",
+        "_turnstile_if_nogil",
     )
 
     def __init__(self, hooks, hooks_key, hook, /):
@@ -290,7 +290,7 @@ class _DynamicHook:
         self.__hooks_key = hooks_key
         self.__hooks_weakref = weakref.ref(hooks)
         self._is_called = False
-        self._lock_if_nogil = _maybe_create_rlock_if_nogil()
+        self._turnstile_if_nogil = _maybe_create_turnstile_if_nogil()
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = __class__  # an implicit closure reference
@@ -336,28 +336,31 @@ class _DynamicHook:
 
     def __call__(self, /, *args, **kwargs):
         if self._unregister():  # only once
-            with self._lock_if_nogil:
-                self._is_called = True
-                try:
-                    hook = self.__hook
+            self._is_called = True
 
-                    del self.__hook
-                except AttributeError:  # a race condition (with set)
-                    return
+            self._turnstile_if_nogil.wait()
+
+            try:
+                hook = self.__hook
+
+                del self.__hook
+            except AttributeError:  # a race condition (with set)
+                return
 
             hook(*args, **kwargs)
 
     def _set_if_not_called(self, hook, /):
-        with self._lock_if_nogil:
-            self.__hook = hook
+        self.__hook = hook
 
-            if self._is_called:
-                try:
-                    del self.__hook
-                except AttributeError:  # a race condition (with set or call)
-                    pass
+        self._turnstile_if_nogil.wait()
 
-                return False
+        if self._is_called:
+            try:
+                del self.__hook
+            except AttributeError:  # a race condition (with set or call)
+                pass
+
+            return False
 
         return True
 
@@ -433,7 +436,7 @@ def _register_bound_hook(
     except KeyError:
         dynamic_hook = _DynamicHook(hooks, key, bound_hook)
 
-        if dynamic_hook._lock_if_nogil is None:  # during initialization
+        if dynamic_hook._turnstile_if_nogil is None:  # during initialization
             register_post_import_hook(bound_hook, module_name)
             return
 

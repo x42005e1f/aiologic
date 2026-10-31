@@ -25,12 +25,12 @@ if TYPE_CHECKING:
 
 
 @replaces_with_outcome(globals())
-def _create_lock():
+def _create_native_lock():
     return import_original("_thread", "allocate_lock")
 
 
 @replaces_with_outcome(globals())
-def _create_rlock():
+def _create_native_rlock():
     return import_original("_thread", "RLock")
 
 
@@ -46,7 +46,7 @@ class LockType:
     )
 
     def __init__(self, /) -> None:
-        self.__impl = _create_lock()
+        self.__impl = _create_native_lock()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
@@ -129,7 +129,7 @@ class RLockType:
     )
 
     def __init__(self, /) -> None:
-        self.__impl = _create_rlock()
+        self.__impl = _create_native_rlock()
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__
