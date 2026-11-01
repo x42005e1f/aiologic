@@ -338,6 +338,8 @@ class _DynamicHook:
         if self._unregister():  # only once
             self._is_called = True
 
+            # to ensure that the underlying hook is the very last one
+            # successfully set (or one of the subsequent ones)
             self._turnstile_if_nogil.wait()
 
             try:
@@ -355,6 +357,7 @@ class _DynamicHook:
 
         self.__hook = hook
 
+        # to ensure that the check below does not result in a false negative
         self._turnstile_if_nogil.wait()
 
         if self._is_called:
