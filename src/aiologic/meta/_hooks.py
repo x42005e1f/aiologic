@@ -350,6 +350,9 @@ class _DynamicHook:
             hook(*args, **kwargs)
 
     def _set_if_not_called(self, hook, /):
+        if self._is_called:
+            return False
+
         self.__hook = hook
 
         self._turnstile_if_nogil.wait()
