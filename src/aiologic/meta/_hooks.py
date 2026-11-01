@@ -377,6 +377,17 @@ class _DynamicHook:
             try:
                 del self.__hook
             except AttributeError:  # a race condition (with set or call)
+                # It might be tempting to return `True` here to avoid redundant
+                # `register_post_import_hook()` calls, since the execution
+                # order in a race condition is nondeterministic anyway (we can
+                # decide which set attempt won the race at our discretion). But
+                # consider a race condition with `__call__()`: if it
+                # successfully deletes and calls the initial hook, then the
+                # hook of this `_set_if_not_called()` call is in fact a new
+                # hook, and therefore must be called (and this is also true for
+                # all other concurrent set attempts that entered this block;
+                # otherwise, we would get inconsistent and potentially
+                # erroneous behavior).
                 pass
 
             return False
