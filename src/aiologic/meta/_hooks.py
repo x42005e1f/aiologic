@@ -352,6 +352,19 @@ class _DynamicHook:
             hook(*args, **kwargs)
 
     def _set_if_not_called(self, hook, /):
+        # Suppose that wrapt queues hooks in `register_post_import_hook()` even
+        # when the notification has already started (one of its possible
+        # implementations). Consider a thread that sequentially makes two
+        # `_set_if_not_called()` calls. There is also another thread that fires
+        # this dynamic hook before those calls. If the second thread sleeps
+        # right after the turnstile (in `__call__()`), the first call will
+        # return `False` and trigger `register_post_import_hook()`, which means
+        # its hook will be queued for execution after this dynamic hook. But
+        # if, on the second call, the first thread sleeps right after the
+        # turnstile (in `_set_if_not_called()`), and the second thread wakes
+        # up, picks up its hook, and calls it, then the second hook will
+        # precede the first one, which violates the expected sequential (FIFO)
+        # order. With this check in place, such a scenario is impossible.
         if self._is_called:
             return False
 
