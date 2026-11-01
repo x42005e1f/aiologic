@@ -404,6 +404,11 @@ class _DynamicHook:
         except AttributeError:  # already executed (possibly in parallel)
             return False
 
+        # wrapt>=1.15.0 handles unloading of modules that have already been
+        # imported (see GrahamDumpleton/wrapt#217) as if they had never been
+        # imported. Although this is a somewhat unusual use case, we should
+        # handle it as well, for which we have to remove the current dynamic
+        # hook when it is fired (due to its one-time nature).
         if (hooks := hooks_weakref()) is not None:
             hook = hooks.pop(hooks_key)
             assert hook is self
