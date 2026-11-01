@@ -13,26 +13,20 @@ from ._handles import ProcessHandle
 from ._states import ProcessState
 
 if "_is_forking" not in globals():
-    _is_forking = False
+    _is_forking = []
 
 
 def _before_fork():
-    global _is_forking
-
     _current_process_ident()
 
-    _is_forking = True
+    _is_forking.append(None)
 
 
 def _after_fork_in_parent():
-    global _is_forking
-
-    _is_forking = False
+    _is_forking.pop()
 
 
 def _after_fork_in_child():
-    global _is_forking
-
     global _child_handle
     global _child_state
     global _child_ident
@@ -49,7 +43,7 @@ def _after_fork_in_child():
     del _child_state
     del _child_ident
 
-    _is_forking = False
+    _is_forking.clear()
 
 
 def _register_hooks():

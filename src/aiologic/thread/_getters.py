@@ -14,27 +14,21 @@ from ._handles import ThreadHandle
 from ._states import ThreadState
 
 if "_is_forking" not in globals():
-    _is_forking = False
+    _is_forking = []
 
 
 def _before_fork():
-    global _is_forking
-
-    _is_forking = True
+    _is_forking.append(None)
 
 
 def _after_fork_in_parent():
-    global _is_forking
-
-    _is_forking = False
+    _is_forking.pop()
 
 
 def _after_fork_in_child():
-    global _is_forking
-
     _current_thread_at_fork()
 
-    _is_forking = False
+    _is_forking.clear()
 
 
 def _register_hooks():
