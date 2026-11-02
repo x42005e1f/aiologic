@@ -582,6 +582,10 @@ def when_imported_for(
         impl = when_imported_for
 
         def decorator(hook, /):
+            if hook is MISSING:
+                msg = "the last argument must not be `MISSING`"
+                raise TypeError(msg)
+
             return impl(
                 namespace,
                 module_name_or_info,

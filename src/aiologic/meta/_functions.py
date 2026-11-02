@@ -71,6 +71,10 @@ def replaces(namespace, replacer=MISSING, /):
         impl = replaces
 
         def decorator(replacer: _NamedCallableT, /) -> _NamedCallableT:
+            if replacer is MISSING:
+                msg = "the last argument must not be `MISSING`"
+                raise TypeError(msg)
+
             return impl(namespace, replacer)
 
         return decorator
@@ -129,6 +133,10 @@ def replaces_when_imported(
         impl = replaces_when_imported
 
         def decorator(replacer: _NamedCallableT, /) -> _NamedCallableT:
+            if replacer is MISSING:
+                msg = "the last argument must not be `MISSING`"
+                raise TypeError(msg)
+
             return impl(namespace, module_name_or_info, replacer)
 
         return decorator
@@ -192,6 +200,10 @@ def replaces_with_outcome(namespace, replacer_factory=MISSING, /):
             replacer_factory: _NamedCallable[[], Callable[_P, _T]],
             /,
         ) -> Callable[_P, _T]:
+            if replacer_factory is MISSING:
+                msg = "the last argument must not be `MISSING`"
+                raise TypeError(msg)
+
             return impl(namespace, replacer_factory)
 
         return decorator
@@ -241,6 +253,10 @@ def copies(original, replaced=MISSING, /):
         impl = copies
 
         def decorator(replaced: Callable[_P, _T], /) -> Callable[_P, _T]:
+            if replaced is MISSING:
+                msg = "the last argument must not be `MISSING`"
+                raise TypeError(msg)
+
             return impl(original, replaced)
 
         return decorator

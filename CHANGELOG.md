@@ -190,6 +190,10 @@ Commit messages are consistent with
   (when the universal decorator is applied to an object other than a future) to
   signal a potentially dangerous cancellation.
   ([#47](https://github.com/x42005e1f/aiologic/issues/47)).
+- Partial decorators from `aiologic.meta`, which are created when the last
+  argument is omitted (or when `aiologic.meta.MISSING` is passed as the last
+  argument), now raise a `TypeError` if `aiologic.meta.MISSING` is passed
+  again, to ensure they are used as intended.
 - `aiologic.meta.lookup_static()` now checks that the second argument is indeed
   a string (and raises a `TypeError` when it is not), to prevent accidental
   triggering of user code via `__hash__()` and `__eq__()` when an object of a
