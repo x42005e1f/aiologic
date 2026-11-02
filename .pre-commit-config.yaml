@@ -15,7 +15,7 @@ repos:
       - id: check-toml
       - id: check-ast
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.2
+    rev: v0.17.3
     hooks:
       - id: ruff-check
       - id: ruff-format
@@ -30,11 +30,11 @@ repos:
         additional_dependencies:
           - tomli
   - repo: https://github.com/fsfe/reuse-tool
-    rev: v6.2.0
+    rev: v6.3.0
     hooks:
       - id: reuse-lint-file
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.13.5
+    rev: 0.13.6
     hooks:
       - id: uv-lock
         args: ["--locked"]
