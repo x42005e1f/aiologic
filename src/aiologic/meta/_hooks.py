@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
     _UHookT = TypeVar("_UHookT", bound=Callable[[ModuleType | None], Any])
 
-_NAMESPACE_HOOKS_NAME = "_aiologic_post_import_hooks"
-
 
 def _maybe_create_turnstile_if_nogil():
     return None
@@ -325,21 +323,14 @@ class _CountdownHook:
             msg = "this hook was called more times than expected"
             raise RuntimeError(msg) from None
 
-        conjunction = self._conjunction
-
-        for module_name in conjunction:
+        for module_name in self._conjunction:
             if module_name not in sys.modules:
-                namespace = self._namespace
-                name = self._name
-
-                bound_hooks = _create_bound_hooks_for(
-                    namespace,
-                    {conjunction},
+                _create_and_register_bound_hooks_for(
+                    self._namespace,
+                    {self._conjunction},
                     bound_hook,
-                    name=name,
+                    name=self._name,
                 )
-
-                _register_bound_hooks_for(namespace, bound_hooks, name=name)
                 return
 
         bound_hook(*args, **kwargs)
@@ -372,19 +363,19 @@ class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
 
 class _DynamicHook:
     __slots__ = (
-        "__hooks_underlying",
-        "__hooks_weakref",
+        "__dynamic_hooks_underlying",
+        "__dynamic_hooks_weakref",
         "__key",
         "_is_called",
         "_turnstile_if_nogil",
     )
 
-    def __init__(self, hooks, key, /):
-        self.__hooks_underlying = hooks._underlying
-        self.__hooks_weakref = weakref.ref(hooks)
+    def __init__(self, dynamic_hooks, key, /):
+        self.__dynamic_hooks_underlying = dynamic_hooks._underlying
+        self.__dynamic_hooks_weakref = weakref.ref(dynamic_hooks)
         self.__key = key
         self._is_called = False
-        self._turnstile_if_nogil = hooks._turnstile_if_nogil
+        self._turnstile_if_nogil = dynamic_hooks._turnstile_if_nogil
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = __class__  # an implicit closure reference
@@ -433,14 +424,14 @@ class _DynamicHook:
             self._is_called = True
             self._turnstile_if_nogil.wait()
 
-            hook = self.__hooks_underlying[self.__key]
-            hook(*args, **kwargs)
+            bound_hook = self.__dynamic_hooks_underlying[self.__key]
+            bound_hook(*args, **kwargs)
 
     def _unregister(self, /):
         try:
-            hooks_weakref = self.__hooks_weakref
+            dynamic_hooks_weakref = self.__dynamic_hooks_weakref
 
-            del self.__hooks_weakref
+            del self.__dynamic_hooks_weakref
         except AttributeError:  # already executed (possibly in parallel)
             return False
 
@@ -449,26 +440,26 @@ class _DynamicHook:
         # imported. Although this is a somewhat unusual use case, we should
         # handle it as well, for which we have to remove the current dynamic
         # hook when it is fired (due to its one-time nature).
-        if (hooks := hooks_weakref()) is not None:
-            hook = hooks.pop(self.__key)
-            assert hook is self
+        if (dynamic_hooks := dynamic_hooks_weakref()) is not None:
+            dynamic_hook = dynamic_hooks.pop(self.__key)
+            assert dynamic_hook is self
 
         return True
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
-        hook = self.__hooks_underlying[self.__key]
+        bound_hook = self.__dynamic_hooks_underlying[self.__key]
 
         self._turnstile_if_nogil.wait()
         if self._is_called:
             return None
 
-        return hook
+        return bound_hook
 
     @property
     def _is_alive(self, /):
         try:
-            _ = self.__hooks_weakref
+            _ = self.__dynamic_hooks_weakref
         except AttributeError:
             return False
 
@@ -482,28 +473,46 @@ class _DynamicHook:
 _HookKey = namedtuple("_HookKey", ["name", "conjunction", "module_name"])
 
 
+def _get_dynamic_hooks(namespace, /):
+    try:
+        hooks = namespace["_aiologic_post_import_hooks"]
+    except KeyError:
+        hooks = _DynamicHookDictionary()
+        hooks._turnstile_if_nogil = _maybe_create_turnstile_if_nogil()
+        if hooks._turnstile_if_nogil is None:  # during initialization
+            hooks._turnstile_if_nogil = _LazyTurnstileType()
+        hooks._underlying = {}
+        hooks = namespace.setdefault("_aiologic_post_import_hooks", hooks)
+
+    return hooks
+
+
 def _build_conjunctions_from(namespace, module_name_or_info, /, *, empty_ok):
+    if isinstance_static(module_name_or_info, str):
+        return {frozenset({module_name_or_info})}
+
     conjunctions = set()
 
     for module_name_or_names in module_name_or_info:
         if isinstance_static(module_name_or_names, str):
             conjunctions.add(frozenset({module_name_or_names}))
-        else:
-            module_names = set()
+            continue
 
-            for module_name in module_name_or_names:
-                if isinstance_static(module_name, str):
-                    module_names.add(module_name)
-                    continue
+        module_names = set()
 
-                msg = "the second argument must yield only strings at depth 2"
-                raise TypeError(msg)
+        for module_name in module_name_or_names:
+            if isinstance_static(module_name, str):
+                module_names.add(module_name)
+                continue
 
-            if not module_names and not empty_ok:
-                msg = "the second argument must not yield empty iterables"
-                raise ValueError(msg)
+            msg = "the second argument must yield only strings at depth 2"
+            raise TypeError(msg)
 
-            conjunctions.add(frozenset(module_names))
+        if not module_names and not empty_ok:
+            msg = "the second argument must not yield empty iterables"
+            raise ValueError(msg)
+
+        conjunctions.add(frozenset(module_names))
 
     return conjunctions
 
@@ -530,34 +539,60 @@ def _create_bound_hooks_for(namespace, conjunctions, bound_hook, /, *, name):
     return bound_hooks
 
 
+def _register_bound_hook_for(namespace, module_name, bound_hook, /, *, name):
+    if name is None:
+        register_post_import_hook(bound_hook, module_name)
+        return
+
+    key = _HookKey(name, frozenset({module_name}), module_name)
+
+    dynamic_hooks = _get_dynamic_hooks(namespace)
+    dynamic_hooks._underlying[key] = bound_hook
+    dynamic_hooks._turnstile_if_nogil.wait()
+
+    if key not in dynamic_hooks:
+        dynamic_hook = _DynamicHook(dynamic_hooks, key)
+
+        if dynamic_hook is dynamic_hooks.setdefault(key, dynamic_hook):
+            register_post_import_hook(dynamic_hook, module_name)
+
+
 def _register_bound_hooks_for(namespace, bound_hooks, /, *, name):
     if name is None:
         for key, bound_hook in bound_hooks.items():
             register_post_import_hook(bound_hook, key.module_name)
-
         return
 
-    try:
-        hooks = namespace[_NAMESPACE_HOOKS_NAME]
-    except KeyError:
-        hooks = _DynamicHookDictionary()
-        hooks._turnstile_if_nogil = _maybe_create_turnstile_if_nogil()
-        if hooks._turnstile_if_nogil is None:  # during initialization
-            hooks._turnstile_if_nogil = _LazyTurnstileType()
-        hooks._underlying = {}
-        hooks = namespace.setdefault(_NAMESPACE_HOOKS_NAME, hooks)
-
-    hooks._underlying.update(bound_hooks)
-    hooks._turnstile_if_nogil.wait()
+    dynamic_hooks = _get_dynamic_hooks(namespace)
+    dynamic_hooks._underlying.update(bound_hooks)
+    dynamic_hooks._turnstile_if_nogil.wait()
 
     for key in bound_hooks:
-        if key in hooks:
-            continue
+        if key not in dynamic_hooks:
+            dynamic_hook = _DynamicHook(dynamic_hooks, key)
 
-        dynamic_hook = _DynamicHook(hooks, key)
+            if dynamic_hook is dynamic_hooks.setdefault(key, dynamic_hook):
+                register_post_import_hook(dynamic_hook, key.module_name)
 
-        if dynamic_hook is hooks.setdefault(key, dynamic_hook):
-            register_post_import_hook(dynamic_hook, key.module_name)
+
+def _create_and_register_bound_hooks_for(
+    namespace,
+    conjunctions,
+    bound_hook,
+    /,
+    *,
+    name,
+):
+    _register_bound_hooks_for(
+        namespace,
+        _create_bound_hooks_for(
+            namespace,
+            conjunctions,
+            bound_hook,
+            name=name,
+        ),
+        name=name,
+    )
 
 
 @overload
@@ -678,14 +713,12 @@ def when_imported_for(
     bound_hook = _WeakBoundHook(hook, namespace)
 
     if isinstance_static(module_name_or_info, str):
-        module_name = module_name_or_info
-
-        if name is None:
-            register_post_import_hook(bound_hook, module_name)
-        else:
-            key = _HookKey(name, frozenset({module_name}), module_name)
-            _register_bound_hooks_for(namespace, {key: bound_hook}, name=name)
-
+        _register_bound_hook_for(
+            namespace,
+            module_name_or_info,
+            bound_hook,
+            name=name,
+        )
         return hook
 
     conjunctions = _build_conjunctions_from(
@@ -693,14 +726,13 @@ def when_imported_for(
         module_name_or_info,
         empty_ok=empty_ok,
     )
-    bound_hooks = _create_bound_hooks_for(
+
+    _create_and_register_bound_hooks_for(
         namespace,
         conjunctions,
         bound_hook,
         name=name,
     )
-
-    _register_bound_hooks_for(namespace, bound_hooks, name=name)
 
     if frozenset() in conjunctions:
         bound_hook(None)
