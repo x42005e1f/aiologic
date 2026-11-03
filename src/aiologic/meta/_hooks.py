@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import sys
 import weakref
 
 from collections import namedtuple
@@ -257,13 +258,19 @@ class _WeakBoundHook:
 
 class _CountdownHook:
     __slots__ = (
-        "__callback",
-        "__vector",
+        "__bound_hook",
+        "__value_vector",
+        "_conjunction",
+        "_name",
+        "_namespace",
     )
 
-    def __init__(self, callback, count, /):
-        self.__callback = callback
-        self.__vector = [None] * (count - 1)  # a signal-safe counter
+    def __init__(self, bound_hook, conjunction, /, *, namespace, name):
+        self.__bound_hook = bound_hook
+        self.__value_vector = [None] * (len(conjunction) - 1)
+        self._conjunction = conjunction
+        self._name = name
+        self._namespace = namespace
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = __class__  # an implicit closure reference
@@ -304,32 +311,55 @@ class _CountdownHook:
 
     def __call__(self, /, *args, **kwargs):
         try:
-            self.__vector.pop()
+            self.__value_vector.pop()
         except IndexError:  # the last (or, unexpectedly, a subsequent)
             pass
         else:
             return
 
         try:
-            callback = self.__callback
+            bound_hook = self.__bound_hook
 
-            del self.__callback
+            del self.__bound_hook
         except AttributeError:  # already executed (possibly in parallel)
             msg = "this hook was called more times than expected"
             raise RuntimeError(msg) from None
 
-        callback(*args, **kwargs)
+        conjunction = self._conjunction
+
+        for module_name in conjunction:
+            if module_name not in sys.modules:
+                namespace = self._namespace
+                name = self._name
+
+                bound_hooks = _create_bound_hooks_for(
+                    namespace,
+                    {conjunction},
+                    bound_hook,
+                    name=name,
+                )
+
+                _register_bound_hooks_for(namespace, bound_hooks, name=name)
+                return
+
+        bound_hook(*args, **kwargs)
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
         try:
-            return self.__callback
+            return self.__bound_hook
         except AttributeError:
             return None
 
     @property
+    def _initial_value(self, /):
+        return len(self._conjunction)
+
+    @property
     def _value(self, /):
-        return len(self.__vector) + (0 if self.__wrapped__ is None else 1)
+        return len(self.__value_vector) + (
+            0 if self.__wrapped__ is None else 1
+        )
 
 
 class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
@@ -483,7 +513,12 @@ def _create_bound_hooks_for(namespace, conjunctions, bound_hook, /, *, name):
 
     for conjunction in conjunctions:
         if len(conjunction) >= 2:
-            countdown_hook = _CountdownHook(bound_hook, len(conjunction))
+            countdown_hook = _CountdownHook(
+                bound_hook,
+                conjunction,
+                namespace=namespace,
+                name=name,
+            )
 
             for module_name in conjunction:
                 key = _HookKey(name, conjunction, module_name)
