@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, overload
 
 from wrapt import register_post_import_hook, when_imported
 
-from ._markers import DEFAULT, MISSING
+from ._markers import MISSING
 from ._static import getabsname_static, getname_static, isinstance_static
 
 if TYPE_CHECKING:
@@ -54,6 +54,66 @@ def _(thread):
             raise
 
         return _maybe_create_turnstile_if_nogil()
+
+
+class _LazyTurnstileType:
+    __slots__ = (
+        "__impl",
+        "__impl_holder",
+        "__weakref__",
+    )
+
+    def __init__(self, /):
+        self.__impl_holder = {}
+
+    def __init_subclass__(cls, /, **kwargs):
+        bcs = __class__  # an implicit closure reference
+        bcs_name = getname_static(bcs)
+
+        msg = f"type {bcs_name!r} is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /):
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot pickle {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __deepcopy__(self, memo, /):
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot deep copy {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __copy__(self, /):
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot copy {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __repr__(self, /):
+        cls = type(self)
+        cls_absname = getabsname_static(cls)
+
+        self_repr = f"{cls_absname} object"
+
+        return f"<{self_repr} at {id(self):#x}>"
+
+    def wait(self, /, timeout=-1):
+        try:
+            impl = self.__impl
+        except AttributeError:
+            impl = _maybe_create_turnstile_if_nogil()
+
+            if impl is None:
+                return True
+
+            self.__impl = impl = self.__impl_holder.setdefault(None, impl)
+
+        return impl.wait(timeout)
 
 
 class _WeakBoundHookImpl:
@@ -273,24 +333,28 @@ class _CountdownHook:
 
 
 class _DynamicHookDictionary(dict):  # ruff: ignore[subclass-builtin]
-    __slots__ = ("__weakref__",)
+    __slots__ = (
+        "__weakref__",
+        "_turnstile_if_nogil",
+        "_underlying",
+    )
 
 
 class _DynamicHook:
     __slots__ = (
-        "__hook",
-        "__hooks_key",
+        "__hooks_underlying",
         "__hooks_weakref",
+        "__key",
         "_is_called",
         "_turnstile_if_nogil",
     )
 
-    def __init__(self, hooks, hooks_key, hook, /):
-        self.__hook = hook
-        self.__hooks_key = hooks_key
+    def __init__(self, hooks, key, /):
+        self.__hooks_underlying = hooks._underlying
         self.__hooks_weakref = weakref.ref(hooks)
+        self.__key = key
         self._is_called = False
-        self._turnstile_if_nogil = _maybe_create_turnstile_if_nogil()
+        self._turnstile_if_nogil = hooks._turnstile_if_nogil
 
     def __init_subclass__(cls, /, **kwargs):
         bcs = __class__  # an implicit closure reference
@@ -337,69 +401,15 @@ class _DynamicHook:
     def __call__(self, /, *args, **kwargs):
         if self._unregister():  # only once
             self._is_called = True
-
-            # to ensure that the underlying hook is the very last one
-            # successfully set (or one of the subsequent ones)
             self._turnstile_if_nogil.wait()
 
-            try:
-                hook = self.__hook
-
-                del self.__hook
-            except AttributeError:  # a race condition (with set)
-                return
-
+            hook = self.__hooks_underlying[self.__key]
             hook(*args, **kwargs)
-
-    def _set_if_not_called(self, hook, /):
-        # Suppose that wrapt queues hooks in `register_post_import_hook()` even
-        # when the notification has already started (one of its possible
-        # implementations). Consider a thread that sequentially makes two
-        # `_set_if_not_called()` calls. There is also another thread that fires
-        # this dynamic hook before those calls. If the second thread sleeps
-        # right after the turnstile (in `__call__()`), the first call will
-        # return `False` and trigger `register_post_import_hook()`, which means
-        # its hook will be queued for execution after this dynamic hook. But
-        # if, on the second call, the first thread sleeps right after the
-        # turnstile (in `_set_if_not_called()`), and the second thread wakes
-        # up, picks up its hook, and calls it, then the second hook will
-        # precede the first one, which violates the expected sequential (FIFO)
-        # order. With this check in place, such a scenario is impossible.
-        if self._is_called:
-            return False
-
-        self.__hook = hook
-
-        # to ensure that the check below does not result in a false negative
-        self._turnstile_if_nogil.wait()
-
-        if self._is_called:
-            try:
-                del self.__hook
-            except AttributeError:  # a race condition (with set or call)
-                # It might be tempting to return `True` here to avoid redundant
-                # `register_post_import_hook()` calls, since the execution
-                # order in a race condition is nondeterministic anyway (we can
-                # decide which set attempt won the race at our discretion). But
-                # consider a race condition with `__call__()`: if it
-                # successfully deletes and calls the initial hook, then the
-                # hook of this `_set_if_not_called()` call is in fact a new
-                # hook, and therefore must be called (and this is also true for
-                # all other concurrent set attempts that entered this block;
-                # otherwise, we would get inconsistent and potentially
-                # erroneous behavior).
-                pass
-
-            return False
-
-        return True
 
     def _unregister(self, /):
         try:
-            hooks_key = self.__hooks_key
             hooks_weakref = self.__hooks_weakref
 
-            del self.__hooks_key
             del self.__hooks_weakref
         except AttributeError:  # already executed (possibly in parallel)
             return False
@@ -410,22 +420,24 @@ class _DynamicHook:
         # handle it as well, for which we have to remove the current dynamic
         # hook when it is fired (due to its one-time nature).
         if (hooks := hooks_weakref()) is not None:
-            hook = hooks.pop(hooks_key)
+            hook = hooks.pop(self.__key)
             assert hook is self
 
         return True
 
     @property
     def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
-        try:
-            return self.__hook
-        except AttributeError:
+        hook = self.__hooks_underlying[self.__key]
+
+        self._turnstile_if_nogil.wait()
+        if self._is_called:
             return None
+
+        return hook
 
     @property
     def _is_alive(self, /):
         try:
-            _ = self.__hooks_key
             _ = self.__hooks_weakref
         except AttributeError:
             return False
@@ -440,53 +452,77 @@ class _DynamicHook:
 _HookKey = namedtuple("_HookKey", ["name", "conjunction", "module_name"])
 
 
-def _register_bound_hook(
-    namespace,
-    module_name,
-    bound_hook,
-    /,
-    *,
-    name=None,
-    conjunction=DEFAULT,
-):
-    if name is None:
-        register_post_import_hook(bound_hook, module_name)
-        return
+def _build_conjunctions_from(namespace, module_name_or_info, /, *, empty_ok):
+    conjunctions = set()
 
-    if conjunction is DEFAULT:
-        conjunction = frozenset({module_name})
+    for module_name_or_names in module_name_or_info:
+        if isinstance_static(module_name_or_names, str):
+            conjunctions.add(frozenset({module_name_or_names}))
+        else:
+            module_names = set()
+
+            for module_name in module_name_or_names:
+                if isinstance_static(module_name, str):
+                    module_names.add(module_name)
+                    continue
+
+                msg = "the second argument must yield only strings at depth 2"
+                raise TypeError(msg)
+
+            if not module_names and not empty_ok:
+                msg = "the second argument must not yield empty iterables"
+                raise ValueError(msg)
+
+            conjunctions.add(frozenset(module_names))
+
+    return conjunctions
+
+
+def _create_bound_hooks_for(namespace, conjunctions, bound_hook, /, *, name):
+    bound_hooks = {}
+
+    for conjunction in conjunctions:
+        if len(conjunction) >= 2:
+            countdown_hook = _CountdownHook(bound_hook, len(conjunction))
+
+            for module_name in conjunction:
+                key = _HookKey(name, conjunction, module_name)
+                bound_hooks[key] = _WeakBoundHook(countdown_hook, namespace)
+        elif len(conjunction) == 1:
+            key = _HookKey(name, conjunction, *conjunction)
+            bound_hooks[key] = bound_hook
+
+    return bound_hooks
+
+
+def _register_bound_hooks_for(namespace, bound_hooks, /, *, name):
+    if name is None:
+        for key, bound_hook in bound_hooks.items():
+            register_post_import_hook(bound_hook, key.module_name)
+
+        return
 
     try:
         hooks = namespace[_NAMESPACE_HOOKS_NAME]
     except KeyError:
-        hooks = namespace.setdefault(
-            _NAMESPACE_HOOKS_NAME,
-            _DynamicHookDictionary(),
-        )
+        hooks = _DynamicHookDictionary()
+        hooks._turnstile_if_nogil = _maybe_create_turnstile_if_nogil()
+        if hooks._turnstile_if_nogil is None:  # during initialization
+            hooks._turnstile_if_nogil = _LazyTurnstileType()
+        hooks._underlying = {}
+        hooks = namespace.setdefault(_NAMESPACE_HOOKS_NAME, hooks)
 
-    key = _HookKey(name, conjunction, module_name)
+    hooks._underlying.update(bound_hooks)
+    hooks._turnstile_if_nogil.wait()
 
-    try:
-        dynamic_hook = hooks[key]
-    except KeyError:
-        dynamic_hook = _DynamicHook(hooks, key, bound_hook)
+    for key in bound_hooks:
+        if key in hooks:
+            continue
 
-        if dynamic_hook._turnstile_if_nogil is None:  # during initialization
-            register_post_import_hook(bound_hook, module_name)
-            return
+        dynamic_hook = _DynamicHook(hooks, key)
 
         if dynamic_hook is hooks.setdefault(key, dynamic_hook):
-            register_post_import_hook(dynamic_hook, module_name)
-            return
-
-        try:
-            dynamic_hook = hooks[key]
-        except KeyError:  # unregistered in parallel
-            register_post_import_hook(bound_hook, module_name)
-            return
-
-    if not dynamic_hook._set_if_not_called(bound_hook):
-        register_post_import_hook(bound_hook, module_name)
+            register_post_import_hook(dynamic_hook, key.module_name)
 
 
 @overload
@@ -604,59 +640,32 @@ def when_imported_for(
         msg = "the `name` must be a string"
         raise TypeError(msg)
 
-    if isinstance_static(module_name_or_info, str):
-        _register_bound_hook(
-            namespace,
-            module_name_or_info,
-            _WeakBoundHook(hook, namespace),
-            name=name,
-        )
-        return hook
-
-    conjunctions = set()
-
-    for module_name_or_names in module_name_or_info:
-        if isinstance_static(module_name_or_names, str):
-            conjunctions.add(frozenset({module_name_or_names}))
-        else:
-            module_names = set()
-
-            for module_name in module_name_or_names:
-                if isinstance_static(module_name, str):
-                    module_names.add(module_name)
-                    continue
-
-                msg = "the second argument must yield only strings at depth 2"
-                raise TypeError(msg)
-
-            if not module_names and not empty_ok:
-                msg = "the second argument must not yield empty iterables"
-                raise ValueError(msg)
-
-            conjunctions.add(frozenset(module_names))
-
     bound_hook = _WeakBoundHook(hook, namespace)
 
-    for conjunction in conjunctions:
-        if len(conjunction) >= 2:
-            countdown_hook = _CountdownHook(bound_hook, len(conjunction))
+    if isinstance_static(module_name_or_info, str):
+        module_name = module_name_or_info
 
-            for module_name in conjunction:
-                _register_bound_hook(
-                    namespace,
-                    module_name,
-                    _WeakBoundHook(countdown_hook, namespace),
-                    name=name,
-                    conjunction=conjunction,
-                )
-        elif len(conjunction) == 1:
-            _register_bound_hook(
-                namespace,
-                *conjunction,
-                bound_hook,
-                name=name,
-                conjunction=conjunction,
-            )
+        if name is None:
+            register_post_import_hook(bound_hook, module_name)
+        else:
+            key = _HookKey(name, frozenset({module_name}), module_name)
+            _register_bound_hooks_for(namespace, {key: bound_hook}, name=name)
+
+        return hook
+
+    conjunctions = _build_conjunctions_from(
+        namespace,
+        module_name_or_info,
+        empty_ok=empty_ok,
+    )
+    bound_hooks = _create_bound_hooks_for(
+        namespace,
+        conjunctions,
+        bound_hook,
+        name=name,
+    )
+
+    _register_bound_hooks_for(namespace, bound_hooks, name=name)
 
     if frozenset() in conjunctions:
         bound_hook(None)
