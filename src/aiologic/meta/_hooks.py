@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, overload
 
 from wrapt import register_post_import_hook, when_imported
 
-from ._markers import MISSING
+from ._markers import DEFAULT, MISSING
+from ._modules import resolve_name, resolve_name_with_parents
 from ._static import getabsname_static, getname_static, isinstance_static
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Any, Literal, TypeVar
 
-    from ._markers import MissingType
+    from ._markers import DefaultType, MissingType
 
     _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
     _UHookT = TypeVar("_UHookT", bound=Callable[[ModuleType | None], Any])
@@ -487,22 +488,44 @@ def _get_dynamic_hooks(namespace, /):
     return hooks
 
 
-def _build_conjunctions_from(namespace, module_name_or_info, /, *, empty_ok):
+def _build_conjunctions_from(
+    namespace,
+    module_name_or_info,
+    /,
+    *,
+    empty_ok,
+    parents,
+    package,
+):
     if isinstance_static(module_name_or_info, str):
-        return {frozenset({module_name_or_info})}
+        module_name = module_name_or_info
+        if parents:
+            resolved = resolve_name_with_parents(module_name, package)
+        else:
+            resolved = [resolve_name(module_name, package)]
+        return {frozenset(resolved)}
 
     conjunctions = set()
 
     for module_name_or_names in module_name_or_info:
         if isinstance_static(module_name_or_names, str):
-            conjunctions.add(frozenset({module_name_or_names}))
+            module_name = module_name_or_names
+            if parents:
+                resolved = resolve_name_with_parents(module_name, package)
+            else:
+                resolved = [resolve_name(module_name, package)]
+            conjunctions.add(frozenset(resolved))
             continue
 
         module_names = set()
 
         for module_name in module_name_or_names:
             if isinstance_static(module_name, str):
-                module_names.add(module_name)
+                if parents:
+                    resolved = resolve_name_with_parents(module_name, package)
+                else:
+                    resolved = [resolve_name(module_name, package)]
+                module_names.update(resolved)
                 continue
 
             msg = "the second argument must yield only strings at depth 2"
@@ -539,28 +562,11 @@ def _create_bound_hooks_for(namespace, conjunctions, bound_hook, /, *, name):
     return bound_hooks
 
 
-def _register_bound_hook_for(namespace, module_name, bound_hook, /, *, name):
-    if name is None:
-        register_post_import_hook(bound_hook, module_name)
-        return
-
-    key = _HookKey(name, frozenset({module_name}), module_name)
-
-    dynamic_hooks = _get_dynamic_hooks(namespace)
-    dynamic_hooks._underlying[key] = bound_hook
-    dynamic_hooks._turnstile_if_nogil.wait()
-
-    if key not in dynamic_hooks:
-        dynamic_hook = _DynamicHook(dynamic_hooks, key)
-
-        if dynamic_hook is dynamic_hooks.setdefault(key, dynamic_hook):
-            register_post_import_hook(dynamic_hook, module_name)
-
-
 def _register_bound_hooks_for(namespace, bound_hooks, /, *, name):
     if name is None:
         for key, bound_hook in bound_hooks.items():
             register_post_import_hook(bound_hook, key.module_name)
+
         return
 
     dynamic_hooks = _get_dynamic_hooks(namespace)
@@ -602,8 +608,10 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: str,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> _UHookT: ...
 @overload
 def when_imported_for(
@@ -612,8 +620,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: str,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
 def when_imported_for(
@@ -622,8 +632,10 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> _UHookT: ...
 @overload
 def when_imported_for(
@@ -632,8 +644,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
 def when_imported_for(
@@ -642,8 +656,10 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: str,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -652,8 +668,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: str,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -662,8 +680,10 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -672,8 +692,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> Callable[[_HookT], _HookT]: ...
 def when_imported_for(
     namespace,
@@ -681,8 +703,10 @@ def when_imported_for(
     hook=MISSING,
     /,
     *,
-    name=None,
     empty_ok=False,
+    parents=False,
+    package=DEFAULT,
+    name=None,
 ):
     if hook is MISSING:
         impl = when_imported_for
@@ -710,21 +734,16 @@ def when_imported_for(
         msg = "the `name` must be a string"
         raise TypeError(msg)
 
+    if package is DEFAULT:
+        package = getattr(namespace.get("__spec__"), "name", None)
+
     bound_hook = _WeakBoundHook(hook, namespace)
-
-    if isinstance_static(module_name_or_info, str):
-        _register_bound_hook_for(
-            namespace,
-            module_name_or_info,
-            bound_hook,
-            name=name,
-        )
-        return hook
-
     conjunctions = _build_conjunctions_from(
         namespace,
         module_name_or_info,
         empty_ok=empty_ok,
+        parents=parents,
+        package=package,
     )
 
     _create_and_register_bound_hooks_for(

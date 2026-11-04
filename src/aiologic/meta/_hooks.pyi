@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from types import ModuleType
 from typing import Any, Literal, TypeVar, overload
 
-from ._markers import MISSING, MissingType
+from ._markers import DEFAULT, MISSING, DefaultType, MissingType
 
 _HookT = TypeVar("_HookT", bound=Callable[[ModuleType], Any])
 _UHookT = TypeVar("_UHookT", bound=Callable[[ModuleType | None], Any])
@@ -19,8 +19,10 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: str,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> _UHookT: ...
 @overload
 def when_imported_for(
@@ -29,8 +31,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: str,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
 def when_imported_for(
@@ -39,8 +43,10 @@ def when_imported_for(
     hook: _UHookT,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> _UHookT: ...
 @overload
 def when_imported_for(
@@ -49,8 +55,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[True],
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> Callable[[_UHookT], _UHookT]: ...
 @overload
 def when_imported_for(
@@ -59,8 +67,10 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: str,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -69,8 +79,10 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: str,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: str,
 ) -> Callable[[_HookT], _HookT]: ...
 @overload
 def when_imported_for(
@@ -79,8 +91,10 @@ def when_imported_for(
     hook: _HookT,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> _HookT: ...
 @overload
 def when_imported_for(
@@ -89,6 +103,8 @@ def when_imported_for(
     hook: MissingType = MISSING,
     /,
     *,
-    name: None = None,
     empty_ok: Literal[False] = False,
+    parents: bool = False,
+    package: str | None | DefaultType = DEFAULT,
+    name: None = None,
 ) -> Callable[[_HookT], _HookT]: ...

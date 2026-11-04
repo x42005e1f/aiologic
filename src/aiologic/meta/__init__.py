@@ -51,6 +51,7 @@ from ._markers import (
 )
 from ._modules import (
     resolve_name as resolve_name,
+    resolve_name_with_parents as resolve_name_with_parents,
 )
 from ._signatures import (
     getsro as getsro,

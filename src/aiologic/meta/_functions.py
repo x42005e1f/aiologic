@@ -173,8 +173,9 @@ def replaces_when_imported(
         namespace,
         module_name_or_info,
         hook,
-        name=name,
         empty_ok=True,
+        parents=True,
+        name=name,
     )
 
     return namespace[name]

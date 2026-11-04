@@ -119,6 +119,13 @@ Commit messages are consistent with
   which is a safer alternative to `global` (since it prevents mismatches
   between the function name and the global name), and covers cases that the
   other two related functions could not cover.
+- `aiologic.meta.resolve_name_with_parents()` to split the module name (which
+  will be resolved to an absolute name) into a list of the names of all modules
+  required to reach that module (if an absolute name is given, this includes
+  the module itself and all its parent modules; if a relative name is given,
+  this includes the module itself, the lowest common ancestor's child module
+  (if the lowest common ancestor is not the target module), and all modules
+  between them).
 - `aiologic.meta.getmro_static()` and `aiologic.meta.getvars_static()` to
   retrieve the `__mro__` and `__dict__` attributes of the class, respectively,
   without triggering user code (that which may be defined in its metaclass).
@@ -145,6 +152,13 @@ Commit messages are consistent with
   tuples of strings means "all of these modules (per tuple)". This should
   simplify the use of the decorator in cases where there is more than one
   required module.
+- `aiologic.meta.replaces_when_imported()` now also requires, by default, that
+  parent packages be imported (that is, for example, `"eventlet.patcher"`
+  becomes a conjunction of the form `("eventlet", "eventlet.patcher")`, in line
+  with the semantics of `aiologic.meta.when_imported_for()`). This should
+  ensure that the hook does not fire before an import error caused by a parent
+  package, which could otherwise lead to erroneous behavior (especially if the
+  implementation relies on the ability to import from a parent package).
 - `aiologic.meta.issubclass_static()` now expects a class as its first argument
   instead of an arbitrary object, to prevent errors and ensure consistency with
   the standard library; as a result, it raises a `TypeError` when this is not
