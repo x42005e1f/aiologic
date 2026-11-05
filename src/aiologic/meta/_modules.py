@@ -38,7 +38,15 @@ def resolve_name(name: str, package: str | None) -> str:
 
 def resolve_name_with_parents(name: str, package: str | None) -> list[str]:
     if not name.startswith("."):
-        return [*accumulate(name.split("."), "{}.{}".format)]
+        name_parts = name.split(".")
+
+        if package:
+            pkg_startswith = f"{package}.".startswith
+
+            while len(name_parts) >= 2 and pkg_startswith(f"{name_parts[0]}."):
+                name_parts = [".".join(name_parts[:2]), *name_parts[2:]]
+
+        return [*accumulate(name_parts, "{}.{}".format)]
 
     if not package:
         msg = (
