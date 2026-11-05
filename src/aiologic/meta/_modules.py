@@ -28,10 +28,12 @@ def resolve_name(name: str, package: str | None) -> str:
         msg = "`name` is beyond the top-level package"
         raise ValueError(msg)
 
-    if shifted_name:
-        return f"{package_parts[0]}.{shifted_name}"
+    base_name = package_parts[0]
 
-    return package_parts[0]
+    if shifted_name:
+        return f"{base_name}.{shifted_name}"
+
+    return base_name
 
 
 def resolve_name_with_parents(name: str, package: str | None) -> list[str]:
@@ -54,13 +56,12 @@ def resolve_name_with_parents(name: str, package: str | None) -> list[str]:
         msg = "`name` is beyond the top-level package"
         raise ValueError(msg)
 
+    base_name = package_parts[0]
+
     if shifted_name:
-        shifted_name_parts = shifted_name.split(".")
-        absolute_name_parts = [
-            f"{package_parts[0]}.{shifted_name_parts[0]}",
-            *shifted_name_parts[1:],
-        ]
+        name_parts = shifted_name.split(".")
+        absolute_name_parts = [f"{base_name}.{name_parts[0]}", *name_parts[1:]]
 
         return [*accumulate(absolute_name_parts, "{}.{}".format)]
 
-    return [package_parts[0]]
+    return [base_name]
