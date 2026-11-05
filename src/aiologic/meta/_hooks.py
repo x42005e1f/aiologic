@@ -720,8 +720,10 @@ def when_imported_for(
                 namespace,
                 module_name_or_info,
                 hook,
-                name=name,
                 empty_ok=empty_ok,
+                parents=parents,
+                package=package,
+                name=name,
             )
 
         return decorator
