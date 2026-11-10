@@ -12,11 +12,10 @@ from aiologic.meta import (
     getabsname_static,
     getname_static,
     import_original,
-    is_nogil,
-    is_notso,
     replaces_with_outcome,
 )
 
+from ._env import is_nogil, is_notso
 from ._getters import current_thread_ident
 
 if TYPE_CHECKING:

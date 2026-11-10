@@ -77,6 +77,10 @@ Commit messages are consistent with
   `aiologic.thread.current_thread()` to obtain the corresponding objects: the
   identifier, the state, and the handle of the current thread (the same objects
   for the same thread).
+- `aiologic.thread.is_nogil()` to determine whether the GIL (Global Interpreter
+  Lock) is disabled.
+- `aiologic.thread.is_notso()` to determine whether TSO (Total Store Order) is
+  not guaranteed.
 - `aiologic.thread.LockType` and `aiologic.thread.create_lock()` as a new type
   of thread-level lock and its factory function, respectively. Unlike the
   similar ones from `aiologic.lowlevel`, the former is a thin wrapper around
@@ -105,10 +109,6 @@ Commit messages are consistent with
   `acquire()` and `release()` into a single `wait()` operation. It is named
   after the basic synchronization pattern of the same name and should not be
   confused with Solaris' turnstiles.
-- `aiologic.meta.is_nogil()` to determine whether the GIL (Global Interpreter
-  Lock) is disabled.
-- `aiologic.meta.is_notso()` to determine whether TSO (Total Store Order) is
-  not guaranteed.
 - `aiologic.meta.when_imported_for()` to register a post import hook for the
   given namespace. Unlike `wrapt.when_imported()`, it is bound to the current
   module state (that is, the hook becomes a no-op after a reload) and accepts

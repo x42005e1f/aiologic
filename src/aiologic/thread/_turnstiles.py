@@ -7,14 +7,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, final
 
-from aiologic.meta import (
-    SingletonEnum,
-    getabsname_static,
-    getname_static,
-    is_nogil,
-    is_notso,
-)
+from aiologic.meta import SingletonEnum, getabsname_static, getname_static
 
+from ._env import is_nogil, is_notso
 from ._locks import create_rlock
 
 if TYPE_CHECKING:
