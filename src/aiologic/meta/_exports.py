@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, get_overloads, overload
 
 from ._imports import import_from
 from ._markers import DEFAULT
-from ._modules import resolve_name
+from ._names import resolve_name
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

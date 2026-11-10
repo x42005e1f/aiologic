@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, overload
 from wrapt import register_post_import_hook, when_imported
 
 from ._markers import DEFAULT, MISSING
-from ._modules import resolve_name, resolve_name_with_parents
+from ._names import resolve_name, resolve_name_with_parents
 from ._static import getabsname_static, getname_static, isinstance_static
 
 if TYPE_CHECKING:

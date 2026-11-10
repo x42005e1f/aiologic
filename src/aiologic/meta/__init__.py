@@ -45,7 +45,7 @@ from ._markers import (
     MissingType as MissingType,
     SingletonEnum as SingletonEnum,
 )
-from ._modules import (
+from ._names import (
     resolve_name as resolve_name,
     resolve_name_with_parents as resolve_name_with_parents,
 )

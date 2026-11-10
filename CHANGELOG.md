@@ -159,6 +159,8 @@ Commit messages are consistent with
   ensure that the hook does not fire before an import error caused by a parent
   package, which could otherwise lead to erroneous behavior (especially if the
   implementation relies on the ability to import from a parent package).
+- The `name` parameter in `aiologic.meta.resolve_name()` is now positional-only
+  for consistency with other similar functions.
 - `aiologic.meta.issubclass_static()` now expects a class as its first argument
   instead of an arbitrary object, to prevent errors and ensure consistency with
   the standard library; as a result, it raises a `TypeError` when this is not
