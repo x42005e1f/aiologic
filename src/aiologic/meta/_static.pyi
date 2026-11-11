@@ -7,8 +7,7 @@ from types import MappingProxyType
 from typing import Any, TypeAlias, TypeGuard, TypeVar, overload
 
 _T = TypeVar("_T")
-_T1 = TypeVar("_T1")
-_T2 = TypeVar("_T2")
+_D = TypeVar("_D")
 
 _ClassInfo: TypeAlias = type | tuple[_ClassInfo, ...]
 
@@ -38,18 +37,18 @@ def isinstance_static(
 @overload
 def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
 @overload
-def lookup_static(owner: type, name: str, /, *, default: _T) -> Any | _T: ...
+def lookup_static(owner: type, name: str, /, *, default: _D) -> Any | _D: ...
 @overload
 def lookup_static(owner: type, name: str, /) -> Any: ...
 @overload
 def resolve_special(
-    owner: type[_T1],
+    owner: type[_T],
     name: str,
     /,
-    instance: _T1,
+    instance: _T,
     *,
-    default: _T2,
-) -> Any | _T2: ...
+    default: _D,
+) -> Any | _D: ...
 @overload
 def resolve_special(
     owner: type,
@@ -57,14 +56,14 @@ def resolve_special(
     /,
     instance: None = None,
     *,
-    default: _T2,
-) -> Any | _T2: ...
+    default: _D,
+) -> Any | _D: ...
 @overload
 def resolve_special(
-    owner: type[_T1],
+    owner: type[_T],
     name: str,
     /,
-    instance: _T1,
+    instance: _T,
 ) -> Any: ...
 @overload
 def resolve_special(

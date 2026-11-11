@@ -20,8 +20,7 @@ else:  # typing-extensions>=4.16.0
 
 if TYPE_CHECKING:
     _T = TypeVar("_T")
-    _T1 = TypeVar("_T1")
-    _T2 = TypeVar("_T2")
+    _D = TypeVar("_D")
 
     _ClassInfo: TypeAlias = type | tuple["_ClassInfo", ...]
 
@@ -199,7 +198,7 @@ def _lookup_static_noerror(owner, name, /):
 
 
 @overload
-def lookup_static(owner: type, name: str, /, *, default: _T) -> Any | _T: ...
+def lookup_static(owner: type, name: str, /, *, default: _D) -> Any | _D: ...
 @overload
 def lookup_static(owner: type, name: str, /) -> Any: ...
 def lookup_static(owner, name, /, *, default=_MISSING):
@@ -215,13 +214,13 @@ def lookup_static(owner, name, /, *, default=_MISSING):
 
 @overload
 def resolve_special(
-    owner: type[_T1],
+    owner: type[_T],
     name: str,
     /,
-    instance: _T1,
+    instance: _T,
     *,
-    default: _T2,
-) -> Any | _T2: ...
+    default: _D,
+) -> Any | _D: ...
 @overload
 def resolve_special(
     owner: type,
@@ -229,14 +228,14 @@ def resolve_special(
     /,
     instance: None = None,
     *,
-    default: _T2,
-) -> Any | _T2: ...
+    default: _D,
+) -> Any | _D: ...
 @overload
 def resolve_special(
-    owner: type[_T1],
+    owner: type[_T],
     name: str,
     /,
-    instance: _T1,
+    instance: _T,
 ) -> Any: ...
 @overload
 def resolve_special(
