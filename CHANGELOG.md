@@ -161,6 +161,11 @@ Commit messages are consistent with
   implementation relies on the ability to import from a parent package).
 - The `name` parameter in `aiologic.meta.resolve_name()` is now positional-only
   for consistency with other similar functions.
+- The `instance` parameter in `aiologic.meta.resolve_special()` is now
+  positional-or-keyword to provide clarity when needed.
+- The `default` parameter in `aiologic.meta.lookup_static()` is now
+  keyword-only to avoid confusion with the `instance` parameter in
+  `aiologic.meta.resolve_special()`.
 - `aiologic.meta.issubclass_static()` now expects a class as its first argument
   instead of an arbitrary object, to prevent errors and ensure consistency with
   the standard library; as a result, it raises a `TypeError` when this is not
@@ -197,6 +202,15 @@ Commit messages are consistent with
 - `aiologic.lowlevel.current_thread_ident()` in favor of
   `aiologic.thread.current_thread_ident()`.
 
+### Removed
+
+- `aiologic.meta.isdatadescriptor_static()` and
+  `aiologic.meta.ismethoddescriptor_static()` because there is no longer a
+  clear reason to provide them.
+- `aiologic.meta.ismetaclass_static()` and `aiologic.meta.isclass_static()` in
+  favor of `aiologic.meta.issubclass_static()` and
+  `aiologic.meta.isinstance_static()`.
+
 ### Fixed
 
 - `aiologic.lowlevel.shield()` did not handle cancellation of the object itself
@@ -210,10 +224,6 @@ Commit messages are consistent with
   argument is omitted (or when `aiologic.meta.MISSING` is passed as the last
   argument), now raise a `TypeError` if `aiologic.meta.MISSING` is passed
   again, to ensure they are used as intended.
-- `aiologic.meta.lookup_static()` now checks that the second argument is indeed
-  a string (and raises a `TypeError` when it is not), to prevent accidental
-  triggering of user code via `__hash__()` and `__eq__()` when an object of a
-  different type is passed.
 - All sentinels and markers are now immune to module reloads and refer to the
   same objects for the entire process's lifetime (provided the namespace
   remains the same), making them more reliable. For example, if you import the

@@ -12,9 +12,8 @@ from types import FunctionType, MethodType, MethodWrapperType
 from typing import TYPE_CHECKING
 
 from ._static import (
-    isclass_static,
     isinstance_static,
-    ismetaclass_static,
+    issubclass_static,
     lookup_static,
     resolve_special,
 )
@@ -56,8 +55,8 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
         if not callable(obj):
             break
 
-        if isclass_static(obj):
-            call = lookup_static(type(obj), "__call__", _TYPE_CALL)
+        if isinstance_static(obj, type):
+            call = lookup_static(type(obj), "__call__", default=_TYPE_CALL)
 
             if call is not _TYPE_CALL:
                 try:
@@ -72,12 +71,12 @@ def getsro(obj: object, /) -> Iterator[tuple[object, object | None, str]]:
                 source = "mcs.__call__"
                 continue
 
-            if ismetaclass_static(obj):
+            if issubclass_static(obj, type):
                 original_new = _TYPE_NEW
             else:
                 original_new = _OBJECT_NEW
 
-            new = lookup_static(obj, "__new__", original_new)
+            new = lookup_static(obj, "__new__", default=original_new)
 
             if new is not original_new:
                 try:

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import sys
 
-from types import FunctionType, MethodDescriptorType, WrapperDescriptorType
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
@@ -62,18 +61,29 @@ def getvars_static(owner: type, /) -> MappingProxyType[str, Any]:
 
 def getabsname_static(owner: type, /) -> str:
     try:
-        owner_modulename = _pytype_getmodulename_static(owner)
         owner_qualname = _pytype_getqualname_static(owner)
+        owner_modulename = _pytype_getmodulename_static(owner)
+    except AttributeError:  # created with no `__name__` in globals
+        return owner_qualname
     except TypeError:
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
-    return f"{owner_modulename}.{owner_qualname}"
+    if (
+        isinstance_static(owner_modulename, str)
+        and owner_modulename != "builtins"
+    ):
+        # f-strings are too slow on PyPy for this case
+        return owner_modulename + "." + owner_qualname
+
+    return owner_qualname
 
 
-def getmodulename_static(owner: type, /) -> str:
+def getmodulename_static(owner: type, /) -> Any:
     try:
         return _pytype_getmodulename_static(owner)
+    except AttributeError:  # created with no `__name__` in globals
+        return "builtins"
     except TypeError:
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
@@ -95,16 +105,11 @@ def getname_static(owner: type, /) -> str:
         raise TypeError(msg) from None
 
 
-def setmodulename_static(owner: type, value: str, /) -> None:
+def setmodulename_static(owner: type, value: Any, /) -> None:
     try:
         _pytype_setmodulename_static(owner, value)
     except TypeError:
-        try:
-            _pytype_getmodulename_static(owner)
-        except TypeError:
-            msg = "the first argument must be a class"
-        else:
-            msg = "the second argument must be a string"
+        msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
 
@@ -143,19 +148,19 @@ def issubclass_static(
 @overload
 def issubclass_static(obj: type, class_or_tuple: _ClassInfo, /) -> bool: ...
 def issubclass_static(obj, class_or_tuple, /):
-    try:
-        mro = _getmro_static(obj)
-    except TypeError:
-        msg = "the first argument must be a class"
-        raise TypeError(msg) from None
-
-    if isclass_static(class_or_tuple):
+    if isinstance(class_or_tuple, type):
         if obj is class_or_tuple:
             return True
 
+        try:
+            mro = _getmro_static(obj)
+        except TypeError:
+            msg = "the first argument must be a class"
+            raise TypeError(msg) from None
+
         return any(base is class_or_tuple for base in mro)
 
-    if _istuple_static(class_or_tuple):
+    if isinstance(class_or_tuple, tuple):
         return any(issubclass_static(obj, info) for info in class_or_tuple)
 
     msg = "the second argument must be a class or a tuple of classes"
@@ -174,90 +179,12 @@ def isinstance_static(obj, class_or_tuple, /):
     return issubclass_static(type(obj), class_or_tuple)
 
 
-def ismetaclass_static(obj: object, /) -> TypeGuard[type[type]]:
-    if obj is type:
-        return True
-
-    try:
-        mro = _getmro_static(obj)
-    except TypeError:  # not a class
-        return False
-
-    return any(base is type for base in mro)
-
-
-def isclass_static(obj: object, /) -> TypeGuard[type[object]]:
-    cls = type(obj)
-
-    if cls is type:
-        return True
-
-    return any(base is type for base in _getmro_static(cls))
-
-
-def _isstr_static(obj, /):
-    cls = type(obj)
-
-    if cls is str:
-        return True
-
-    return any(base is str for base in _getmro_static(cls))
-
-
-def _istuple_static(obj, /):
-    cls = type(obj)
-
-    if cls is tuple:
-        return True
-
-    return any(base is tuple for base in _getmro_static(cls))
-
-
-def isdatadescriptor_static(obj: object, /) -> bool:
-    cls = type(obj)
-
-    for base in _getmro_static(cls):
-        base_vars = _pytype_getvars_static(base)
-
-        if "__set__" in base_vars:
-            return True
-
-        if "__delete__" in base_vars:
-            return True
-
-    return False
-
-
-def ismethoddescriptor_static(obj: object, /) -> bool:
-    cls = type(obj)
-
-    if (
-        cls is FunctionType
-        or cls is MethodDescriptorType
-        or cls is WrapperDescriptorType
-    ):
-        return True
-
-    return any(
-        (
-            base is FunctionType
-            or base is MethodDescriptorType
-            or base is WrapperDescriptorType
-        )
-        for base in _getmro_static(cls)
-    )
-
-
 def _lookup_static_noerror(owner, name, /):
     try:
         mro = _getmro_static(owner)
     except TypeError:
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
-
-    if not _isstr_static(name):
-        msg = "the second argument must be a string"
-        raise TypeError(msg)
 
     for base in mro:
         base_vars = _pytype_getvars_static(base)
@@ -272,12 +199,11 @@ def _lookup_static_noerror(owner, name, /):
 
 
 @overload
-def lookup_static(owner: type, name: str, /) -> Any: ...
+def lookup_static(owner: type, name: str, /, *, default: _T) -> Any | _T: ...
 @overload
-def lookup_static(owner: type, name: str, /, default: _T) -> Any | _T: ...
-def lookup_static(owner, name, /, default=_MISSING):
+def lookup_static(owner: type, name: str, /) -> Any: ...
+def lookup_static(owner, name, /, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
-
     if member is _NOTHING:
         if default is _MISSING:
             raise LookupError(name)
@@ -289,24 +215,19 @@ def lookup_static(owner, name, /, default=_MISSING):
 
 @overload
 def resolve_special(
-    owner: type,
-    name: str,
-    instance: None = None,
-    /,
-) -> Any: ...
-@overload
-def resolve_special(
     owner: type[_T1],
     name: str,
-    instance: _T1,
     /,
-) -> Any: ...
+    instance: _T1,
+    *,
+    default: _T2,
+) -> Any | _T2: ...
 @overload
 def resolve_special(
     owner: type,
     name: str,
-    instance: None = None,
     /,
+    instance: None = None,
     *,
     default: _T2,
 ) -> Any | _T2: ...
@@ -314,14 +235,18 @@ def resolve_special(
 def resolve_special(
     owner: type[_T1],
     name: str,
-    instance: _T1,
     /,
-    *,
-    default: _T2,
-) -> Any | _T2: ...
-def resolve_special(owner, name, instance=None, /, *, default=_MISSING):
+    instance: _T1,
+) -> Any: ...
+@overload
+def resolve_special(
+    owner: type,
+    name: str,
+    /,
+    instance: None = None,
+) -> Any: ...
+def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
-
     if member is _NOTHING:
         if default is _MISSING:
             raise LookupError(name)
@@ -329,7 +254,6 @@ def resolve_special(owner, name, instance=None, /, *, default=_MISSING):
         return default
 
     descr_get = _lookup_static_noerror(type(member), "__get__")
-
     if descr_get is _NOTHING:
         return member
 

@@ -9,7 +9,8 @@ from itertools import accumulate
 
 
 def _dotjoin2(a, b, /):
-    return a + "." + b  # f-strings are too slow on PyPy for this case
+    # f-strings are too slow on PyPy for this case
+    return a + "." + b
 
 
 def resolve_name(name: str, /, package: str | None) -> str:
