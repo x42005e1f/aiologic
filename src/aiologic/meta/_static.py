@@ -68,14 +68,13 @@ def getabsname_static(owner: type, /) -> str:
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
-    if (
-        isinstance_static(owner_modulename, str)
-        and owner_modulename != "builtins"
-    ):
-        # f-strings are too slow on PyPy for this case
-        return owner_modulename + "." + owner_qualname
-
-    return owner_qualname
+    try:
+        return ".".join([  # ruff: ignore[static-join-to-f-string]
+            owner_modulename,
+            owner_qualname,
+        ]).removeprefix("builtins.")
+    except TypeError:  # `owner_modulename` is not a string
+        return owner_qualname
 
 
 def getmodulename_static(owner: type, /) -> Any:
