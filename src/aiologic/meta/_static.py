@@ -62,7 +62,7 @@ def getabsname_static(owner: type, /) -> str:
     try:
         owner_qualname = _pytype_getqualname_static(owner)
         owner_modulename = _pytype_getmodulename_static(owner)
-    except AttributeError:  # created with no `__name__` in globals
+    except AttributeError:  # python/cpython#120857
         return owner_qualname
     except TypeError:
         msg = "the first argument must be a class"
@@ -81,7 +81,7 @@ def getabsname_static(owner: type, /) -> str:
 def getmodulename_static(owner: type, /) -> Any:
     try:
         return _pytype_getmodulename_static(owner)
-    except AttributeError:  # created with no `__name__` in globals
+    except AttributeError:  # python/cpython#120857
         return "builtins"
     except TypeError:
         msg = "the first argument must be a class"
