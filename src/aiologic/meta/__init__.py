@@ -53,6 +53,7 @@ from ._signatures import (
     getsro as getsro,
 )
 from ._static import (
+    ensurestr_static as ensurestr_static,
     getabsname_static as getabsname_static,
     getmodulename_static as getmodulename_static,
     getmro_static as getmro_static,
