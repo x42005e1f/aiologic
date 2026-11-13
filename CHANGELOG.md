@@ -138,6 +138,9 @@ Commit messages are consistent with
   manipulate the corresponding class attributes (`__module__`, `__qualname__`,
   and `__name__`) via direct descriptor calls. They are useful for ensuring
   consistency with C implementations.
+- `aiologic.meta.ensurestr_static()` to efficiently check that the argument is
+  a string (and raise a `TypeError` if it is not) and also to convert instances
+  of string subclasses to exact strings (to simplify further processing).
 - `message` parameter to `aiologic.meta.export_deprecated()` (an optional
   fourth parameter) as a way to set a custom deprecation message (instead of
   the default, which simply refers to the target).
