@@ -262,6 +262,12 @@ def _lookup_static_noerror(owner, name, /):
         msg = "the first argument must be a class"
         raise TypeError(msg) from None
 
+    try:
+        name = _pystr_ensurestr_static(name)
+    except TypeError:
+        msg = "the second argument must be a string"
+        raise TypeError(msg) from None
+
     for base in mro:
         base_vars = _pytype_getvars_static(base)
 

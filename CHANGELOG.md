@@ -227,6 +227,10 @@ Commit messages are consistent with
   argument is omitted (or when `aiologic.meta.MISSING` is passed as the last
   argument), now raise a `TypeError` if `aiologic.meta.MISSING` is passed
   again, to ensure they are used as intended.
+- `aiologic.meta.lookup_static()` (and `aiologic.meta.resolve_special()`) now
+  ensures that the second argument is an exact string (and raises a `TypeError`
+  when it is not a string), to prevent accidental triggering of user code via
+  `__hash__()` and `__eq__()`.
 - All sentinels and markers are now immune to module reloads and refer to the
   same objects for the entire process's lifetime (provided the namespace
   remains the same), making them more reliable. For example, if you import the
