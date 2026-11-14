@@ -237,22 +237,21 @@ def issubclass_static(obj, class_or_tuple, /):
     if obj is class_or_tuple:
         return True
 
-    try:
-        _pytype_getmro_static(class_or_tuple)
-    except TypeError:  # not a class
-        pass
-    else:
-        return any(base is class_or_tuple for base in mro)
+    if type(class_or_tuple) is not tuple:  # a fast check
+        try:
+            _pytype_getmro_static(class_or_tuple)
+        except TypeError:  # not a class
+            pass
+        else:
+            return any(base is class_or_tuple for base in mro)
 
     try:
-        class_or_tuple = _pytuple_iter_static(class_or_tuple)
-    except TypeError:  # not a tuple
-        pass
-    else:
-        return any(issubclass_static(obj, info) for info in class_or_tuple)
+        it = _pytuple_iter_static(class_or_tuple)
+    except TypeError:
+        msg = "the second argument must be a class or a tuple of classes"
+        raise TypeError(msg) from None
 
-    msg = "the second argument must be a class or a tuple of classes"
-    raise TypeError(msg)
+    return any(issubclass_static(obj, info) for info in it)
 
 
 @overload
