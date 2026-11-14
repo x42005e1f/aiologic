@@ -42,6 +42,7 @@ _pytype_setname_static = vars(type)["__name__"].__set__
 _pytype_repr_static = type.__repr__
 _pystr_ensurestr_static = str.__str__  # subclass of `str` -> `str`
 _pystr_prependdot_static = ".".__add__
+_pytuple_iter_static = tuple.__iter__  # subclass of `tuple` -> iter of `tuple`
 
 
 def getmro_static(owner: type, /) -> tuple[type, ...]:
@@ -102,7 +103,7 @@ def getmodulename_static(owner, /, *, ensure_str=True):
         if ensure_str:
             try:
                 return _pystr_ensurestr_static(owner_modulename)
-            except TypeError:
+            except TypeError:  # not a string
                 pass
         else:
             return owner_modulename
@@ -158,7 +159,7 @@ def setmodulename_static(owner: type, value: Any, /) -> None:
         _pytype_setmodulename_static(owner, value)
     except TypeError:
         try:
-            _pytype_getqualname_static(owner)  # to avoid python/cpython#120857
+            _pytype_getmro_static(owner)
         except TypeError:
             msg = "the first argument must be a class"
         else:
@@ -171,7 +172,7 @@ def setqualname_static(owner: type, value: str, /) -> None:
         _pytype_setqualname_static(owner, value)
     except TypeError:
         try:
-            _pytype_getqualname_static(owner)
+            _pytype_getmro_static(owner)
         except TypeError:
             msg = "the first argument must be a class"
         else:
@@ -189,7 +190,7 @@ def setname_static(owner: type, value: str, /) -> None:
         _pytype_setname_static(owner, value)
     except TypeError:
         try:
-            _pytype_getname_static(owner)
+            _pytype_getmro_static(owner)
         except TypeError:
             msg = "the first argument must be a class"
         else:
@@ -219,19 +220,35 @@ def issubclass_static(
 @overload
 def issubclass_static(obj: type, class_or_tuple: _ClassInfo, /) -> bool: ...
 def issubclass_static(obj, class_or_tuple, /):
-    if isinstance(class_or_tuple, type):
-        if obj is class_or_tuple:
-            return True
+    try:
+        mro = _pytype_getmro_static(obj)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
 
-        try:
-            mro = _pytype_getmro_static(obj)
-        except TypeError:
-            msg = "the first argument must be a class"
-            raise TypeError(msg) from None
+    # After the previous check, the first argument is guaranteed to be a class,
+    # so this cannot be true for a non-class as the second argument. We could,
+    # of course, place it after the check below and have it precede the `mro`
+    # lookup there, but the performance difference in the tuple case is
+    # negligible, and with the current implementation, the first argument is
+    # checked regardless of whether the second argument yields at least one
+    # class or not (unlike the standard `issubclass()`, which simply returns
+    # `False` in such a case), which seems somewhat safer for the user.
+    if obj is class_or_tuple:
+        return True
 
+    try:
+        _pytype_getmro_static(class_or_tuple)
+    except TypeError:  # not a class
+        pass
+    else:
         return any(base is class_or_tuple for base in mro)
 
-    if isinstance(class_or_tuple, tuple):
+    try:
+        class_or_tuple = _pytuple_iter_static(class_or_tuple)
+    except TypeError:  # not a tuple
+        pass
+    else:
         return any(issubclass_static(obj, info) for info in class_or_tuple)
 
     msg = "the second argument must be a class or a tuple of classes"
