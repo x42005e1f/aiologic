@@ -158,7 +158,7 @@ def setmodulename_static(owner: type, value: Any, /) -> None:
         _pytype_setmodulename_static(owner, value)
     except TypeError:
         try:
-            _pytype_getmodulename_static(owner)
+            _pytype_getqualname_static(owner)  # to avoid python/cpython#120857
         except TypeError:
             msg = "the first argument must be a class"
         else:
