@@ -41,6 +41,7 @@ _pytype_setname_static = vars(type)["__name__"].__set__
 
 _pytype_repr_static = type.__repr__
 _pystr_ensurestr_static = str.__str__  # subclass of `str` -> `str`
+_pystr_prependdot_static = ".".__add__
 
 
 def getmro_static(owner: type, /) -> tuple[type, ...]:
@@ -69,8 +70,7 @@ def getabsname_static(owner: type, /) -> str:
     # As a general rule, we should not rely on specific formatting behavior,
     # but we have to do so here to account for edge cases (such as the one
     # described below), and this is also one of the most efficient
-    # implementations (excluding asserts).
-
+    # implementations (excluding the asserts).
     assert owner_repr.startswith("<class '")
     assert owner_repr.endswith("'>")
     return owner_repr[8:-2]
@@ -119,13 +119,8 @@ def getmodulename_static(owner, /, *, ensure_str=True):
     # similar types, we have to extract the module name from the representation
     # (since there is no direct way to get that value in pure Python, and we
     # must not trigger unknown descriptors).
-
-    owner_repr = _pytype_repr_static(owner)
-    assert owner_repr.startswith("<class '")
-    assert owner_repr.endswith("'>")
-    owner_absname = owner_repr[8:-2]
-
-    suffix = ".".__add__(_pytype_getqualname_static(owner))  # static
+    owner_absname = getabsname_static(owner)
+    suffix = _pystr_prependdot_static(_pytype_getqualname_static(owner))
     if owner_absname.endswith(suffix):
         return owner_absname[: -len(suffix)]
 
