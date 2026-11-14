@@ -40,9 +40,9 @@ _pytype_setqualname_static = vars(type)["__qualname__"].__set__
 _pytype_setname_static = vars(type)["__name__"].__set__
 
 _pytype_repr_static = type.__repr__
+_pytuple_iter_static = tuple.__iter__  # subclass of `tuple` -> iter of `tuple`
 _pystr_ensurestr_static = str.__str__  # subclass of `str` -> `str`
 _pystr_prependdot_static = ".".__add__
-_pytuple_iter_static = tuple.__iter__  # subclass of `tuple` -> iter of `tuple`
 
 
 def getmro_static(owner: type, /) -> tuple[type, ...]:
@@ -203,69 +203,6 @@ def setname_static(owner: type, value: str, /) -> None:
         raise TypeError(msg) from None
 
 
-def ensurestr_static(obj: str, /) -> str:
-    try:
-        return _pystr_ensurestr_static(obj)
-    except TypeError:
-        msg = "the first argument is not a string"
-        raise TypeError(msg) from None
-
-
-@overload
-def issubclass_static(
-    obj: type,
-    class_or_tuple: type[_T],
-    /,
-) -> TypeGuard[type[_T]]: ...
-@overload
-def issubclass_static(obj: type, class_or_tuple: _ClassInfo, /) -> bool: ...
-def issubclass_static(obj, class_or_tuple, /):
-    try:
-        mro = _pytype_getmro_static(obj)
-    except TypeError:
-        msg = "the first argument must be a class"
-        raise TypeError(msg) from None
-
-    # After the previous check, the first argument is guaranteed to be a class,
-    # so this cannot be true for a non-class as the second argument. We could,
-    # of course, place it after the check below and have it precede the `mro`
-    # lookup there, but the performance difference in the tuple case is
-    # negligible, and with the current implementation, the first argument is
-    # checked regardless of whether the second argument yields at least one
-    # class or not (unlike the standard `issubclass()`, which simply returns
-    # `False` in such a case), which seems somewhat safer for the user.
-    if obj is class_or_tuple:
-        return True
-
-    if type(class_or_tuple) is not tuple:  # a fast check
-        try:
-            _pytype_getmro_static(class_or_tuple)
-        except TypeError:  # not a class
-            pass
-        else:
-            return any(base is class_or_tuple for base in mro)
-
-    try:
-        it = _pytuple_iter_static(class_or_tuple)
-    except TypeError:
-        msg = "the second argument must be a class or a tuple of classes"
-        raise TypeError(msg) from None
-
-    return any(issubclass_static(obj, info) for info in it)
-
-
-@overload
-def isinstance_static(
-    obj: object,
-    class_or_tuple: type[_T],
-    /,
-) -> TypeGuard[_T]: ...
-@overload
-def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
-def isinstance_static(obj, class_or_tuple, /):
-    return issubclass_static(type(obj), class_or_tuple)
-
-
 def _lookup_static_noerror(owner, name, /):
     try:
         mro = _pytype_getmro_static(owner)
@@ -351,3 +288,66 @@ def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
         return member
 
     return descr_get(member, instance, owner)
+
+
+@overload
+def issubclass_static(
+    obj: type,
+    class_or_tuple: type[_T],
+    /,
+) -> TypeGuard[type[_T]]: ...
+@overload
+def issubclass_static(obj: type, class_or_tuple: _ClassInfo, /) -> bool: ...
+def issubclass_static(obj, class_or_tuple, /):
+    try:
+        mro = _pytype_getmro_static(obj)
+    except TypeError:
+        msg = "the first argument must be a class"
+        raise TypeError(msg) from None
+
+    # After the previous check, the first argument is guaranteed to be a class,
+    # so this cannot be true for a non-class as the second argument. We could,
+    # of course, place it after the check below and have it precede the `mro`
+    # lookup there, but the performance difference in the tuple case is
+    # negligible, and with the current implementation, the first argument is
+    # checked regardless of whether the second argument yields at least one
+    # class or not (unlike the standard `issubclass()`, which simply returns
+    # `False` in such a case), which seems somewhat safer for the user.
+    if obj is class_or_tuple:
+        return True
+
+    if type(class_or_tuple) is not tuple:  # a fast check
+        try:
+            _pytype_getmro_static(class_or_tuple)
+        except TypeError:  # not a class
+            pass
+        else:
+            return any(base is class_or_tuple for base in mro)
+
+    try:
+        it = _pytuple_iter_static(class_or_tuple)
+    except TypeError:
+        msg = "the second argument must be a class or a tuple of classes"
+        raise TypeError(msg) from None
+
+    return any(issubclass_static(obj, info) for info in it)
+
+
+@overload
+def isinstance_static(
+    obj: object,
+    class_or_tuple: type[_T],
+    /,
+) -> TypeGuard[_T]: ...
+@overload
+def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
+def isinstance_static(obj, class_or_tuple, /):
+    return issubclass_static(type(obj), class_or_tuple)
+
+
+def ensurestr_static(obj: str, /) -> str:
+    try:
+        return _pystr_ensurestr_static(obj)
+    except TypeError:
+        msg = "the first argument is not a string"
+        raise TypeError(msg) from None
