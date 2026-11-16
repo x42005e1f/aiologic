@@ -29,6 +29,24 @@ if "_MISSING" not in globals():
 if "_NOTHING" not in globals():
     _NOTHING = sentinel("_NOTHING")
 
+# Direct calls to C-level descriptors of standard types are generally expected
+# to be safe, since Python-level subclasses are ABI-compatible as-is, and
+# C-level subclasses typically include the object structure of the parent class
+# into their own (and thus, the pointers resolve to the exact same fields). A
+# well-known exception is Nuitka, whose types intentionally pretend to be
+# subclasses of non-inheritable standard types since 0.7: for example,
+# `Nuitka_Function_Type` sets `tp_base` to `&PyFunction_Type` during
+# initialization, but `Nuitka_FunctionObject` is not ABI-compatible with
+# `PyFunctionObject`; to make the object work as expected, it simply overrides
+# all parent attributes and members. If you try to use a descriptor (or even a
+# method) of the parent `types.FunctionType` for a compiled function object, it
+# may result in an invalid address access, and either the interpreter will
+# crash with a segmentation fault, or unexpected behavior will occur (a wrong
+# object is returned, a weird side effect occurs, etc.). Fortunately, there are
+# currently no known instances of similar hacks for metaclasses (and tuples,
+# strings), so we can expect that the members below are always safe for
+# correctly implemented types (but see python/cpython#84351).
+
 _pytype_getmro_static = vars(type)["__mro__"].__get__
 _pytype_getvars_static = vars(type)["__dict__"].__get__
 _pytype_getmodulename_static = vars(type)["__module__"].__get__
