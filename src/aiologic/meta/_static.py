@@ -415,7 +415,7 @@ class nonmember:
         try:
             name = self.__name
         except AttributeError:
-            self_repr = f"{cls_absname} object"
+            self_repr = f"{cls_absname}()"
         else:
             self_repr = f"{cls_absname}({name!r})"
 
