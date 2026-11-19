@@ -267,7 +267,10 @@ def lookup_static(owner, name, /, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
     if member is _NOTHING:
         if default is _MISSING:
-            raise LookupError(name)
+            owner_name = getname_static(owner)
+
+            msg = f"type object {owner_name!r} has no member {name!r}"
+            raise LookupError(msg)
 
         return default
 
@@ -294,7 +297,10 @@ def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
     if member is _NOTHING:
         if default is _MISSING:
-            raise LookupError(name)
+            owner_name = getname_static(owner)
+
+            msg = f"type object {owner_name!r} has no member {name!r}"
+            raise LookupError(msg)
 
         return default
 

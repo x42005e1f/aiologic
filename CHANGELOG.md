@@ -174,6 +174,9 @@ Commit messages are consistent with
 - The `default` parameter in `aiologic.meta.lookup_static()` is now
   keyword-only to avoid confusion with the `instance` parameter in
   `aiologic.meta.resolve_special()`.
+- The `LookupError` raised by `aiologic.meta.resolve_special()` and
+  `aiologic.meta.lookup_static()` now has a more informative error message that
+  is consistent with the standard `AttributeError`.
 - `aiologic.meta.issubclass_static()` now expects a class as its first argument
   instead of an arbitrary object, to prevent errors and ensure consistency with
   the standard library; as a result, it raises a `TypeError` when this is not
