@@ -249,7 +249,7 @@ def _lookup_static_noerror(owner, name, /):
             try:
                 member = base_vars[name]
             except KeyError:  # a race condition
-                pass
+                continue
 
             if type(member) is nonmember and member.name == name:
                 break
