@@ -63,6 +63,7 @@ from ._static import (
     isinstance_static as isinstance_static,
     issubclass_static as issubclass_static,
     lookup_static as lookup_static,
+    nonmember as nonmember,
     resolve_special as resolve_special,
     setmodulename_static as setmodulename_static,
     setname_static as setname_static,

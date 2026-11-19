@@ -7,11 +7,19 @@ from __future__ import annotations
 
 import sys
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, final, overload
 
 if TYPE_CHECKING:
     from types import MappingProxyType
-    from typing import Any, Literal, TypeAlias, TypeGuard, TypeVar
+    from typing import (
+        Any,
+        ClassVar,
+        Literal,
+        Never,
+        TypeAlias,
+        TypeGuard,
+        TypeVar,
+    )
 
 if sys.version_info >= (3, 15):  # PEP 661
     from builtins import sentinel
@@ -239,9 +247,14 @@ def _lookup_static_noerror(owner, name, /):
 
         if name in base_vars:
             try:
-                return base_vars[name]
+                member = base_vars[name]
             except KeyError:  # a race condition
                 pass
+
+            if type(member) is nonmember and member.name == name:
+                break
+
+            return member
 
     return _NOTHING
 
@@ -266,16 +279,7 @@ def resolve_special(
     owner: type[_T],
     name: str,
     /,
-    instance: _T,
-    *,
-    default: _D,
-) -> Any | _D: ...
-@overload
-def resolve_special(
-    owner: type,
-    name: str,
-    /,
-    instance: None = None,
+    instance: _T | None = None,
     *,
     default: _D,
 ) -> Any | _D: ...
@@ -284,14 +288,7 @@ def resolve_special(
     owner: type[_T],
     name: str,
     /,
-    instance: _T,
-) -> Any: ...
-@overload
-def resolve_special(
-    owner: type,
-    name: str,
-    /,
-    instance: None = None,
+    instance: _T | None = None,
 ) -> Any: ...
 def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
     member = _lookup_static_noerror(owner, name)
@@ -369,3 +366,140 @@ def ensurestr_static(obj: str, /) -> str:
     except TypeError:
         msg = "the first argument is not a string"
         raise TypeError(msg) from None
+
+
+@final
+class nonmember:
+    __slots__ = ("__name",)
+
+    def __init__(self, /, name: str | None = None) -> None:
+        if name is not None:
+            try:
+                self.__name = _pystr_ensurestr_static(name)
+            except TypeError:
+                msg = "the `name` must be a string or `None`"
+                raise TypeError(msg) from None
+
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never:
+        bcs = __class__  # an implicit closure reference
+        bcs_name = getname_static(bcs)
+
+        msg = f"type {bcs_name!r} is not an acceptable base type"
+        raise TypeError(msg)
+
+    def __reduce__(self, /) -> Never:
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot pickle {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __deepcopy__(self, memo: Any, /) -> Never:
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot deep copy {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __copy__(self, /) -> Never:
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"cannot copy {cls_name!r} object"
+        raise TypeError(msg)
+
+    def __repr__(self, /) -> str:
+        cls = type(self)
+        cls_absname = getabsname_static(cls)
+
+        try:
+            name = self.__name
+        except AttributeError:
+            self_repr = f"{cls_absname} object"
+        else:
+            self_repr = f"{cls_absname}({name!r})"
+
+        return f"<{self_repr} at {id(self):#x}>"
+
+    __hash__: ClassVar[None] = None
+
+    @overload
+    def __get__(
+        self,
+        instance: None,
+        owner: type,
+        /,
+    ) -> Any: ...
+    @overload
+    def __get__(
+        self,
+        instance: _T,
+        owner: type[_T] | None = None,
+        /,
+    ) -> Never: ...
+    def __get__(self, instance, owner=None, /):
+        try:
+            name = self.__name
+        except AttributeError:
+            msg = "this nonmember has no name assigned"
+            raise RuntimeError(msg) from None
+
+        if instance is not None:
+            obj = instance
+        else:
+            obj = owner
+
+            # This check, which may seem redundant at first glance, prevents
+            # triggering a descriptor from a non-metaclass, which is consistent
+            # with the expectations for this module.
+            try:
+                _pytype_getmro_static(obj)
+            except TypeError:
+                if obj is None:
+                    msg = "__get__(None, None) is invalid"  # the standard one
+                else:
+                    msg = "the second argument must be a class or `None`"
+                raise TypeError(msg) from None
+
+            # Attribute lookup implemented by the `__getattribute__()` magic
+            # method can be schematically represented as `<data descriptor from
+            # type(object)>` -> `<member from object>` -> `<member from
+            # type(object)>` (where the data descriptor must also have the
+            # `__get__()` method; otherwise, it is ignored in the first step).
+            # In the instance case, our descriptor is at the end of this chain,
+            # so we can simply raise an `AttributeError`. But in the owner
+            # case, our descriptor is in the middle, and we have no way to
+            # instruct `__getattribute__()` to skip us and continue to the
+            # metaclass. Therefore, we have to handle the latter ourselves.
+            member = resolve_special(type(obj), name, obj, default=_NOTHING)
+            if member is not _NOTHING:
+                return member
+
+        # To adhere to the principle of least surprise, the message should
+        # resemble a standard one. Note that we do not handle module objects,
+        # as doing so would make the implementation too complex, and this is an
+        # unlikely use case. Starting with Python 3.16, we can begin to rely on
+        # autogeneration (see python/cpython#153786).
+        try:
+            obj_name = getname_static(obj)
+        except TypeError:  # not a class
+            cls_name = getname_static(type(obj))
+
+            msg = f"{cls_name!r} object has no attribute {name!r}"
+        else:
+            msg = f"type object {obj_name!r} has no attribute {name!r}"
+        raise AttributeError(msg, obj=obj, name=name)
+
+    def __set_name__(self, owner: type, name: str, /) -> None:
+        try:
+            self.__name = _pystr_ensurestr_static(name)
+        except TypeError:
+            msg = "the second argument must be a string"
+            raise TypeError(msg) from None
+
+    @property
+    def name(self, /) -> str | None:
+        try:
+            return self.__name
+        except AttributeError:
+            return None

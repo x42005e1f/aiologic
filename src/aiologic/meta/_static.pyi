@@ -4,7 +4,17 @@
 # SPDX-License-Identifier: ISC
 
 from types import MappingProxyType
-from typing import Any, Literal, TypeAlias, TypeGuard, TypeVar, overload
+from typing import (
+    Any,
+    ClassVar,
+    Literal,
+    Never,
+    TypeAlias,
+    TypeGuard,
+    TypeVar,
+    final,
+    overload,
+)
 
 _T = TypeVar("_T")
 _D = TypeVar("_D")
@@ -42,16 +52,7 @@ def resolve_special(
     owner: type[_T],
     name: str,
     /,
-    instance: _T,
-    *,
-    default: _D,
-) -> Any | _D: ...
-@overload
-def resolve_special(
-    owner: type,
-    name: str,
-    /,
-    instance: None = None,
+    instance: _T | None = None,
     *,
     default: _D,
 ) -> Any | _D: ...
@@ -60,14 +61,7 @@ def resolve_special(
     owner: type[_T],
     name: str,
     /,
-    instance: _T,
-) -> Any: ...
-@overload
-def resolve_special(
-    owner: type,
-    name: str,
-    /,
-    instance: None = None,
+    instance: _T | None = None,
 ) -> Any: ...
 @overload
 def issubclass_static(
@@ -86,3 +80,32 @@ def isinstance_static(
 @overload
 def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
 def ensurestr_static(obj: str, /) -> str: ...
+
+@final
+class nonmember:
+    __slots__ = ("__name",)
+
+    def __init__(self, /, name: str | None = None) -> None: ...
+    def __init_subclass__(cls, /, **kwargs: Any) -> Never: ...
+    def __reduce__(self, /) -> Never: ...
+    def __deepcopy__(self, memo: Any, /) -> Never: ...
+    def __copy__(self, /) -> Never: ...
+    def __repr__(self, /) -> str: ...
+    __hash__: ClassVar[None]  # type: ignore[assignment]
+    @overload
+    def __get__(
+        self,
+        instance: None,
+        owner: type,
+        /,
+    ) -> Any: ...
+    @overload
+    def __get__(
+        self,
+        instance: _T,
+        owner: type[_T] | None = None,
+        /,
+    ) -> Never: ...
+    def __set_name__(self, owner: type, name: str, /) -> None: ...
+    @property
+    def name(self, /) -> str | None: ...

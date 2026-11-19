@@ -141,6 +141,11 @@ Commit messages are consistent with
 - `aiologic.meta.ensurestr_static()` to efficiently check that the argument is
   a string (and raise a `TypeError` if it is not) and also to convert instances
   of string subclasses to exact strings (to simplify further processing).
+- `aiologic.meta.nonmember` to shadow the parent member with its absence (as if
+  the name were not defined anywhere in the MRO). Useful when you have to
+  inherit unwanted items but you do not want to expose them to the user. Note,
+  however, that you will still need to manually override `__dir__()` to hide
+  the suggestions.
 - `message` parameter to `aiologic.meta.export_deprecated()` (an optional
   fourth parameter) as a way to set a custom deprecation message (instead of
   the default, which simply refers to the target).
