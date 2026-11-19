@@ -450,18 +450,14 @@ class nonmember:
             msg = "this nonmember has no name assigned"
             raise RuntimeError(msg) from None
 
-        if instance is not None:
-            obj = instance
-        else:
-            obj = owner
-
+        if instance is None:
             # This check, which may seem redundant at first glance, prevents
             # triggering a descriptor from a non-metaclass, which is consistent
             # with the expectations for this module.
             try:
-                _pytype_getmro_static(obj)
+                _pytype_getmro_static(owner)
             except TypeError:
-                if obj is None:
+                if owner is None:
                     msg = "__get__(None, None) is invalid"  # the standard one
                 else:
                     msg = "the second argument must be a class or `None`"
@@ -477,9 +473,13 @@ class nonmember:
             # case, our descriptor is in the middle, and we have no way to
             # instruct `__getattribute__()` to skip us and continue to the
             # metaclass. Therefore, we have to handle the latter ourselves.
-            member = resolve_special(type(obj), name, obj, default=_NOTHING)
-            if member is not _NOTHING:
-                return member
+            value = resolve_special(type(owner), name, owner, default=_NOTHING)
+            if value is not _NOTHING:
+                return value
+
+            obj = owner
+        else:
+            obj = instance
 
         # To adhere to the principle of least surprise, the message should
         # resemble a standard one. Note that we do not handle module objects,
