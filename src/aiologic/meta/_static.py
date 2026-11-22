@@ -244,8 +244,13 @@ def _lookup_static_noerror(owner, name, /):
                 continue
 
             if type(member) is nonmember:
-                if member.__name__ == name:
-                    break
+                try:
+                    member_name = member.__name__
+                except AttributeError:
+                    pass
+                else:
+                    if member_name == name:
+                        break
 
             return member
 

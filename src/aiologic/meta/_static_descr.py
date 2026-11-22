@@ -166,8 +166,9 @@ class nonmember:
         return object
 
     @property
-    def __name__(self, /) -> str | None:
+    def __name__(self, /) -> str:
         try:
             return self.__name
         except AttributeError:
-            return None
+            msg = "this nonmember has no name assigned"
+            raise AttributeError(msg, name=None) from None
