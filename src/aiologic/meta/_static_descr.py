@@ -28,6 +28,8 @@ else:  # typing-extensions>=4.16.0
 if TYPE_CHECKING:
     _T = TypeVar("_T")
 
+if "_MISSING" not in globals():
+    _MISSING = sentinel("_MISSING")
 if "_NOTHING" not in globals():
     _NOTHING = sentinel("_NOTHING")
 
@@ -36,12 +38,16 @@ if "_NOTHING" not in globals():
 class nonmember:
     __slots__ = ("__name",)
 
-    def __init__(self, /, name: str | None = None) -> None:
-        if name is not None:
+    @overload
+    def __init__(self, /, name: str) -> None: ...
+    @overload
+    def __init__(self, /) -> None: ...
+    def __init__(self, /, name=_MISSING):
+        if name is not _MISSING:
             try:
                 self.__name = ensurestr_static(name)
             except TypeError:
-                msg = "the `name` must be a string or `None`"
+                msg = "the `name` must be a string"
                 raise TypeError(msg) from None
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
