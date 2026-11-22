@@ -221,7 +221,7 @@ class _WeakBoundHook:
             callback(*args, **kwargs)
 
     @property
-    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+    def __wrapped__(self, /):
         try:
             return self.__impl.callback
         except AttributeError:
@@ -337,7 +337,7 @@ class _CountdownHook:
         bound_hook(*args, **kwargs)
 
     @property
-    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+    def __wrapped__(self, /):
         try:
             return self.__bound_hook
         except AttributeError:
@@ -448,7 +448,7 @@ class _DynamicHook:
         return True
 
     @property
-    def __wrapped__(self, /):  # ruff: ignore[bad-dunder-method-name]
+    def __wrapped__(self, /):
         bound_hook = self.__dynamic_hooks_underlying[self.__key]
 
         self._turnstile_if_nogil.wait()

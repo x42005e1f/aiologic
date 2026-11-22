@@ -243,8 +243,9 @@ def _lookup_static_noerror(owner, name, /):
             except KeyError:  # a race condition
                 continue
 
-            if type(member) is nonmember and member.name == name:
-                break
+            if type(member) is nonmember:
+                if member.__name__ == name:
+                    break
 
             return member
 

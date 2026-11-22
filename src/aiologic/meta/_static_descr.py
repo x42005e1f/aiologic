@@ -162,7 +162,11 @@ class nonmember:
             raise TypeError(msg) from None
 
     @property
-    def name(self, /) -> str | None:
+    def __objclass__(self, /) -> type:
+        return object
+
+    @property
+    def __name__(self, /) -> str | None:
         try:
             return self.__name
         except AttributeError:

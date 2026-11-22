@@ -42,10 +42,7 @@ if TYPE_CHECKING:
             **kwargs: _P.kwargs,
         ) -> _T_co: ...
         @property
-        def __name__(  # ruff: ignore[bad-dunder-method-name]
-            self,
-            /,
-        ) -> str: ...
+        def __name__(self, /) -> str: ...
 
 
 _ANNOTATIONS_EAGER = sys.version_info < (3, 14)

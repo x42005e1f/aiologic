@@ -250,6 +250,7 @@ ignore = [
     "PLW0108",  # unnecessary-lambda
     "PLW0603",  # global-statement
     "PLW0717",  # too-many-statements-in-try-clause
+    "PLW3201",  # bad-dunder-method-name
     # tryceratops
     "TRY003",  # raise-vanilla-args
     "TRY301",  # raise-within-try
