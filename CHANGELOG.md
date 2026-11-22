@@ -173,7 +173,11 @@ Commit messages are consistent with
   positional-or-keyword to provide clarity when needed.
 - The `default` parameter in `aiologic.meta.lookup_static()` is now
   keyword-only to avoid confusion with the `instance` parameter in
-  `aiologic.meta.resolve_special()`.
+  `aiologic.meta.resolve_special()`. In addition,
+  `aiologic.meta.lookup_static()` now has the same third parameter named
+  `instance`, whose sole purpose is to distinguish between direct access
+  (`instance is None`) and indirect access (`instance is not None`) for some
+  descriptor types.
 - The `LookupError` raised by `aiologic.meta.resolve_special()` and
   `aiologic.meta.lookup_static()` now has a more informative error message that
   is consistent with the standard `AttributeError`.

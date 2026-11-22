@@ -34,9 +34,21 @@ def setmodulename_static(owner: type, value: Any, /) -> None: ...
 def setqualname_static(owner: type, value: str, /) -> None: ...
 def setname_static(owner: type, value: str, /) -> None: ...
 @overload
-def lookup_static(owner: type, name: str, /, *, default: _D) -> Any | _D: ...
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    default: _D,
+) -> Any | _D: ...
 @overload
-def lookup_static(owner: type, name: str, /) -> Any: ...
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+) -> Any: ...
 @overload
 def resolve_special(
     owner: type[_T],

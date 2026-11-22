@@ -221,7 +221,7 @@ def setname_static(owner: type, value: str, /) -> None:
         raise TypeError(msg) from None
 
 
-def _lookup_static_noerror(owner, name, /):
+def _lookup_static_noerror(owner, name, /, instance):
     try:
         mro = _pytype_getmro_static(owner)
     except TypeError:
@@ -258,11 +258,23 @@ def _lookup_static_noerror(owner, name, /):
 
 
 @overload
-def lookup_static(owner: type, name: str, /, *, default: _D) -> Any | _D: ...
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    default: _D,
+) -> Any | _D: ...
 @overload
-def lookup_static(owner: type, name: str, /) -> Any: ...
-def lookup_static(owner, name, /, *, default=_MISSING):
-    member = _lookup_static_noerror(owner, name)
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+) -> Any: ...
+def lookup_static(owner, name, /, instance=None, *, default=_MISSING):
+    member = _lookup_static_noerror(owner, name, instance)
     if member is _NOTHING:
         if default is _MISSING:
             owner_name = getname_static(owner)
@@ -292,7 +304,7 @@ def resolve_special(
     instance: _T | None = None,
 ) -> Any: ...
 def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
-    member = _lookup_static_noerror(owner, name)
+    member = _lookup_static_noerror(owner, name, instance)
     if member is _NOTHING:
         if default is _MISSING:
             owner_name = getname_static(owner)
@@ -302,7 +314,7 @@ def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
 
         return default
 
-    descr_get = _lookup_static_noerror(type(member), "__get__")
+    descr_get = _lookup_static_noerror(type(member), "__get__", member)
     if descr_get is _NOTHING:
         return member
 
