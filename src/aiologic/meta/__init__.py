@@ -69,6 +69,7 @@ from ._static import (
     setqualname_static as setqualname_static,
 )
 from ._static_descr import (
+    classonly as classonly,
     nonmember as nonmember,
 )
 from ._types import (

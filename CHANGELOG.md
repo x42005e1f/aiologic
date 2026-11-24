@@ -146,6 +146,17 @@ Commit messages are consistent with
   inherit unwanted items but you do not want to expose them to the user. Note,
   however, that you will still need to manually override `__dir__()` to hide
   the suggestions.
+- `aiologic.meta.classonly` as a specialization of `aiologic.meta.nonmember`
+  for instance-only access. If created with an argument as a member, it wraps
+  that member, and in the class namespace it behaves as if the member were
+  defined directly; otherwise, for class-only access, it behaves as if it were
+  not defined (for comparison, if `aiologic.meta.nonmember` is `break`, then
+  `aiologic.meta.classonly` is `continue`). Useful when you want to separate
+  the class namespace from the instance namespace.
+- `after` parameter to `aiologic.meta.lookup_static()` and
+  `aiologic.meta.resolve_special()` as a `super`-like way to look up on behalf
+  of the specified parent (skipping the parent itself and its children, but
+  using the same MRO as the `owner`).
 - `message` parameter to `aiologic.meta.export_deprecated()` (an optional
   fourth parameter) as a way to set a custom deprecation message (instead of
   the default, which simply refers to the target).
@@ -176,8 +187,8 @@ Commit messages are consistent with
   `aiologic.meta.resolve_special()`. In addition,
   `aiologic.meta.lookup_static()` now has the same third parameter named
   `instance`, whose sole purpose is to distinguish between direct access
-  (`instance is None`) and indirect access (`instance is not None`) for some
-  descriptor types.
+  (`instance is None`) and indirect access (`instance is not None`) for
+  `aiologic.meta.classonly` descriptor objects.
 - The `LookupError` raised by `aiologic.meta.resolve_special()` and
   `aiologic.meta.lookup_static()` now has a more informative error message that
   is consistent with the standard `AttributeError`.

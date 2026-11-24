@@ -221,7 +221,22 @@ def setname_static(owner: type, value: str, /) -> None:
         raise TypeError(msg) from None
 
 
-def _lookup_static_noerror(owner, name, /, instance):
+# Note, the value of `owner.__mro__` is constructed via the `type.mro()` method
+# of the metaclass, and as such can be (almost) any non-empty tuple of classes
+# with a suitable layout when the method is overridden. As a result, the
+# `owner` may not be the first entry in its own MRO, or it may appear more than
+# once (but at least once; otherwise, the `owner` would not be treated as a
+# subclass of itself and would not be created at all due to a `TypeError`
+# raised by `super()`). However, we do not (and probably cannot) handle the
+# latter correctly. In the member skipping algorithm, forward traversal (right
+# up to the first entry) may lead to descriptor re-entries (and thus infinite
+# recursion) for descriptors such as `classonly` with no wrapped member, while
+# backward traversal (right up to the last entry) ignores unique intermediate
+# members and has a worst-case complexity of O(n^2) for the entire lookup. In
+# the current implementation, the non-strict former is preferred (performance
+# in standard cases at the cost of abandoning the "safe" but questionable
+# behavior in cases of weird metaclasses).
+def _lookup_static_noerror(owner, name, /, instance=None, *, after=_MISSING):
     try:
         mro = _pytype_getmro_static(owner)
     except TypeError:
@@ -234,7 +249,24 @@ def _lookup_static_noerror(owner, name, /, instance):
         msg = "the second argument must be a string"
         raise TypeError(msg) from None
 
-    for base in mro:
+    it = iter(mro)
+    if after is not _MISSING:
+        for base in it:
+            if base is after:
+                break
+        else:
+            try:
+                after_name = getname_static(after)
+            except TypeError:
+                msg = "the `after` must be a class"
+                raise TypeError(msg) from None
+            else:
+                owner_name = getname_static(owner)
+
+            msg = f"type object {after_name!r} is not in MRO of {owner_name!r}"
+            raise ValueError(msg)
+
+    for base in it:
         base_vars = _pytype_getvars_static(base)
 
         if name in base_vars:
@@ -242,21 +274,71 @@ def _lookup_static_noerror(owner, name, /, instance):
                 member = base_vars[name]
             except KeyError:  # a race condition
                 continue
+        else:
+            continue
 
-            if type(member) is nonmember:
-                try:
-                    member_name = member.__name__
-                except AttributeError:
-                    pass
-                else:
-                    if member_name == name:
+        if type(member) is nonmember:
+            try:
+                member_name = member.__name__
+            except AttributeError:  # not assigned (invalid)
+                return member
+
+            if member_name != name:  # foreign (invalid)
+                return member
+
+            return _NOTHING
+
+        if type(member) is classonly:
+            try:
+                member_name = member.__name__
+            except AttributeError:  # not assigned (invalid)
+                return member
+
+            if member_name != name:  # foreign (invalid)
+                return member
+
+            if instance is not None:
+                return _NOTHING
+
+            try:
+                return member.__wrapped__
+            except AttributeError:
+                pass
+
+            member_owner = member.__objclass__
+            if member_owner is not base:
+                for base in it:  # ruff: ignore[redefined-loop-name]
+                    if base is member_owner:
                         break
+                else:  # precedes `base` (recursion) or is foreign (invalid)
+                    return member
 
-            return member
+            continue
+
+        return member
 
     return _NOTHING
 
 
+@overload
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    after: type,
+    default: _D,
+) -> Any | _D: ...
+@overload
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    after: type,
+) -> Any: ...
 @overload
 def lookup_static(
     owner: type[_T],
@@ -273,8 +355,16 @@ def lookup_static(
     /,
     instance: _T | None = None,
 ) -> Any: ...
-def lookup_static(owner, name, /, instance=None, *, default=_MISSING):
-    member = _lookup_static_noerror(owner, name, instance)
+def lookup_static(
+    owner,
+    name,
+    /,
+    instance=None,
+    *,
+    after=_MISSING,
+    default=_MISSING,
+):
+    member = _lookup_static_noerror(owner, name, instance, after=after)
     if member is _NOTHING:
         if default is _MISSING:
             owner_name = getname_static(owner)
@@ -294,6 +384,25 @@ def resolve_special(
     /,
     instance: _T | None = None,
     *,
+    after: type,
+    default: _D,
+) -> Any | _D: ...
+@overload
+def resolve_special(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    after: type,
+) -> Any: ...
+@overload
+def resolve_special(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
     default: _D,
 ) -> Any | _D: ...
 @overload
@@ -303,8 +412,16 @@ def resolve_special(
     /,
     instance: _T | None = None,
 ) -> Any: ...
-def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
-    member = _lookup_static_noerror(owner, name, instance)
+def resolve_special(
+    owner,
+    name,
+    /,
+    instance=None,
+    *,
+    after=_MISSING,
+    default=_MISSING,
+):
+    member = _lookup_static_noerror(owner, name, instance, after=after)
     if member is _NOTHING:
         if default is _MISSING:
             owner_name = getname_static(owner)
@@ -314,7 +431,13 @@ def resolve_special(owner, name, /, instance=None, *, default=_MISSING):
 
         return default
 
-    descr_get = _lookup_static_noerror(type(member), "__get__", member)
+    # The interpreter calls the `__get__()` method as-is, without any recursive
+    # resolution (that is, if you define the `__get__()` method via a
+    # non-callable descriptor, such as `property`, it will not work as you
+    # might expect), and we replicate this behavior. It is the only one of its
+    # kind; the `__set__()`, `__delete__()`, and `__set_name__()` methods are
+    # resolved as regular special methods.
+    descr_get = _lookup_static_noerror(type(member), "__get__")
     if descr_get is _NOTHING:
         return member
 
@@ -385,4 +508,4 @@ def ensurestr_static(obj: str, /) -> str:
 
 
 # ruff: ignore[module-import-not-at-top-of-file]
-from ._static_descr import nonmember  # a circular import
+from ._static_descr import classonly, nonmember  # a circular import

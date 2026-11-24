@@ -40,6 +40,7 @@ def lookup_static(
     /,
     instance: _T | None = None,
     *,
+    after: type,
     default: _D,
 ) -> Any | _D: ...
 @overload
@@ -48,6 +49,43 @@ def lookup_static(
     name: str,
     /,
     instance: _T | None = None,
+    *,
+    after: type,
+) -> Any: ...
+@overload
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    default: _D,
+) -> Any | _D: ...
+@overload
+def lookup_static(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+) -> Any: ...
+@overload
+def resolve_special(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    after: type,
+    default: _D,
+) -> Any | _D: ...
+@overload
+def resolve_special(
+    owner: type[_T],
+    name: str,
+    /,
+    instance: _T | None = None,
+    *,
+    after: type,
 ) -> Any: ...
 @overload
 def resolve_special(
