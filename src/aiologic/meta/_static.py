@@ -286,7 +286,7 @@ def _lookup_static_noerror(owner, name, /, instance=None, *, after=_MISSING):
             if member_name != name:  # foreign (invalid)
                 return member
 
-            return _NOTHING
+            break
 
         if type(member) is classonly:
             try:
@@ -298,7 +298,7 @@ def _lookup_static_noerror(owner, name, /, instance=None, *, after=_MISSING):
                 return member
 
             if instance is not None:
-                return _NOTHING
+                break
 
             if member:  # holds a constant member
                 return member.__wrapped__
