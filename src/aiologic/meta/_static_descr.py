@@ -229,6 +229,9 @@ class classonly(Generic[_AnyT_co]):
 
     __hash__: ClassVar[None] = None
 
+    def __bool__(self, /) -> bool:
+        return self.__wrapped is not _NOTHING
+
     def __set_name__(self, owner: type, name: str, /) -> None:
         try:
             getvars_static(owner)

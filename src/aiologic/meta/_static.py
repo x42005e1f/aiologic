@@ -300,10 +300,8 @@ def _lookup_static_noerror(owner, name, /, instance=None, *, after=_MISSING):
             if instance is not None:
                 return _NOTHING
 
-            try:
+            if member:  # holds a constant member
                 return member.__wrapped__
-            except AttributeError:
-                pass
 
             member_owner = member.__objclass__
             if member_owner is not base:
