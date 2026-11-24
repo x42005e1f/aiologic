@@ -182,8 +182,10 @@ class classonly(Generic[_AnyT_co]):
     @overload
     def __init__(self, /) -> None: ...
     def __init__(self, wrapped=_MISSING, /):
-        if wrapped is not _MISSING:
-            self.__wrapped = wrapped
+        if wrapped is _MISSING:
+            wrapped = _NOTHING
+
+        self.__wrapped = wrapped
 
     def __init_subclass__(cls, /, **kwargs: Any) -> Never:
         bcs = __class__  # an implicit closure reference
@@ -217,12 +219,11 @@ class classonly(Generic[_AnyT_co]):
         cls = type(self)
         cls_absname = getabsname_static(cls)
 
-        try:
-            wrapped = self.__wrapped
-        except AttributeError:
-            self_repr = f"{cls_absname}()"
-        else:
+        wrapped = self.__wrapped
+        if wrapped is not _NOTHING:
             self_repr = f"{cls_absname}({wrapped!r})"
+        else:
+            self_repr = f"{cls_absname}()"
 
         return f"<{self_repr} at {id(self):#x}>"
 
@@ -241,11 +242,8 @@ class classonly(Generic[_AnyT_co]):
             msg = "the second argument must be a string"
             raise TypeError(msg) from None
 
-        try:
-            wrapped = self.__wrapped
-        except AttributeError:
-            pass
-        else:
+        wrapped = self.__wrapped
+        if wrapped is not _NOTHING:
             wrapped_set_name = resolve_special(
                 type(wrapped),
                 "__set_name__",
@@ -302,11 +300,8 @@ class classonly(Generic[_AnyT_co]):
             # into the `__init__()` special method, but then we would have had
             # to ignore the fact that classes are usually mutable, and caching
             # would therefore violate user expectations.
-            try:
-                wrapped = self.__wrapped
-            except AttributeError:
-                pass
-            else:
+            wrapped = self.__wrapped
+            if wrapped is not _NOTHING:
                 descr_get = lookup_static(
                     type(wrapped),
                     "__get__",
@@ -393,11 +388,12 @@ class classonly(Generic[_AnyT_co]):
 
     @property
     def __wrapped__(self, /) -> _AnyT_co:
-        try:
-            return self.__wrapped
-        except AttributeError:
+        wrapped = self.__wrapped
+        if wrapped is _NOTHING:
             cls = type(self)
             cls_name = getname_static(cls)
 
             msg = f"this {cls_name!r} object has no wrapped assigned"
-            raise AttributeError(msg, name=None) from None
+            raise AttributeError(msg, name=None)
+
+        return wrapped
