@@ -232,6 +232,18 @@ class classonly(Generic[_AnyT_co]):
     def __bool__(self, /) -> bool:
         return self.__wrapped is not _NOTHING
 
+    # allows the descriptor to be used for the `__get__()` method
+    def __call__(self, /, *args: Any, **kwargs: Any) -> Any:
+        wrapped = self.__wrapped
+        if wrapped is not _NOTHING:
+            return wrapped(*args, **kwargs)
+
+        cls = type(self)
+        cls_name = getname_static(cls)
+
+        msg = f"this {cls_name!r} object is not callable"
+        raise TypeError(msg)
+
     def __set_name__(self, owner: type, name: str, /) -> None:
         try:
             getvars_static(owner)
