@@ -14,7 +14,7 @@ from ._static import (
     getabsname_static,
     getmro_static,
     getname_static,
-    getvars_static,
+    isinstance_static,
     lookup_static,
     resolve_special,
 )
@@ -245,11 +245,9 @@ class classonly(Generic[_AnyT_co]):
         raise TypeError(msg)
 
     def __set_name__(self, owner: type, name: str, /) -> None:
-        try:
-            getvars_static(owner)
-        except TypeError:
+        if not isinstance_static(owner, type):
             msg = "the first argument must be a class"
-            raise TypeError(msg) from None
+            raise TypeError(msg)
 
         try:
             name = ensurestr_static(name)
