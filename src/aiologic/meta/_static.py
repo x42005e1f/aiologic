@@ -494,6 +494,14 @@ def isinstance_static(
 @overload
 def isinstance_static(obj: object, class_or_tuple: _ClassInfo, /) -> bool: ...
 def isinstance_static(obj, class_or_tuple, /):
+    if class_or_tuple is type:
+        try:
+            _pytype_getmro_static(obj)
+        except TypeError:
+            return False
+
+        return True
+
     return issubclass_static(type(obj), class_or_tuple)
 
 
